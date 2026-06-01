@@ -1,7 +1,6 @@
 import { queryOne, query, run, parseFecha, now } from '../db.js';
 import { ok, err } from '../auth.js';
 import { callAdapter, callAdapterSync } from '../google.js';
-import { generarFolio } from '../folios.js';
 
 function limpiarLinkMaps(url) {
   if (!url) return url;

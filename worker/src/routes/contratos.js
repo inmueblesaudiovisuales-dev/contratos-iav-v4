@@ -1,7 +1,7 @@
 import { query, queryOne, run, batch, uuid, now } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter } from '../google.js';
-import { generarFolio } from '../folios.js';
+import { generarFolio, asignarFolio } from '../folios.js';
 
 export async function handleContratos(request, env, ctx, action) {
   const db = env.DB;
@@ -138,7 +138,7 @@ export async function handleContratos(request, env, ctx, action) {
     const adicionalesJSON = JSON.stringify([...adicionalesOfrecidos, ...extrasObjs]);
 
     // Siempre generar folio desde propiedad 1
-    const folio = prop1.fechaSesion ? generarFolio(prop1.fechaSesion) : null;
+    const folio = prop1.fechaSesion ? await asignarFolio(db, prop1.fechaSesion) : null;
 
     const portalToken = uuid();
     const portalExpira = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
@@ -427,7 +427,7 @@ export async function handleContratos(request, env, ctx, action) {
     const folioAnterior = c.folio;
     let folioNuevo = folioAnterior;
     if (parseInt(numPropiedad) === 1) {
-      folioNuevo = generarFolio(fecha);
+      folioNuevo = await asignarFolio(db, fecha);
       await run(db, 'UPDATE contratos SET folio=? WHERE token=?', [folioNuevo, token]);
     }
     const { results: paquetesRe } = await query(db, 'SELECT clave, nombre FROM paquetes');
