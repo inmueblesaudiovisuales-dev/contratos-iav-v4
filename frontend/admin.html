@@ -1724,6 +1724,7 @@ function renderAlertas() {
     const f = c.FechaSesion ? String(c.FechaSesion).substring(0, 10) : '';
     return f > manana && f <= en7;
   }).length;
+  const pendFirma = activos.filter(c => c.Estatus === 'Pendiente firma').length;
   const expirando = activos.filter(c =>
     c.Estatus === 'Pendiente firma' &&
     c.FechaCreacion &&
@@ -1738,7 +1739,7 @@ function renderAlertas() {
   if (sesHoy)    items.push(`<span class="alerta-item" style="color:var(--gold)"><i class="ti ti-camera"></i>${sesHoy === 1 ? '1 sesión hoy' : sesHoy + ' sesiones hoy'}</span>`);
   if (sesManana) items.push(`<span class="alerta-item" style="color:#B45309"><i class="ti ti-calendar-event"></i>${sesManana} sesión${sesManana > 1 ? 'es' : ''} mañana</span>`);
   if (sesSemana) items.push(`<span class="alerta-item" style="color:#2563EB"><i class="ti ti-calendar"></i>${sesSemana} esta semana</span>`);
-  if (expirando) items.push(`<span class="alerta-item" style="color:var(--warn)"><i class="ti ti-clock-exclamation"></i>${expirando} cotización${expirando > 1 ? 'es' : ''} por expirar</span>`);
+  if (pendFirma) items.push(`<span class="alerta-item" style="color:var(--ink-1)"><i class="ti ti-signature"></i>${pendFirma} pendiente${pendFirma > 1 ? 's' : ''} de firma${expirando ? ` <span style="color:var(--warn);font-size:11px">(${expirando} por expirar)</span>` : ''}</span>`);
   if (cobros)    items.push(`<span class="alerta-item" style="color:var(--ink-2)"><i class="ti ti-cash"></i>${cobros} cobro${cobros > 1 ? 's' : ''} pendiente${cobros > 1 ? 's' : ''}</span>`);
 
   if (!items.length) {
