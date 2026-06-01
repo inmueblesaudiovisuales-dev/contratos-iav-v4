@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-01 (Ronda 15 — Rediseño tab Contratos + Radar de Sesiones)  
+> Última actualización: 2026-06-01 (Ronda 17 — Fechas de entrega estimadas + fixes de auditoría)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -59,7 +59,7 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
         ├── auth.js          — requireAdmin(), ok(), err()
         ├── db.js            — helpers D1: query(), queryOne(), run(), batch()
         ├── tokens.js        — crearTokenPortal(), crearTokenConfigurar(), refrescarExpiry(), marcarUsado()
-        ├── folios.js        — generarFolio() → "IAV-YYMM.DD"
+        ├── folios.js        — generarFolio() base + asignarFolio() → "IAV-YYMM.DD-A" (con sufijo letra)
         ├── google.js        — callAdapter() async, callAdapterSync()
         ├── cron.js          — syncToSheets() para backup horario
         └── routes/
@@ -130,7 +130,7 @@ Los archivos de `frontend/` se suben automáticamente como assets estáticos ví
 
 | Tabla | Descripción |
 |-------|-------------|
-| `contratos` | Un registro por contrato. PK: `token` (UUID). |
+| `contratos` | Un registro por contrato. PK: `token` (UUID). Columna `entrega_express INTEGER DEFAULT 0` agregada en R17. |
 | `tokens` | Tokens de portal y configurar. FK: `contrato_id` → `contratos.token`. |
 | `abonos` | Pagos. FK: `contrato_token` → `contratos.token`. |
 | `propiedades` | Una o más propiedades por contrato. PK compuesta: `(contrato_token, num_propiedad)`. |
@@ -273,6 +273,69 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 17 — Fechas de entrega estimadas + fixes de auditoría (2026-06-01)
+
+**Feature: Entrega express y fechas estimadas**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R17-01 | `schema.sql` | Nueva columna `entrega_express INTEGER DEFAULT 0` en `contratos` |
+| R17-02 | `contratos.js` | Nueva acción `actualizarExpress` — actualiza el flag, usa `result.meta.changes` para 404 |
+| R17-03 | `index.js` | `actualizarExpress` agregado a `RUTAS_CONTRATOS` |
+| R17-04 | `admin.html` | Toggle "Entrega express (1 día natural)" en acordeón Propiedades |
+| R17-05 | `admin.html` | Fecha de entrega estimada por tarjeta: sesión + 5 días (estándar) o + 1 día (express) |
+| R17-06 | `admin.html` | `calcFechaEntrega(fechaISO, express)` — aritmética local pura (split + `new Date(y,m,d)`) sin conversión UTC |
+
+**Fixes post-auditoría (8 bugs)**
+
+| ID | Archivo | Fix |
+|----|---------|-----|
+| R17-F1 | `index.js` | `actualizarExpress` faltaba en `RUTAS_CONTRATOS` — siempre retornaba 404 |
+| R17-F2 | `contratos.js` | `reagendarPropiedad` valida formato YYYY-MM-DD (inconsistencia con `crearContrato`) |
+| R17-F3 | `admin.html` | `guardarExpress` actualiza DOM solo tras API exitoso; revierte checkbox en error |
+| R17-F4 | `admin.html` | `calcFechaEntrega` usa `substring(0,10)` para manejar datetime strings con timezone |
+| R17-F5 | `contratos.js` | `actualizarExpress` usa `result.meta.changes` en lugar de SELECT+UPDATE innecesario |
+| R17-F6 | `admin.html` | `guardarExpress` verifica `tok === tokenActivo` post-await (evita mensaje en panel incorrecto) |
+| R17-F7 | `admin.html` | `guardarExpress` usa `setMsg()` helper (estilos ok/error consistentes con el resto) |
+
+---
+
+### Ronda 16 — Corrección masiva de bugs + Folios con sufijo de letra (2026-06-01)
+
+**Bugs corregidos (auditoría pre-E2E)**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| B-1 | `portal.js` | Verificación de expiración del token de firma movida a `firmaCliente` — ya no bloquea la vista del portal |
+| B-2 | `contratos.js` | `TRANSICIONES_BLOQUEADAS`: desde `Pendiente firma` no se puede saltar a producción/entrega; desde `Firmado` no se puede saltar a entrega |
+| B-3 | `abonos.js` | Guard: no se puede registrar abono si estatus es `Pendiente firma` |
+| B-5 | `contratos.js` | `crearContrato` usa `batch()` atómico — contrato + propiedades + token de portal en una sola transacción |
+| B-6 | `abonos.js` | Contrato en `Completado` que recibe abono mantiene `Completado` (no regresa a `Liquidado`) |
+| B-7 | `contratos.js` | `guardarEntrega` solo llama adapter si `c.correo_cliente` es truthy |
+| B-8 | `portal.js` | Deduplicación de `adicionalesSeleccionados` por clave antes de procesar |
+| B-10 | `contratos.js` | `estatusAbiertos` en `listarContratos` incluye `'Completado'` |
+| B-12 | `contratos.js` | `revocarEntrega` agrega guards `if (!cr) return err(...)` en ambas ramas |
+| B-13 | `contratos.js` | `actualizarCarpeta` solo incluye campo en SET si el valor es truthy |
+| A-1 | `admin.html` | `esAd()` maneja `true`, `1` y strings (D1 devuelve enteros, no booleans) |
+| A-2 | `admin.html` | Select de estatus incluye opción `'Completado'` |
+| A-3 | `admin.html` | Race condition en reload del panel: captura token antes del setTimeout |
+| A-4 | `admin.html` | WhatsApp checklist URL usa `esc(c.Token)` |
+| P-1 | `portal.html` | `addonsGlobal.push` usa `Object.assign({}, a, ...)` — no muta `portalData` |
+| P-4 | `portal.html` | Guard `hasStroke` al inicio de `enviarFirma` — previene submit sin firma dibujada |
+| C-1 | `checklist.html` | Migración para formato antiguo: `{completado: bool}` → `{foto, video, t360}` |
+
+**Feature: Folios con sufijo de letra**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| F-1 | `folios.js` | Nueva función `asignarFolio(db, fecha)` — detecta colisiones por fecha y asigna letra secuencial (A, B, C…). Formato: `IAV-AAMM.DD-A`. |
+| F-2 | `contratos.js` | `crearContrato` usa `asignarFolio()` en lugar de `generarFolio()` |
+| F-3 | `contratos.js` | `reagendarPropiedad` usa `asignarFolio()` al cambiar fecha de propiedad 1 |
+
+> Folios: si dos clientes tienen la misma fecha, reciben `IAV-2506.15-A` y `IAV-2506.15-B`. Si el cliente A reagenda, su folio cambia pero el B conserva su `-B` permanentemente.
+
+---
 
 ### Ronda 15 — Rediseño tab Contratos + Radar de Sesiones (2026-06-01)
 
@@ -543,8 +606,8 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 | Capa | Versión | Estado |
 |------|---------|--------|
-| Worker + Frontend | R15 | Desplegado |
-| D1 Schema | — | Actualizado (`carpeta_entregables_id`, `referencias`, `fachada_url`, `perimetro_url` agregados) |
+| Worker + Frontend | R17 | Desplegado |
+| D1 Schema | — | Actualizado (`carpeta_entregables_id`, `referencias`, `fachada_url`, `perimetro_url` en rondas anteriores; `entrega_express` en R17 — **requiere ALTER TABLE manual en DB existente**) |
 | Adapter Apps Script | — | Pendiente deploy (Rondas 4–11) |
 
 ---
@@ -589,6 +652,10 @@ Features descartadas explícitamente. No incluirlas en ningún plan ni sugerirla
 - [ ] `procesarPDFsPendientes` en Apps Script requiere trigger automático — verificar que esté configurado en script.google.com para correr cada minuto.
 - [ ] Cuando el correo del cliente está vacío al crear el contrato, no llega ningún correo en la firma. El cliente debe llenarlo en el portal antes de firmar.
 - [ ] El folio solo se genera para contratos estándar con fecha de sesión. Contratos particulares no tienen folio hasta configurar la propiedad.
+- [ ] **Migración D1 pendiente (R17):** ejecutar en la DB existente:
+  ```bash
+  wrangler d1 execute contratos-iav-v4 --remote --command="ALTER TABLE contratos ADD COLUMN entrega_express INTEGER DEFAULT 0"
+  ```
 
 ---
 
