@@ -78,15 +78,31 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
 
 **Repo:** `https://github.com/inmueblesaudiovisuales-dev/contratos-iav-v4` (privado)  
 **Rama de producción:** `main`  
-**Cuenta GitHub:** `inmueblesaudiovisuales-dev`
+**Cuenta GitHub:** `inmueblesaudiovisuales-dev`  
+**GitHub App:** Claude Code instalada en el repo (permisos completos de commits/PRs)  
+**GitHub Actions secret:** `CLOUDFLARE_API_TOKEN` configurado
+
+---
+
+## Cómo trabajar desde el celular (sin Mac)
+
+Claude Code on the Web permite trabajar 100% en la nube sin necesitar la Mac encendida:
+
+1. Abrir `claude.ai/code` en el cel
+2. Conectar repo `contratos-iav-v4` via OAuth (Settings → Integrations → GitHub)
+3. Pedirle a Claude los cambios en lenguaje natural
+4. Claude edita archivos, hace commit y push a `main`
+5. GitHub Actions despliega a Cloudflare automáticamente en ~1 minuto
+
+**Limitación conocida:** Claude Code on the Web no puede modificar archivos bajo `.github/workflows/` (restricción de scope OAuth). Para cambiar el workflow de deploy, se necesita la Mac.
 
 ---
 
 ## Cómo desplegar cambios
 
-**El flujo de trabajo desde R16 en adelante:**
+**Flujo normal (desde Mac o cel via Claude Code on the Web):**
 
-1. Claude hace cambios en los archivos locales
+1. Claude hace cambios en los archivos
 2. Claude hace `git commit` + `git push origin main`
 3. GitHub Actions dispara automáticamente `wrangler deploy`
 4. Cloudflare despliega en ~1 minuto
