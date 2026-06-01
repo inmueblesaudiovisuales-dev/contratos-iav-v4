@@ -577,6 +577,7 @@
       box-shadow: 0 4px 16px rgba(201,168,76,0.4);
       font-size: 0 !important; letter-spacing: 0;
       padding: 0; flex: none;
+      justify-content: center; gap: 0;
     }
     .bnav-fab i { font-size: 22px !important; color: var(--onyx); }
 
@@ -621,8 +622,8 @@
       #filtro-fecha-desde, #filtro-fecha-hasta { flex: 1; min-width: 0; }
       /* Botones de menor prioridad ocultos — FAB los reemplaza o no aplican */
       #btn-nuevo-toolbar, #btn-refresh-tabla, #btn-export-csv { display: none !important; }
-      /* Email oculto en cards — el nombre y paquete ya identifican al cliente */
-      .td-email { display: none !important; }
+      /* Email oculto en cards — selector doble para ganar especificidad sobre .td-sub */
+      .td-sub.td-email { display: none !important; }
 
       /* Tabla → cards en mobile */
       .tabla-card table, .tabla-card thead { display: block; }
