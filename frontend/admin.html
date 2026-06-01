@@ -495,15 +495,13 @@
     .crm-proyecto { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-top: 1px solid var(--border); font-size: 12px; }
     .crm-folio { font-family: 'Courier New', monospace; color: var(--ink-2); font-size: 11px; }
 
-    /* ── Stats barra compacta ───────────────────────── */
+    /* ── Alertas accionables ────────────────────────── */
     .stats-linea {
       display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
       background: var(--card); border: 1px solid var(--border);
       border-radius: var(--r); padding: 9px 16px; margin-bottom: 12px;
     }
-    .stats-item { display: flex; align-items: center; gap: 5px; font-size: 13px; white-space: nowrap; }
-    .stats-lbl { color: var(--ink-3); font-weight: 500; }
-    .stats-val { font-weight: 700; }
+    .alerta-item { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; white-space: nowrap; }
     .stats-sep { color: var(--border2); font-size: 16px; }
 
     /* ── Skeleton loading ───────────────────────────── */
@@ -1691,11 +1689,8 @@ async function cargarContratos(tokenInicial) {
     _cargandoContratos = false;
     return;
   }
-  // Stats no bloquean la tabla — se cargan en paralelo al display de contratos.
   _cargandoContratos = false;
-  apiGet({ action: 'listarStats', periodo: 'mes' })
-    .then(dataS => { if (dataS?.ok) renderStatsBar(dataS); })
-    .catch(() => {});
+  renderAlertas();
 }
 
 function setCiclo(ciclo) {
@@ -1711,17 +1706,50 @@ function setCiclo(ciclo) {
   filtrarContratos();
 }
 
-function renderStatsBar(s) {
+function renderAlertas() {
   const bar = document.getElementById('stats-bar');
   if (!bar) return;
-  bar.innerHTML = `
-    <div class="stats-linea">
-      <span class="stats-item"><span class="stats-lbl">Facturado</span> <span class="stats-val" style="color:var(--gold)">${fmxn(s.facturado)}</span></span>
-      <span class="stats-sep">·</span>
-      <span class="stats-item"><span class="stats-lbl">Cobrado</span> <span class="stats-val" style="color:var(--success)">${fmxn(s.cobrado)}</span></span>
-      <span class="stats-sep">·</span>
-      <span class="stats-item"><span class="stats-lbl">Por cobrar</span> <span class="stats-val" style="color:var(--warn)">${fmxn(s.porCobrar)}</span></span>
-    </div>`;
+
+  const tzOff  = new Date().getTimezoneOffset() * 60000;
+  const ahora  = Date.now();
+  const hoy    = new Date(ahora - tzOff).toISOString().substring(0, 10);
+  const manana = new Date(ahora - tzOff + 86400000).toISOString().substring(0, 10);
+  const en7    = new Date(ahora - tzOff + 7 * 86400000).toISOString().substring(0, 10);
+
+  const activos = todosContratos.filter(c => !['Completado', 'Cancelado'].includes(c.Estatus));
+
+  const sesHoy    = activos.filter(c => c.FechaSesion && String(c.FechaSesion).substring(0, 10) === hoy).length;
+  const sesManana = activos.filter(c => c.FechaSesion && String(c.FechaSesion).substring(0, 10) === manana).length;
+  const sesSemana = activos.filter(c => {
+    const f = c.FechaSesion ? String(c.FechaSesion).substring(0, 10) : '';
+    return f > manana && f <= en7;
+  }).length;
+  const expirando = activos.filter(c =>
+    c.Estatus === 'Pendiente firma' &&
+    c.FechaCreacion &&
+    (ahora - new Date(c.FechaCreacion).getTime()) / (1000 * 60 * 60) > 60
+  ).length;
+  const cobros = activos.filter(c =>
+    (c.SaldoPendiente ?? 0) > 0 &&
+    ['Firmado', 'Anticipo recibido', 'En produccion', 'Entregado'].includes(c.Estatus)
+  ).length;
+
+  const items = [];
+  if (sesHoy)    items.push(`<span class="alerta-item" style="color:var(--gold)"><i class="ti ti-camera"></i>${sesHoy === 1 ? '1 sesión hoy' : sesHoy + ' sesiones hoy'}</span>`);
+  if (sesManana) items.push(`<span class="alerta-item" style="color:#B45309"><i class="ti ti-calendar-event"></i>${sesManana} sesión${sesManana > 1 ? 'es' : ''} mañana</span>`);
+  if (sesSemana) items.push(`<span class="alerta-item" style="color:#2563EB"><i class="ti ti-calendar"></i>${sesSemana} esta semana</span>`);
+  if (expirando) items.push(`<span class="alerta-item" style="color:var(--warn)"><i class="ti ti-clock-exclamation"></i>${expirando} cotización${expirando > 1 ? 'es' : ''} por expirar</span>`);
+  if (cobros)    items.push(`<span class="alerta-item" style="color:var(--ink-2)"><i class="ti ti-cash"></i>${cobros} cobro${cobros > 1 ? 's' : ''} pendiente${cobros > 1 ? 's' : ''}</span>`);
+
+  if (!items.length) {
+    bar.innerHTML = '';
+    bar.style.display = 'none';
+    actualizarBadgesTabs();
+    return;
+  }
+
+  bar.style.display = '';
+  bar.innerHTML = `<div class="stats-linea">${items.join('<span class="stats-sep" style="color:var(--border2)">·</span>')}</div>`;
   actualizarBadgesTabs();
 }
 
