@@ -613,10 +613,16 @@
       .bottom-nav { display: block; }
       .bulk-bar { bottom: 76px; }
 
-      /* Barra: filtros colapsables en mobile */
-      .barra-fila-principal .campo-busqueda { min-width: 0; }
+      /* Barra: toolbar reestructurado para mobile */
+      /* Search ocupa línea propia (order -1 lo pone primero) */
+      .barra-fila-principal .campo-busqueda { width: 100%; min-width: 0; order: -1; flex: none; }
+      /* Status select crece para llenar el espacio disponible */
       #filtro-estatus { flex: 1; min-width: 0; }
       #filtro-fecha-desde, #filtro-fecha-hasta { flex: 1; min-width: 0; }
+      /* Botones de menor prioridad ocultos — FAB los reemplaza o no aplican */
+      #btn-nuevo-toolbar, #btn-refresh-tabla, #btn-export-csv { display: none !important; }
+      /* Email oculto en cards — el nombre y paquete ya identifican al cliente */
+      .td-email { display: none !important; }
 
       /* Tabla → cards en mobile */
       .tabla-card table, .tabla-card thead { display: block; }
@@ -767,7 +773,6 @@
     <div class="bnav-inner">
       <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)"><i class="ti ti-file-text"></i>Contratos</button>
       <button class="bnav-btn bnav-fab" data-tab="nuevo" onclick="irANuevo()" title="Nuevo contrato"><i class="ti ti-plus"></i></button>
-      <button class="bnav-btn" data-tab="metricas"   onclick="mostrarTabMobile('metricas',this)"><i class="ti ti-chart-bar"></i>Métricas</button>
       <button class="bnav-btn" data-tab="ajustes"    onclick="mostrarTabMobile('ajustes',this)"><i class="ti ti-settings"></i>Ajustes</button>
     </div>
   </nav>
@@ -782,7 +787,6 @@
   <div class="contenido">
     <div class="tabs">
       <button class="tab-btn activo" data-tab="contratos" onclick="mostrarTab('contratos', this)">Contratos</button>
-      <button class="tab-btn" data-tab="metricas"   onclick="mostrarTab('metricas', this)">Métricas</button>
     </div>
 
     <!-- ── CONTRATOS ──────────────────────────────────── -->
@@ -827,13 +831,13 @@
             <i class="ti ti-calendar-search"></i> Fechas
             <span id="badge-filtros" class="filtros-badge" style="display:none">1</span>
           </button>
-          <button class="btn-primario gold" onclick="irANuevo()">
+          <button class="btn-primario gold" id="btn-nuevo-toolbar" onclick="irANuevo()">
             <i class="ti ti-plus"></i> Nuevo
           </button>
-          <button class="btn-secundario btn-sm" onclick="cargarContratos()" title="Actualizar">
+          <button class="btn-secundario btn-sm" id="btn-refresh-tabla" onclick="cargarContratos()" title="Actualizar">
             <i class="ti ti-refresh"></i>
           </button>
-          <button class="btn-secundario btn-sm" onclick="descargarCSV()" title="Exportar CSV">
+          <button class="btn-secundario btn-sm" id="btn-export-csv" onclick="descargarCSV()" title="Exportar CSV">
             <i class="ti ti-table-export"></i>
           </button>
           <button class="btn-seleccion" id="btn-seleccion" onclick="toggleModoSeleccion()" title="Selección masiva">
@@ -930,23 +934,13 @@
     <!-- ── SESIONES ─────────────────────────────────── -->
 
     <!-- ── MÉTRICAS ─────────────────────────────────── -->
-    <div id="sec-metricas" class="seccion">
-      <div class="barra" style="margin-bottom:14px">
-        <div style="display:flex;gap:6px">
-          <button class="ciclo-btn activo-ciclo" id="met-btn-mes"       onclick="setMetPeriodo('mes',this)">Este mes</button>
-          <button class="ciclo-btn" id="met-btn-trimestre" onclick="setMetPeriodo('trimestre',this)">Trimestre</button>
-          <button class="ciclo-btn" id="met-btn-anio"      onclick="setMetPeriodo('anio',this)">Este año</button>
-          <button class="ciclo-btn" id="met-btn-todo"      onclick="setMetPeriodo('todo',this)">Todo</button>
-        </div>
-        <button class="btn-secundario btn-sm" onclick="cargarMetricas()"><i class="ti ti-refresh"></i></button>
-      </div>
-      <div id="metricas-body"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p></div>
-    </div>
-
-    <!-- ── AJUSTES ──────────────────────────────────── -->
+    <!-- ── AJUSTES (incluye Métricas, Paquetes y Clientes) ──── -->
     <div id="sec-ajustes" class="seccion">
       <div class="ajustes-tabs">
-        <button id="atab-paquetes" class="ajustes-tab activo-atab" onclick="setAjustesTab('paquetes')">
+        <button id="atab-metricas" class="ajustes-tab activo-atab" onclick="setAjustesTab('metricas')">
+          <i class="ti ti-chart-bar"></i> Métricas
+        </button>
+        <button id="atab-paquetes" class="ajustes-tab" onclick="setAjustesTab('paquetes')">
           <i class="ti ti-package"></i> Paquetes
         </button>
         <button id="atab-clientes" class="ajustes-tab" onclick="setAjustesTab('clientes')">
@@ -954,8 +948,22 @@
         </button>
       </div>
 
+      <!-- Pane: Métricas -->
+      <div id="apane-metricas" class="ajustes-pane activo-apane">
+        <div class="barra" style="margin-bottom:14px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="ciclo-btn activo-ciclo" id="met-btn-mes"       onclick="setMetPeriodo('mes',this)">Este mes</button>
+            <button class="ciclo-btn" id="met-btn-trimestre" onclick="setMetPeriodo('trimestre',this)">Trimestre</button>
+            <button class="ciclo-btn" id="met-btn-anio"      onclick="setMetPeriodo('anio',this)">Este año</button>
+            <button class="ciclo-btn" id="met-btn-todo"      onclick="setMetPeriodo('todo',this)">Todo</button>
+          </div>
+          <button class="btn-secundario btn-sm" onclick="cargarMetricas()"><i class="ti ti-refresh"></i></button>
+        </div>
+        <div id="metricas-body"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p></div>
+      </div>
+
       <!-- Pane: Paquetes -->
-      <div id="apane-paquetes" class="ajustes-pane activo-apane">
+      <div id="apane-paquetes" class="ajustes-pane">
         <div class="barra">
           <p style="font-size:13px;color:var(--ink-3);flex:1">Paquetes y add-ons disponibles en el sistema.</p>
           <button class="btn-secundario btn-sm" onclick="cargarPaquetesAdmin()"><i class="ti ti-refresh"></i> Actualizar</button>
@@ -1395,10 +1403,10 @@ function mostrarTab(id, btn) {
   if (id === 'contratos') cargarContratos();
   if (id === 'ajustes') {
     const paneActivo = document.querySelector('.ajustes-pane.activo-apane');
-    if (paneActivo && paneActivo.id === 'apane-clientes') cargarCRM();
-    else cargarPaquetesAdmin();
+    if (paneActivo?.id === 'apane-clientes') cargarCRM();
+    else if (paneActivo?.id === 'apane-paquetes') cargarPaquetesAdmin();
+    else cargarMetricas();
   }
-  if (id === 'metricas') cargarMetricas();
   if (id === 'nuevo') cargarClientesParaAutocomplete();
 }
 
@@ -1407,6 +1415,7 @@ function setAjustesTab(pane) {
   document.querySelectorAll('.ajustes-pane').forEach(p => p.classList.remove('activo-apane'));
   document.getElementById('atab-' + pane).classList.add('activo-atab');
   document.getElementById('apane-' + pane).classList.add('activo-apane');
+  if (pane === 'metricas') cargarMetricas();
   if (pane === 'paquetes') cargarPaquetesAdmin();
   if (pane === 'clientes') cargarCRM();
 }
@@ -1812,7 +1821,7 @@ function renderTabla(lista) {
       <td class="td-folio">${esc(c.Folio) || '—'}</td>
       <td>
         <div class="td-nombre">${esc(c.NombreCliente)}</div>
-        <div class="td-sub">${esc(c.CorreoCliente)}</div>
+        <div class="td-sub td-email">${esc(c.CorreoCliente)}</div>
         ${c.PaqueteBase ? `<div class="td-sub" style="color:var(--ink-2)">${esc(c.PaqueteBase)}</div>` : ''}
       </td>
       <td>
