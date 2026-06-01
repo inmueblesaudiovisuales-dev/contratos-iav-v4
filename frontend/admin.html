@@ -495,6 +495,54 @@
     .crm-proyecto { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-top: 1px solid var(--border); font-size: 12px; }
     .crm-folio { font-family: 'Courier New', monospace; color: var(--ink-2); font-size: 11px; }
 
+    /* ── Stats barra compacta ───────────────────────── */
+    .stats-linea {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 9px 16px; margin-bottom: 12px;
+    }
+    .stats-item { display: flex; align-items: center; gap: 5px; font-size: 13px; white-space: nowrap; }
+    .stats-lbl { color: var(--ink-3); font-weight: 500; }
+    .stats-val { font-weight: 700; }
+    .stats-sep { color: var(--border2); font-size: 16px; }
+
+    /* ── Skeleton loading ───────────────────────────── */
+    @keyframes skel-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+    .skel {
+      display: inline-block; border-radius: 5px;
+      background: var(--border); animation: skel-pulse 1.4s ease infinite;
+    }
+
+    /* ── Tabla — hover con borde izquierdo ──────────── */
+    .tabla-card tbody tr {
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 100ms, border-left-color 100ms;
+    }
+    .tabla-card tbody tr:hover { background: var(--gold-pale); border-left-color: var(--gold-border); }
+    .tabla-card tbody tr.activo { background: var(--gold-pale); border-left-color: var(--gold); }
+
+    /* ── Panel acordeón ─────────────────────────────── */
+    .panel-acord { border-top: 1px solid var(--border); }
+    .panel-acord:first-of-type { border-top: none; }
+    .panel-acord > summary {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 0; cursor: pointer; list-style: none;
+      font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      color: var(--ink-3); user-select: none;
+    }
+    .panel-acord > summary::-webkit-details-marker { display: none; }
+    .panel-acord > summary::after {
+      content: '›'; font-size: 16px; color: var(--ink-4);
+      transition: transform 180ms; transform: rotate(90deg);
+      font-weight: 400; letter-spacing: 0; text-transform: none;
+    }
+    .panel-acord[open] > summary::after { transform: rotate(270deg); }
+    .panel-acord-body { padding-bottom: 14px; }
+
+    /* ── Panel sesión en header ──────────────────────── */
+    .panel-sesion { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+
     /* Overlay */
     #overlay { display: none; position: fixed; inset: 0; background: rgba(28,28,30,0.4); z-index: 190; }
     #overlay.visible { display: block; }
@@ -589,9 +637,9 @@
       .td-fecha { font-size: 11px; color: var(--ink-3); width: 100%; margin-top: 4px; }
       .td-check { padding-left: 0 !important; }
 
-      /* Stats bar: 2 columnas; 5ta tarjeta ocupa fila completa si queda sola */
-      #stats-bar { grid-template-columns: repeat(2,1fr) !important; }
-      #stats-bar > *:last-child:nth-child(odd) { grid-column: 1 / -1; }
+      /* Stats bar — en mobile la linea se reduce de tamaño */
+      .stats-linea { padding: 8px 12px; gap: 8px; }
+      .stats-item { font-size: 12px; }
 
       /* Panel lateral como bottom sheet */
       .panel-lateral {
@@ -740,8 +788,8 @@
     <!-- ── CONTRATOS ──────────────────────────────────── -->
     <div id="sec-contratos" class="seccion activa">
 
-      <!-- Stats bar simplificada (3 tarjetas — JS las llena) -->
-      <div id="stats-bar" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px"></div>
+      <!-- Stats — línea compacta (JS la llena) -->
+      <div id="stats-bar"></div>
 
       <!-- Tabs de navegación con contadores -->
       <div class="contratos-tabs">
@@ -812,9 +860,9 @@
               <th>Folio</th>
               <th>Cliente</th>
               <th>Estatus</th>
+              <th>Sesión</th>
               <th>Total</th>
               <th>Saldo</th>
-              <th>Creado</th>
             </tr>
           </thead>
           <tbody id="tabla-body">
@@ -1050,7 +1098,10 @@
     <div class="panel-header-info">
       <div class="panel-folio" id="panel-folio">—</div>
       <div class="panel-nombre" id="panel-nombre">—</div>
-      <div id="panel-badge"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px">
+        <div id="panel-badge"></div>
+        <div id="panel-sesion" class="panel-sesion" style="display:none"></div>
+      </div>
     </div>
     <button class="btn-cerrar" onclick="cerrarPanel()"><i class="ti ti-x"></i></button>
   </div>
@@ -1615,7 +1666,7 @@ function actualizarAnticipo(p) {
 async function cargarContratos(tokenInicial) {
   if (_cargandoContratos) return;
   _cargandoContratos = true;
-  document.getElementById('tabla-body').innerHTML = '<tr><td colspan="6" class="tabla-vacio">Cargando...</td></tr>';
+  document.getElementById('tabla-body').innerHTML = skeletonRows();
   try {
     const dataC = await apiGet({ action: 'listarContratos' });
     if (!dataC.ok) throw new Error(dataC.error || 'Error desconocido');
@@ -1653,17 +1704,14 @@ function setCiclo(ciclo) {
 function renderStatsBar(s) {
   const bar = document.getElementById('stats-bar');
   if (!bar) return;
-  const tarjetas = [
-    { label: 'Facturado este mes',  valor: fmxn(s.facturado),  sub: '',                   color: 'var(--gold)' },
-    { label: 'Cobrado este mes',    valor: fmxn(s.cobrado),    sub: '',                   color: 'var(--success)' },
-    { label: 'Por cobrar (total)',  valor: fmxn(s.porCobrar),  sub: 'contratos abiertos', color: 'var(--warn)' },
-  ];
-  bar.innerHTML = tarjetas.map(t => `
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px">
-      <p style="font-size:11px;color:var(--ink-3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.05em">${t.label}</p>
-      <p style="font-size:20px;font-weight:700;color:${t.color};margin:0 0 2px">${t.valor}</p>
-      ${t.sub ? `<p style="font-size:11px;color:var(--ink-3);margin:0">${t.sub}</p>` : ''}
-    </div>`).join('');
+  bar.innerHTML = `
+    <div class="stats-linea">
+      <span class="stats-item"><span class="stats-lbl">Facturado</span> <span class="stats-val" style="color:var(--gold)">${fmxn(s.facturado)}</span></span>
+      <span class="stats-sep">·</span>
+      <span class="stats-item"><span class="stats-lbl">Cobrado</span> <span class="stats-val" style="color:var(--success)">${fmxn(s.cobrado)}</span></span>
+      <span class="stats-sep">·</span>
+      <span class="stats-item"><span class="stats-lbl">Por cobrar</span> <span class="stats-val" style="color:var(--warn)">${fmxn(s.porCobrar)}</span></span>
+    </div>`;
   actualizarBadgesTabs();
 }
 
@@ -1708,6 +1756,21 @@ function diasEnEstatus(c) {
   return Math.max(0, Math.floor((ahora - d.getTime()) / (1000 * 60 * 60 * 24)));
 }
 
+function skeletonRows() {
+  return Array.from({length: 5}).map(() => `
+    <tr style="pointer-events:none">
+      <td class="td-folio"><span class="skel" style="width:64px;height:12px"></span></td>
+      <td>
+        <span class="skel" style="width:130px;height:13px;display:block;margin-bottom:5px"></span>
+        <span class="skel" style="width:90px;height:11px;display:block"></span>
+      </td>
+      <td><span class="skel" style="width:80px;height:20px;border-radius:20px"></span></td>
+      <td><span class="skel" style="width:60px;height:12px"></span></td>
+      <td class="td-monto"><span class="skel" style="width:55px;height:12px"></span></td>
+      <td class="td-saldo"><span class="skel" style="width:50px;height:12px"></span></td>
+    </tr>`).join('');
+}
+
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
   if (!lista.length) {
@@ -1735,13 +1798,21 @@ function renderTabla(lista) {
          : fs <= en2Str ? 'tr-ses-pronto'
          : fs <= en7Str ? 'tr-ses-semana' : '')
       : '';
+    // Celda de sesión: fecha coloreada por proximidad
+    const sesColorStyle = sesClass === 'tr-ses-hoy'   ? 'color:var(--gold);font-weight:700'
+                        : sesClass === 'tr-ses-pronto' ? 'color:var(--warn);font-weight:600'
+                        : sesClass === 'tr-ses-semana' ? 'color:#3B82F6;font-weight:600'
+                        : 'color:var(--ink-3)';
+    const sesCell = fs
+      ? `<td class="td-fecha" style="${sesColorStyle}">${fmxnFecha(fs)}</td>`
+      : `<td class="td-fecha" style="color:var(--ink-4)">—</td>`;
     return `<tr class="${[activo, sesClass].filter(Boolean).join(' ')}" ${rowClick}>
       ${checkCell}
       <td class="td-folio">${esc(c.Folio) || '—'}</td>
       <td>
         <div class="td-nombre">${esc(c.NombreCliente)}</div>
         <div class="td-sub">${esc(c.CorreoCliente)}</div>
-        ${(c.FechaSesion || c.PaqueteBase) ? `<div class="td-sub" style="color:var(--ink-2)">${[c.FechaSesion ? fmxnFecha(c.FechaSesion) : '', c.PaqueteBase || ''].filter(Boolean).join(' · ')}</div>` : ''}
+        ${c.PaqueteBase ? `<div class="td-sub" style="color:var(--ink-2)">${esc(c.PaqueteBase)}</div>` : ''}
       </td>
       <td>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -1750,11 +1821,11 @@ function renderTabla(lista) {
         </div>
         ${dias > 0 ? `<div class="td-sub" style="margin-top:3px">${dias} día${dias !== 1 ? 's' : ''} en este estatus</div>` : ''}
       </td>
+      ${sesCell}
       <td class="td-monto">${fmxn(c.PrecioTotal)}</td>
       <td class="td-saldo${(c.SaldoPendiente ?? 0) <= 0 ? ' pagado' : ''}">
         ${(c.SaldoPendiente ?? 0) > 0 ? fmxn(c.SaldoPendiente) : '<i class="ti ti-check" style="color:var(--success)"></i>'}
       </td>
-      <td class="td-fecha">${fmxnFecha(c.FechaCreacion)}</td>
     </tr>`;
   }).join('');
 }
@@ -1865,6 +1936,17 @@ function renderPanel(data) {
   document.getElementById('panel-folio').textContent  = c.Folio || 'Sin folio';
   document.getElementById('panel-nombre').textContent = c.NombreCliente;
   document.getElementById('panel-badge').innerHTML    = badgeEstatus(c.Estatus);
+  // Fecha de primera sesión en header
+  const primeraSesion = data.propiedades && data.propiedades[0] && data.propiedades[0].FechaSesion;
+  const panelSesionEl = document.getElementById('panel-sesion');
+  if (panelSesionEl) {
+    if (primeraSesion) {
+      panelSesionEl.innerHTML = '<i class="ti ti-calendar" style="font-size:11px"></i> ' + fmxnFecha(primeraSesion);
+      panelSesionEl.style.display = '';
+    } else {
+      panelSesionEl.style.display = 'none';
+    }
+  }
 
   // ── PANE GENERAL ──
   const addHtml = adicionales.length
@@ -1983,14 +2065,29 @@ function renderPanel(data) {
     : '<p style="font-size:12px;color:var(--ink-3);padding:6px 0">Sin abonos registrados.</p>';
 
   document.getElementById('pane-general').innerHTML = `
-    <div class="info-fila"><span class="etiq">Cliente</span><span class="val">${esc(c.NombreCliente)}</span></div>
-    <div class="info-fila"><span class="etiq">Correo</span><span class="val"><a href="mailto:${esc(c.CorreoCliente)}" style="color:var(--gold);text-decoration:none">${esc(c.CorreoCliente)}</a></span></div>
-    <div class="info-fila"><span class="etiq">Teléfono</span><span class="val">${esc(c.TelefonoCliente) || '—'}</span></div>
-    <div class="info-fila"><span class="etiq">Tipo</span><span class="val">${c.TipoContrato === 'estandar' ? 'Estándar' : 'Particular'}</span></div>
-    ${c.PaqueteBase ? `<div class="info-fila"><span class="etiq">Paquete</span><span class="val">${esc(c.PaqueteBase)}</span></div>` : ''}
-    <div class="info-fila"><span class="etiq">Adicionales</span><span class="val">${addHtml}</span></div>
-    <div class="sec-label">Propiedades</div>
-    ${propHtml}
+
+    <!-- ── Acordeón: Datos del cliente (cerrado) ── -->
+    <details class="panel-acord">
+      <summary>Datos del cliente</summary>
+      <div class="panel-acord-body">
+        <div class="info-fila"><span class="etiq">Nombre</span><span class="val">${esc(c.NombreCliente)}</span></div>
+        <div class="info-fila"><span class="etiq">Correo</span><span class="val"><a href="mailto:${esc(c.CorreoCliente)}" style="color:var(--gold);text-decoration:none">${esc(c.CorreoCliente)}</a></span></div>
+        <div class="info-fila"><span class="etiq">Teléfono</span><span class="val">${esc(c.TelefonoCliente) || '—'}</span></div>
+        <div class="info-fila"><span class="etiq">Tipo</span><span class="val">${c.TipoContrato === 'estandar' ? 'Estándar' : 'Particular'}</span></div>
+        ${c.PaqueteBase ? `<div class="info-fila"><span class="etiq">Paquete</span><span class="val">${esc(c.PaqueteBase)}</span></div>` : ''}
+        <div class="info-fila"><span class="etiq">Adicionales</span><span class="val">${addHtml}</span></div>
+      </div>
+    </details>
+
+    <!-- ── Acordeón: Propiedades (abierto) ── -->
+    <details class="panel-acord" open>
+      <summary>Propiedades</summary>
+      <div class="panel-acord-body">
+        ${propHtml}
+      </div>
+    </details>
+
+    <!-- ── Portal y acciones (siempre visible) ── -->
     <div class="link-portal-box">
       <div class="link-portal-label">Link del portal (cliente)</div>
       <div class="link-portal-url">${esc(urlPortal)}</div>
@@ -2009,8 +2106,7 @@ function renderPanel(data) {
         </button>
       </div>
     </div>
-    <div style="margin-top:12px">
-      <div class="link-portal-label" style="margin-bottom:6px">Herramientas de producción</div>
+    <div style="margin-top:10px;margin-bottom:4px">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
            href="${'https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token)}" target="_blank" rel="noopener">
@@ -2022,64 +2118,78 @@ function renderPanel(data) {
         </a>
       </div>
     </div>
-    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
-      <p class="sec-label" style="margin-bottom:6px">Pagos</p>
-      <div class="pago-resumen">
-        <div class="pago-fila"><span>Total del contrato</span><span>${fmxn(precioTotal)}</span></div>
-        <div class="pago-fila"><span>Total abonado</span><span style="color:var(--success)">${fmxn(totalAbonado)}</span></div>
-        <div class="pago-fila total"><span>Saldo pendiente</span><span style="color:${saldo > 0 ? 'var(--warn)' : 'var(--success)'}">${fmxn(saldo)}</span></div>
-      </div>
-      <div class="pago-barra-track"><div class="pago-barra-fill" style="width:${pct}%"></div></div>
 
-      <div class="sec-label">Historial de abonos</div>
-      <div id="historial-abonos">${abonosHtml}</div>
-
-      <div class="sec-label">Registrar abono</div>
-      <div class="fila-2">
-        <div class="campo campo-sm"><label>Monto</label><input type="number" id="abono-monto" placeholder="0"></div>
-        <div class="campo campo-sm">
-          <label>Método</label>
-          <select id="abono-metodo">
-            <option value="Transferencia">Transferencia</option>
-            <option value="Efectivo">Efectivo</option>
-            <option value="Clip">Clip</option>
-            <option value="OXXO">OXXO / 7-Eleven</option>
-          </select>
+    <!-- ── Acordeón: Pagos (abierto) ── -->
+    <details class="panel-acord" open>
+      <summary>Pagos</summary>
+      <div class="panel-acord-body">
+        <div class="pago-resumen">
+          <div class="pago-fila"><span>Total del contrato</span><span>${fmxn(precioTotal)}</span></div>
+          <div class="pago-fila"><span>Total abonado</span><span style="color:var(--success)">${fmxn(totalAbonado)}</span></div>
+          <div class="pago-fila total"><span>Saldo pendiente</span><span style="color:${saldo > 0 ? 'var(--warn)' : 'var(--success)'}">${fmxn(saldo)}</span></div>
         </div>
-      </div>
-      <div class="campo campo-sm"><label>Notas (opcional)</label><input type="text" id="abono-notas" maxlength="500" placeholder="Referencia, aclaración..."></div>
-      <button class="btn-primario gold" style="width:100%" id="btn-abono" onclick="registrarAbono()">
-        <i class="ti ti-check"></i> Registrar abono
-      </button>
-      <div class="form-msg" id="msg-abono"></div>
+        <div class="pago-barra-track"><div class="pago-barra-fill" style="width:${pct}%"></div></div>
 
-      <div class="sec-label" style="margin-top:22px">Cambiar estatus</div>
-      <div class="estatus-fila">
-        <select id="panel-estatus">
-          ${['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado'].map(s =>
-            `<option value="${s}" ${c.Estatus === s ? 'selected' : ''}>${s === 'En produccion' ? 'En producción' : esc(s)}</option>`
-          ).join('')}
-        </select>
-        <button class="btn-secundario btn-sm" onclick="cambiarEstatus()">Guardar</button>
+        <div class="sec-label">Historial de abonos</div>
+        <div id="historial-abonos">${abonosHtml}</div>
+
+        <div class="sec-label">Registrar abono</div>
+        <div class="fila-2">
+          <div class="campo campo-sm"><label>Monto</label><input type="number" id="abono-monto" placeholder="0"></div>
+          <div class="campo campo-sm">
+            <label>Método</label>
+            <select id="abono-metodo">
+              <option value="Transferencia">Transferencia</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Clip">Clip</option>
+              <option value="OXXO">OXXO / 7-Eleven</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo campo-sm"><label>Notas (opcional)</label><input type="text" id="abono-notas" maxlength="500" placeholder="Referencia, aclaración..."></div>
+        <button class="btn-primario gold" style="width:100%" id="btn-abono" onclick="registrarAbono()">
+          <i class="ti ti-check"></i> Registrar abono
+        </button>
+        <div class="form-msg" id="msg-abono"></div>
+
+        <div class="sec-label" style="margin-top:22px">Cambiar estatus</div>
+        <div class="estatus-fila">
+          <select id="panel-estatus">
+            ${['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado'].map(s =>
+              `<option value="${s}" ${c.Estatus === s ? 'selected' : ''}>${s === 'En produccion' ? 'En producción' : esc(s)}</option>`
+            ).join('')}
+          </select>
+          <button class="btn-secundario btn-sm" onclick="cambiarEstatus()">Guardar</button>
+        </div>
+        <div class="form-msg" id="msg-estatus"></div>
       </div>
-      <div class="form-msg" id="msg-estatus"></div>
-    </div>
+    </details>
+
     ${['Anticipo recibido','Firmado','En produccion'].includes(c.Estatus) ? `
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <p class="sec-label" style="margin-bottom:6px">Producción</p>
-      <button class="btn-primario gold" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" id="btn-sesion-completada" onclick="marcarSesionCompletada()">
-        <i class="ti ti-camera-check"></i> Sesión completada — iniciar edición
-      </button>
-      <div class="form-msg" id="msg-sesion-completada"></div>
-    </div>` : ''}
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <p class="sec-label" style="margin-bottom:6px">Notas internas</p>
-      <textarea id="notas-internas-txt" rows="3" maxlength="5000" placeholder="Notas visibles solo para ti..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1);box-sizing:border-box">${esc(c.NotasInternas || '')}</textarea>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="btn-primario gold btn-sm" onclick="guardarNotasInternas()">Guardar notas</button>
+    <!-- ── Sesión completada (visible solo si aplica) ── -->
+    <details class="panel-acord" open>
+      <summary>Marcar sesión</summary>
+      <div class="panel-acord-body">
+        <button class="btn-primario gold" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" id="btn-sesion-completada" onclick="marcarSesionCompletada()">
+          <i class="ti ti-camera-check"></i> Sesión completada — iniciar edición
+        </button>
+        <div class="form-msg" id="msg-sesion-completada"></div>
       </div>
-      <div class="form-msg" id="msg-notas-internas"></div>
-    </div>
+    </details>` : ''}
+
+    <!-- ── Acordeón: Notas internas (cerrado) ── -->
+    <details class="panel-acord">
+      <summary>Notas internas</summary>
+      <div class="panel-acord-body">
+        <textarea id="notas-internas-txt" rows="3" maxlength="5000" placeholder="Notas visibles solo para ti..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1);box-sizing:border-box">${esc(c.NotasInternas || '')}</textarea>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="btn-primario gold btn-sm" onclick="guardarNotasInternas()">Guardar notas</button>
+        </div>
+        <div class="form-msg" id="msg-notas-internas"></div>
+      </div>
+    </details>
+
+    <!-- ── Acordeón: Archivos del cliente (cerrado) ── -->
     ${(() => {
       const propsConCarpeta = data.propiedades.filter(p => p.CarpetaControlId);
       const tieneCarpeta    = propsConCarpeta.length > 0;
@@ -2088,32 +2198,38 @@ function renderPanel(data) {
           data.propiedades.map(p => `<option value="${p.NumPropiedad}"${p.CarpetaControlId ? '' : ' disabled'}>${esc('Propiedad ' + p.NumPropiedad + (p.Paquete ? ' — ' + p.Paquete : '') + (p.CarpetaControlId ? '' : ' (sin carpeta)'))}</option>`).join('') +
           '</select>'
         : '';
-      return `<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-        <p class="sec-label" style="margin-bottom:6px">Archivos del cliente</p>
-        <p style="font-size:12px;color:var(--ink-3);margin-bottom:10px;line-height:1.5">Sube documentos o imágenes que el cliente mande por WhatsApp. Se guardan en la carpeta del proyecto en Drive.</p>
-        ${tieneCarpeta ? `
-          ${selectorHtml}
-          <input type="file" id="admin-file-input" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:block;font-size:12px;margin-bottom:8px;width:100%;box-sizing:border-box">
-          <button class="btn-primario gold btn-sm" id="btn-subir-archivos" onclick="subirArchivosAdmin()" style="width:100%;justify-content:center">
-            <i class="ti ti-upload"></i> Subir a Drive
-          </button>
-        ` : `<p style="font-size:12px;color:var(--warn);padding:8px 10px;background:var(--warn-bg,#fef9e7);border-radius:6px;border:1px solid var(--warn-border,#f0c040)">La carpeta del proyecto se crea al confirmar la reservación.</p>`}
-        <div id="lista-archivos-admin" style="margin-top:10px"></div>
-        <div class="form-msg" id="msg-archivos-admin" style="margin-top:6px"></div>
-      </div>`;
+      return `<details class="panel-acord">
+        <summary>Archivos del cliente</summary>
+        <div class="panel-acord-body">
+          <p style="font-size:12px;color:var(--ink-3);margin-bottom:10px;line-height:1.5">Sube documentos o imágenes que el cliente mande por WhatsApp. Se guardan en la carpeta del proyecto en Drive.</p>
+          ${tieneCarpeta ? `
+            ${selectorHtml}
+            <input type="file" id="admin-file-input" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:block;font-size:12px;margin-bottom:8px;width:100%;box-sizing:border-box">
+            <button class="btn-primario gold btn-sm" id="btn-subir-archivos" onclick="subirArchivosAdmin()" style="width:100%;justify-content:center">
+              <i class="ti ti-upload"></i> Subir a Drive
+            </button>
+          ` : `<p style="font-size:12px;color:var(--warn);padding:8px 10px;background:var(--warn-bg,#fef9e7);border-radius:6px;border:1px solid var(--warn-border,#f0c040)">La carpeta del proyecto se crea al confirmar la reservación.</p>`}
+          <div id="lista-archivos-admin" style="margin-top:10px"></div>
+          <div class="form-msg" id="msg-archivos-admin" style="margin-top:6px"></div>
+        </div>
+      </details>`;
     })()}
-    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
-      <p class="sec-label" style="margin-bottom:10px">Zona de riesgo</p>
-      <div style="display:flex;gap:8px">
-        <button class="btn-secundario btn-sm" style="flex:1;color:var(--warn);border-color:var(--warn)" onclick="archivarContrato()">
-          <i class="ti ti-archive"></i> Archivar
-        </button>
-        <button class="btn-secundario btn-sm" style="flex:1;color:var(--error, #e74c3c);border-color:var(--error, #e74c3c)" onclick="eliminarContrato()">
-          <i class="ti ti-trash"></i> Eliminar
-        </button>
+
+    <!-- ── Acordeón: Zona de riesgo (cerrado) ── -->
+    <details class="panel-acord">
+      <summary style="color:var(--danger)">Zona de riesgo</summary>
+      <div class="panel-acord-body">
+        <div style="display:flex;gap:8px">
+          <button class="btn-secundario btn-sm" style="flex:1;color:var(--warn);border-color:var(--warn)" onclick="archivarContrato()">
+            <i class="ti ti-archive"></i> Archivar
+          </button>
+          <button class="btn-secundario btn-sm" style="flex:1;color:var(--error, #e74c3c);border-color:var(--error, #e74c3c)" onclick="eliminarContrato()">
+            <i class="ti ti-trash"></i> Eliminar
+          </button>
+        </div>
+        <div class="form-msg" id="msg-borrar"></div>
       </div>
-      <div class="form-msg" id="msg-borrar"></div>
-    </div>`;
+    </details>`;
 
   // ── PANE PRODUCCIÓN ──
   const prodFila = (hecho, etiqueta, fechaVal) => `
