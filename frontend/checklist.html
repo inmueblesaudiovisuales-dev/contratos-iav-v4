@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <title>Checklist de rodaje</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --onyx:   #1C1C1E;
+      --gold:   #C9A84C;
+      --gold-d: #a8863b;
+      --page:   #F5F5F5;
+      --card:   #FFFFFF;
+      --ink-1:  #1C1C1E;
+      --ink-2:  #6B6B6B;
+      --ink-3:  #A8A8A8;
+      --border: #E5E5E5;
+      --success:#2A9D5C;
+      --r:      12px;
+    }
+
+    html, body { height: 100%; background: var(--page); }
+    body {
+      font-family: 'Montserrat', system-ui, sans-serif;
+      color: var(--ink-1);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh; min-height: 100dvh;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      background: var(--onyx); color: #fff;
+      padding-top: max(14px, env(safe-area-inset-top));
+      padding-left: 16px; padding-right: 16px; padding-bottom: 0;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-row1 { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; }
+    .topbar-info { flex: 1; min-width: 0; }
+    .topbar-folio {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 2px;
+    }
+    .topbar-nombre {
+      font-size: 14px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sync-wrap { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .sync-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #4ade80; transition: background 0.3s;
+    }
+    .sync-dot.syncing { background: #fbbf24; animation: pulse 1s infinite; }
+    .sync-dot.error   { background: #f87171; }
+    .sync-label { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    /* nombre dentro del topbar */
+    .nombre-row {
+      display: flex; align-items: center; gap: 10px;
+      padding-bottom: 12px;
+    }
+    .nombre-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.45); white-space: nowrap; }
+    .nombre-input {
+      flex: 1;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 8px; color: #fff;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      padding: 7px 12px; outline: none;
+    }
+    .nombre-input::placeholder { color: rgba(255,255,255,0.3); }
+    .nombre-input:focus { border-color: var(--gold); }
+
+    /* ── COLUMNAS CONFIG ── */
+    .columnas-bar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .columnas-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); margin-right: 2px; }
+    .col-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 99px;
+      border: 1.5px solid var(--border);
+      background: var(--page);
+      font-family: inherit; font-size: 12px; font-weight: 700;
+      color: var(--ink-3); cursor: pointer; transition: all 0.18s;
+    }
+    .col-chip.activo {
+      border-color: var(--gold);
+      background: rgba(201,168,76,0.12);
+      color: var(--gold-d);
+    }
+    .col-chip .chip-ico { font-size: 14px; }
+
+    /* ── PROGRESS ── */
+    .progress-section {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px 12px;
+    }
+    .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 7px; }
+    .progress-track {
+      flex: 1; height: 6px;
+      background: var(--border); border-radius: 99px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 99px;
+      background: var(--gold); transition: width 0.35s ease;
+    }
+    .progress-fill.completo { background: var(--success); }
+    .progress-text { font-size: 12px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+    .progress-detalle { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+    .progress-detalle span { color: var(--ink-2); }
+
+    /* ── PENDIENTES ── */
+    .pendientes-section {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+    .pendientes-toggle {
+      width: 100%; background: none; border: none;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      font-family: inherit; font-size: 12px; font-weight: 700;
+      color: var(--ink-2); cursor: pointer; text-align: left;
+    }
+    .pendientes-toggle .badge {
+      background: var(--gold); color: #fff;
+      border-radius: 99px; padding: 1px 7px;
+      font-size: 10px; font-weight: 700;
+    }
+    .pendientes-toggle .chevron { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+    .pendientes-toggle.abierto .chevron { transform: rotate(180deg); }
+    .pendientes-body { padding: 0 16px 12px; display: none; }
+    .pendiente-item {
+      display: flex; align-items: baseline; gap: 8px;
+      padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .pendiente-item:last-child { border-bottom: none; }
+    .pendiente-nombre { font-weight: 700; min-width: 0; flex: 1; }
+    .pendiente-falta { color: var(--ink-3); font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .pendientes-vacio { font-size: 13px; color: var(--success); font-weight: 700; padding: 4px 0; }
+
+    /* ── LISTA ── */
+    .lista { padding: 12px 16px 120px; max-width: 620px; margin: 0 auto; }
+
+    /* ── CUARTO CARD ── */
+    .cuarto-card {
+      background: var(--card); border-radius: var(--r);
+      margin-bottom: 10px; overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    }
+    .cuarto-header {
+      display: flex; align-items: center;
+      padding: 12px 14px 10px; gap: 10px;
+    }
+    .cuarto-nombre {
+      flex: 1; font-size: 15px; font-weight: 700;
+      border: none; background: transparent;
+      font-family: inherit; color: var(--ink-1);
+      padding: 0; outline: none; min-width: 0;
+    }
+    .cuarto-nombre::placeholder { color: var(--ink-3); }
+    .btn-borrar-cuarto {
+      background: none; border: none; color: var(--ink-3); cursor: pointer;
+      width: 28px; height: 28px; display: flex; align-items: center;
+      justify-content: center; border-radius: 6px; flex-shrink: 0;
+      font-size: 16px; transition: color 0.15s, background 0.15s;
+    }
+    .btn-borrar-cuarto:hover { color: #dc2626; background: rgba(220,38,38,0.08); }
+
+    /* ── CHECKS ROW ── */
+    .checks-row { display: grid; gap: 6px; padding: 0 14px 12px; }
+    .checks-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .checks-row.cols-2 { grid-template-columns: 1fr 1fr; }
+    .checks-row.cols-1 { grid-template-columns: 1fr; }
+    .check-btn {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 3px;
+      padding: 10px 6px; border-radius: 10px;
+      border: 1.5px solid var(--border); background: var(--page);
+      cursor: pointer; transition: border-color 0.18s, background 0.18s;
+      font-family: inherit; min-height: 64px;
+    }
+    .check-btn:active { transform: scale(0.96); }
+    .check-btn.marcado { border-color: var(--gold); background: rgba(201,168,76,0.1); }
+    .check-icon  { font-size: 20px; line-height: 1; }
+    .check-label { font-size: 11px; font-weight: 700; color: var(--ink-2); letter-spacing: 0.03em; }
+    .check-btn.marcado .check-label { color: var(--gold-d); }
+    .check-quien {
+      font-size: 9px; font-weight: 700; color: var(--gold-d);
+      letter-spacing: 0.02em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 90px; text-align: center;
+    }
+
+    /* ── COMENTARIOS ── */
+    .comentarios-wrap { border-top: 1px solid var(--border); }
+    .comentarios-toggle {
+      width: 100%; background: none; border: none;
+      display: flex; align-items: center; gap: 7px; padding: 9px 14px;
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      color: var(--ink-2); cursor: pointer; text-align: left;
+    }
+    .comentarios-toggle .ico { font-size: 14px; }
+    .comentarios-toggle .badge {
+      background: var(--gold); color: #fff;
+      border-radius: 99px; padding: 1px 6px; font-size: 9px; font-weight: 700;
+    }
+    .comentarios-toggle .chevron { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+    .comentarios-toggle.abierto .chevron { transform: rotate(180deg); }
+    .comentarios-body { padding: 0 14px 12px; display: none; }
+    .comentario-item {
+      background: var(--page); border-radius: 8px;
+      padding: 9px 12px; margin-bottom: 7px;
+    }
+    .comentario-texto { font-size: 13px; line-height: 1.5; word-break: break-word; }
+    .comentario-meta {
+      display: flex; justify-content: space-between; align-items: center; margin-top: 4px;
+    }
+    .comentario-autor { font-size: 10px; font-weight: 700; color: var(--gold-d); }
+    .comentario-hora  { font-size: 10px; color: var(--ink-3); }
+    .btn-borrar-comentario {
+      background: none; border: none; cursor: pointer;
+      color: var(--ink-3); font-size: 11px; padding: 0;
+    }
+    .btn-borrar-comentario:hover { color: #dc2626; }
+    .comentarios-vacio { font-size: 12px; color: var(--ink-3); padding: 4px 0 8px; }
+    .comentario-form { display: flex; gap: 7px; margin-top: 4px; }
+    .comentario-input {
+      flex: 1; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; font-family: inherit; font-size: 13px;
+      outline: none; resize: none; background: var(--card);
+    }
+    .comentario-input:focus { border-color: var(--gold); }
+    .btn-enviar-comentario {
+      background: var(--onyx); color: #fff; border: none; border-radius: 8px;
+      padding: 0 14px; cursor: pointer;
+      font-family: inherit; font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .btn-enviar-comentario:active { background: #333; }
+
+    /* ── AGREGAR CUARTO ── */
+    .agregar-wrap { display: flex; gap: 8px; margin-top: 4px; }
+    .agregar-input {
+      flex: 1; border: 1.5px dashed var(--border); border-radius: var(--r);
+      background: var(--card); padding: 13px 14px;
+      font-family: inherit; font-size: 14px; color: var(--ink-1); outline: none;
+    }
+    .agregar-input::placeholder { color: var(--ink-3); }
+    .agregar-input:focus { border-color: var(--gold); border-style: solid; }
+    .btn-agregar {
+      background: var(--onyx); color: #fff; border: none; border-radius: var(--r);
+      padding: 0 18px; cursor: pointer;
+      font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap;
+    }
+    .btn-agregar:active { background: #333; }
+
+    .btn-restablecer {
+      background: none; color: var(--ink-3); border: 1.5px solid var(--border);
+      border-radius: var(--r); padding: 0 18px; cursor: pointer;
+      font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-restablecer:hover { border-color: #dc2626; color: #dc2626; }
+
+    /* ── ESTADOS ── */
+    .estado-pantalla {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 60vh; padding: 32px;
+      text-align: center; gap: 14px;
+    }
+    .estado-pantalla .ico { font-size: 36px; }
+    .estado-pantalla h2  { font-size: 18px; font-weight: 700; }
+    .estado-pantalla p   { font-size: 14px; color: var(--ink-2); max-width: 300px; line-height: 1.6; }
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--gold); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--onyx); color: #fff;
+      padding: 11px 18px; border-radius: 10px;
+      font-size: 13px; font-weight: 600;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      opacity: 0; transition: opacity 0.2s;
+      pointer-events: none; z-index: 200; white-space: nowrap;
+    }
+    .toast.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div id="topbar" style="display:none" class="topbar">
+  <div class="topbar-row1">
+    <div class="topbar-info">
+      <div class="topbar-folio" id="top-folio">—</div>
+      <div class="topbar-nombre" id="top-nombre">—</div>
+    </div>
+    <div class="sync-wrap">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span class="sync-label" id="sync-label"></span>
+    </div>
+  </div>
+  <div class="nombre-row">
+    <span class="nombre-label">Tu nombre:</span>
+    <input class="nombre-input" id="mi-nombre" type="text" placeholder="Ej. Bruno" maxlength="30" autocomplete="off">
+  </div>
+</div>
+
+<div id="columnas-bar" class="columnas-bar" style="display:none">
+  <span class="columnas-label">Columnas</span>
+  <button class="col-chip activo" id="chip-foto"  onclick="toggleColumna('foto')">
+    <span class="chip-ico">&#128247;</span> Foto
+  </button>
+  <button class="col-chip activo" id="chip-video" onclick="toggleColumna('video')">
+    <span class="chip-ico">&#127916;</span> Video
+  </button>
+  <button class="col-chip activo" id="chip-t360"  onclick="toggleColumna('t360')">
+    <span class="chip-ico">&#128260;</span> 360°
+  </button>
+</div>
+
+<div id="progress-section" class="progress-section" style="display:none">
+  <div class="progress-row">
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <span class="progress-text" id="progress-text">0 / 0</span>
+  </div>
+  <div class="progress-detalle" id="progress-detalle"></div>
+</div>
+
+<div id="pendientes-section" class="pendientes-section" style="display:none">
+  <button class="pendientes-toggle" id="pendientes-toggle" onclick="togglePendientes()">
+    <span>Pendientes</span>
+    <span class="badge" id="pendientes-badge">0</span>
+    <span class="chevron">&#8964;</span>
+  </button>
+  <div class="pendientes-body" id="pendientes-body"></div>
+</div>
+
+<div id="main">
+  <div class="estado-pantalla"><div class="spinner"></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API   = 'https://contratos.inmueblesaudiovisuales.com/api';
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+
+// ── ESTADO GLOBAL ──
+let cuartos   = [];
+let columnas  = { foto: true, video: true, t360: true };
+
+let pollingId   = null;
+let guardandoId = null;
+let pendiente   = false;
+let guardando   = false;
+
+let _debounceMax = null;
+let _reintentos  = 0;
+let _retryId     = null;
+let _domStale    = false;
+
+const COLS_DEF = [
+  { campo: 'foto',  label: 'Foto',  ico: '&#128247;' },
+  { campo: 'video', label: 'Video', ico: '&#127916;' },
+  { campo: 't360',  label: '360°',  ico: '&#128260;' },
+];
+
+// ── HELPERS ──
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function miNombre() {
+  return document.getElementById('mi-nombre').value.trim() || 'Anónimo';
+}
+
+function colsActivas() {
+  return COLS_DEF.filter(c => columnas[c.campo]);
+}
+
+// ── NOMBRE PERSISTIDO ──
+function iniciarNombreInput() {
+  const inp = document.getElementById('mi-nombre');
+  inp.value = localStorage.getItem('checklist_nombre') || '';
+  inp.addEventListener('input', () => localStorage.setItem('checklist_nombre', inp.value.trim()));
+}
+
+// ── SYNC VISUAL ──
+function setSync(estado) {
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  dot.className = 'sync-dot' + (estado === 'syncing' ? ' syncing' : estado === 'error' ? ' error' : '');
+  label.textContent = estado === 'syncing' ? 'Guardando...' : estado === 'error' ? 'Error' : '';
+}
+
+// ── TOAST ──
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('visible');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('visible'), 2500);
+}
+
+// ── API ──
+async function apiGet(p) {
+  const action = p.action;
+  const rest = Object.assign({}, p, { token: TOKEN });
+  delete rest.action;
+  const qs = new URLSearchParams(rest).toString();
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const res = await fetch(API + '/' + action + '?' + qs, { signal: ctrl.signal });
+    clearTimeout(tid);
+    return res.json();
+  } catch (e) {
+    clearTimeout(tid);
+    throw e;
+  }
+}
+
+async function apiPost(body) {
+  const action = body.action;
+  const rest = Object.assign({}, body, { token: TOKEN });
+  delete rest.action;
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const res = await fetch(API + '/' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rest),
+      signal: ctrl.signal,
+    });
+    clearTimeout(tid);
+    return res.json();
+  } catch (e) {
+    clearTimeout(tid);
+    throw e;
+  }
+}
+
+// ── GUARDAR ──
+function guardarDebounce() {
+  _reintentos = 0;
+  pendiente = true;
+  clearTimeout(guardandoId);
+  clearTimeout(_retryId);
+  guardandoId = setTimeout(guardarAhora, 500);
+  if (!_debounceMax) _debounceMax = setTimeout(() => { _debounceMax = null; guardarAhora(); }, 4000);
+}
+
+async function guardarAhora() {
+  clearTimeout(_debounceMax); _debounceMax = null;
+  if (!pendiente || guardando) return;
+  pendiente = false;
+  guardando = true;
+  setSync('syncing');
+  try {
+    const data = await apiPost({ action: 'guardarChecklist', cuartos, columnas });
+    guardando = false;
+    _reintentos = 0;
+    if (data.error) { setSync('error'); toast('Error al guardar: ' + data.error); return; }
+    setSync('ok');
+  } catch (_) {
+    guardando = false;
+    setSync('error');
+    if (_reintentos < 4) {
+      _reintentos++;
+      pendiente = true;
+      toast('Sin conexión. Reintentando (' + _reintentos + '/4)...');
+      _retryId = setTimeout(guardarAhora, 8000);
+    } else {
+      toast('Error persistente. Revisa tu conexión.');
+    }
+  }
+}
+
+// ── CARGAR ──
+async function cargar() {
+  try {
+    const data = await apiGet({ action: 'obtenerChecklist' });
+    if (data.error) { mostrarError(data.error); return; }
+    cuartos  = data.cuartos  || [];
+    columnas = data.columnas || { foto: true, video: true, t360: true };
+
+    document.getElementById('top-folio').textContent  = data.folio        || '—';
+    document.getElementById('top-nombre').textContent = data.nombreCliente || '—';
+    document.getElementById('topbar').style.display           = '';
+    document.getElementById('columnas-bar').style.display     = '';
+    document.getElementById('progress-section').style.display = '';
+    document.getElementById('pendientes-section').style.display = '';
+
+    buildLista();
+    actualizarColChips();
+    actualizarProgreso();
+  } catch (_) {
+    mostrarError('No se pudo cargar el checklist.');
+  }
+}
+
+// ── POLLING ──
+async function poll() {
+  if (pendiente || guardando) return;
+
+  if (_domStale && !document.activeElement?.classList.contains('cuarto-nombre')) {
+    buildLista();
+    _domStale = false;
+    actualizarProgreso();
+  }
+
+  try {
+    const data = await apiGet({ action: 'obtenerChecklist' });
+    if (data.error || !data.cuartos) return;
+    if (guardando) return;
+
+    const nuevasColumnas = data.columnas || { foto: true, video: true, t360: true };
+    const colsChanged = JSON.stringify(nuevasColumnas) !== JSON.stringify(columnas);
+    columnas = nuevasColumnas;
+
+    // Detectar cambios estructurales (cuartos añadidos o eliminados)
+    if (data.cuartos.length !== cuartos.length || colsChanged) {
+      const huboDeleciones = data.cuartos.length < cuartos.length;
+      cuartos = data.cuartos;
+      actualizarColChips();
+      actualizarProgreso();
+      const focused = document.activeElement?.classList.contains('cuarto-nombre');
+      if (!focused || huboDeleciones) {
+        buildLista();
+        _domStale = false;
+      } else {
+        _domStale = true;
+      }
+      return;
+    }
+
+    // Actualizar solo botones que cambiaron — sin tocar el DOM del resto
+    let huboNombres = false;
+    data.cuartos.forEach((c, idx) => {
+      if (c.nombre !== cuartos[idx].nombre) huboNombres = true;
+      COLS_DEF.forEach(({ campo }) => {
+        if (c[campo] !== cuartos[idx][campo]) {
+          cuartos[idx][campo] = c[campo];
+          actualizarCheckBtn(idx, campo);
+        }
+      });
+      cuartos[idx].comentarios = c.comentarios;
+    });
+
+    if (huboNombres) {
+      const focused = document.activeElement?.classList.contains('cuarto-nombre');
+      if (!pendiente && !guardando && !focused) {
+        data.cuartos.forEach((c, i) => {
+          if (cuartos[i]) cuartos[i].nombre = c.nombre;
+          const inp = document.querySelector('#cuarto-' + i + ' .cuarto-nombre');
+          if (inp && inp !== document.activeElement) inp.value = c.nombre;
+        });
+      }
+    }
+    actualizarProgreso();
+  } catch (_) {}
+}
+
+function iniciarPolling() {
+  if (pollingId) clearInterval(pollingId);
+  pollingId = setInterval(poll, 4000);
+}
+
+// ── PROGRESO ──
+function actualizarProgreso() {
+  const activas = colsActivas();
+  const total   = cuartos.length;
+
+  // Por cuarto: completo si todas las columnas activas están marcadas
+  const completos = cuartos.filter(c => activas.every(col => c[col.campo])).length;
+  const pct = total > 0 ? Math.round(completos / total * 100) : 0;
+
+  const fill = document.getElementById('progress-fill');
+  fill.style.width = pct + '%';
+  fill.className = 'progress-fill' + (pct === 100 ? ' completo' : '');
+  document.getElementById('progress-text').textContent = completos + ' / ' + total + ' cuartos';
+
+  // Desglose por columna activa
+  const detalle = activas.map(col => {
+    const hechos = cuartos.filter(c => c[col.campo]).length;
+    return `<span>${col.label} ${hechos}/${total}</span>`;
+  }).join(' &nbsp;·&nbsp; ');
+  document.getElementById('progress-detalle').innerHTML = detalle;
+
+  // Pendientes
+  const pendientesItems = cuartos.map((c, idx) => {
+    const faltantes = activas.filter(col => !c[col.campo]).map(col => col.label);
+    return faltantes.length ? { idx, nombre: c.nombre, faltantes } : null;
+  }).filter(Boolean);
+
+  const badge = document.getElementById('pendientes-badge');
+  badge.textContent = pendientesItems.length;
+
+  const body = document.getElementById('pendientes-body');
+  if (pendientesItems.length === 0) {
+    body.innerHTML = '<p class="pendientes-vacio">Todo listo.</p>';
+  } else {
+    body.innerHTML = pendientesItems.map(p =>
+      `<div class="pendiente-item">
+        <span class="pendiente-nombre">${esc(p.nombre)}</span>
+        <span class="pendiente-falta">${p.faltantes.join(', ')}</span>
+      </div>`
+    ).join('');
+  }
+}
+
+// ── COLUMNAS ──
+function actualizarColChips() {
+  COLS_DEF.forEach(({ campo }) => {
+    const chip = document.getElementById('chip-' + campo);
+    if (chip) chip.classList.toggle('activo', !!columnas[campo]);
+  });
+}
+
+function toggleColumna(campo) {
+  const estaActivo = columnas[campo];
+
+  if (estaActivo) {
+    // Contar marcas existentes en esa columna
+    const marcas = cuartos.filter(c => c[campo]).length;
+    if (marcas > 0) {
+      const ok = confirm(
+        'La columna "' + COLS_DEF.find(c => c.campo === campo).label +
+        '" tiene ' + marcas + ' cuarto' + (marcas > 1 ? 's' : '') + ' marcado' + (marcas > 1 ? 's' : '') + '.\n\n' +
+        'Las marcas se conservan pero la columna quedará oculta. ¿Desactivarla?'
+      );
+      if (!ok) return;
+    }
+  }
+
+  columnas[campo] = !estaActivo;
+  actualizarColChips();
+
+  // Actualizar la grid de checks en cada tarjeta
+  document.querySelectorAll('.checks-row').forEach((row, idx) => {
+    actualizarGridCols(row);
+    COLS_DEF.forEach(({ campo: c }) => {
+      const btn = row.querySelector('[data-campo="' + c + '"]');
+      if (btn) btn.style.display = columnas[c] ? '' : 'none';
+    });
+  });
+
+  actualizarProgreso();
+  guardarDebounce();
+}
+
+// ── BUILD LISTA (render completo — solo en carga inicial y cambios estructurales) ──
+function buildLista() {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+
+  const lista = document.createElement('div');
+  lista.className = 'lista';
+
+  cuartos.forEach((c, idx) => lista.appendChild(crearCardCuarto(c, idx)));
+
+  const agrWrap = document.createElement('div');
+  agrWrap.className = 'agregar-wrap';
+  agrWrap.innerHTML = `
+    <input class="agregar-input" id="nuevo-cuarto" type="text" placeholder="Nombre del cuarto o espacio..." maxlength="60">
+    <button class="btn-agregar" onclick="agregarCuarto()">Agregar</button>
+    <button class="btn-restablecer" onclick="restablecerCuartos()">Restablecer</button>
+  `;
+  agrWrap.querySelector('#nuevo-cuarto').addEventListener('keydown', e => {
+    if (e.key === 'Enter') agregarCuarto();
+  });
+
+  lista.appendChild(agrWrap);
+  main.appendChild(lista);
+}
+
+function crearCardCuarto(c, idx) {
+  const card = document.createElement('div');
+  card.className = 'cuarto-card';
+  card.id = 'cuarto-' + idx;
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'cuarto-header';
+
+  const inp = document.createElement('input');
+  inp.className = 'cuarto-nombre';
+  inp.type = 'text'; inp.value = c.nombre;
+  inp.placeholder = 'Nombre del espacio';
+  inp.addEventListener('input', e => {
+    cuartos[idx].nombre = e.target.value.trim();
+    guardarDebounce();
+  });
+
+  const btnDel = document.createElement('button');
+  btnDel.className = 'btn-borrar-cuarto';
+  btnDel.title = 'Eliminar espacio';
+  btnDel.innerHTML = '&#10005;';
+  btnDel.addEventListener('click', () => borrarCuarto(idx));
+
+  header.appendChild(inp);
+  header.appendChild(btnDel);
+  card.appendChild(header);
+
+  // Checks
+  const checksRow = document.createElement('div');
+  checksRow.className = 'checks-row';
+  checksRow.setAttribute('data-idx', idx);
+  actualizarGridCols(checksRow);
+
+  COLS_DEF.forEach(({ campo, label, ico }) => {
+    const btn = crearCheckBtn(idx, campo, label, ico, c[campo]);
+    if (!columnas[campo]) btn.style.display = 'none';
+    checksRow.appendChild(btn);
+  });
+
+  card.appendChild(checksRow);
+
+  // Comentarios
+  card.appendChild(crearComentariosSection(c, idx));
+
+  return card;
+}
+
+function crearCheckBtn(idx, campo, label, ico, valor) {
+  const btn = document.createElement('button');
+  btn.className = 'check-btn' + (valor ? ' marcado' : '');
+  btn.setAttribute('data-campo', campo);
+  btn.innerHTML = buildCheckBtnInner(ico, label, valor);
+  btn.addEventListener('click', () => toggleCheck(idx, campo));
+  return btn;
+}
+
+function buildCheckBtnInner(ico, label, valor) {
+  return `<span class="check-icon">${ico}</span>
+    <span class="check-label">${label}</span>
+    ${valor ? `<span class="check-quien">${esc(valor)}</span>` : ''}`;
+}
+
+// Actualizar un solo botón sin tocar el resto del DOM
+function actualizarCheckBtn(idx, campo) {
+  const row  = document.querySelector('#cuarto-' + idx + ' .checks-row');
+  if (!row) return;
+  const btn  = row.querySelector('[data-campo="' + campo + '"]');
+  if (!btn) return;
+  const col  = COLS_DEF.find(c => c.campo === campo);
+  const valor = cuartos[idx][campo];
+  btn.className = 'check-btn' + (valor ? ' marcado' : '');
+  btn.innerHTML = buildCheckBtnInner(col.ico, col.label, valor);
+  if (!columnas[campo]) btn.style.display = 'none';
+}
+
+function actualizarGridCols(row) {
+  const n = Object.values(columnas).filter(Boolean).length;
+  row.className = 'checks-row cols-' + Math.max(1, n);
+}
+
+// ── COMENTARIOS ──
+function crearComentariosSection(c, idx) {
+  const wrap = document.createElement('div');
+  wrap.className = 'comentarios-wrap';
+
+  const num = (c.comentarios || []).length;
+  const togBtn = document.createElement('button');
+  togBtn.className = 'comentarios-toggle';
+  togBtn.innerHTML = `
+    <span class="ico">&#128172;</span>
+    <span>${num > 0 ? 'Comentarios' : 'Agregar comentario'}</span>
+    ${num > 0 ? `<span class="badge">${num}</span>` : ''}
+    <span class="chevron">&#8964;</span>
+  `;
+
+  const body = document.createElement('div');
+  body.className = 'comentarios-body';
+
+  togBtn.addEventListener('click', () => {
+    const abierto = body.style.display !== 'none';
+    body.style.display = abierto ? 'none' : 'block';
+    togBtn.classList.toggle('abierto', !abierto);
+  });
+
+  const comentariosHtml = (c.comentarios || []).map((cm, ci) => `
+    <div class="comentario-item">
+      <div class="comentario-texto">${esc(cm.texto)}</div>
+      <div class="comentario-meta">
+        <span>
+          <span class="comentario-autor">${esc(cm.autor)}</span>
+          <span class="comentario-hora"> · ${esc(cm.hora || '')}</span>
+        </span>
+        <button class="btn-borrar-comentario" onclick="borrarComentario(${idx},${ci})">Borrar</button>
+      </div>
+    </div>
+  `).join('');
+
+  body.innerHTML = comentariosHtml
+    + (num === 0 ? '<p class="comentarios-vacio">Sin comentarios aún.</p>' : '')
+    + `<div class="comentario-form">
+         <textarea class="comentario-input" rows="1" placeholder="Escribe un comentario..." maxlength="300"></textarea>
+         <button class="btn-enviar-comentario">Enviar</button>
+       </div>`;
+
+  const textarea = body.querySelector('.comentario-input');
+  body.querySelector('.btn-enviar-comentario').addEventListener('click', () => enviarComentario(idx, textarea));
+  textarea.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarComentario(idx, textarea); }
+  });
+
+  wrap.appendChild(togBtn);
+  wrap.appendChild(body);
+  return wrap;
+}
+
+// ── PENDIENTES TOGGLE ──
+function togglePendientes() {
+  const body   = document.getElementById('pendientes-body');
+  const toggle = document.getElementById('pendientes-toggle');
+  const abierto = body.style.display !== 'none';
+  body.style.display = abierto ? 'none' : 'block';
+  toggle.classList.toggle('abierto', !abierto);
+}
+
+// ── ACCIONES ──
+function toggleCheck(idx, campo) {
+  cuartos[idx][campo] = cuartos[idx][campo] ? null : miNombre();
+  actualizarCheckBtn(idx, campo);
+  actualizarProgreso();
+  guardarDebounce();
+}
+
+function borrarCuarto(idx) {
+  if (!confirm('¿Eliminar "' + cuartos[idx].nombre + '"?')) return;
+  cuartos.splice(idx, 1);
+  guardarDebounce();
+  buildLista();
+  actualizarProgreso();
+}
+
+function agregarCuarto() {
+  const inp = document.getElementById('nuevo-cuarto');
+  const nombre = (inp.value || '').trim();
+  if (!nombre) { inp.focus(); return; }
+  cuartos.push({ id: 'c-' + Date.now(), nombre, foto: null, video: null, t360: null, comentarios: [] });
+  inp.value = '';
+  guardarDebounce();
+  buildLista();
+  actualizarProgreso();
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.cuarto-card');
+    if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+}
+
+const CUARTOS_DEFECTO = [
+  'Sala', 'Comedor', 'Cocina', 'Habitación principal', 'Baño y closet principal',
+  'Habitación 2', 'Habitación 3', 'Baño de visita', 'Cochera', 'Jardín/Exterior', 'Área de lavado'
+];
+
+function restablecerCuartos() {
+  if (!confirm(
+    '¿Reemplazar TODOS los espacios actuales con los 11 predefinidos?\n\n' +
+    'Los nombres, checks y comentarios actuales se perderán. Esta acción no se puede deshacer.'
+  )) return;
+  const ts = Date.now();
+  cuartos = CUARTOS_DEFECTO.map((nombre, i) => ({
+    id: 'c-def-' + ts + '-' + i,
+    nombre,
+    foto: null, video: null, t360: null, comentarios: []
+  }));
+  buildLista();
+  actualizarProgreso();
+  guardarDebounce();
+}
+
+function rebuildComentarios(idx) {
+  const card = document.getElementById('cuarto-' + idx);
+  if (!card) return;
+  const oldWrap = card.querySelector('.comentarios-wrap');
+  if (!oldWrap) return;
+  const oldBody = oldWrap.querySelector('.comentarios-body');
+  const estaAbierto = oldBody && oldBody.style.display === 'block';
+  const nuevaSeccion = crearComentariosSection(cuartos[idx], idx);
+  oldWrap.replaceWith(nuevaSeccion);
+  if (estaAbierto) {
+    nuevaSeccion.querySelector('.comentarios-body').style.display = 'block';
+    nuevaSeccion.querySelector('.comentarios-toggle').classList.add('abierto');
+  }
+}
+
+function enviarComentario(idx, textarea) {
+  const texto = (textarea.value || '').trim();
+  if (!texto) { textarea.focus(); return; }
+  if (!cuartos[idx].comentarios) cuartos[idx].comentarios = [];
+  const ahora = new Date();
+  const hora  = ahora.getHours().toString().padStart(2,'0') + ':' + ahora.getMinutes().toString().padStart(2,'0');
+  cuartos[idx].comentarios.push({ texto, autor: miNombre(), hora });
+  textarea.value = '';
+  guardarDebounce();
+  rebuildComentarios(idx);
+  actualizarProgreso();
+  setTimeout(() => {
+    const card = document.getElementById('cuarto-' + idx);
+    if (!card) return;
+    const toggle = card.querySelector('.comentarios-toggle');
+    const body   = card.querySelector('.comentarios-body');
+    if (toggle && body && body.style.display === 'none') {
+      body.style.display = 'block';
+      toggle.classList.add('abierto');
+    }
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+function borrarComentario(idxCuarto, idxComentario) {
+  if (!confirm('¿Borrar este comentario?')) return;
+  cuartos[idxCuarto].comentarios.splice(idxComentario, 1);
+  guardarDebounce();
+  rebuildComentarios(idxCuarto);
+  actualizarProgreso();
+}
+
+// ── ESTADOS ──
+function mostrarCargando() {
+  document.getElementById('main').innerHTML =
+    '<div class="estado-pantalla"><div class="spinner"></div></div>';
+}
+
+function mostrarError(msg) {
+  document.getElementById('main').innerHTML = `
+    <div class="estado-pantalla">
+      <div class="ico">&#9888;</div>
+      <h2>Algo salió mal</h2>
+      <p>${esc(msg)}</p>
+    </div>`;
+}
+
+// ── INIT ──
+if (!TOKEN) {
+  mostrarError('Este enlace no tiene un token de contrato. Usa el botón "Checklist de rodaje" desde el panel de administración.');
+} else {
+  iniciarNombreInput();
+  cargar().then(() => iniciarPolling());
+}
+</script>
+</body>
+</html>

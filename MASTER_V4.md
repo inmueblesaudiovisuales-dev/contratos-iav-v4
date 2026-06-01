@@ -1,0 +1,576 @@
+# IAV Contratos v4.0 — Documento Master
+
+> Última actualización: 2026-06-01 (Ronda 15 — Rediseño tab Contratos + Radar de Sesiones)  
+> Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
+
+---
+
+## Qué es v4.0
+
+Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cloudflare. El cambio central es velocidad: v3 tardaba 2-4 segundos por operación (Apps Script frío). v4 responde en < 200ms porque todas las operaciones de datos van a D1 (SQLite en edge). Google sigue siendo el backend para carpetas de Drive, calendario, correos y PDFs — pero se llama de forma asíncrona, el usuario no espera.
+
+---
+
+## URLs de producción
+
+| Recurso | URL |
+|--------|-----|
+| Admin | `https://contratos.inmueblesaudiovisuales.com/admin.html` |
+| Portal del cliente | `https://contratos.inmueblesaudiovisuales.com/portal.html?token=<token>` |
+| Checklist de rodaje | `https://contratos.inmueblesaudiovisuales.com/checklist.html?token=<token>` |
+| API base | `https://contratos.inmueblesaudiovisuales.com/api/<accion>` |
+
+---
+
+## Credenciales y referencias
+
+| Ítem | Valor |
+|------|-------|
+| Clave admin | `framedock` |
+| Cloudflare account | `inmueblesaudiovisuales@gmail.com` |
+| Worker name | `contratos-iav-v4` |
+| D1 database | `contratos-iav-v4` |
+| D1 database_id | `84ae26a8-5bbc-4cdc-ad39-ead4c6bc7500` |
+| Apps Script URL | `https://script.google.com/macros/s/AKfycbwv6J6Mh-y31LYGdLBasL0bFDOloosEaiaLJDXH-TIF2-A_VpFUbh14I9zHt43LEfY/exec` |
+| Sheets backup | `https://docs.google.com/spreadsheets/d/1YLscbVQJEm_SF77lfiZXyDHc0_gy543P5yitPX_KpnY` |
+
+---
+
+## Estructura de archivos
+
+```
+06. VERSION 4.0/
+├── ARRANQUE.md              — guía de despliegue inicial (ya ejecutada)
+├── MASTER_V4.md             — este archivo
+├── PROMPT_DEEPSEEK_BUGS.md  — historial de bugs
+├── adapter/
+│   └── AdapterScript4_v1.js — Apps Script desplegado en script.google.com
+├── frontend/
+│   ├── admin.html           — panel de administración (~3557 líneas)
+│   ├── portal.html          — portal del cliente (firma, pagos, reseña) (~2231 líneas)
+│   └── checklist.html       — checklist de rodaje
+└── worker/
+    ├── wrangler.toml        — configuración del Worker
+    ├── schema.sql           — estructura de D1 (referencia, ya aplicado)
+    ├── seed-paquetes.sql    — 10 paquetes iniciales (ya aplicado)
+    ├── package.json
+    └── src/
+        ├── index.js         — entry point, routing
+        ├── auth.js          — requireAdmin(), ok(), err()
+        ├── db.js            — helpers D1: query(), queryOne(), run(), batch()
+        ├── tokens.js        — crearTokenPortal(), crearTokenConfigurar(), refrescarExpiry(), marcarUsado()
+        ├── folios.js        — generarFolio() → "IAV-YYMM.DD"
+        ├── google.js        — callAdapter() async, callAdapterSync()
+        ├── cron.js          — syncToSheets() para backup horario
+        └── routes/
+            ├── contratos.js — ~25 endpoints del admin
+            ├── portal.js    — obtenerPortal, firmaCliente, guardarResena, guardarConfiguracion
+            ├── abonos.js    — registrarAbono, listarAbonos
+            ├── paquetes.js  — CRUD catálogo de paquetes
+            ├── stats.js     — métricas por periodo
+            ├── checklist.js — obtenerChecklist, guardarChecklist
+            └── archivos.js  — subirArchivo, subirArchivoAdmin
+```
+
+---
+
+## Cómo desplegar cambios
+
+**El despliegue del Worker lo hace Claude siempre** — nunca hace falta que Bruno lo haga manualmente. Lo mismo aplica para cualquier operación de Cloudflare (D1, Workers, Pages) o GitHub.
+
+**Regla de despliegue: Claude siempre hace `wrangler deploy` completo**, sin importar si el cambio fue solo al Worker o solo a un archivo del frontend. Nunca desplegar parcialmente ni asumir que algo ya está en producción.
+
+```bash
+cd "/Users/brunogutierrez/Documents/CLAUDE CODE/Inmuebles WEBSITE/02. contratos/06. VERSION 4.0/worker"
+npx wrangler deploy
+```
+
+Los archivos de `frontend/` se suben automáticamente como assets estáticos. No hay paso separado.
+
+**El adapter de Apps Script sí requiere acción manual de Bruno**: pegar el contenido de `adapter/AdapterScript4_v1.js` en script.google.com y desplegar nueva versión. Claude entrega el archivo listo.
+
+---
+
+## Base de datos D1
+
+### Tablas
+
+| Tabla | Descripción |
+|-------|-------------|
+| `contratos` | Un registro por contrato. PK: `token` (UUID). |
+| `tokens` | Tokens de portal y configurar. FK: `contrato_id` → `contratos.token`. |
+| `abonos` | Pagos. FK: `contrato_token` → `contratos.token`. |
+| `propiedades` | Una o más propiedades por contrato. PK compuesta: `(contrato_token, num_propiedad)`. |
+| `paquetes` | Catálogo. PK: `clave` (ej. `RES-COMBO`). |
+| `checklist` | Un checklist por contrato. PK: `contrato_token`. |
+
+### Nota importante — D1 no soporta foreign keys
+`PRAGMA foreign_keys` es ignorado en D1. Las cascadas de eliminación están implementadas manualmente en código con `db.batch()` en orden correcto: checklist → propiedades → abonos → tokens → contratos.
+
+### Consultar D1 desde terminal
+```bash
+wrangler d1 execute contratos-iav-v4 --remote --command="SELECT token, folio, nombre_cliente, estatus FROM contratos ORDER BY fecha_creacion DESC LIMIT 10"
+```
+
+---
+
+## Paquetes en catálogo
+
+| Clave | Nombre | Precio | Tipo |
+|-------|--------|--------|------|
+| RES-COMBO | Paquete Residencial | $4,500 | Base |
+| TER-COMBO | Paquete Terreno | $4,000 | Base |
+| IND-FOTO | Fotografía profesional | $3,000 | Base |
+| IND-VIDEO | Video cinemático + Drone | $3,000 | Base |
+| IND-360 | Recorrido virtual 360° | $3,000 | Base |
+| ADD-COMOLLEGAR | Video cómo llegar | $1,000 | Adicional |
+| ADD-LANDING | Landing page | $1,200 | Adicional |
+| ADD-FOLLETO | Folleto digital PDF | $800 | Adicional |
+| ADD-ASESOR | Asesor en Video | $500 | Adicional |
+| ADD-EXPRESS | Entrega Express | $1,000 | Adicional |
+
+Todos los adicionales tienen columna `alcance` en D1. Desde R14, **todos** son `por_propiedad` — ADD-EXPRESS ya no es caso especial.
+
+Además, el admin permite crear **add-ons personalizados** (nombre + precio libre) por propiedad. Se guardan en `adicionales_json` como `{ nombre: "...", precio: X, ofrecido: true, numPropiedad?: N }`.
+
+---
+
+## Flujo de un contrato completo
+
+### 1. Creación (admin)
+- Bruno llena el formulario en `admin.html` → `POST /api/crearContrato`
+- Worker inserta en D1: `contratos` + `propiedades` + token de portal en `tokens`
+- Se valida que `precioTotal > 0`
+- **Async (sin esperar):** Apps Script notifica a Bruno por correo con el link del portal (solo guarda referencia — Bruno ya ve el admin)
+- Admin muestra el link del portal para compartir con el cliente
+
+### 2. Firma del cliente (portal)
+- Cliente abre `portal.html?token=<token>` (token permanece en la URL para poder copiarla/compartirla)
+- Selecciona adicionales si los hay, llena datos (incluyendo orientación), dibuja firma → `POST /api/firmaCliente`
+- Worker actualiza contrato en D1 (estatus → "Firmado" o "En produccion" si prepagado)
+- Protección anti-doble-firma: `WHERE token=? AND estatus='Pendiente firma'` + check `meta.changes`
+- **Async:** Apps Script guarda la firma en Drive, registra un PDF pendiente en PropertiesService
+- **Async (mismo call):** Apps Script crea carpetas Drive (año/mes de la sesión, no de hoy) para TODAS las propiedades, genera PDF de referencias y eventos Calendar; llama de vuelta al Worker con `carpetaControlId`, `carpetaEntregablesId`, `calendarEventId`
+- **Async:** `procesarPDFsPendientes` (trigger cada minuto) genera el PDF desde template de Google Docs con firma insertada, lo adjunta en un email y lo manda al cliente
+
+### 3. Primer abono
+- Bruno registra el abono en admin → `POST /api/registrarAbono`
+- Worker actualiza saldo en D1, cambia estatus a "Anticipo recibido"
+- Devuelve `totalAbonado` en la respuesta para actualizar UI
+- Guard: si ya existe `carpeta_control_id` en propiedades, no se llama `primerAbono` — **`primerAbono` es fallback legacy** para contratos firmados antes de esta versión
+- **Async:** Apps Script envía correo de confirmación al cliente
+
+### 4. Entrega
+- Bruno actualiza producción/entrega en admin
+- Cliente puede ver los links de entrega en el portal (etapa 3)
+- `carpetaEntregablesUrl` en `obtenerContrato` ahora prefiere `carpeta_entregables_id`, con fallback a `carpeta_control_id`
+
+---
+
+## Flujo de correos
+
+| Evento | Destinatario | Enviado por |
+|--------|-------------|-------------|
+| Contrato firmado + PDF | Cliente | Apps Script (`procesarPDFsPendientes`) |
+| Abono registrado (primer abono) | Cliente | Apps Script async — asunto "Tu sesión está apartada" |
+| Abono registrado (subsecuentes) | Cliente | Apps Script async — asunto "Confirmación de pago" |
+| Upsell notificado | Cliente | Apps Script async |
+| Recordatorio de pago | Cliente | Apps Script (trigger manual desde admin) |
+| Sesión reagendada | Cliente | Apps Script async |
+| Material entregado | Cliente | Apps Script async |
+| Reseña nueva | Bruno | Apps Script async |
+
+> Bruno NO recibe correo al crear ni al firmar contratos — ve el estado en el admin.
+> El cliente NO recibe correo al crear el contrato. El primer correo es el PDF cuando firma.
+
+---
+
+## Cómo funciona el adapter de Apps Script
+
+El Worker llama al adapter con `POST` y un JSON `{ action: '...', ...datos }`. Las operaciones son asíncronas via `ctx.waitUntil()` — el usuario nunca espera.
+
+**Acciones disponibles:**
+
+| Acción | Qué hace |
+|--------|---------|
+| `notificarContratoCreado` | ~~Eliminado en Ronda 8~~ — función vacía removida del handler map |
+| `procesarFirma` | Guarda firma PNG en Drive, registra PDF pendiente; **crea carpetas Drive (año/mes de la sesión) + PDF referencias + eventos Calendar** para todas las propiedades; llama Worker `actualizarCarpeta` + `actualizarCalendarEvent` |
+| `procesarPDFsPendientes` | Genera PDF desde template, envía al cliente, llama Worker `actualizarPdfUrl` |
+| `primerAbono` | **Legacy fallback** — solo se ejecuta si el contrato no tiene `carpeta_control_id` (firmado antes de Ronda 11). Igual que `procesarFirma` pero para contratos viejos. Usa fecha de sesión (no hoy) para el mes de carpeta. |
+| `enviarCorreoAbono` | Correo HTML de confirmación de pago al cliente |
+| `enviarRecordatorioPago` | Correo HTML de recordatorio de saldo al cliente |
+| `reagendarPropiedad` | Actualiza fecha/hora del evento Calendar; actualiza **título** del evento con nuevo folio; actualiza **descripción** con nuevo PDF URL; **renombra carpeta** con nuevo folio; **mueve carpeta** al mes/año correcto según nueva fecha; **borra PDF referencias anterior** y **regenera** con nuevo folio; llama Worker `actualizarCalendarEvent` |
+| `enviarCorreoEntrega` | Correo HTML de entrega al cliente |
+| `notificarUpsell` | Correo HTML de servicios adicionales |
+| `subirArchivo` | Sube archivo a carpeta de propiedad (desde portal) |
+| `subirArchivoAdmin` | Sube archivo a carpeta (desde admin) |
+| `syncBackup` | Sobreescribe tabs en Sheets con datos de D1 |
+| `obtenerLogoCliente` | Busca logo precargado del cliente en Drive |
+
+### Callbacks del adapter al Worker
+Apps Script llama de vuelta al Worker para guardar IDs de Google en D1:
+- `POST /api/actualizarCarpeta` — guarda `carpeta_control_id` y `carpeta_entregables_id` en `propiedades`
+- `POST /api/actualizarCalendarEvent` — guarda `calendar_event_id` en `propiedades`
+- `POST /api/actualizarPdfUrl` — guarda `pdf_contrato_url` en `contratos`
+
+---
+
+## Backup automático
+
+Un Cron Trigger de Cloudflare ejecuta `syncToSheets()` cada hora (`:00`). Sincroniza las 4 tablas principales (contratos, abonos, propiedades, paquetes) a la hoja `1YLscbVQJEm_SF77lfiZXyDHc0_gy543P5yitPX_KpnY` en tabs: Contratos4, Abonos4, Propiedades4, Paquetes4.
+
+Pérdida máxima de datos si Cloudflare falla: 1 hora.
+
+---
+
+## Diferencias clave con v3.0
+
+| Aspecto | v3.0 | v4.0 |
+|---------|------|------|
+| Backend | Google Apps Script | Cloudflare Workers |
+| Base de datos | Google Sheets | Cloudflare D1 (SQLite) |
+| Velocidad | 2-4s (frío) | < 200ms |
+| Routing | `?action=nombreAccion` | `/api/nombreAccion` |
+| Auth admin | `?adminKey=framedock` | Header `X-Admin-Key: framedock` |
+| Campos DB | PascalCase (Sheets columns) | snake_case (D1 columns) |
+| Google services | Síncrono (bloquea respuesta) | Asíncrono (`ctx.waitUntil`) |
+| PDF | Síncrono en la firma | Pendiente en PropertiesService, trigger separado |
+| Backup | Sheets es la DB | Sheets es solo backup horario |
+
+---
+
+## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 15 — Rediseño tab Contratos + Radar de Sesiones (2026-06-01)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R15-B1 | `admin.html` `mostrarTab` | Eliminado bloque muerto con referencia a `renderSesionesFuturas` (función removida en sesión anterior, condición `id === 'sesiones'` nunca se cumplía). |
+| R15-B2 | `admin.html` `setCiclo` | `document.querySelector('.tabla-card')` → `document.getElementById('tabla-contratos-card')`. Agrega `id="tabla-contratos-card"` al div en HTML. Evita seleccionar el elemento equivocado si hay otras `.tabla-card` antes en el DOM. |
+| R15-B3 | `admin.html` `fmxnFecha` | Corregido desfase de zona horaria: `new Date(val)` → `new Date(val + 'T12:00:00')`, igual que `fmxnFechaLarga`. Evitaba que fechas ISO aparecieran un día antes en México (UTC-5/UTC-6). |
+| R15-01 | `admin.html` CSS | Eliminados `.ciclo-btn`/`.activo-ciclo` del bloque de Contratos. Nuevas clases: `.contratos-tabs`, `.contratos-tab`, `.activo-ctab`, `.ctab-badge` — tabs con underline dorado y contadores. |
+| R15-02 | `admin.html` CSS | Nuevas clases radar: `.radar-strip` (tira horizontal scrolleable), `.radar-pil`, `.radar-pil-hoy` (dorado), `.radar-pil-pronto` (ámbar), `.radar-pil-semana` (azul), `.radar-vacia`. |
+| R15-03 | `admin.html` CSS | Nuevas clases de fila: `.tr-ses-hoy` (borde dorado), `.tr-ses-pronto` (borde ámbar), `.tr-ses-semana` (borde azul) — indicadores visuales de proximidad de sesión en tabla. |
+| R15-04 | `admin.html` CSS | `.btn-filtros-toggle` con `.filtros-badge` — botón colapsable para filtros de fecha. `.barra-filtros` inicia con `display:none`. |
+| R15-05 | `admin.html` HTML `#sec-contratos` | Reemplazado completamente: pill-buttons → tabs con badges (`ctab-sesiones`, `ctab-abiertos`, `ctab-todos`). `#radar-sesiones` insertado entre tabs y toolbar. Filtro de estatus movido a toolbar (siempre visible). Fechas colapsadas detrás de `btn-filtros-toggle`. |
+| R15-06 | `admin.html` `setCiclo` | Maneja nuevos tabs (agrega/quita `activo-ctab`). Muestra/oculta radar, oculta botón de fechas en vista sesiones. Llama `renderRadar()` y `actualizarBadgesTabs()`. |
+| R15-07 | `admin.html` `filtrarContratos` | Agrega llamadas a `actualizarBadgesTabs()` y `renderRadar()` al final. |
+| R15-08 | `admin.html` `renderTabla` | Calcula `diasHastaSesion` por fila; agrega clase `tr-ses-hoy` (0 días), `tr-ses-pronto` (1–2 días), `tr-ses-semana` (3–7 días). |
+| R15-09 | `admin.html` `renderStatsBar` | Simplificada de 5 a 3 tarjetas: Facturado, Cobrado, Por cobrar. Eliminadas "Contratos activos" (redundante con badge de tab) y "Sesiones esta semana" (redundante con radar). |
+| R15-10 | `admin.html` `toggleFiltros` | Renombrada desde `toggleFiltrosMobile`. Alterna visibilidad de `.barra-filtros` y clase `activo` en botón. Llama `actualizarBadgeFiltros()`. |
+| R15-11 | `admin.html` `renderRadar` | Nueva función. Genera píldoras de sesiones próximas (14 días) desde `todosContratos` con estatus abierto. Muestra hasta 20 sesiones ordenadas por fecha. Oculta el strip si no hay sesiones. |
+| R15-12 | `admin.html` `actualizarBadgesTabs` | Nueva función. Cuenta contratos por ciclo y actualiza `ctab-badge` en los tres tabs. |
+| R15-13 | `admin.html` `actualizarBadgeFiltros` | Nueva función. Muestra badge rojo en `btn-filtros-toggle` cuando hay filtros de fecha activos. |
+| R15-14 | `admin.html` `limpiarFiltrosFecha` | Nueva función. Limpia `#filtro-desde` y `#filtro-hasta`, refresca `filtrarContratos()` y `actualizarBadgeFiltros()`. |
+
+### Ronda 14 — Simplificación servicios adicionales + precio modo Personalizado (2026-06-01)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R14-01 | D1 remota | `UPDATE paquetes SET Alcance='por_propiedad' WHERE Clave='ADD-EXPRESS'` — ADD-EXPRESS deja de ser caso especial. |
+| R14-02 | `admin.html` HTML estático | Eliminado acordeón `#detalles-globales` ("Add-ons del proyecto globales"). |
+| R14-03 | `admin.html` HTML estático | Eliminada sección "Servicios ya acordados" global (`#campo-extras-catalogo`, `#lista-extras-acordados`, botón `agregarExtraLibre`). |
+| R14-04 | `admin.html` `renderPropCard` | Acordeón por propiedad renombrado a "Servicios adicionales". Sub-sección A: "Opcionales" (checkboxes del catálogo, el cliente los elige en portal). Sub-sección B: "Extras cotizados" (texto libre + precio, ya incluidos en el precio total). `campo-acordados-prop-N` ya no inicia oculto. |
+| R14-05 | `admin.html` `renderPropCard` | `#wrap-nombre-N` (modo Personalizado) agrega campo `#prop-precio-custom-N` (número). Al cambiar el precio, llama `precioManual=false; actualizarPrecio()`. |
+| R14-06 | `admin.html` `actualizarAddonsProp` | Eliminado filtro `if (p.Alcance === 'global') return false`. ADD-EXPRESS ahora aparece como checkbox normal. |
+| R14-07 | `admin.html` `actualizarAcordadosProp` | Simplificada a solo `campo-acordados-prop-N style display:block` — ya no renderiza checkboxes del catálogo. |
+| R14-08 | `admin.html` `actualizarPrecio` | Loop `baseTotal`: si `modosNombre[i] === 'custom'`, usa `#prop-precio-custom-N`; si no, usa el paquete seleccionado. Eliminado selector `.extra-acordado-cat-cb:checked` (muerto). |
+| R14-09 | `admin.html` `setModoNombre` | Al volver a modo 'paquete': limpia `#prop-precio-custom-N`, llama `precioManual=false; actualizarPrecio()`. |
+| R14-10 | `admin.html` `leerEstadoProps` | Agrega `precioCustom` al snapshot. Elimina `acordadosChecked` (ya no hay checkboxes en acordados). |
+| R14-11 | `admin.html` `restaurarEstadoProps` | Restaura `precioCustom`. Elimina restauración de `acordadosChecked`. |
+| R14-12 | `admin.html` `actualizarPaquetesAdicionales` | Reducida a solo `actualizarPrecio()`. Ya no gestiona add-ons globales. |
+| R14-13 | `admin.html` `crearContrato` | Eliminados tres bloques de colección de datos globales: add-ons de `#lista-adicionales`, acordados de `#campo-extras-catalogo`, libres de `#lista-extras-acordados`. |
+| R14-14 | `admin.html` `limpiarFormCrear` | Eliminadas referencias a `lista-extras-acordados` y `.extra-acordado-cat-cb`. |
+| R14-15 | `admin.html` | Eliminadas funciones muertas `agregarAddonPersonalizado()` y `agregarExtraLibre()`. Eliminado loop `.extra-acordado-cat-cb:checked` en `crearContrato`. |
+
+### Ronda 13 — Toggle Paquete/Personalizado + add-ons globales acordeón + eliminación duplicarContrato (2026-05-31)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R13-01 | `admin.html` global | Nueva variable `var modosNombre = {};` — mapea `{ propIdx: 'paquete' \| 'custom' }` para cada propiedad del formulario. |
+| R13-02 | `admin.html` `renderPropCard` | "Nombre del servicio" reemplazado por toggle "Paquete base" / "Personalizado" (botones con clase `modo-nombre-btn par-tipo-btn`). En modo paquete: muestra `#wrap-paquete-N` con el select. En modo personalizado: muestra `#wrap-nombre-N` con input de texto libre. Por defecto arranca en "Paquete base". |
+| R13-03 | `admin.html` `setModoNombre(num, modo)` | Nueva función. Alterna visibilidad de `wrap-paquete-N` / `wrap-nombre-N`, limpia el campo oculto al cambiar modo, actualiza clases `activo-par` en los botones toggle. |
+| R13-04 | `admin.html` `crearContrato` | `paqueteVal` respeta el modo: modo `'custom'` → usa `nombreSvc`; modo `'paquete'` → usa `paqClave \|\| nombreSvc` (comportamiento anterior). |
+| R13-05 | `admin.html` `leerEstadoProps` | Agrega `modoNombre: modosNombre[i] \|\| 'paquete'` al snapshot de estado por propiedad. |
+| R13-06 | `admin.html` `restaurarEstadoProps` | Restaura `modosNombre[i]` y los wraps de visibilidad y clases de botón desde `s.modoNombre` tras cada re-render. |
+| R13-07 | `admin.html` `renderTodasLasProps` | Loop de inicialización `if (!modosNombre[j]) modosNombre[j] = 'paquete'` antes de restaurar estado. Llama `actualizarPaquetesAdicionales()` al final (corregía B3). |
+| R13-08 | `admin.html` `quitarPropiedad` | Reindexea `modosNombre` en paralelo a `tiposProp` (`nuevosModos`). Llama `actualizarPaquetesAdicionales()` al final. Corregía bugs B7 y B8. |
+| R13-09 | `admin.html` `limpiarFormCrear` | Resetea `modosNombre = {}` al limpiar el formulario. |
+| R13-10 | `admin.html` HTML estático | Sección "Add-ons del proyecto" convertida a `<details id="detalles-globales">` acordeón cerrado. |
+| R13-11 | `admin.html` `actualizarPaquetesAdicionales` | Oculta `#detalles-globales` cuando `numProps === 1`; al ocultarlo desmarca todos los checkboxes de `#lista-adicionales` para evitar inclusión silenciosa en el payload (corregía B9). |
+| R13-12 | `admin.html` `duplicarContrato` | **Eliminada** — función completa (~97 líneas) y botón del panel lateral. No hay referencias remanentes. R12-10 queda obsoleto. |
+
+### Ronda 12 — Add-ons por propiedad + personalizados + acordeón (2026-05-31)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R12-01 | `schema.sql` + D1 | Columna `alcance TEXT DEFAULT 'por_propiedad'` en `paquetes`. ADD-EXPRESS = `global`, resto = `por_propiedad`. |
+| R12-02 | `portal.js` `obtenerPortal` | Separa `adicionales_json` en `ofertasStrings` / `ofertasObjs` / `acordados`. `paquetesDisponibles` incluye `numPropiedad` para filtrar por propiedad en el frontend. |
+| R12-03 | `portal.js` `obtenerPortal` | Add-ons personalizados (`ofrecido: true`) se incluyen en `paquetesDisponibles` como `{ custom: true, nombre, precio }` sin lookup en catálogo. |
+| R12-04 | `portal.js` `firmaCliente` | Acepta objetos en `adicionalesSeleccionados` (extrae `.clave`). Add-ons personalizados usan su propio `item.precio` sin DB lookup. |
+| R12-05 | `admin.html` `renderPropCard` | Cada card de propiedad tiene secciones `#campo-addons-prop-N` y `#campo-acordados-prop-N` dentro de un `<details>` acordeón cerrado. |
+| R12-06 | `admin.html` `actualizarAddonsProp`/`actualizarAcordadosProp` | Filtran add-ons por `alcance = 'por_propiedad'` y por `Tipo` de la propiedad. Preservan filas personalizadas al reconstruir. |
+| R12-07 | `admin.html` `actualizarPaquetesAdicionales` | Sección global solo muestra `Alcance = 'global'` (ADD-EXPRESS). + botón "Add-on personalizado". |
+| R12-08 | `admin.html` | Botones "+ Add-on personalizado" en sección global y por propiedad. Crean fila con nombre + precio libre. Se preservan al cambiar propiedades. |
+| R12-09 | `admin.html` `crearContrato` | Recolecta add-ons per-prop como `{ clave, numPropiedad }` y personalizados como `{ nombre, precio, ofrecido: true }`. Recolecta acordados per-prop. |
+| R12-10 | `admin.html` `duplicarContrato` | Restaura add-ons per-prop (ofrecidos + acordados + libres + personalizados) desde `adicionales_json`. |
+| R12-11 | `admin.html` `actualizarPrecio` | Suma add-ons per-prop y personalizados (`.addon-libre-precio`). |
+| R12-12 | `admin.html` labels | Renombrados: "Add-ons del proyecto" (global), "Add-ons opcionales" (por prop), "Servicios acordados" (por prop). |
+| R12-13 | `portal.html` | Estado dividido `adicionalesOnGlobal` + `adicionalesOnProp`. `renderEtapa1` renderiza per-prop en cada card. `toggleAdicion(clave, numProp)`. `buildAdicionalesSeleccionados` devuelve mixto (strings para catálogo global, objetos para per-prop y personalizados). |
+| R12-14 | `portal.html` | Polyfill `CSS.escape` para compatibilidad con navegadores viejos. |
+
+### Ronda 11 — Carpetas en firma + reagendar completo + fixes UI (2026-05-31)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R11-01 | `adapter` `procesarFirma` | Carpetas Drive, PDF referencias y eventos Calendar ahora se crean al firmar (no al primer abono). Usa fecha de sesión para determinar mes/año de la carpeta. |
+| R11-02 | `adapter` `primerAbono` | Corregido: usaba `new Date()` para mes/año — ahora usa `propiedades[0].fecha_sesion`. Queda como fallback legacy. |
+| R11-03 | `contratos.js` `reagendarPropiedad` | Captura `folioAnterior` antes del UPDATE; manda `folioNuevo` explícito al adapter. |
+| R11-04 | `adapter` `reagendarPropiedad` | Renombra carpeta con `folioNuevo` (antes usaba `contrato.folio` que era el folio viejo). |
+| R11-05 | `adapter` `reagendarPropiedad` | Mueve carpeta al mes/año correcto según nueva fecha de sesión. |
+| R11-06 | `adapter` `reagendarPropiedad` | Borra PDF referencias anterior (busca por `folioAnterior + " IAV"`) y regenera con nuevo folio. |
+| R11-07 | `adapter` `reagendarPropiedad` | Actualiza título del evento Calendar con nuevo folio. |
+| R11-08 | `adapter` `reagendarPropiedad` | Actualiza descripción del evento Calendar con nuevo URL de PDF. |
+| R11-09 | `portal.html` | Token permanece en la URL (eliminado `history.replaceState`) para poder copiarla/compartirla. |
+| R11-10 | `portal.js` `obtenerPortal` | `pkMap` se construye antes de `extrasAcordados` — nombres de adicionales acordados resueltos correctamente (antes mostraba ADD-ASESOR). |
+| R11-11 | `portal.js` `obtenerPortal` | `extrasAcordados` incluye campo `entregables` para mostrar descripción en el resumen. |
+| R11-12 | `portal.js` `obtenerPortal` | `paqueteBase` y `propiedades[].paquete` resueltos a nombre legible antes de retornar. |
+| R11-13 | `portal.html` | Entregables de adicionales acordados visibles en "Resumen de tu servicio". |
+| R11-14 | `portal.html` | Lista de servicios incluidos usa puntos (`·`) en lugar de checkmarks SVG. |
+| R11-15 | `portal.html` | Split de entregables de adicionales usa `\n` y `\|` (antes solo `\|`). |
+| R11-16 | `admin.html` | Correo del cliente ya no es obligatorio al crear contrato — puede llenarlo el cliente en su portal. |
+
+### Ronda 10 — Estatus "Completado" (2026-05-31)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R10-01 | `abonos.js` | Cuando saldo llega a 0 y el contrato ya está en "Entregado" → estatus pasa a "Completado" automáticamente |
+| R10-02 | `contratos.js` `guardarEntrega` | Si `saldo_pendiente <= 0` al registrar entrega → estatus "Completado"; si hay saldo → "Entregado" |
+| R10-03 | `contratos.js` `revocarEntrega` | Revocación desde "Completado" → vuelve a "Liquidado" (pago se conserva) |
+| R10-04 | `contratos.js` `actualizarEstatus` | "Completado" en `ESTATUSES_VALIDOS` y `TRANSICIONES_BLOQUEADAS` |
+| R10-05 | `contratos.js` `actualizarContratoUpsell` | Upsell que sube precio en "Completado" → vuelve a "Entregado" |
+| R10-06 | `contratos.js` `listarContratos` | "Completado" excluido de `estatusAbiertos` — solo aparece en vista "todos" |
+| R10-07 | `portal.html` | "Completado" rutea a `actualizarStepper(5) + renderEtapa4()` — igual que "Entregado" |
+| R10-08 | `admin.html` | Badge dorado, opción en dropdown, fecha visible |
+
+### Ronda 9 — Auditoría exhaustiva 18 bugs (2026-05-31)
+
+| ID | Severidad | Archivo | Corrección |
+|----|-----------|---------|------------|
+| B02 | CRÍTICO | `portal.js` | `nuevoEstatus` basado en `saldoPendiente === 0` en lugar de `anticipo >= precioTotal` |
+| B03 | CRÍTICO | `portal.js` | `Array.isArray` check movido antes del `DELETE FROM propiedades` |
+| B14 | CRÍTICO | `archivos.js` | Query de auth usa `contrato_id = ?` en lugar de `token = ?` — uploads del portal ya funcionan |
+| B15 | CRÍTICO | `google.js` | `callAdapterSync` con try/catch y verificación de `res.ok` |
+| B05 | FUNCIONAL | `admin.html` | `numPropiedad: pi` agregado al payload de contratos particulares multi-propiedad |
+| B07 | FUNCIONAL | `adapter` | Correo de primer abono incluye "Hola [nombre]" |
+| B08 | FUNCIONAL | `portal.js` | Entregables de contratos particulares usan `propiedadesFirma[0].entregables` como fallback |
+| B09 | FUNCIONAL | `cron.js` | `syncToSheets` con try/catch — errores de D1 no borran tabs de Sheets |
+| B17 | FUNCIONAL | `contratos.js` | `reagendarPropiedad` actualiza folio del contrato cuando se cambia fecha de propiedad 1 |
+| B18 | FUNCIONAL | `admin.html` | `tipoPaquete` incluido en body de `crearContrato` estándar |
+| B19/B27 | FUNCIONAL | `portal.html` + `portal.js` + `adapter` | `fachada_url` y `perimetro_url` guardados en D1 y enviados al adapter para PDF y Calendar |
+| B22 | FUNCIONAL | `portal.js` | `guardarResena` permite reseñas con estatus "Liquidado" además de "Entregado" |
+| B23 | FUNCIONAL | `adapter` | `reagendarPropiedad` usa `D1.calendar_event_id` como fallback cuando PropertiesService no tiene el valor |
+| B10 | MENOR | `adapter` | Segundo loop en `primerAbono` usa `var j` en lugar de reusar `var i` |
+| B11 | MENOR | `contratos.js` | Timestamp de notas internas usa `now()` en lugar de `toLocaleString` |
+| B12 | MENOR | `portal.html` | Comprobante multi-propiedad distribuye el residuo en la última fila — suma siempre cuadra con el total |
+| B21 | MENOR | `portal.html` | `orientaciones = {}` al inicio de `renderEtapa1` evita mezcla de estados en re-renders |
+| D1 | — | D1 | Columnas `fachada_url TEXT` y `perimetro_url TEXT` agregadas a `propiedades` |
+
+**Omitidos por diseño:** B01/B13 (orientación oculta + pre-inicializada — intencional), B16 (checklist sin auth admin — producción usa token de contrato sin credenciales).
+
+### Ronda 8 — Paquetes/nombres + 11 fixes (2026-05-31)
+
+| ID | Archivo | Corrección |
+|----|---------|------------|
+| R8-01 | `portal.js` | Campo `referencias` guardado en D1 al firmar y devuelto en `obtenerPortal` |
+| R8-02 | `portal.js` | Adicionales string (claves) resueltos a nombres antes de `procesarFirma` |
+| R8-03 | `contratos.js` | `reagendarPropiedad` resuelve clave → nombre antes de llamar adapter |
+| R8-04 | `contratos.js` | `obtenerContrato` devuelve paquete como nombre (no clave) en propiedades |
+| R8-05 | `contratos.js` | `exportarCSV` resuelve `paquete_base` a nombre |
+| R8-06 | `contratos.js` | `actualizarContratoUpsell` resuelve `agregarAdicionales` a nombres para email |
+| R8-07 | `contratos.js` | `listarClientes` excluye contratos sin correo del agrupamiento |
+| R8-08 | `admin.html` | ~~Correo del cliente obligatorio~~ — revertido en R11-16 |
+| R8-09 | `portal.js` + `abonos.js` | Paquete clave → nombre resuelto para `procesarFirma` y `primerAbono` |
+| R8-10 | `AdapterScript4_v1.js` | `referencias` aparece en PDF de referencias y en evento Calendar |
+| R8-11 | `AdapterScript4_v1.js` | `notificarContratoCreado` eliminado del handler map (código muerto) |
+| R8-D1 | D1 | Columna `referencias TEXT` agregada a `propiedades`; `ADD-COMOLLEGAR` entregables actualizados |
+| R8-PKG | D1 + seed | Entregables sin paréntesis; Drone separado de Video; `IND-360` con `360°` |
+
+### Ronda 7 — Paquetes nombres (2026-05-31)
+
+| ID | Archivo | Corrección |
+|----|---------|------------|
+| R7-01 | `portal.js` + `abonos.js` | Paquete clave → nombre antes de cada `callAdapter` (`procesarFirma`, `primerAbono`) |
+| R7-02 | D1 + `seed-paquetes.sql` | Entregables sin paréntesis; Drone separado de Video; `IND-360` con `360°` |
+
+### Ronda 6 — Fixes E2E post-deploy (2026-05-30)
+
+| ID | Archivo | Corrección |
+|----|---------|------------|
+| E1 | `AdapterScript4_v1.js` | Header de correos usa `email-header.png` (igual que v3) en vez de SVG inline con fondo oscuro |
+| E2 | `AdapterScript4_v1.js` | Nombres de carpeta de mes usan `01. Enero` (punto) en vez de `01 — Enero` (guion largo) para encontrar carpetas existentes en Drive |
+| E3 | `AdapterScript4_v1.js` | PDF de referencias reemplaza copia de Slides por `DocumentApp` generado programáticamente (igual que v3): secciones CLIENTE, SESIÓN, UBICACIÓN, SOBRE LA PROPIEDAD, NOTAS; exportado como PDF y guardado en `Control Interno` |
+| E4 | `AdapterScript4_v1.js` | Evento Calendar idéntico a v3: título `{folio} IA {cliente} — {paquete}`, location = maps URL, descripción con Tipo/Paquete, Dirección, Mapa, Orientación, Entregables, Notas, Comentarios del cliente, PDF Referencias, Carpeta Drive, Checklist de rodaje |
+
+### Ronda 5 — Fixes AE2-AE9 (2026-05-30)
+
+| ID | Severidad | Archivo | Correccion |
+|----|-----------|---------|------------|
+| AE2 | FUNCIONAL | `portal.html` | `apiGet` con AbortController + timeout 15s |
+| AE3 | FUNCIONAL | `portal.html` | `firmaCliente` con timeout 30s en apiPost |
+| AE4 | FUNCIONAL | `portal.html` | Comprobante multi-propiedad muestra monto por propiedad |
+| AE5 | FUNCIONAL | `contratos.js` | `listarContratos` usa subquery para primera propiedad con direccion |
+| AE6 | MENOR | `portal.js` | Abonos mapeados a camelCase en `obtenerPortal` |
+| AE7 | MENOR | `tokens.js` | Eliminada funcion muerta `crearTokenConfigurar` |
+| AE8 | MENOR | `contratos.js` | Eliminada llamada no-op `notificarContratoCreado` al adapter |
+| AE9 | MENOR | `admin.html` | Verificado: sin cambio necesario (`carpetaEntregablesUrl` es campo calculado) |
+
+### Ronda 4 — Auditoría exhaustiva (bfe6a4c6) — 18 fixes
+
+| ID | Severidad | Archivo | Corrección |
+|----|-----------|---------|------------|
+| C1 | CRÍTICO | `stats.js` | `err` agregado al import (craseaba con periodo inválido) |
+| C2 | CRÍTICO | `portal.js` | Anti-doble-firma: `WHERE estatus='Pendiente firma'` + check `meta.changes` |
+| C3 | CRÍTICO | `portal.js` | `guardarConfiguracion` preserva `carpeta_control_id` y `calendar_event_id` |
+| C4 | CRÍTICO | `adapter` + `contratos.js` | `calendar_event_id` ahora se persiste en D1 vía callback |
+| C5 | CRÍTICO | `portal.js` | `logoPrecargadoUrl` incluido en `obtenerPortal` |
+| C6 | CRÍTICO | `contratos.js` | Validación `precioTotal > 0` en `crearContrato` |
+| F1 | FUNCIONAL | `abonos.js` | `totalAbonado` devuelto en `registrarAbono` |
+| F2 | FUNCIONAL | `checklist.js` | Columnas configurables: `foto`, `video`, `t360` + migración automática |
+| F3 | FUNCIONAL | `abonos.js` | Guard contra `primerAbono` duplicado (verifica `carpeta_control_id`) |
+| F4 | FUNCIONAL | `stats.js` | Periodo `"todo"` agregado (sin filtro de fecha) |
+| F5 | FUNCIONAL | `adapter` | Link al checklist en descripción del evento Calendar |
+| F6 | FUNCIONAL | `portal.js` + `adapter` | `limpiarLinkMaps` implementado en ambos lados |
+| F7 | FUNCIONAL | `contratos.js` | Eliminado `crearTokenConfigurar` y `linkConfigurar` (código muerto) |
+| M1 | MENOR | `archivos.js` | Body parse movido después de verificación de auth |
+| M2 | MENOR | `contratos.js` | Upsell: anticipo no se recalcula si ya es 100% prepago |
+| M3 | MENOR | `contratos.js` + `adapter` + `schema.sql` | `carpetaEntregablesUrl` usa `carpeta_entregables_id` con fallback. Nueva columna D1 |
+| M4 | MENOR | `adapter` | `reagendarPropiedad`: renombra carpeta Drive + guarda `calendar_event_id` en D1 |
+| M5 | MENOR | `checklist.html` | Timeout en polling — **pendiente verificar frontend** |
+
+### Ronda 3 — Worker + Adapter (vbb89f35e)
+
+| Cambio | Archivo | Corrección |
+|--------|---------|------------|
+| B1 — revocarEntrega + estatus | `contratos.js` | Al revocar, estatus vuelve a `En produccion`. Al re-entregar, vuelve a `Entregado`. |
+| B2 — guardarResena valida estatus | `portal.js` | Solo permite reseña si estatus es `Entregado` (error 403 si no). |
+| B3 — obtenerChecklist retorna folio/nombreCliente | `checklist.js` | SELECT ahora pide `folio, nombre_cliente`; ambas ramas (template y existente) los incluyen. |
+| A1 — comentarios en Calendar | `AdapterScript4_v1.js` | Lee `datos_especificos.comentarios` y lo agrega a la descripción del evento Calendar. |
+| A2 — multi-propiedad carpeta D1 | `AdapterScript4_v1.js` | Loop sobre todas las propiedades para actualizar `carpeta_control_id` en D1, no solo la primera. |
+
+### Ronda 2 — Worker + Adapter (v0848fffc)
+
+| Bug | Archivo | Corrección |
+|-----|---------|------------|
+| Anticipo proporcional inflado en firma | `portal.js` | Mantener anticipo absoluto, `Math.max(0, total - anticipo)` |
+| `guardarConfiguracion` sin validación | `portal.js` | `Array.isArray(propsData)` check antes del loop |
+| Folio NaN con fecha inválida | `portal.js` | Validación de fecha antes de `generarFolio` |
+| Token portal lookup incorrecto | `portal.js` | Agregado `AND usado = 0` a queries |
+| Liquidado → En produccion | `contratos.js` | Bloqueada transición en `TRANSICIONES_BLOQUEADAS` |
+| String `"false"` bypass forzar | `contratos.js` | `forzarBool` con comparación explícita |
+| Configurar token descartado | `contratos.js` | `linkConfigurar` incluido en return |
+| JSON.parse crash upsell | `contratos.js` | try-catch con fallback `[]` |
+| Servicios con precio=0 ignorados | `contratos.js` | Check `!== undefined` en lugar de `!` |
+| Boolean `false` → `null` | `contratos.js` | `??` en lugar de `\|\|` |
+| CSV formula injection | `contratos.js` | Prefijo `'` en celdas que empiezan con `=+-@` |
+| `subirArchivo` sin auth | `archivos.js` | Validación de token portal o admin key |
+| Periodo inválido fallback a 2000 | `stats.js` | Validación contra whitelist |
+| Top clientes por nombre | `stats.js` | Agrupar por email |
+| `e.postData` null adapter | `AdapterScript4_v1.js` | Guard antes de `JSON.parse` |
+| `contrato` undefined en PDF | `AdapterScript4_v1.js` | Guard `if (!contrato) return null` |
+| `numPropiedad: 1` hardcodeado | `AdapterScript4_v1.js` | Usar `propiedades[0].num_propiedad` real |
+| NaN % en correo PDF | `AdapterScript4_v1.js` | Guard `precio_total > 0` y `anticipo \|\| 0` |
+| NaN % en correo abono | `AdapterScript4_v1.js` | Igual fix |
+| `numPropiedad` undefined reagendar | `AdapterScript4_v1.js` | Validación y error temprano |
+
+### Ronda 1 — Frontend + Backend (v5947067e)
+
+| Bug | Archivo | Corrección |
+|-----|---------|------------|
+| CLABE/cuenta faltaban en portal | `portal.js` | Agregados `banco`, `clabe`, `cuenta`, `tarjeta`, `clipLink`, `waLink` en `obtenerPortal` |
+| `firmaCliente` no devolvía total/anticipo/folio | `portal.js` | Agregados al return |
+| Orientación hidden en portal | `portal.html` | Removido `style="display:none"` |
+| Status hardcodeado `'Firmado'` | `portal.html` | Usa `data.estatus` del worker |
+| `parseFloat("0")` tratado como falsy | `portal.html` | Cambiado a null-check explícito |
+| `errEl` null guard faltante | `portal.html` | Agregado guard |
+| NaN en `formatFechaHora` | `portal.html` | Agregado `isNaN` guard |
+| Texto "Copiada" vs "Copiado" | `portal.html` | Unificado a "Copiado" |
+| Anticipo 50% cuando total=0 | `portal.html` | Default a 0 |
+| Abonos con campos lowercase | `admin.html` | Cambiado a PascalCase (`Metodo`, `Fecha`, `Notas`, `Monto`) |
+| `AdicionalesJSON` double-parse | `admin.html` | Detecta si ya es array antes de `JSON.parse` |
+| Token sin escapar en `onclick` | `admin.html` | Agregado `esc()` |
+| `SaldoPendiente` undefined | `admin.html` | Usado `?? 0` |
+| `safeHref` retorna `#` | `admin.html` | Cambiado a `''` |
+| `codigoError` dentro de string | `contratos.js` | Devuelve JSON estructurado directamente |
+| `periodo` faltante en stats | `stats.js` | Agregado al response |
+
+---
+
+## Estado de despliegue actual
+
+| Capa | Versión | Estado |
+|------|---------|--------|
+| Worker + Frontend | R15 | Desplegado |
+| D1 Schema | — | Actualizado (`carpeta_entregables_id`, `referencias`, `fachada_url`, `perimetro_url` agregados) |
+| Adapter Apps Script | — | Pendiente deploy (Rondas 4–11) |
+
+---
+
+## Formato de `adicionales_json`
+
+Cada elemento del array puede ser uno de estos tipos:
+
+| Tipo | Formato | Significado |
+|------|---------|-------------|
+| Catálogo global ofrecido | `"ADD-EXPRESS"` (string) | Add-on del catálogo, alcance global, el cliente lo ve como opcional |
+| Catálogo per-prop ofrecido | `{ clave: "ADD-LANDING", numPropiedad: 1 }` | Add-on del catálogo, ofrecido solo a propiedad 1 |
+| Catálogo acordado | `{ clave: "ADD-ASESOR", precio: 500 }` | Ya incluido en el precio, se muestra en resumen (no toggleable) |
+| Catálogo acordado per-prop | `{ clave: "ADD-ASESOR", precio: 500, numPropiedad: 1 }` | Acordado para propiedad específica |
+| Personalizado ofrecido | `{ nombre: "Tour extra", precio: 2500, ofrecido: true }` | Add-on creado manualmente, el cliente lo ve como opcional |
+| Personalizado ofrecido per-prop | `{ nombre: "Tour extra", precio: 2500, ofrecido: true, numPropiedad: 1 }` | Personalizado para propiedad específica |
+| Personalizado acordado | `{ nombre: "Limpieza", precio: 800 }` | Servicio libre ya incluido en el precio |
+| Personalizado acordado per-prop | `{ nombre: "Limpieza", precio: 800, numPropiedad: 1 }` | Servicio libre por propiedad |
+
+El adapter de Apps Script **no requiere cambios** — ignora `numPropiedad` y `ofrecido`.
+
+---
+
+## Decisiones de diseño — NO implementar
+
+Features descartadas explícitamente. No incluirlas en ningún plan ni sugerirlas en futuras sesiones.
+
+| Feature | Motivo |
+|---------|--------|
+| Correo a Bruno cuando un cliente firma el contrato | No se quiere. Bruno ve el estado en el admin. |
+| Correo del cliente en la descripción del evento Calendar | No se quiere. Solo teléfono y comentarios en Calendar. |
+| Recordatorio automático de sesión por correo (cron 24h antes) | No se quiere. El recordatorio manual desde admin es suficiente. |
+| `MODO_BORRADOR` en adapter | No necesario en v4. |
+| Limpieza automática de tokens viejos en D1 | Volumen no lo justifica. |
+| `linkConfigurar` / `configurar4.html` | Eliminado. El admin ya configura propiedades para contratos particulares. |
+
+---
+
+## Pendientes conocidos
+
+- [x] Adapter desplegado (2026-05-30).
+- [ ] `procesarPDFsPendientes` en Apps Script requiere trigger automático — verificar que esté configurado en script.google.com para correr cada minuto.
+- [ ] Cuando el correo del cliente está vacío al crear el contrato, no llega ningún correo en la firma. El cliente debe llenarlo en el portal antes de firmar.
+- [ ] El folio solo se genera para contratos estándar con fecha de sesión. Contratos particulares no tienen folio hasta configurar la propiedad.
+
+---
+
+## Comandos útiles de mantenimiento
+
+```bash
+# Ver contratos recientes
+wrangler d1 execute contratos-iav-v4 --remote --command="SELECT folio, nombre_cliente, estatus, fecha_creacion FROM contratos ORDER BY fecha_creacion DESC LIMIT 20"
+
+# Ver tokens activos
+wrangler d1 execute contratos-iav-v4 --remote --command="SELECT * FROM tokens WHERE usado=0 ORDER BY rowid DESC LIMIT 10"
+
+# Verificar API
+curl -H "X-Admin-Key: framedock" "https://contratos.inmueblesaudiovisuales.com/api/listarContratos"
+
+# Redesplegar
+cd "/Users/brunogutierrez/Documents/CLAUDE CODE/Inmuebles WEBSITE/02. contratos/06. VERSION 4.0/worker" && wrangler deploy
+```
