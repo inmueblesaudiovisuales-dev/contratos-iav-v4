@@ -490,5 +490,14 @@ export async function handleContratos(request, env, ctx, action) {
     return ok({ ok: true });
   }
 
+  if (action === 'actualizarExpress') {
+    const { token, express } = await request.json();
+    if (!token) return err('Token requerido');
+    const ce = await queryOne(db, 'SELECT token FROM contratos WHERE token=?', [token]);
+    if (!ce) return err('Contrato no encontrado', 404);
+    await run(db, 'UPDATE contratos SET entrega_express=? WHERE token=?', [express ? 1 : 0, token]);
+    return ok({ ok: true });
+  }
+
   return err('Acción no encontrada', 404);
 }

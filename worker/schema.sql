@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS contratos (
   video_listo TEXT,
   recorrido_listo TEXT,
   recorrido_url TEXT,
-  entrega_revocada TEXT
+  entrega_revocada TEXT,
+  entrega_express INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS tokens (

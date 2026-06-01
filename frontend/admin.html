@@ -1444,6 +1444,25 @@ async function enviarRecordatorio() {
   }
 }
 
+async function guardarExpress(checked) {
+  const tok = tokenActivo;
+  if (!tok) return;
+  const msgEl = document.getElementById('msg-express');
+  if (msgEl) msgEl.textContent = 'Guardando…';
+  const props = (window._contratoActivo && window._contratoActivo.propiedades) || [];
+  props.forEach(function(p) {
+    const el = document.getElementById('fecha-entrega-' + p.NumPropiedad);
+    if (el && p.FechaSesion) el.textContent = fmxnFecha(calcFechaEntrega(p.FechaSesion, checked));
+  });
+  try {
+    const r = await apiPost({ action: 'actualizarExpress', token: tok, express: checked });
+    if (!r.ok) throw new Error(r.error || 'Error');
+    if (msgEl) { msgEl.textContent = 'Guardado'; setTimeout(function() { if (msgEl) msgEl.textContent = ''; }, 2000); }
+  } catch(e) {
+    if (msgEl) msgEl.textContent = 'Error: ' + e.message;
+  }
+}
+
 async function descargarCSV() {
   try {
     const data = await apiGet({ action: 'exportarCSV' });
@@ -2009,6 +2028,7 @@ function renderPanel(data) {
       }).join('') + '</span>'
     : '<span style="font-size:12px;color:var(--ink-3)">Sin servicios adicionales</span>';
 
+  const esExpress = !!(c.EntregaExpress);
   const _props   = data.propiedades || [];
   const propHtml = _props.length
     ? _props.map((p, i) => {
@@ -2018,10 +2038,12 @@ function renderPanel(data) {
         const numProp  = p.NumPropiedad || (i + 1);
         const fechaISO = p.FechaSesion ? new Date(p.FechaSesion).toISOString().substring(0, 10) : '';
         const horaVal  = p.HoraSesion  || '';
+        const entregaISO = calcFechaEntrega(p.FechaSesion, esExpress);
         return `<div class="prop-card" id="prop-card-${numProp}">
           <div class="prop-card-titulo">${esc(titulo)}${esc(tipotxt)}</div>
           ${p.Paquete     ? `<div class="prop-dato"><span class="lbl">Paquete </span>${esc(p.Paquete)}</div>` : ''}
           ${fechatxt      ? `<div class="prop-dato"><span class="lbl">Fecha </span>${esc(fechatxt)}</div>` : ''}
+          ${entregaISO    ? `<div class="prop-dato"><span class="lbl">Entrega est. </span><span id="fecha-entrega-${numProp}" style="color:var(--ink-2)">${esc(fmxnFecha(entregaISO))}</span></div>` : ''}
           ${p.Direccion   ? `<div class="prop-dato"><span class="lbl">Dirección </span>${esc(p.Direccion)}</div>` : ''}
           ${p.LinkMaps    ? `<div class="prop-dato"><a href="${safeHref(p.LinkMaps)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px">Ver en Maps</a></div>` : ''}
           <div class="prop-dato"><span class="lbl">Características </span><span id="sobre-prop-${numProp}">${esc(p.SobreLaPropiedad || '—')}</span></div>
@@ -2125,6 +2147,13 @@ function renderPanel(data) {
     <details class="panel-acord" open>
       <summary>Propiedades</summary>
       <div class="panel-acord-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="toggle-express" ${esExpress ? 'checked' : ''} onchange="guardarExpress(this.checked)">
+            <span>Entrega express <span style="font-size:11px;color:var(--ink-3)">(1 día natural)</span></span>
+          </label>
+          <span id="msg-express" style="font-size:11px;color:var(--ink-3)"></span>
+        </div>
         ${propHtml}
       </div>
     </details>
@@ -3096,6 +3125,18 @@ function fmxnFechaLarga(val) {
   const d = new Date(str);
   if (isNaN(d)) return String(val);
   return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function calcFechaEntrega(fechaISO, express) {
+  if (!fechaISO) return null;
+  var parts = String(fechaISO).split('-');
+  if (parts.length !== 3) return null;
+  var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, d = parseInt(parts[2], 10);
+  var fecha = new Date(y, m, d + (express ? 1 : 5));
+  var yy = fecha.getFullYear();
+  var mm = String(fecha.getMonth() + 1).padStart(2, '0');
+  var dd = String(fecha.getDate()).padStart(2, '0');
+  return yy + '-' + mm + '-' + dd;
 }
 
 function esc(str) {
