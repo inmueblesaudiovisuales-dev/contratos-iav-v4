@@ -84,6 +84,43 @@
     }
     .btn-logout:hover { border-color: rgba(255,255,255,0.4); color: white; }
 
+    /* ── Botón Ajustes en topbar ────────────────────── */
+    .btn-ajustes {
+      background: none; border: none; color: rgba(255,255,255,0.55);
+      border-radius: var(--r); padding: 6px 12px; font-size: 12px;
+      font-weight: 600; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; gap: 6px; transition: color 120ms;
+    }
+    .btn-ajustes:hover { color: rgba(255,255,255,0.9); }
+    .btn-ajustes.activo { color: var(--gold); }
+    .btn-ajustes i { font-size: 16px; }
+
+    /* ── Sección Ajustes ────────────────────────────── */
+    .ajustes-tabs {
+      display: flex; gap: 4px;
+      border-bottom: 2px solid var(--border); margin-bottom: 20px;
+    }
+    .ajustes-tab {
+      background: none; border: none; border-bottom: 2.5px solid transparent;
+      margin-bottom: -2px; padding: 10px 18px;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      color: var(--ink-2); cursor: pointer;
+      display: flex; align-items: center; gap: 7px; transition: color 120ms;
+    }
+    .ajustes-tab:hover { color: var(--ink-1); }
+    .ajustes-tab.activo-atab { color: var(--ink-1); border-bottom-color: var(--gold); }
+    .ajustes-pane { display: none; }
+    .ajustes-pane.activo-apane { display: block; }
+
+    /* ── Botón volver en sec-nuevo ──────────────────── */
+    .btn-volver {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: none; border: none; color: var(--ink-3);
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      cursor: pointer; padding: 0; margin-bottom: 18px; transition: color 120ms;
+    }
+    .btn-volver:hover { color: var(--ink-1); }
+
     .contenido { max-width: 1140px; margin: 0 auto; padding: 24px 24px 80px; }
 
     /* Tabs principales */
@@ -484,6 +521,16 @@
     }
     .bnav-btn i { font-size: 20px; }
     .bnav-btn.activo { color: var(--gold); }
+    /* FAB central — botón Nuevo en mobile */
+    .bnav-fab {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--gold); color: var(--onyx) !important;
+      margin-top: -18px; border: 3px solid var(--page);
+      box-shadow: 0 4px 16px rgba(201,168,76,0.4);
+      font-size: 0 !important; letter-spacing: 0;
+      padding: 0; flex-shrink: 0;
+    }
+    .bnav-fab i { font-size: 22px !important; color: var(--onyx); }
 
     /* ── Modo selección masiva ── */
     .btn-seleccion { background: none; border: 1.5px solid var(--border2); border-radius: var(--r); padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
@@ -661,6 +708,9 @@
     <span class="topbar-marca">Inmuebles Audiovisuales</span>
     <span class="topbar-sep">/</span>
     <span class="topbar-titulo">Contratos v4</span>
+    <button class="btn-ajustes" id="btn-topbar-ajustes" onclick="mostrarTab('ajustes', null)" title="Ajustes">
+      <i class="ti ti-settings"></i><span class="btn-ajustes-label">Ajustes</span>
+    </button>
     <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
   </div>
 
@@ -668,10 +718,9 @@
   <nav class="bottom-nav">
     <div class="bnav-inner">
       <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)"><i class="ti ti-file-text"></i>Contratos</button>
-      <button class="bnav-btn" data-tab="nuevo"      onclick="mostrarTabMobile('nuevo',this)"><i class="ti ti-plus"></i>Nuevo</button>
-      <button class="bnav-btn" data-tab="crm"        onclick="mostrarTabMobile('crm',this)"><i class="ti ti-users"></i>Clientes</button>
+      <button class="bnav-btn bnav-fab" onclick="irANuevo()" title="Nuevo contrato"><i class="ti ti-plus"></i></button>
       <button class="bnav-btn" data-tab="metricas"   onclick="mostrarTabMobile('metricas',this)"><i class="ti ti-chart-bar"></i>Métricas</button>
-      <button class="bnav-btn" data-tab="paquetes"   onclick="mostrarTabMobile('paquetes',this)"><i class="ti ti-package"></i>Paquetes</button>
+      <button class="bnav-btn" data-tab="ajustes"    onclick="mostrarTabMobile('ajustes',this)"><i class="ti ti-settings"></i>Ajustes</button>
     </div>
   </nav>
 
@@ -684,11 +733,8 @@
 
   <div class="contenido">
     <div class="tabs">
-      <button class="tab-btn activo" data-tab="contratos"  onclick="mostrarTab('contratos', this)">Contratos</button>
-      <button class="tab-btn" data-tab="nuevo"      onclick="mostrarTab('nuevo', this)">Nuevo contrato</button>
-      <button class="tab-btn" data-tab="crm"        onclick="mostrarTab('crm', this)">Clientes</button>
+      <button class="tab-btn activo" data-tab="contratos" onclick="mostrarTab('contratos', this)">Contratos</button>
       <button class="tab-btn" data-tab="metricas"   onclick="mostrarTab('metricas', this)">Métricas</button>
-      <button class="tab-btn" data-tab="paquetes"   onclick="mostrarTab('paquetes', this)">Paquetes</button>
     </div>
 
     <!-- ── CONTRATOS ──────────────────────────────────── -->
@@ -785,6 +831,9 @@
     <!-- ── NUEVO CONTRATO ─────────────────────────────── -->
     <div id="sec-nuevo" class="seccion">
       <div class="form-card">
+        <button class="btn-volver" onclick="mostrarTab('contratos', document.querySelector('.tab-btn[data-tab=\'contratos\']'))">
+          <i class="ti ti-arrow-left"></i> Contratos
+        </button>
         <h2>Nuevo contrato</h2>
         <p class="form-desc">Configura el contrato para tu cliente. Agrega una o más propiedades.</p>
 
@@ -846,136 +895,150 @@
       <div id="metricas-body"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p></div>
     </div>
 
-    <!-- ── CRM ────────────────────────────────────────── -->
-    <div id="sec-crm" class="seccion">
-      <div class="barra">
-        <p style="font-size:13px;color:var(--ink-3);flex:1">Clientes únicos con historial de proyectos.</p>
-        <button class="btn-secundario btn-sm" onclick="cargarCRM()"><i class="ti ti-refresh"></i> Actualizar</button>
+    <!-- ── AJUSTES ──────────────────────────────────── -->
+    <div id="sec-ajustes" class="seccion">
+      <div class="ajustes-tabs">
+        <button id="atab-paquetes" class="ajustes-tab activo-atab" onclick="setAjustesTab('paquetes')">
+          <i class="ti ti-package"></i> Paquetes
+        </button>
+        <button id="atab-clientes" class="ajustes-tab" onclick="setAjustesTab('clientes')">
+          <i class="ti ti-users"></i> Clientes
+        </button>
       </div>
-      <div class="crm-grid" id="crm-grid">
-        <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
+
+      <!-- Pane: Paquetes -->
+      <div id="apane-paquetes" class="ajustes-pane activo-apane">
+        <div class="barra">
+          <p style="font-size:13px;color:var(--ink-3);flex:1">Paquetes y add-ons disponibles en el sistema.</p>
+          <button class="btn-secundario btn-sm" onclick="cargarPaquetesAdmin()"><i class="ti ti-refresh"></i> Actualizar</button>
+          <button class="btn-primario gold btn-sm" onclick="abrirModalNuevoPaquete()"><i class="ti ti-plus"></i> Nuevo paquete</button>
+        </div>
+        <div id="lista-paquetes-admin">
+          <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
+        </div>
+      </div>
+
+      <!-- Pane: Clientes -->
+      <div id="apane-clientes" class="ajustes-pane">
+        <div class="barra">
+          <p style="font-size:13px;color:var(--ink-3);flex:1">Clientes únicos con historial de proyectos.</p>
+          <button class="btn-secundario btn-sm" onclick="cargarCRM()"><i class="ti ti-refresh"></i> Actualizar</button>
+        </div>
+        <div class="crm-grid" id="crm-grid">
+          <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODALES GLOBALES (fuera de .seccion para que funcionen desde cualquier tab) ═══ -->
+
+<!-- Modal nuevo / editar paquete -->
+<div id="modal-paquete" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <p class="section-title" id="modal-paq-titulo">Nuevo paquete</p>
+    <input type="hidden" id="mp-clave-original">
+    <div class="campo">
+      <label>Clave *</label>
+      <input type="text" id="mp-clave" placeholder="PREM-RES" style="text-transform:uppercase">
+    </div>
+    <div class="campo">
+      <label>Nombre *</label>
+      <input type="text" id="mp-nombre" placeholder="Premium Residencial">
+    </div>
+    <div class="campo">
+      <label>Tipo</label>
+      <select id="mp-tipo">
+        <option value="Ambos">Ambos</option>
+        <option value="Residencial">Residencial</option>
+        <option value="Terreno">Terreno</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Precio (MXN)</label>
+      <input type="number" id="mp-precio" placeholder="0" min="0" step="100">
+    </div>
+    <div class="campo">
+      <label>Entregables</label>
+      <textarea id="mp-entregables" maxlength="2000" placeholder="Video 4K · Fotografías · Tour virtual" style="min-height:70px"></textarea>
+    </div>
+    <div class="campo" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="mp-es-adicional" style="width:auto;margin:0" onchange="document.getElementById('campo-mp-alcance').style.display = this.checked ? 'block' : 'none'">
+      <label for="mp-es-adicional" style="margin:0;font-weight:400">Es add-on (adicional)</label>
+    </div>
+    <div class="campo" id="campo-mp-alcance" style="display:none">
+      <label>Alcance</label>
+      <select id="mp-alcance">
+        <option value="por_propiedad">Por propiedad</option>
+        <option value="global">Global</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn-primario gold" style="flex:1" onclick="guardarPaqueteAdmin()">Guardar</button>
+      <button class="btn-secundario" style="flex:1" onclick="cerrarModalPaquete()">Cancelar</button>
+    </div>
+    <div id="modal-paq-error" style="color:var(--danger);font-size:12px;margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- Modal: añadir servicio extra / subir precio -->
+<div id="modal-upsell" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <p class="section-title">Añadir servicio extra / subir precio</p>
+    <p style="font-size:12px;color:var(--ink-3);margin-top:-4px;margin-bottom:14px">Útil cuando durante o después de la sesión el cliente pide algo adicional. El portal del cliente refleja el nuevo total al instante.</p>
+
+    <div class="campo">
+      <label>Adicionales del catálogo (no aplicados aún)</label>
+      <div id="upsell-adicionales" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
+        <p style="font-size:12px;color:var(--ink-3);font-style:italic">Cargando...</p>
       </div>
     </div>
 
-    <!-- ── PAQUETES ──────────────────────────────────── -->
-    <div id="sec-paquetes" class="seccion">
-      <div class="barra">
-        <p style="font-size:13px;color:var(--ink-3);flex:1">Paquetes y add-ons disponibles en el sistema.</p>
-        <button class="btn-secundario btn-sm" onclick="cargarPaquetesAdmin()"><i class="ti ti-refresh"></i> Actualizar</button>
-        <button class="btn-primario gold btn-sm" onclick="abrirModalNuevoPaquete()"><i class="ti ti-plus"></i> Nuevo paquete</button>
-      </div>
-      <div id="lista-paquetes-admin">
-        <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
-      </div>
+    <div class="campo">
+      <label>Servicio fuera de catálogo (opcional)</label>
+      <input type="text" id="upsell-libre-nombre" placeholder="Ej. Toma extra con drone">
+      <input type="number" id="upsell-libre-precio" placeholder="Precio MXN" min="0" step="100" style="margin-top:6px">
+    </div>
 
-      <!-- Modal nuevo / editar paquete -->
-      <div id="modal-paquete" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
-        <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)">
-          <p class="section-title" id="modal-paq-titulo">Nuevo paquete</p>
-          <input type="hidden" id="mp-clave-original">
-          <div class="campo">
-            <label>Clave *</label>
-            <input type="text" id="mp-clave" placeholder="PREM-RES" style="text-transform:uppercase">
-          </div>
-          <div class="campo">
-            <label>Nombre *</label>
-            <input type="text" id="mp-nombre" placeholder="Premium Residencial">
-          </div>
-          <div class="campo">
-            <label>Tipo</label>
-            <select id="mp-tipo">
-              <option value="Ambos">Ambos</option>
-              <option value="Residencial">Residencial</option>
-              <option value="Terreno">Terreno</option>
-            </select>
-          </div>
-          <div class="campo">
-            <label>Precio (MXN)</label>
-            <input type="number" id="mp-precio" placeholder="0" min="0" step="100">
-          </div>
-          <div class="campo">
-            <label>Entregables</label>
-            <textarea id="mp-entregables" maxlength="2000" placeholder="Video 4K · Fotografías · Tour virtual" style="min-height:70px"></textarea>
-          </div>
-          <div class="campo" style="display:flex;align-items:center;gap:10px">
-            <input type="checkbox" id="mp-es-adicional" style="width:auto;margin:0" onchange="document.getElementById('campo-mp-alcance').style.display = this.checked ? 'block' : 'none'">
-            <label for="mp-es-adicional" style="margin:0;font-weight:400">Es add-on (adicional)</label>
-          </div>
-          <div class="campo" id="campo-mp-alcance" style="display:none">
-            <label>Alcance</label>
-            <select id="mp-alcance">
-              <option value="por_propiedad">Por propiedad</option>
-              <option value="global">Global</option>
-            </select>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:20px">
-            <button class="btn-primario gold" style="flex:1" onclick="guardarPaqueteAdmin()">Guardar</button>
-            <button class="btn-secundario" style="flex:1" onclick="cerrarModalPaquete()">Cancelar</button>
-          </div>
-          <div id="modal-paq-error" style="color:var(--danger);font-size:12px;margin-top:10px;display:none"></div>
-        </div>
-      </div>
+    <div class="campo">
+      <label>O establecer precio total manualmente</label>
+      <input type="number" id="upsell-precio-manual" placeholder="(opcional, reemplaza todo el cálculo)" min="0" step="100">
+      <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Si llenas este campo, ignora las selecciones de arriba y fija ese precio total.</p>
+    </div>
 
-      <!-- Modal: añadir servicio extra / subir precio -->
-      <div id="modal-upsell" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
-        <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)">
-          <p class="section-title">Añadir servicio extra / subir precio</p>
-          <p style="font-size:12px;color:var(--ink-3);margin-top:-4px;margin-bottom:14px">Útil cuando durante o después de la sesión el cliente pide algo adicional. El portal del cliente refleja el nuevo total al instante.</p>
+    <div class="campo">
+      <label>Nota interna (opcional)</label>
+      <input type="text" id="upsell-nota" maxlength="500" placeholder="Acordado durante la sesión, etc.">
+    </div>
 
-          <div class="campo">
-            <label>Adicionales del catálogo (no aplicados aún)</label>
-            <div id="upsell-adicionales" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
-              <p style="font-size:12px;color:var(--ink-3);font-style:italic">Cargando...</p>
-            </div>
-          </div>
+    <div class="campo" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="upsell-notificar" style="width:auto;margin:0" checked>
+      <label for="upsell-notificar" style="margin:0;font-weight:400">Notificar al cliente por correo</label>
+    </div>
 
-          <div class="campo">
-            <label>Servicio fuera de catálogo (opcional)</label>
-            <input type="text" id="upsell-libre-nombre" placeholder="Ej. Toma extra con drone">
-            <input type="number" id="upsell-libre-precio" placeholder="Precio MXN" min="0" step="100" style="margin-top:6px">
-          </div>
+    <div id="upsell-resumen" style="background:var(--page);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;margin:14px 0;display:none">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">Precio actual</span><span id="upsell-precio-actual">—</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:700"><span>Nuevo total</span><span id="upsell-precio-nuevo" style="color:var(--gold)">—</span></div>
+    </div>
 
-          <div class="campo">
-            <label>O establecer precio total manualmente</label>
-            <input type="number" id="upsell-precio-manual" placeholder="(opcional, reemplaza todo el cálculo)" min="0" step="100">
-            <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Si llenas este campo, ignora las selecciones de arriba y fija ese precio total.</p>
-          </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-primario gold" style="flex:1" onclick="guardarUpsell()" id="btn-upsell-guardar">Guardar</button>
+      <button class="btn-secundario" style="flex:1" onclick="cerrarModalUpsell()">Cancelar</button>
+    </div>
+    <div id="modal-upsell-error" style="color:var(--danger);font-size:12px;margin-top:10px;display:none"></div>
+  </div>
+</div>
 
-          <div class="campo">
-            <label>Nota interna (opcional)</label>
-            <input type="text" id="upsell-nota" maxlength="500" placeholder="Acordado durante la sesión, etc.">
-          </div>
-
-          <div class="campo" style="display:flex;align-items:center;gap:10px">
-            <input type="checkbox" id="upsell-notificar" style="width:auto;margin:0" checked>
-            <label for="upsell-notificar" style="margin:0;font-weight:400">Notificar al cliente por correo</label>
-          </div>
-
-          <div id="upsell-resumen" style="background:var(--page);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;margin:14px 0;display:none">
-            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">Precio actual</span><span id="upsell-precio-actual">—</span></div>
-            <div style="display:flex;justify-content:space-between;font-weight:700"><span>Nuevo total</span><span id="upsell-precio-nuevo" style="color:var(--gold)">—</span></div>
-          </div>
-
-          <div style="display:flex;gap:10px;margin-top:8px">
-            <button class="btn-primario gold" style="flex:1" onclick="guardarUpsell()" id="btn-upsell-guardar">Guardar</button>
-            <button class="btn-secundario" style="flex:1" onclick="cerrarModalUpsell()">Cancelar</button>
-          </div>
-          <div id="modal-upsell-error" style="color:var(--danger);font-size:12px;margin-top:10px;display:none"></div>
-        </div>
-      </div>
-
-      <!-- Modal: abono excede saldo -->
-      <div id="modal-exceso" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
-        <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
-          <p class="section-title">El abono excede el saldo</p>
-          <div id="modal-exceso-detalle" style="font-size:13px;color:var(--ink-2);line-height:1.55;margin-bottom:18px"></div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button class="btn-primario gold" onclick="confirmarAbonoConExceso()">Subir precio del contrato y registrar abono completo</button>
-            <button class="btn-secundario" onclick="ajustarAbonoAlSaldo()">Registrar solo el saldo pendiente</button>
-            <button class="btn-secundario" onclick="cerrarModalExceso()">Cancelar</button>
-          </div>
-        </div>
-      </div>
+<!-- Modal: abono excede saldo -->
+<div id="modal-exceso" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <p class="section-title">El abono excede el saldo</p>
+    <div id="modal-exceso-detalle" style="font-size:13px;color:var(--ink-2);line-height:1.55;margin-bottom:18px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-primario gold" onclick="confirmarAbonoConExceso()">Subir precio del contrato y registrar abono completo</button>
+      <button class="btn-secundario" onclick="ajustarAbonoAlSaldo()">Registrar solo el saldo pendiente</button>
+      <button class="btn-secundario" onclick="cerrarModalExceso()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -1269,15 +1332,32 @@ function mostrarTab(id, btn) {
   document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('activo'));
+  // Gear button de topbar refleja estado activo de ajustes
+  const btnGear = document.getElementById('btn-topbar-ajustes');
+  if (btnGear) btnGear.classList.toggle('activo', id === 'ajustes');
   document.getElementById('sec-' + id).classList.add('activa');
   if (btn) btn.classList.add('activo');
   const bnavBtn = document.querySelector(`.bnav-btn[data-tab="${id}"]`);
   if (bnavBtn) bnavBtn.classList.add('activo');
+  const tabBtn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+  if (tabBtn) tabBtn.classList.add('activo');
   if (id === 'contratos') cargarContratos();
-  if (id === 'crm') cargarCRM();
-  if (id === 'paquetes') cargarPaquetesAdmin();
+  if (id === 'ajustes') {
+    const paneActivo = document.querySelector('.ajustes-pane.activo-apane');
+    if (paneActivo && paneActivo.id === 'apane-clientes') cargarCRM();
+    else cargarPaquetesAdmin();
+  }
   if (id === 'metricas') cargarMetricas();
   if (id === 'nuevo') cargarClientesParaAutocomplete();
+}
+
+function setAjustesTab(pane) {
+  document.querySelectorAll('.ajustes-tab').forEach(b => b.classList.remove('activo-atab'));
+  document.querySelectorAll('.ajustes-pane').forEach(p => p.classList.remove('activo-apane'));
+  document.getElementById('atab-' + pane).classList.add('activo-atab');
+  document.getElementById('apane-' + pane).classList.add('activo-apane');
+  if (pane === 'paquetes') cargarPaquetesAdmin();
+  if (pane === 'clientes') cargarCRM();
 }
 
 
@@ -1289,8 +1369,7 @@ function mostrarPanelTab(id, btn) {
 }
 
 function irANuevo() {
-  const btn = document.querySelector('.tab-btn[data-tab="nuevo"]');
-  mostrarTab('nuevo', btn);
+  mostrarTab('nuevo', null);
 }
 
 async function enviarRecordatorio() {
