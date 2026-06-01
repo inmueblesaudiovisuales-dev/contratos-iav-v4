@@ -569,8 +569,7 @@ function renderEtapa1() {
   // 1-prop: merge all per-prop add-ons into global (strip numPropiedad)
   if (props.length === 1) {
     addonsPorProp.forEach(function(a) {
-      a.numPropiedad = null;
-      addonsGlobal.push(a);
+      addonsGlobal.push(Object.assign({}, a, { numPropiedad: null }));
     });
     addonsPorProp = [];
   }
@@ -1572,6 +1571,14 @@ function enviarFirma() {
   if (enviando || !formData) return;
   var errEl = document.getElementById('error-firma');
   if (errEl) errEl.style.display = 'none';
+
+  if (!hasStroke) {
+    if (errEl) {
+      errEl.textContent = 'Dibuja tu firma para continuar.';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
 
   if (!canvas) {
     errEl.textContent = 'Error: área de firma no disponible. Recarga la página.';

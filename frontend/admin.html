@@ -2155,7 +2155,7 @@ function renderPanel(data) {
           <i class="ti ti-checkbox"></i> Checklist de rodaje
         </a>
         <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
-           href="${'https://wa.me/?' + new URLSearchParams({ text: 'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + c.Token }).toString()}" target="_blank" rel="noopener">
+           href="${'https://wa.me/?' + new URLSearchParams({ text: 'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener">
           <i class="ti ti-brand-whatsapp"></i> Compartir
         </a>
       </div>
@@ -2197,7 +2197,7 @@ function renderPanel(data) {
         <div class="sec-label" style="margin-top:22px">Cambiar estatus</div>
         <div class="estatus-fila">
           <select id="panel-estatus">
-            ${['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado'].map(s =>
+            ${['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado','Completado'].map(s =>
               `<option value="${s}" ${c.Estatus === s ? 'selected' : ''}>${s === 'En produccion' ? 'En producción' : esc(s)}</option>`
             ).join('')}
           </select>
@@ -2484,7 +2484,7 @@ function abrirModalUpsell() {
     if (typeof item === 'string') yaTiene.add(item);
     else if (item && item.clave) yaTiene.add(item.clave);
   });
-  const esAd = v => v === true || String(v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'') === 'si';
+  const esAd = v => v === true || v === 1 || String(v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'') === 'si';
   const esActivo = v => v === true || (v !== false && String(v || '').trim().toLowerCase() !== 'no');
   const disponibles = (paquetes || []).filter(p => esAd(p.EsAdicional) && esActivo(p.Activo) && !yaTiene.has(p.Clave));
   if (!disponibles.length) {
@@ -3725,7 +3725,8 @@ async function confirmarReagendar(numProp) {
     });
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
     setMsg('msg-reagendar-' + numProp, 'Reagendado. Correo enviado al cliente.', 'ok');
-    setTimeout(function() { abrirPanel(tokenActivo); }, 1200);
+    const tok = tokenActivo;
+    setTimeout(function() { if (tok === tokenActivo) abrirPanel(tok); }, 1200);
   } catch (e) {
     setMsg('msg-reagendar-' + numProp, 'Error: ' + e.message, 'error');
   }

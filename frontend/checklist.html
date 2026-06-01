@@ -498,7 +498,13 @@ async function cargar() {
   try {
     const data = await apiGet({ action: 'obtenerChecklist' });
     if (data.error) { mostrarError(data.error); return; }
-    cuartos  = data.cuartos  || [];
+    const rawCuartos = data.cuartos || [];
+    cuartos = rawCuartos.map(function(c) {
+      if (typeof c === 'object' && ('completado' in c) && !('foto' in c)) {
+        return { nombre: c.nombre || '', foto: !!c.completado, video: !!c.completado, t360: !!c.completado };
+      }
+      return c;
+    });
     columnas = data.columnas || { foto: true, video: true, t360: true };
 
     document.getElementById('top-folio').textContent  = data.folio        || '—';
