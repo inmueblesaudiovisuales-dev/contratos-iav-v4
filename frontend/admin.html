@@ -766,7 +766,7 @@
   <nav class="bottom-nav">
     <div class="bnav-inner">
       <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)"><i class="ti ti-file-text"></i>Contratos</button>
-      <button class="bnav-btn bnav-fab" onclick="irANuevo()" title="Nuevo contrato"><i class="ti ti-plus"></i></button>
+      <button class="bnav-btn bnav-fab" data-tab="nuevo" onclick="irANuevo()" title="Nuevo contrato"><i class="ti ti-plus"></i></button>
       <button class="bnav-btn" data-tab="metricas"   onclick="mostrarTabMobile('metricas',this)"><i class="ti ti-chart-bar"></i>Métricas</button>
       <button class="bnav-btn" data-tab="ajustes"    onclick="mostrarTabMobile('ajustes',this)"><i class="ti ti-settings"></i>Ajustes</button>
     </div>
@@ -879,7 +879,7 @@
     <!-- ── NUEVO CONTRATO ─────────────────────────────── -->
     <div id="sec-nuevo" class="seccion">
       <div class="form-card">
-        <button class="btn-volver" onclick="mostrarTab('contratos', document.querySelector('.tab-btn[data-tab=\'contratos\']'))">
+        <button class="btn-volver" onclick="mostrarTab('contratos', null)">
           <i class="ti ti-arrow-left"></i> Contratos
         </button>
         <h2>Nuevo contrato</h2>
@@ -1677,7 +1677,7 @@ async function cargarContratos(tokenInicial) {
     if (tok) abrirPanel(tok);
   } catch (e) {
     document.getElementById('tabla-body').innerHTML =
-      `<tr><td colspan="6" style="color:var(--danger);padding:24px;text-align:center">Error: ${esc(e.message)}</td></tr>`;
+      `<tr><td colspan="${modoSeleccion ? 7 : 6}" style="color:var(--danger);padding:24px;text-align:center">Error: ${esc(e.message)}</td></tr>`;
     _cargandoContratos = false;
     return;
   }
@@ -1759,13 +1759,14 @@ function diasEnEstatus(c) {
 function skeletonRows() {
   return Array.from({length: 5}).map(() => `
     <tr style="pointer-events:none">
+      ${modoSeleccion ? '<td style="width:32px"></td>' : ''}
       <td class="td-folio"><span class="skel" style="width:64px;height:12px"></span></td>
       <td>
         <span class="skel" style="width:130px;height:13px;display:block;margin-bottom:5px"></span>
         <span class="skel" style="width:90px;height:11px;display:block"></span>
       </td>
       <td><span class="skel" style="width:80px;height:20px;border-radius:20px"></span></td>
-      <td><span class="skel" style="width:60px;height:12px"></span></td>
+      <td class="td-fecha"><span class="skel" style="width:60px;height:12px"></span></td>
       <td class="td-monto"><span class="skel" style="width:55px;height:12px"></span></td>
       <td class="td-saldo"><span class="skel" style="width:50px;height:12px"></span></td>
     </tr>`).join('');
@@ -1936,8 +1937,9 @@ function renderPanel(data) {
   document.getElementById('panel-folio').textContent  = c.Folio || 'Sin folio';
   document.getElementById('panel-nombre').textContent = c.NombreCliente;
   document.getElementById('panel-badge').innerHTML    = badgeEstatus(c.Estatus);
-  // Fecha de primera sesión en header
-  const primeraSesion = data.propiedades && data.propiedades[0] && data.propiedades[0].FechaSesion;
+  // Fecha de primera sesión en header — find() para contratos multi-propiedad donde [0] puede no tener fecha
+  const _sesionProp   = data.propiedades && data.propiedades.find(p => p.FechaSesion);
+  const primeraSesion = _sesionProp && _sesionProp.FechaSesion;
   const panelSesionEl = document.getElementById('panel-sesion');
   if (panelSesionEl) {
     if (primeraSesion) {
@@ -1968,9 +1970,10 @@ function renderPanel(data) {
       }).join('') + '</span>'
     : '<span style="font-size:12px;color:var(--ink-3)">Sin servicios adicionales</span>';
 
-  const propHtml = data.propiedades.length
-    ? data.propiedades.map((p, i) => {
-        const titulo = data.propiedades.length > 1 ? `Propiedad ${i + 1}` : 'Propiedad';
+  const _props   = data.propiedades || [];
+  const propHtml = _props.length
+    ? _props.map((p, i) => {
+        const titulo = _props.length > 1 ? `Propiedad ${i + 1}` : 'Propiedad';
         const tipotxt = p.Tipo ? ` · ${p.Tipo}` : '';
         const fechatxt = p.FechaSesion ? fmxnFechaLarga(p.FechaSesion) + (p.HoraSesion ? ' · ' + p.HoraSesion : '') : '';
         const numProp  = p.NumPropiedad || (i + 1);
@@ -2191,11 +2194,11 @@ function renderPanel(data) {
 
     <!-- ── Acordeón: Archivos del cliente (cerrado) ── -->
     ${(() => {
-      const propsConCarpeta = data.propiedades.filter(p => p.CarpetaControlId);
+      const propsConCarpeta = _props.filter(p => p.CarpetaControlId);
       const tieneCarpeta    = propsConCarpeta.length > 0;
-      const selectorHtml    = data.propiedades.length > 1
+      const selectorHtml    = _props.length > 1
         ? '<select id="admin-file-prop" style="font-size:12px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;background:var(--page);color:var(--ink-1);margin-bottom:8px;width:100%">' +
-          data.propiedades.map(p => `<option value="${p.NumPropiedad}"${p.CarpetaControlId ? '' : ' disabled'}>${esc('Propiedad ' + p.NumPropiedad + (p.Paquete ? ' — ' + p.Paquete : '') + (p.CarpetaControlId ? '' : ' (sin carpeta)'))}</option>`).join('') +
+          _props.map(p => `<option value="${p.NumPropiedad}"${p.CarpetaControlId ? '' : ' disabled'}>${esc('Propiedad ' + p.NumPropiedad + (p.Paquete ? ' — ' + p.Paquete : '') + (p.CarpetaControlId ? '' : ' (sin carpeta)'))}</option>`).join('') +
           '</select>'
         : '';
       return `<details class="panel-acord">
