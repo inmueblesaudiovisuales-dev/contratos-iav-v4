@@ -414,6 +414,7 @@ export async function handleContratos(request, env, ctx, action) {
   if (action === 'reagendarPropiedad') {
     const { token, numPropiedad, fecha, hora } = await request.json();
     if (!token || !numPropiedad || !fecha) return err('Faltan campos requeridos');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return err('Formato de fecha inválido (esperado YYYY-MM-DD)');
     const c = await queryOne(db, 'SELECT * FROM contratos WHERE token=?', [token]);
     if (!c) return err('Contrato no encontrado', 404);
     const p = await queryOne(db,
@@ -493,9 +494,8 @@ export async function handleContratos(request, env, ctx, action) {
   if (action === 'actualizarExpress') {
     const { token, express } = await request.json();
     if (!token) return err('Token requerido');
-    const ce = await queryOne(db, 'SELECT token FROM contratos WHERE token=?', [token]);
-    if (!ce) return err('Contrato no encontrado', 404);
-    await run(db, 'UPDATE contratos SET entrega_express=? WHERE token=?', [express ? 1 : 0, token]);
+    const result = await run(db, 'UPDATE contratos SET entrega_express=? WHERE token=?', [express ? 1 : 0, token]);
+    if (!result.meta?.changes) return err('Contrato no encontrado', 404);
     return ok({ ok: true });
   }
 

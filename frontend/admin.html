@@ -1447,19 +1447,23 @@ async function enviarRecordatorio() {
 async function guardarExpress(checked) {
   const tok = tokenActivo;
   if (!tok) return;
-  const msgEl = document.getElementById('msg-express');
-  if (msgEl) msgEl.textContent = 'Guardando…';
-  const props = (window._contratoActivo && window._contratoActivo.propiedades) || [];
-  props.forEach(function(p) {
-    const el = document.getElementById('fecha-entrega-' + p.NumPropiedad);
-    if (el && p.FechaSesion) el.textContent = fmxnFecha(calcFechaEntrega(p.FechaSesion, checked));
-  });
+  setMsg('msg-express', 'Guardando…', '');
   try {
     const r = await apiPost({ action: 'actualizarExpress', token: tok, express: checked });
+    if (tok !== tokenActivo) return;
     if (!r.ok) throw new Error(r.error || 'Error');
-    if (msgEl) { msgEl.textContent = 'Guardado'; setTimeout(function() { if (msgEl) msgEl.textContent = ''; }, 2000); }
+    const props = (window._contratoActivo && window._contratoActivo.propiedades) || [];
+    props.forEach(function(p) {
+      const el = document.getElementById('fecha-entrega-' + p.NumPropiedad);
+      if (el && p.FechaSesion) el.textContent = fmxnFecha(calcFechaEntrega(p.FechaSesion, checked));
+    });
+    setMsg('msg-express', 'Guardado', 'ok');
+    setTimeout(function() { setMsg('msg-express', '', ''); }, 2000);
   } catch(e) {
-    if (msgEl) msgEl.textContent = 'Error: ' + e.message;
+    if (tok !== tokenActivo) return;
+    const cb = document.getElementById('toggle-express');
+    if (cb) cb.checked = !checked;
+    setMsg('msg-express', 'Error: ' + e.message, 'error');
   }
 }
 
@@ -3129,7 +3133,7 @@ function fmxnFechaLarga(val) {
 
 function calcFechaEntrega(fechaISO, express) {
   if (!fechaISO) return null;
-  var parts = String(fechaISO).split('-');
+  var parts = String(fechaISO).substring(0, 10).split('-');
   if (parts.length !== 3) return null;
   var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, d = parseInt(parts[2], 10);
   var fecha = new Date(y, m, d + (express ? 1 : 5));
