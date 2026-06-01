@@ -74,18 +74,35 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
 
 ---
 
+## Repositorio GitHub
+
+**Repo:** `https://github.com/inmueblesaudiovisuales-dev/contratos-iav-v4` (privado)  
+**Rama de producción:** `main`  
+**Cuenta GitHub:** `inmueblesaudiovisuales-dev`
+
+---
+
 ## Cómo desplegar cambios
 
-**El despliegue del Worker lo hace Claude siempre** — nunca hace falta que Bruno lo haga manualmente. Lo mismo aplica para cualquier operación de Cloudflare (D1, Workers, Pages) o GitHub.
+**El flujo de trabajo desde R16 en adelante:**
 
-**Regla de despliegue: Claude siempre hace `wrangler deploy` completo**, sin importar si el cambio fue solo al Worker o solo a un archivo del frontend. Nunca desplegar parcialmente ni asumir que algo ya está en producción.
+1. Claude hace cambios en los archivos locales
+2. Claude hace `git commit` + `git push origin main`
+3. GitHub Actions dispara automáticamente `wrangler deploy`
+4. Cloudflare despliega en ~1 minuto
+
+**Claude nunca corre `wrangler deploy` directamente** — el push a `main` es suficiente.
 
 ```bash
-cd "/Users/brunogutierrez/Documents/CLAUDE CODE/Inmuebles WEBSITE/02. contratos/06. VERSION 4.0/worker"
-npx wrangler deploy
+cd "/Users/brunogutierrez/Documents/CLAUDE CODE/Inmuebles WEBSITE/02. contratos/06. VERSION 4.0"
+git add <archivos>
+git commit -m "R16 — descripción del cambio"
+git push origin main
 ```
 
-Los archivos de `frontend/` se suben automáticamente como assets estáticos. No hay paso separado.
+Los archivos de `frontend/` se suben automáticamente como assets estáticos vía el workflow `.github/workflows/deploy.yml`.
+
+**Para operaciones de D1** (migraciones, seeds) sigue siendo `wrangler d1 execute ... --remote` directamente desde terminal.
 
 **El adapter de Apps Script sí requiere acción manual de Bruno**: pegar el contenido de `adapter/AdapterScript4_v1.js` en script.google.com y desplegar nueva versión. Claude entrega el archivo listo.
 
