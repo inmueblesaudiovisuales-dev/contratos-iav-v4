@@ -31,10 +31,14 @@ export async function handleProspectos(request, env, ctx, action) {
   }
 
   if (action === 'listarProspectos') {
-    const { results } = await query(db,
-      `SELECT * FROM prospectos ORDER BY fecha_llamada DESC, hora_llamada DESC LIMIT 100`
-    );
-    return ok({ prospectos: results });
+    try {
+      const { results } = await query(db,
+        `SELECT * FROM prospectos ORDER BY fecha_llamada DESC, hora_llamada DESC LIMIT 100`
+      );
+      return ok({ prospectos: results });
+    } catch (e) {
+      return err('DB error: ' + e.message, 500);
+    }
   }
 
   if (action === 'actualizarEstatusProspecto') {
