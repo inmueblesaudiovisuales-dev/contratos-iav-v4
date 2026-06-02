@@ -1148,6 +1148,52 @@
 
       /* Override mobile panel tabs */
       .panel-tab-btn { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+      /* ── SIDEBAR — section labels & badges ── */
+      .bnav-section-label {
+        padding: 10px 18px 4px;
+        font-size: 9.5px; font-weight: 700;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        color: rgba(255,255,255,0.18);
+      }
+      .bnav-badge {
+        font-size: 10px; font-weight: 700;
+        background: var(--gold);
+        color: #1a1000;
+        border-radius: 10px;
+        padding: 1px 7px;
+        min-width: 20px; text-align: center;
+        margin-left: auto;
+      }
+      .bnav-badge.subtle {
+        background: rgba(255,255,255,0.08);
+        color: rgba(255,255,255,0.35);
+      }
+
+      /* ── SIDEBAR — user footer ── */
+      .bnav-user-avatar {
+        width: 30px; height: 30px; border-radius: 50%;
+        background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 700; color: #fff;
+        flex-shrink: 0;
+      }
+      .bnav-user-info { flex: 1; min-width: 0; }
+      .bnav-user-name {
+        font-size: 12px; font-weight: 600;
+        color: rgba(255,255,255,0.7);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .bnav-user-role { font-size: 10.5px; color: rgba(255,255,255,0.25); margin-top: 1px; }
+
+      /* ── STATS RIBBON — delta ── */
+      .stat-delta {
+        margin-left: auto;
+        font-size: 10.5px; font-weight: 600;
+        color: #10B981;
+        white-space: nowrap;
+      }
+      .stat-delta.neg { color: #EF4444; }
     }
   </style>
 </head>
@@ -1199,12 +1245,35 @@
       </div>
     </div>
     <div class="bnav-inner">
-      <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)"><i class="ti ti-file-text"></i>Contratos</button>
+      <div class="bnav-section-label">Principal</div>
+      <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)">
+        <i class="ti ti-file-text"></i>Contratos
+        <span class="bnav-badge" id="bnav-badge-contratos" style="display:none"></span>
+      </button>
       <button class="bnav-btn bnav-fab" data-tab="nuevo" onclick="irANuevo()" title="Nuevo contrato"><i class="ti ti-plus"></i><span class="bnav-fab-label" style="display:none">Nuevo</span></button>
-      <button class="bnav-btn" data-tab="ajustes" onclick="mostrarTabMobile('ajustes',this)"><i class="ti ti-settings"></i>Ajustes</button>
+      <button class="bnav-btn" data-subtab="clientes" onclick="irASubseccion('ajustes','clientes',this)">
+        <i class="ti ti-users"></i>Clientes
+        <span class="bnav-badge subtle" id="bnav-badge-clientes" style="display:none"></span>
+      </button>
+      <div class="bnav-section-label">Catálogos</div>
+      <button class="bnav-btn" data-subtab="paquetes" onclick="irASubseccion('ajustes','paquetes',this)">
+        <i class="ti ti-package"></i>Paquetes
+      </button>
+      <div class="bnav-section-label">Reportes</div>
+      <button class="bnav-btn" data-subtab="metricas" onclick="irASubseccion('ajustes','metricas',this)">
+        <i class="ti ti-chart-bar"></i>Estadísticas
+      </button>
+      <button class="bnav-btn" data-tab="ajustes" onclick="mostrarTabMobile('ajustes',this)">
+        <i class="ti ti-settings"></i>Ajustes
+      </button>
     </div>
     <div class="bnav-logout" style="display:none">
-      <button class="bnav-logout-btn" onclick="cerrarSesion()"><i class="ti ti-logout"></i>Salir</button>
+      <div class="bnav-user-avatar">IA</div>
+      <div class="bnav-user-info">
+        <div class="bnav-user-name">Admin IAV</div>
+        <div class="bnav-user-role">Administrador</div>
+      </div>
+      <button class="bnav-logout-btn" onclick="cerrarSesion()" title="Cerrar sesión"><i class="ti ti-logout"></i></button>
     </div>
   </nav>
 
@@ -1231,7 +1300,7 @@
         <div class="stat-card"><div class="stat-icon gold">📅</div><div class="stat-data"><div class="stat-value" id="statSesionesHoy">—</div><div class="stat-label">Sesiones hoy</div></div></div>
         <div class="stat-card"><div class="stat-icon blue">✍️</div><div class="stat-data"><div class="stat-value" id="statPendientesFirma">—</div><div class="stat-label">Pendientes firma</div></div></div>
         <div class="stat-card"><div class="stat-icon purple">🎬</div><div class="stat-data"><div class="stat-value" id="statEnProduccion">—</div><div class="stat-label">En produccion</div></div></div>
-        <div class="stat-card"><div class="stat-icon green">💵</div><div class="stat-data"><div class="stat-value" id="statCobradoMes">—</div><div class="stat-label">Cobrado este mes</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">💵</div><div class="stat-data"><div class="stat-value" id="statCobradoMes">—</div><div class="stat-label">Cobrado este mes</div></div><div class="stat-delta" id="statDeltaCobrado" style="display:none"></div></div>
       </div>
 
       <!-- Tabs de navegación con contadores -->
@@ -1880,6 +1949,34 @@ function irANuevo() {
   mostrarTab('nuevo', null);
 }
 
+function actualizarNavBadges(contratos) {
+  if (window.innerWidth < 1024) return;
+  var abiertos = contratos.filter(function(c){
+    var e = c.Estatus||'';
+    return e !== 'Completado' && e !== 'Liquidado';
+  }).length;
+  var bdgContratos = document.getElementById('bnav-badge-contratos');
+  if (bdgContratos) {
+    if (abiertos > 0) { bdgContratos.textContent = abiertos; bdgContratos.style.display = ''; }
+    else bdgContratos.style.display = 'none';
+  }
+  // clientes únicos por correo (para badge sutil)
+  var correos = new Set(contratos.map(function(c){ return c.CorreoCliente||''; }).filter(Boolean));
+  var bdgClientes = document.getElementById('bnav-badge-clientes');
+  if (bdgClientes && correos.size > 0) {
+    bdgClientes.textContent = correos.size;
+    bdgClientes.style.display = '';
+  }
+}
+
+function irASubseccion(tab, subtab, btn) {
+  mostrarTab(tab, null);
+  setAjustesTab(subtab);
+  // marcar el item del sidebar como activo (mostrarTab ya limpió todos)
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('activo'));
+  if (btn) btn.classList.add('activo');
+}
+
 async function enviarRecordatorio() {
   const ctx = window._contratoActivo;
   if (!ctx) return;
@@ -2358,6 +2455,7 @@ function renderTabla(lista) {
     </tr>`;
   }).join('');
   actualizarStatsRibbon(todosContratos);
+  actualizarNavBadges(todosContratos);
   renderHoyStrip(todosContratos);
 }
 
@@ -4325,13 +4423,35 @@ function hashColor(str) {
 function actualizarStatsRibbon(contratos) {
   if (window.innerWidth < 1024) return;
   const hoy = new Date().toISOString().slice(0,10);
-  const mes = new Date().toISOString().slice(0,7);
+  const ahora = new Date();
+  const mesActual = ahora.toISOString().slice(0,7);
+  const mesPasado = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString().slice(0,7);
   const el = function(id){ return document.getElementById(id); };
+
   if (el('statSesionesHoy'))     el('statSesionesHoy').textContent  = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); }).length;
   if (el('statPendientesFirma')) el('statPendientesFirma').textContent = contratos.filter(function(c){ var e = (c.Estatus||'').toLowerCase(); return e.includes('pendiente'); }).length;
   if (el('statEnProduccion'))    el('statEnProduccion').textContent = contratos.filter(function(c){ var e = (c.Estatus||'').toLowerCase(); return e.includes('produccion')||e.includes('producción'); }).length;
-  var cobrado = contratos.filter(function(c){ return c.Estatus === 'Completado' || c.Estatus === 'Liquidado'; }).reduce(function(s,c){ return s + (Number(c.PrecioTotal||0) - Number(c.SaldoPendiente||0)); }, 0);
-  if (el('statCobradoMes'))      el('statCobradoMes').textContent = '$' + cobrado.toLocaleString('es-MX');
+
+  // cobrado este mes (filtrado por fecha de creación del mes actual)
+  function cobradoEnMes(mes) {
+    return contratos
+      .filter(function(c){ return (c.FechaCreacion||'').startsWith(mes) && (c.Estatus === 'Completado' || c.Estatus === 'Liquidado' || c.Estatus === 'Entregado'); })
+      .reduce(function(s,c){ return s + (Number(c.PrecioTotal||0) - Number(c.SaldoPendiente||0)); }, 0);
+  }
+  var cobradoActual = cobradoEnMes(mesActual);
+  var cobradoAnterior = cobradoEnMes(mesPasado);
+  if (el('statCobradoMes')) el('statCobradoMes').textContent = '$' + cobradoActual.toLocaleString('es-MX');
+
+  // delta vs mes anterior
+  var deltaEl = el('statDeltaCobrado');
+  if (deltaEl && cobradoAnterior > 0) {
+    var pct = Math.round((cobradoActual - cobradoAnterior) / cobradoAnterior * 100);
+    deltaEl.textContent = (pct >= 0 ? '↑ ' : '↓ ') + Math.abs(pct) + '%';
+    deltaEl.className = 'stat-delta' + (pct < 0 ? ' neg' : '');
+    deltaEl.style.display = '';
+  } else if (deltaEl) {
+    deltaEl.style.display = 'none';
+  }
 }
 
 function renderHoyStrip(contratos) {

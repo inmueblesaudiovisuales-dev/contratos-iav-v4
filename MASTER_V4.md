@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 19 — Rediseño desktop admin v2)  
+> Última actualización: 2026-06-02 (Ronda 20 — Sidebar completo + stats delta)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -280,6 +280,29 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 20 — Sidebar completo + stats delta (2026-06-02)
+
+**Fase A: Sidebar — secciones, nav items y badges**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R20-01 | `frontend/admin.html` CSS | Nuevas clases desktop: `.bnav-section-label` (labels de sección en el sidebar), `.bnav-badge` (dorado) y `.bnav-badge.subtle` (gris), `.bnav-user-avatar`, `.bnav-user-name`, `.bnav-user-role` para el footer del sidebar. |
+| R20-02 | `frontend/admin.html` HTML | Sidebar `.bnav-inner` reestructurado con 3 secciones: "Principal" (Contratos, Nuevo, Clientes), "Catálogos" (Paquetes), "Reportes" (Estadísticas, Ajustes). |
+| R20-03 | `frontend/admin.html` HTML | Badge `#bnav-badge-contratos` (dorado) en ítem Contratos — muestra count de contratos abiertos. Badge `#bnav-badge-clientes` (sutil) en ítem Clientes — muestra total de clientes únicos. |
+| R20-04 | `frontend/admin.html` HTML | Footer sidebar `.bnav-logout` actualizado: agrega `.bnav-user-avatar` (IAV), `.bnav-user-info` (nombre + rol), botón logout con solo ícono. |
+| R20-05 | `frontend/admin.html` JS | Nueva función `actualizarNavBadges(contratos)` — calcula abiertos y clientes únicos por correo. Solo ejecuta en ≥1024px. Llamada desde `renderTabla()`. |
+| R20-06 | `frontend/admin.html` JS | Nueva función `irASubseccion(tab, subtab, btn)` — navega a una sección y subtab en un solo paso, luego marca el ítem del sidebar como activo. Usada por los nuevos nav items (Clientes, Paquetes, Estadísticas). |
+
+**Fase B: Stats ribbon — delta mes actual vs anterior**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R20-07 | `frontend/admin.html` CSS | Nueva clase `.stat-delta` (verde, `margin-left:auto`) y `.stat-delta.neg` (rojo) para mostrar variación porcentual. |
+| R20-08 | `frontend/admin.html` HTML | Card "Cobrado este mes" agrega `#statDeltaCobrado` con clase `.stat-delta`. |
+| R20-09 | `frontend/admin.html` JS | `actualizarStatsRibbon()` refactorizado: `cobrado` ahora filtra por `FechaCreacion` del mes actual (antes sumaba todo el histórico). Calcula `cobradoAnterior` del mes previo. Muestra delta "↑ X%" / "↓ X%" solo si hay datos del mes anterior; oculto si no hay base de comparación. |
+
+---
 
 ### Ronda 19 — Rediseño desktop admin v2 (2026-06-02)
 
