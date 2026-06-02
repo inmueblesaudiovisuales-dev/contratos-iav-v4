@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IAV Admin — Mockup v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  background: #EFEDE8;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --sidebar-w: 224px;
+  --panel-w: 488px;
+
+  --gold:       #C9A84C;
+  --gold-light: rgba(201,168,76,0.14);
+  --gold-text:  #92720E;
+
+  --ink-1: #111827;
+  --ink-2: #4B5563;
+  --ink-3: #9CA3AF;
+  --ink-4: #D1D5DB;
+
+  --page:   #EFEDE8;
+  --card:   #FFFFFF;
+  --border: #E5E3DD;
+  --border-strong: #CCC9C1;
+
+  --sidebar-bg:     #0D0D10;
+  --sidebar-border: rgba(255,255,255,0.07);
+
+  /* status */
+  --c-pendiente: #9CA3AF;
+  --c-firmado:   #3B82F6;
+  --c-anticipo:  #F59E0B;
+  --c-produccion:#8B5CF6;
+  --c-entregado: #14B8A6;
+  --c-completado:#10B981;
+
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+
+/* ════════════════════════════════
+   LAYOUT
+════════════════════════════════ */
+.app { display: flex; height: 100vh; }
+
+/* ════════════════════════════════
+   SIDEBAR
+════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10;
+}
+
+/* logo */
+.s-brand {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid var(--sidebar-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.s-brand-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #C9A84C 0%, #8B6914 100%);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px; font-weight: 800; color: #fff;
+  letter-spacing: -0.5px;
+}
+.s-brand-text {}
+.s-brand-name {
+  font-size: 11.5px; font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+}
+.s-brand-version {
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  margin-top: 1px;
+}
+
+/* new btn */
+.s-new {
+  margin: 12px 14px 4px;
+  padding: 9px 14px;
+  background: var(--gold);
+  color: #1a1000;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex; align-items: center; gap: 8px;
+  width: calc(100% - 28px);
+  transition: filter 120ms;
+  letter-spacing: 0.01em;
+}
+.s-new:hover { filter: brightness(1.08); }
+.s-new-icon {
+  width: 18px; height: 18px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; line-height: 1; font-weight: 300;
+  flex-shrink: 0;
+}
+
+/* nav */
+.s-nav { flex: 1; padding: 6px 0 6px; overflow-y: auto; }
+
+.s-section-label {
+  padding: 10px 18px 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.18);
+}
+
+.s-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px;
+  font-size: 12.5px; font-weight: 500;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  border: none; background: none;
+  width: 100%; text-align: left;
+  font-family: inherit;
+  transition: color 120ms, background 120ms;
+  border-radius: 0;
+  position: relative;
+}
+.s-item:hover { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.04); }
+.s-item.active {
+  color: rgba(255,255,255,0.95);
+  background: rgba(255,255,255,0.07);
+}
+.s-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px; bottom: 8px;
+  width: 3px;
+  background: var(--gold);
+  border-radius: 0 2px 2px 0;
+}
+.s-item-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.06);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+  transition: background 120ms;
+}
+.s-item.active .s-item-icon { background: rgba(201,168,76,0.15); }
+.s-item-label { flex: 1; }
+.s-item-badge {
+  font-size: 10px; font-weight: 700;
+  background: var(--gold);
+  color: #1a1000;
+  border-radius: 10px;
+  padding: 1px 7px;
+  min-width: 20px; text-align: center;
+}
+.s-item-badge.subtle {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.35);
+}
+
+/* user */
+.s-user {
+  padding: 12px 14px;
+  border-top: 1px solid var(--sidebar-border);
+  display: flex; align-items: center; gap: 10px;
+}
+.s-avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+.s-user-info { flex: 1; min-width: 0; }
+.s-user-name {
+  font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.s-user-role {
+  font-size: 10.5px; color: rgba(255,255,255,0.25);
+  margin-top: 1px;
+}
+.s-logout {
+  width: 26px; height: 26px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  background: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: rgba(255,255,255,0.3);
+  font-size: 12px;
+  transition: color 120ms, border-color 120ms;
+}
+.s-logout:hover { color: rgba(255,255,255,0.65); border-color: rgba(255,255,255,0.2); }
+
+/* ════════════════════════════════
+   MAIN
+════════════════════════════════ */
+.main {
+  flex: 1;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  transition: margin-right 300ms cubic-bezier(0.16,1,0.3,1);
+}
+.main.panel-open { margin-right: var(--panel-w); }
+
+/* ════════════════════════════════
+   TOPBAR
+════════════════════════════════ */
+.topbar {
+  padding: 0 24px;
+  height: 52px;
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.topbar-title {
+  font-size: 15px; font-weight: 700;
+  color: var(--ink-1);
+  white-space: nowrap;
+}
+.topbar-sep {
+  color: var(--ink-4);
+  font-size: 18px; font-weight: 300;
+}
+.topbar-sub {
+  font-size: 13px; font-weight: 500;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.search-wrap {
+  flex: 1; max-width: 300px;
+  position: relative;
+}
+.search-input {
+  width: 100%; height: 32px;
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px 0 32px;
+  font-size: 12.5px; font-family: inherit;
+  color: var(--ink-1); outline: none;
+  transition: border-color 120ms, background 120ms;
+}
+.search-input:focus { border-color: var(--gold); background: #fff; box-shadow: 0 0 0 3px var(--gold-light); }
+.search-input::placeholder { color: var(--ink-3); }
+.search-icon {
+  position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-3); font-size: 14px;
+  pointer-events: none;
+}
+.search-shortcut {
+  position: absolute; right: 8px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px; color: var(--ink-4);
+  background: var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.topbar-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.btn-ghost {
+  height: 30px; padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  font-size: 12px; font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; gap: 5px;
+  transition: border-color 120ms, color 120ms, background 120ms;
+  white-space: nowrap;
+}
+.btn-ghost:hover { border-color: var(--ink-4); color: var(--ink-1); background: var(--page); }
+.btn-icon {
+  width: 30px; height: 30px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  transition: border-color 120ms, color 120ms, background 120ms;
+}
+.btn-icon:hover { border-color: var(--ink-4); color: var(--ink-1); background: var(--page); }
+
+/* ════════════════════════════════
+   STATS RIBBON
+════════════════════════════════ */
+.stats-ribbon {
+  display: flex; gap: 0;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.stat-card {
+  flex: 1;
+  padding: 10px 20px;
+  border-right: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  cursor: default;
+  transition: background 100ms;
+}
+.stat-card:last-child { border-right: none; }
+.stat-card:hover { background: #FAFAF8; }
+.stat-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.stat-icon.gold { background: var(--gold-light); }
+.stat-icon.blue { background: rgba(59,130,246,0.1); }
+.stat-icon.purple { background: rgba(139,92,246,0.1); }
+.stat-icon.green { background: rgba(16,185,129,0.1); }
+.stat-data {}
+.stat-value {
+  font-size: 18px; font-weight: 700;
+  color: var(--ink-1);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stat-label {
+  font-size: 10.5px; font-weight: 500;
+  color: var(--ink-3);
+  margin-top: 1px;
+  white-space: nowrap;
+}
+.stat-delta {
+  margin-left: auto;
+  font-size: 10.5px; font-weight: 600;
+  color: #10B981;
+}
+.stat-delta.neg { color: #EF4444; }
+
+/* ════════════════════════════════
+   SUBTABS + FILTERS
+════════════════════════════════ */
+.toolbar {
+  display: flex; align-items: center;
+  padding: 0 24px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 16px;
+}
+.subtabs { display: flex; align-items: center; gap: 0; }
+.subtab {
+  padding: 11px 14px;
+  font-size: 12.5px; font-weight: 500;
+  color: var(--ink-3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  border-left: none; border-right: none; border-top: none;
+  font-family: inherit;
+  display: flex; align-items: center; gap: 6px;
+  transition: color 100ms;
+  white-space: nowrap;
+}
+.subtab:hover { color: var(--ink-2); }
+.subtab.active { color: var(--ink-1); border-bottom-color: var(--gold); font-weight: 600; }
+.subtab-count {
+  font-size: 10px; font-weight: 700;
+  background: var(--page);
+  color: var(--ink-2);
+  border-radius: 8px; padding: 1px 6px;
+}
+.subtab.active .subtab-count { background: var(--gold); color: #1a1000; }
+
+.toolbar-sep { width: 1px; height: 20px; background: var(--border); }
+.filter-chips { display: flex; gap: 6px; align-items: center; }
+.chip {
+  height: 26px; padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: none;
+  font-size: 11.5px; font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; gap: 5px;
+  transition: all 100ms;
+  white-space: nowrap;
+}
+.chip:hover { border-color: var(--ink-4); color: var(--ink-1); }
+.chip.on { background: var(--ink-1); border-color: var(--ink-1); color: #fff; }
+.chip-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+/* ════════════════════════════════
+   HOY STRIP (sessions today)
+════════════════════════════════ */
+.hoy-strip {
+  padding: 10px 24px;
+  background: var(--page);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: stretch; gap: 10px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hoy-strip::-webkit-scrollbar { display: none; }
+.hoy-header {
+  display: flex; flex-direction: column; justify-content: center;
+  margin-right: 4px; flex-shrink: 0;
+}
+.hoy-title {
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-2);
+}
+.hoy-date { font-size: 10px; color: var(--ink-3); margin-top: 1px; }
+.hoy-divider { width: 1px; background: var(--border); flex-shrink: 0; }
+
+.session-card {
+  display: flex; align-items: stretch;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 120ms, box-shadow 120ms;
+  width: 220px;
+}
+.session-card:hover { border-color: var(--ink-4); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.session-card.active-card { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-light); }
+.session-card-accent { width: 4px; flex-shrink: 0; }
+.session-card-body { padding: 9px 12px; flex: 1; min-width: 0; }
+.session-card-hora {
+  font-size: 12px; font-weight: 800;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+.session-card-nombre {
+  font-size: 12px; font-weight: 600;
+  color: var(--ink-1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.session-card-meta { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+.session-card-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 5px;
+  font-size: 10.5px; font-weight: 600;
+  color: var(--ink-2);
+}
+.session-card-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+/* ════════════════════════════════
+   TABLE
+════════════════════════════════ */
+.tabla-wrap {
+  flex: 1; overflow-y: auto; background: var(--page);
+}
+.tabla { width: 100%; border-collapse: collapse; }
+
+.tabla thead tr {
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  position: sticky; top: 0; z-index: 2;
+}
+.tabla th {
+  padding: 9px 16px;
+  text-align: left;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  user-select: none;
+  cursor: pointer;
+}
+.tabla th:hover { color: var(--ink-2); }
+.tabla th.sort-asc::after { content: ' ↑'; }
+.tabla th.sort-desc::after { content: ' ↓'; }
+.th-right { text-align: right !important; }
+
+.tabla tbody tr {
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  cursor: pointer;
+  transition: background 80ms;
+  position: relative;
+}
+.tabla tbody tr::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--row-color, transparent);
+  transition: width 120ms;
+}
+.tabla tbody tr:hover { background: #FAFAF8; }
+.tabla tbody tr:hover::before { width: 4px; }
+.tabla tbody tr.row-active { background: #FBF9F3; }
+.tabla tbody tr.row-active::before { width: 4px; }
+
+.tabla td { padding: 12px 16px; vertical-align: middle; }
+
+/* folio */
+.td-folio {
+  font-size: 11px; font-weight: 600;
+  color: var(--ink-3); font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+/* cliente */
+.td-client { display: flex; align-items: center; gap: 10px; }
+.td-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+.td-client-name { font-size: 13px; font-weight: 600; color: var(--ink-1); }
+.td-client-sub { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+
+/* status */
+.td-status { display: flex; align-items: center; gap: 7px; }
+.td-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.td-status-label { font-size: 12px; font-weight: 500; color: var(--ink-2); }
+.td-status-age { font-size: 10.5px; color: var(--ink-4); margin-top: 1px; }
+
+/* fecha */
+.td-fecha { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+.td-fecha.today { color: var(--gold); font-weight: 700; }
+.td-fecha.soon { color: #F59E0B; font-weight: 600; }
+
+/* monto */
+.td-monto { text-align: right; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink-1); }
+
+/* saldo */
+.td-saldo-wrap { text-align: right; }
+.td-saldo { display: inline-block; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.td-saldo.red { color: #DC2626; }
+.td-saldo.amber { color: #D97706; }
+.td-saldo.green { color: #059669; }
+.saldo-bar-wrap { margin-top: 3px; height: 2px; background: var(--border); border-radius: 99px; }
+.saldo-bar { height: 2px; border-radius: 99px; }
+
+/* ════════════════════════════════
+   PANEL
+════════════════════════════════ */
+.panel {
+  position: fixed;
+  right: 0; top: 0; bottom: 0;
+  width: var(--panel-w);
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 300ms cubic-bezier(0.16,1,0.3,1);
+  z-index: 50;
+}
+.panel.visible {
+  transform: translateX(0);
+  box-shadow: -12px 0 40px rgba(0,0,0,0.07);
+}
+
+/* panel header */
+.panel-header {
+  padding: 20px 20px 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--card);
+}
+.panel-header-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.panel-status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11.5px; font-weight: 600;
+  background: rgba(139,92,246,0.1);
+  color: #6D28D9;
+}
+.panel-status-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+.panel-close {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: var(--page);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--ink-2);
+  transition: background 100ms;
+  flex-shrink: 0;
+}
+.panel-close:hover { background: var(--border); }
+
+.panel-folio { font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.panel-name { font-size: 20px; font-weight: 800; color: var(--ink-1); line-height: 1.2; letter-spacing: -0.3px; }
+.panel-email { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+
+/* lifecycle progress */
+.lifecycle {
+  display: flex; align-items: center;
+  margin: 14px 0 0;
+  gap: 0;
+  overflow: hidden;
+}
+.lc-step {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center;
+  position: relative;
+  padding-bottom: 10px;
+}
+.lc-step::before {
+  content: '';
+  position: absolute;
+  top: 7px; left: calc(-50% + 8px); right: calc(50% + 8px);
+  height: 2px;
+  background: var(--border);
+}
+.lc-step:first-child::before { display: none; }
+.lc-step.done::before { background: var(--gold); }
+
+.lc-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--card);
+  z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 200ms;
+}
+.lc-step.done .lc-dot {
+  border-color: var(--gold);
+  background: var(--gold);
+}
+.lc-step.current .lc-dot {
+  border-color: var(--c-anticipo);
+  background: var(--c-anticipo);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.2);
+}
+.lc-dot-check { font-size: 8px; color: #fff; font-weight: 800; }
+.lc-label { font-size: 9px; font-weight: 600; color: var(--ink-3); margin-top: 5px; text-align: center; white-space: nowrap; }
+.lc-step.done .lc-label { color: var(--gold-text); }
+.lc-step.current .lc-label { color: #92580A; font-weight: 700; }
+
+/* panel tabs */
+.panel-tabs {
+  display: flex; gap: 0;
+  margin: 4px -20px 0;
+  padding: 0 20px;
+}
+.panel-tab {
+  padding: 9px 12px;
+  font-size: 12px; font-weight: 500;
+  color: var(--ink-3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  border-left: none; border-right: none; border-top: none;
+  font-family: inherit;
+  transition: color 100ms;
+  white-space: nowrap;
+}
+.panel-tab:hover { color: var(--ink-2); }
+.panel-tab.active { color: var(--ink-1); border-bottom-color: var(--ink-1); font-weight: 600; }
+
+/* panel body */
+.panel-body { flex: 1; overflow-y: auto; padding: 20px; }
+
+/* kpi row */
+.kpi-row { display: flex; gap: 10px; margin-bottom: 20px; }
+.kpi-card {
+  flex: 1;
+  background: var(--page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); margin-bottom: 5px; }
+.kpi-val { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink-1); letter-spacing: -0.5px; }
+.kpi-val.amber { color: #D97706; }
+.kpi-val.green { color: #059669; }
+.kpi-sub { font-size: 10px; color: var(--ink-3); margin-top: 3px; }
+
+/* progress bar */
+.pay-progress { margin-bottom: 20px; }
+.pay-progress-labels { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.pay-progress-label { font-size: 11px; font-weight: 500; color: var(--ink-3); }
+.pay-bar-bg { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.pay-bar-fill { height: 6px; border-radius: 99px; background: linear-gradient(90deg, #10B981 0%, #34D399 100%); transition: width 600ms cubic-bezier(0.16,1,0.3,1); }
+
+/* section */
+.p-section { margin-bottom: 20px; }
+.p-section-label {
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.09em; color: var(--ink-3);
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.p-section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.p-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.p-field {}
+.p-field.full { grid-column: 1/-1; }
+.p-field-label { font-size: 10.5px; color: var(--ink-3); margin-bottom: 2px; }
+.p-field-value { font-size: 13px; font-weight: 500; color: var(--ink-1); }
+.p-field-value.highlight { color: var(--gold); font-weight: 700; }
+.p-field-value.green { color: #059669; }
+
+/* timeline */
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.tl-item { display: flex; gap: 12px; position: relative; padding-bottom: 16px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item:last-child .tl-line { display: none; }
+.tl-icon-wrap { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.tl-icon {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; flex-shrink: 0;
+}
+.tl-icon.gold { background: var(--gold-light); }
+.tl-icon.blue { background: rgba(59,130,246,0.1); }
+.tl-icon.green { background: rgba(16,185,129,0.1); }
+.tl-icon.gray { background: var(--page); }
+.tl-line { flex: 1; width: 1px; background: var(--border); margin: 3px 0; }
+.tl-content { flex: 1; padding-top: 3px; }
+.tl-action { font-size: 12.5px; font-weight: 500; color: var(--ink-1); line-height: 1.3; }
+.tl-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+
+/* action buttons */
+.panel-actions {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 8px; flex-wrap: wrap;
+  background: var(--card);
+  flex-shrink: 0;
+}
+.btn-action {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  border: 1px solid var(--border);
+  background: var(--page);
+  color: var(--ink-1);
+  transition: border-color 100ms, background 100ms;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-action:hover { border-color: var(--ink-4); background: var(--border); }
+.btn-action.primary { background: var(--gold); border-color: var(--gold); color: #1a1000; }
+.btn-action.primary:hover { filter: brightness(1.06); }
+.btn-action.danger { color: #DC2626; border-color: #FECACA; background: #FEF2F2; }
+.btn-action.danger:hover { background: #FEE2E2; border-color: #FCA5A5; }
+
+/* ════════════════════════════════
+   STATUS HELPERS
+════════════════════════════════ */
+.bg-pendiente  { background: #9CA3AF; }
+.bg-firmado    { background: #3B82F6; }
+.bg-anticipo   { background: #F59E0B; }
+.bg-produccion { background: #8B5CF6; }
+.bg-entregado  { background: #14B8A6; }
+.bg-completado { background: #10B981; }
+
+/* avatar colors by initial */
+.av-a { background: linear-gradient(135deg,#F59E0B,#D97706); }
+.av-b { background: linear-gradient(135deg,#3B82F6,#1D4ED8); }
+.av-c { background: linear-gradient(135deg,#EC4899,#DB2777); }
+.av-d { background: linear-gradient(135deg,#8B5CF6,#6D28D9); }
+.av-e { background: linear-gradient(135deg,#10B981,#059669); }
+.av-f { background: linear-gradient(135deg,#F97316,#EA580C); }
+
+/* empty strip */
+.empty-row {
+  height: 8px;
+  background: var(--page);
+}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ═══════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════ -->
+<nav class="sidebar">
+
+  <div class="s-brand">
+    <div class="s-brand-icon">IAV</div>
+    <div class="s-brand-text">
+      <div class="s-brand-name">Inmuebles<br>Audiovisuales</div>
+      <div class="s-brand-version">Contratos v4</div>
+    </div>
+  </div>
+
+  <button class="s-new" onclick="togglePanel()">
+    <div class="s-new-icon">+</div>
+    Nuevo contrato
+  </button>
+
+  <div class="s-nav">
+    <div class="s-section-label">Principal</div>
+    <button class="s-item active">
+      <div class="s-item-icon">📋</div>
+      <span class="s-item-label">Contratos</span>
+      <span class="s-item-badge">3</span>
+    </button>
+    <button class="s-item">
+      <div class="s-item-icon">📅</div>
+      <span class="s-item-label">Agenda</span>
+    </button>
+    <button class="s-item">
+      <div class="s-item-icon">👥</div>
+      <span class="s-item-label">Clientes</span>
+      <span class="s-item-badge subtle">24</span>
+    </button>
+
+    <div class="s-section-label" style="margin-top:6px">Catálogos</div>
+    <button class="s-item">
+      <div class="s-item-icon">📦</div>
+      <span class="s-item-label">Paquetes</span>
+    </button>
+    <button class="s-item">
+      <div class="s-item-icon">💰</div>
+      <span class="s-item-label">Pagos</span>
+    </button>
+
+    <div class="s-section-label" style="margin-top:6px">Reportes</div>
+    <button class="s-item">
+      <div class="s-item-icon">📊</div>
+      <span class="s-item-label">Estadísticas</span>
+    </button>
+    <button class="s-item">
+      <div class="s-item-icon">⚙️</div>
+      <span class="s-item-label">Ajustes</span>
+    </button>
+  </div>
+
+  <div class="s-user">
+    <div class="s-avatar">IA</div>
+    <div class="s-user-info">
+      <div class="s-user-name">Admin IAV</div>
+      <div class="s-user-role">Administrador</div>
+    </div>
+    <button class="s-logout" title="Cerrar sesión">↪</button>
+  </div>
+
+</nav>
+
+<!-- ═══════════════════════════════════
+     MAIN
+═══════════════════════════════════ -->
+<div class="main" id="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <span class="topbar-title">Contratos</span>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" type="text" placeholder="Buscar por nombre, folio, teléfono…">
+      <span class="search-shortcut">⌘K</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-ghost">⬇ Exportar</button>
+      <button class="btn-icon" title="Refrescar" style="font-size:15px">↺</button>
+    </div>
+  </div>
+
+  <!-- STATS RIBBON -->
+  <div class="stats-ribbon">
+    <div class="stat-card">
+      <div class="stat-icon gold">📅</div>
+      <div class="stat-data">
+        <div class="stat-value">2</div>
+        <div class="stat-label">Sesiones hoy</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon blue">✍️</div>
+      <div class="stat-data">
+        <div class="stat-value">2</div>
+        <div class="stat-label">Pendientes firma</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">🎬</div>
+      <div class="stat-data">
+        <div class="stat-value">1</div>
+        <div class="stat-label">En producción</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">💵</div>
+      <div class="stat-data">
+        <div class="stat-value">$15,650</div>
+        <div class="stat-label">Cobrado este mes</div>
+      </div>
+      <div class="stat-delta">↑ 12%</div>
+    </div>
+  </div>
+
+  <!-- TOOLBAR: subtabs + filter chips -->
+  <div class="toolbar">
+    <div class="subtabs">
+      <button class="subtab" onclick="switchTab(this)">Sesiones <span class="subtab-count">2</span></button>
+      <button class="subtab active" onclick="switchTab(this)">Abiertos <span class="subtab-count">3</span></button>
+      <button class="subtab" onclick="switchTab(this)">Todos</button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <div class="filter-chips">
+      <button class="chip on">
+        <span class="chip-dot" style="background:#9CA3AF"></span>Pendiente
+      </button>
+      <button class="chip">
+        <span class="chip-dot" style="background:#F59E0B"></span>Anticipo
+      </button>
+      <button class="chip">
+        <span class="chip-dot" style="background:#8B5CF6"></span>Producción
+      </button>
+      <button class="chip">
+        <span class="chip-dot" style="background:#14B8A6"></span>Entregado
+      </button>
+    </div>
+  </div>
+
+  <!-- HOY STRIP -->
+  <div class="hoy-strip">
+    <div class="hoy-header">
+      <div class="hoy-title">Hoy</div>
+      <div class="hoy-date">2 jun 2026</div>
+    </div>
+    <div class="hoy-divider"></div>
+
+    <div class="session-card active-card" onclick="togglePanel()">
+      <div class="session-card-accent" style="background:#F59E0B"></div>
+      <div class="session-card-body">
+        <div class="session-card-hora">09:00</div>
+        <div class="session-card-nombre">TEST Jaimito Perez</div>
+        <div class="session-card-meta">Hotel PARRAS · Monterrey</div>
+        <div class="session-card-status">
+          <span class="session-card-dot" style="background:#F59E0B"></span>
+          Anticipo recibido
+        </div>
+      </div>
+    </div>
+
+    <div class="session-card">
+      <div class="session-card-accent" style="background:#9CA3AF"></div>
+      <div class="session-card-body">
+        <div class="session-card-hora">11:30</div>
+        <div class="session-card-nombre">(TEST) RAUL ALFAJOR</div>
+        <div class="session-card-meta">Hotel PARRAS · Monterrey</div>
+        <div class="session-card-status">
+          <span class="session-card-dot" style="background:#9CA3AF"></span>
+          Pendiente firma
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="tabla-wrap">
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th style="width:120px;padding-left:20px">Folio</th>
+          <th>Cliente</th>
+          <th style="width:190px">Estatus</th>
+          <th style="width:130px">Sesión</th>
+          <th class="th-right" style="width:100px">Total</th>
+          <th class="th-right" style="width:120px">Saldo</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- row 1 — pendiente firma -->
+        <tr style="--row-color:#9CA3AF">
+          <td style="padding-left:20px"><div class="td-folio">IAV-2606.15</div></td>
+          <td>
+            <div class="td-client">
+              <div class="td-avatar av-a">TC</div>
+              <div>
+                <div class="td-client-name">TEST cliente1</div>
+                <div class="td-client-sub">RES-COMBO</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="td-status">
+              <div class="td-status-dot bg-pendiente"></div>
+              <div>
+                <div class="td-status-label">Pendiente firma</div>
+                <div class="td-status-age">1 día sin avance</div>
+              </div>
+            </div>
+          </td>
+          <td><div class="td-fecha soon">15 jun 2026</div></td>
+          <td><div class="td-monto">$5,500</div></td>
+          <td>
+            <div class="td-saldo-wrap">
+              <div class="td-saldo amber">$2,750</div>
+              <div class="saldo-bar-wrap"><div class="saldo-bar" style="width:50%;background:#F59E0B"></div></div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- row 2 — anticipo (selected) -->
+        <tr class="row-active" style="--row-color:#F59E0B" onclick="togglePanel()">
+          <td style="padding-left:20px"><div class="td-folio">IAV-2606.10</div></td>
+          <td>
+            <div class="td-client">
+              <div class="td-avatar av-b">JP</div>
+              <div>
+                <div class="td-client-name">TEST Jaimito Perez</div>
+                <div class="td-client-sub">Servicio Audiovisual Hotel PARRAS</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="td-status">
+              <div class="td-status-dot bg-anticipo"></div>
+              <div>
+                <div class="td-status-label">Anticipo recibido</div>
+                <div class="td-status-age">Hoy</div>
+              </div>
+            </div>
+          </td>
+          <td><div class="td-fecha today">Hoy · 09:00</div></td>
+          <td><div class="td-monto">$1,000</div></td>
+          <td>
+            <div class="td-saldo-wrap">
+              <div class="td-saldo amber">$500</div>
+              <div class="saldo-bar-wrap"><div class="saldo-bar" style="width:50%;background:#F59E0B"></div></div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- row 3 — pendiente firma -->
+        <tr style="--row-color:#9CA3AF">
+          <td style="padding-left:20px"><div class="td-folio">IAV-2606.09</div></td>
+          <td>
+            <div class="td-client">
+              <div class="td-avatar av-f">RA</div>
+              <div>
+                <div class="td-client-name">(TEST) RAUL ALFAJOR</div>
+                <div class="td-client-sub">Hotel PARRAS · inmueblesaudiovisuales+r@gmail.com</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="td-status">
+              <div class="td-status-dot bg-pendiente"></div>
+              <div>
+                <div class="td-status-label">Pendiente firma</div>
+                <div class="td-status-age">1 día sin avance</div>
+              </div>
+            </div>
+          </td>
+          <td><div class="td-fecha today">Hoy · 11:30</div></td>
+          <td><div class="td-monto">$1,250</div></td>
+          <td>
+            <div class="td-saldo-wrap">
+              <div class="td-saldo red">$1,250</div>
+              <div class="saldo-bar-wrap"><div class="saldo-bar" style="width:0%;background:#EF4444"></div></div>
+            </div>
+          </td>
+        </tr>
+
+        <tr class="empty-row"><td colspan="6"></td></tr>
+
+        <!-- row 4 — en producción -->
+        <tr style="--row-color:#8B5CF6">
+          <td style="padding-left:20px"><div class="td-folio">IAV-2605.22</div></td>
+          <td>
+            <div class="td-client">
+              <div class="td-avatar av-d">DN</div>
+              <div>
+                <div class="td-client-name">Desarrolladora del Norte</div>
+                <div class="td-client-sub">RES-AVANZADO · contacto@desarrolladora.mx</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="td-status">
+              <div class="td-status-dot bg-produccion"></div>
+              <div>
+                <div class="td-status-label">En producción</div>
+                <div class="td-status-age">5 días</div>
+              </div>
+            </div>
+          </td>
+          <td><div class="td-fecha">22 may 2026</div></td>
+          <td><div class="td-monto">$8,900</div></td>
+          <td>
+            <div class="td-saldo-wrap">
+              <div class="td-saldo amber">$4,450</div>
+              <div class="saldo-bar-wrap"><div class="saldo-bar" style="width:50%;background:#F59E0B"></div></div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- row 5 — completado -->
+        <tr style="--row-color:#10B981">
+          <td style="padding-left:20px"><div class="td-folio">IAV-2605.14</div></td>
+          <td>
+            <div class="td-client">
+              <div class="td-avatar av-e">IP</div>
+              <div>
+                <div class="td-client-name">Inmobiliaria Pedregal</div>
+                <div class="td-client-sub">COMBO · gerencia@pedregal.mx</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="td-status">
+              <div class="td-status-dot bg-completado"></div>
+              <div>
+                <div class="td-status-label">Completado</div>
+              </div>
+            </div>
+          </td>
+          <td><div class="td-fecha">14 may 2026</div></td>
+          <td><div class="td-monto">$3,200</div></td>
+          <td>
+            <div class="td-saldo-wrap">
+              <div class="td-saldo green">✓ Liquidado</div>
+              <div class="saldo-bar-wrap"><div class="saldo-bar" style="width:100%;background:#10B981"></div></div>
+            </div>
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ═══════════════════════════════════
+     PANEL LATERAL
+═══════════════════════════════════ -->
+<div class="panel" id="panel">
+
+  <div class="panel-header">
+    <div class="panel-header-top">
+      <div class="panel-status-pill">
+        <span class="dot" style="background:#F59E0B"></span>
+        Anticipo recibido
+      </div>
+      <button class="panel-close" onclick="togglePanel()">✕</button>
+    </div>
+
+    <div class="panel-folio">IAV-2606.10 · Servicio Audiovisual</div>
+    <div class="panel-name">TEST Jaimito Perez</div>
+    <div class="panel-email">jaimito@test.com · +52 81 0000 0000</div>
+
+    <!-- lifecycle -->
+    <div class="lifecycle">
+      <div class="lc-step done">
+        <div class="lc-dot"><span class="lc-dot-check">✓</span></div>
+        <div class="lc-label">Pendiente</div>
+      </div>
+      <div class="lc-step done">
+        <div class="lc-dot"><span class="lc-dot-check">✓</span></div>
+        <div class="lc-label">Firmado</div>
+      </div>
+      <div class="lc-step current">
+        <div class="lc-dot"></div>
+        <div class="lc-label">Anticipo</div>
+      </div>
+      <div class="lc-step">
+        <div class="lc-dot"></div>
+        <div class="lc-label">Producción</div>
+      </div>
+      <div class="lc-step">
+        <div class="lc-dot"></div>
+        <div class="lc-label">Entregado</div>
+      </div>
+      <div class="lc-step">
+        <div class="lc-dot"></div>
+        <div class="lc-label">Completado</div>
+      </div>
+    </div>
+
+    <div class="panel-tabs">
+      <button class="panel-tab active">Resumen</button>
+      <button class="panel-tab">Pagos</button>
+      <button class="panel-tab">Producción</button>
+      <button class="panel-tab">Actividad</button>
+    </div>
+  </div>
+
+  <div class="panel-body">
+
+    <!-- kpis -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Total</div>
+        <div class="kpi-val">$1,000</div>
+        <div class="kpi-sub">Precio contratado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Anticipo</div>
+        <div class="kpi-val green">$500</div>
+        <div class="kpi-sub">Pagado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Saldo</div>
+        <div class="kpi-val amber">$500</div>
+        <div class="kpi-sub">Pendiente</div>
+      </div>
+    </div>
+
+    <!-- payment progress -->
+    <div class="pay-progress">
+      <div class="pay-progress-labels">
+        <span class="pay-progress-label">Progreso de pago</span>
+        <span class="pay-progress-label" style="color:var(--ink-1);font-weight:700">50% — $500 de $1,000</span>
+      </div>
+      <div class="pay-bar-bg">
+        <div class="pay-bar-fill" style="width:50%"></div>
+      </div>
+    </div>
+
+    <!-- sesión -->
+    <div class="p-section">
+      <div class="p-section-label">Sesión</div>
+      <div class="p-fields">
+        <div class="p-field">
+          <div class="p-field-label">Fecha</div>
+          <div class="p-field-value highlight">Hoy · 09:00 AM</div>
+        </div>
+        <div class="p-field">
+          <div class="p-field-label">Paquete</div>
+          <div class="p-field-value">Servicio Audiovisual</div>
+        </div>
+        <div class="p-field full">
+          <div class="p-field-label">Dirección</div>
+          <div class="p-field-value">Hotel PARRAS, Av. Principal 100, Monterrey, NL</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- cliente -->
+    <div class="p-section">
+      <div class="p-section-label">Cliente</div>
+      <div class="p-fields">
+        <div class="p-field">
+          <div class="p-field-label">Nombre</div>
+          <div class="p-field-value">TEST Jaimito Perez</div>
+        </div>
+        <div class="p-field">
+          <div class="p-field-label">Teléfono</div>
+          <div class="p-field-value">+52 81 0000 0000</div>
+        </div>
+        <div class="p-field full">
+          <div class="p-field-label">Correo</div>
+          <div class="p-field-value">jaimito@test.com</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- actividad reciente -->
+    <div class="p-section">
+      <div class="p-section-label">Actividad reciente</div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-icon-wrap">
+            <div class="tl-icon gold">💰</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-content">
+            <div class="tl-action">Anticipo registrado — <strong>$500</strong></div>
+            <div class="tl-meta">Hoy · 08:45 AM</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-icon-wrap">
+            <div class="tl-icon blue">✍️</div>
+            <div class="tl-line"></div>
+          </div>
+          <div class="tl-content">
+            <div class="tl-action">Contrato firmado por el cliente</div>
+            <div class="tl-meta">01 jun 2026 · 03:22 PM</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-icon-wrap">
+            <div class="tl-icon gray">📋</div>
+          </div>
+          <div class="tl-content">
+            <div class="tl-action">Contrato creado</div>
+            <div class="tl-meta">01 jun 2026 · 10:00 AM</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-body -->
+
+  <div class="panel-actions">
+    <button class="btn-action primary">💰 Registrar abono</button>
+    <button class="btn-action">🎬 Iniciar producción</button>
+    <button class="btn-action">🌐 Ver portal</button>
+    <button class="btn-action danger">🗑 Eliminar</button>
+  </div>
+
+</div><!-- /panel -->
+
+</div><!-- /app -->
+
+<script>
+let panelOpen = true;
+const panel = document.getElementById('panel');
+const main  = document.getElementById('main');
+
+panel.classList.add('visible');
+main.classList.add('panel-open');
+
+function togglePanel() {
+  panelOpen = !panelOpen;
+  panel.classList.toggle('visible', panelOpen);
+  main.classList.toggle('panel-open', panelOpen);
+}
+
+function switchTab(el) {
+  el.closest('.subtabs').querySelectorAll('.subtab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// chip toggle
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => c.classList.toggle('on'));
+});
+
+// panel tabs
+document.querySelectorAll('.panel-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    t.closest('.panel-tabs').querySelectorAll('.panel-tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+  });
+});
+
+// row click opens panel
+document.querySelectorAll('.tabla tbody tr:not(.empty-row)').forEach(r => {
+  r.addEventListener('click', () => {
+    document.querySelectorAll('.tabla tbody tr').forEach(x => x.classList.remove('row-active'));
+    r.classList.add('row-active');
+    if (!panelOpen) togglePanel();
+  });
+});
+</script>
+</body>
+</html>
