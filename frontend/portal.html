@@ -158,18 +158,20 @@
     .fmt-precio.placeholder { visibility: hidden; }
   }
   /* Acceso/caseta */
-  .acceso-grid { display: flex; gap: 10px; }
-  .acceso-btn { flex: 1; background: var(--bg-chip); border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 12px; cursor: pointer; text-align: center; transition: all 0.15s; font-size: 13px; font-weight: 700; color: var(--charcoal); }
+  .acceso-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+  .acceso-btn { flex: none; min-width: 110px; background: var(--bg-chip); border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 11px 18px; cursor: pointer; text-align: center; transition: all 0.15s; font-size: 13px; font-weight: 700; color: var(--charcoal); }
   .acceso-btn:hover { border-color: var(--gold); }
   .acceso-btn.activo { border-color: var(--gold); border-width: 2px; background: var(--gold-dim); }
-  .acceso-detalle { display: none; margin-top: -6px; margin-bottom: 18px; padding: 14px; border: 1.5px solid var(--border); border-radius: 10px; background: rgba(201,168,76,0.06); }
+  .acceso-detalle { display: none; margin-top: 14px; margin-bottom: 18px; padding: 20px; border: 1.5px solid var(--border); border-left: 3px solid var(--gold); border-radius: 12px; background: var(--white); }
   .acceso-detalle.visible { display: block; }
-  .acceso-intro { font-size: 12px; color: var(--concrete); line-height: 1.6; margin-bottom: 14px; }
+  .acceso-intro { font-size: 12px; color: var(--concrete); line-height: 1.6; margin-bottom: 18px; }
   .acceso-chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
   .acceso-chip { background: var(--bg-chip); border: 1.5px solid var(--border-strong); border-radius: 20px; padding: 8px 12px; cursor: pointer; transition: all 0.15s; font-size: 11px; font-weight: 700; color: var(--charcoal); }
   .acceso-chip:hover { border-color: var(--gold); }
   .acceso-chip.activo { border-color: var(--gold); background: var(--gold-dim); color: var(--charcoal); }
+  .acceso-sep { border: none; border-top: 1px solid var(--border); margin: 20px 0 4px; }
   .acceso-fields { display: grid; grid-template-columns: 1fr; gap: 0; }
+  .acceso-fields > .acceso-sep { grid-column: 1 / -1; }
   .acceso-edificio { display: none; }
   .acceso-edificio.visible { display: contents; }
   .acceso-contacto-otro { display: none; }
@@ -586,17 +588,27 @@ var ACCESO_METODO_LABELS = ACCESO_METODOS.reduce(function(acc, item) {
   return acc;
 }, {});
 
-var ACCESO_PUNTOS = [
-  ['directo_departamento', 'Pasamos directo al departamento'],
-  ['lobby', 'Nos vemos en lobby'],
-  ['estacionamiento', 'Nos vemos en estacionamiento'],
-  ['otro', 'Otro punto']
-];
+var ACCESO_PUNTOS_POR_TIPO = {
+  '':                     [['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']],
+  'departamento':         [['afuera_departamento','Nos vemos afuera del departamento'],['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']],
+  'condominio_horizontal':[['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']],
+  'oficina_torre':        [['recepcion','Nos vemos en recepción'],['entrada_oficina','Nos vemos en la entrada de la oficina'],['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']],
+  'otro':                 [['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']]
+};
 
-var ACCESO_PUNTO_LABELS = ACCESO_PUNTOS.reduce(function(acc, item) {
-  acc[item[0]] = item[1];
-  return acc;
-}, {});
+var ACCESO_PUNTO_LABELS = {
+  'directo_departamento': 'Pasamos directo al departamento',
+  'afuera_departamento':  'Nos vemos afuera del departamento',
+  'recepcion':            'Nos vemos en recepción',
+  'entrada_oficina':      'Nos vemos en la entrada de la oficina',
+  'lobby':                'Nos vemos en lobby',
+  'estacionamiento':      'Nos vemos en estacionamiento',
+  'otro':                 'Otro punto'
+};
+
+function getPuntosParaTipo(tipo) {
+  return ACCESO_PUNTOS_POR_TIPO[tipo] !== undefined ? ACCESO_PUNTOS_POR_TIPO[tipo] : ACCESO_PUNTOS_POR_TIPO[''];
+}
 
 function getAccesoExistente(p) {
   return (p && p.datosEspecificos && p.datosEspecificos.acceso) ? p.datosEspecificos.acceso : {};
@@ -631,54 +643,85 @@ function resumenAcceso(acceso) {
   return partes.join('\n');
 }
 
+function renderPuntosChips(n, tipo, puntoActivo) {
+  var puntos = getPuntosParaTipo(tipo);
+  var html = '';
+  puntos.forEach(function(item) {
+    var activo = puntoActivo === item[0] ? ' activo' : '';
+    html += '<button type="button" class="acceso-chip' + activo + '" data-punto-prop="' + n + '" data-punto-valor="' + item[0] + '">' + esc(item[1]) + '</button>';
+  });
+  return html;
+}
+
 function renderAccesoDetalle(n, acceso) {
   acceso = acceso || {};
   var metodos = acceso.metodos || [];
+  var tipoActual = acceso.tipoEdificio || '';
+  var puntoEncuentro = acceso.puntoEncuentro || '';
+  var contactoTipo = acceso.contactoAccesoTipo || (acceso.contactoAcceso ? 'otro' : 'yo');
+
   var html = '<div class="acceso-detalle" id="acceso-detalle-' + n + '">';
   html += '<p class="acceso-intro">Estos datos ayudan a que el equipo llegue, se registre y entre sin perder tiempo el día de la sesión.</p>';
-  html += '<div class="field full"><label>Método de acceso (opcional)</label><div class="acceso-chip-grid">';
-  ACCESO_METODOS.forEach(function(item) {
-    var activo = metodos.indexOf(item[0]) !== -1 ? ' activo' : '';
-    html += '<button type="button" class="acceso-chip' + activo + '" data-prop="' + n + '" data-metodo="' + item[0] + '">' + esc(item[1]) + '</button>';
-  });
-  html += '</div></div>';
-  html += '<div class="acceso-fields">';
-  html += '<div class="field"><label>Nombre del dueño o contacto autorizado</label><input type="text" id="inp-acceso-registro-' + n + '" placeholder="Ej. Juan Pérez, propietario / administración / asesor" value="' + esc(acceso.nombreRegistro || '') + '"></div>';
-  var contactoTipo = acceso.contactoAccesoTipo || (acceso.contactoAcceso ? 'otro' : 'yo');
-  html += '<div class="field"><label>¿Quién resuelve si hay problema de acceso?</label><div class="acceso-grid">';
-  html += '<div class="acceso-btn' + (contactoTipo === 'yo' ? ' activo' : '') + '" data-contacto-prop="' + n + '" data-contacto-valor="yo">Yo</div>';
-  html += '<div class="acceso-btn' + (contactoTipo === 'otro' ? ' activo' : '') + '" data-contacto-prop="' + n + '" data-contacto-valor="otro">Otro contacto</div>';
-  html += '</div></div>';
-  html += '<div class="field acceso-contacto-otro" id="acceso-contacto-otro-' + n + '"><label>Otro contacto de acceso</label><input type="text" id="inp-acceso-contacto-' + n + '" placeholder="Nombre y teléfono" value="' + esc(acceso.contactoAcceso || '') + '"></div>';
-  html += '<div class="field full"><label>Indicaciones para guardia o caseta</label><textarea id="inp-acceso-caseta-' + n + '" placeholder="Ej. El equipo ya queda en lista; decir que viene a foto/video. Si no los ubican, llamar al contacto autorizado." style="min-height:88px">' + esc(acceso.instruccionesCaseta || '') + '</textarea></div>';
-  html += '<div class="field full">' + renderUploadField('fachada', n - 1, 'QR, invitación o referencia de acceso', 'Si tienes QR, invitación digital, código o imagen de referencia para caseta, puedes subirla aquí. También puedes enviarla por WhatsApp después.') + '</div>';
-  html += '<div class="field"><label>Tipo de acceso o inmueble</label><select id="inp-acceso-tipo-edificio-' + n + '" data-prop="' + n + '">';
-  [
+
+  /* Tipo de inmueble — chips, al inicio */
+  var tiposInmueble = [
     ['', 'Casa / privada'],
     ['departamento', 'Departamento'],
     ['condominio_horizontal', 'Condominio horizontal'],
     ['oficina_torre', 'Oficina / torre'],
     ['otro', 'Otro']
-  ].forEach(function(opt) {
-    html += '<option value="' + opt[0] + '"' + ((acceso.tipoEdificio || '') === opt[0] ? ' selected' : '') + '>' + esc(opt[1]) + '</option>';
-  });
-  html += '</select></div>';
-  var puntoEncuentro = acceso.puntoEncuentro || '';
-  html += '<div class="field"><label>¿Dónde nos vemos o cómo entramos?</label><div class="acceso-chip-grid">';
-  ACCESO_PUNTOS.forEach(function(item) {
-    var activoPunto = puntoEncuentro === item[0] ? ' activo' : '';
-    html += '<button type="button" class="acceso-chip' + activoPunto + '" data-punto-prop="' + n + '" data-punto-valor="' + item[0] + '">' + esc(item[1]) + '</button>';
+  ];
+  html += '<div class="field"><label>Tipo de inmueble</label><div class="acceso-chip-grid">';
+  tiposInmueble.forEach(function(opt) {
+    var activo = tipoActual === opt[0] ? ' activo' : '';
+    html += '<button type="button" class="acceso-chip' + activo + '" data-tipo-prop="' + n + '" data-tipo-valor="' + opt[0] + '">' + esc(opt[1]) + '</button>';
   });
   html += '</div></div>';
-  html += '<div class="field acceso-contacto-otro" id="acceso-punto-otro-' + n + '"><label>Detalle del punto de encuentro</label><input type="text" id="inp-acceso-punto-detalle-' + n + '" placeholder="Ej. acceso de proveedores, caseta 2, lobby de torre B" value="' + esc(acceso.puntoEncuentroDetalle || '') + '"></div>';
+
+  html += '<hr class="acceso-sep">';
+  html += '<div class="acceso-fields">';
+
+  /* Método de acceso */
+  html += '<div class="field full"><label>Método de acceso <span style="font-weight:500;text-transform:none;letter-spacing:0">(opcional)</span></label><div class="acceso-chip-grid">';
+  ACCESO_METODOS.forEach(function(item) {
+    var activo = metodos.indexOf(item[0]) !== -1 ? ' activo' : '';
+    html += '<button type="button" class="acceso-chip' + activo + '" data-prop="' + n + '" data-metodo="' + item[0] + '">' + esc(item[1]) + '</button>';
+  });
+  html += '</div></div>';
+
+  /* Contacto */
+  html += '<div class="field"><label>Nombre del dueño o contacto autorizado</label><input type="text" id="inp-acceso-registro-' + n + '" placeholder="Ej. Juan Pérez, propietario / administración / asesor" value="' + esc(acceso.nombreRegistro || '') + '"></div>';
+  html += '<div class="field"><label>¿Quién resuelve si hay problema de acceso?</label><div class="acceso-grid">';
+  html += '<div class="acceso-btn' + (contactoTipo === 'yo' ? ' activo' : '') + '" data-contacto-prop="' + n + '" data-contacto-valor="yo">Yo</div>';
+  html += '<div class="acceso-btn' + (contactoTipo === 'otro' ? ' activo' : '') + '" data-contacto-prop="' + n + '" data-contacto-valor="otro">Otro contacto</div>';
+  html += '</div></div>';
+  html += '<div class="field acceso-contacto-otro" id="acceso-contacto-otro-' + n + '"><label>Otro contacto de acceso</label><input type="text" id="inp-acceso-contacto-' + n + '" placeholder="Nombre y teléfono" value="' + esc(acceso.contactoAcceso || '') + '"></div>';
+
+  /* Caseta */
+  html += '<hr class="acceso-sep">';
+  html += '<div class="field full"><label>Indicaciones para guardia o caseta</label><textarea id="inp-acceso-caseta-' + n + '" placeholder="Ej. El equipo ya queda en lista; decir que viene a foto/video. Si no los ubican, llamar al contacto autorizado." style="min-height:88px">' + esc(acceso.instruccionesCaseta || '') + '</textarea></div>';
+  html += '<div class="field full">' + renderUploadField('fachada', n - 1, 'QR, invitación o referencia de acceso', 'Si tienes QR, invitación digital, código o imagen de referencia para caseta, puedes subirla aquí. También puedes enviarla por WhatsApp después.') + '</div>';
+
+  /* Punto de encuentro */
+  html += '<hr class="acceso-sep">';
+  html += '<div class="field full"><label>¿Dónde nos vemos?</label><div class="acceso-chip-grid" id="acceso-puntos-grid-' + n + '">';
+  html += renderPuntosChips(n, tipoActual, puntoEncuentro);
+  html += '</div></div>';
+  html += '<div class="field acceso-contacto-otro full" id="acceso-punto-otro-' + n + '"><label>Detalle del punto de encuentro</label><input type="text" id="inp-acceso-punto-detalle-' + n + '" placeholder="Ej. acceso de proveedores, caseta 2, lobby de torre B" value="' + esc(acceso.puntoEncuentroDetalle || '') + '"></div>';
+
+  /* Datos de edificio (condicional) */
   html += '<div class="acceso-edificio" id="acceso-edificio-' + n + '">';
   html += '<div class="field"><label>Torre</label><input type="text" id="inp-acceso-torre-' + n + '" placeholder="Ej. Torre B" value="' + esc(acceso.torre || '') + '"></div>';
   html += '<div class="field"><label>Piso</label><input type="text" id="inp-acceso-piso-' + n + '" placeholder="Ej. 7" value="' + esc(acceso.piso || '') + '"></div>';
   html += '<div class="field"><label>Departamento / interior</label><input type="text" id="inp-acceso-depa-' + n + '" placeholder="Ej. 704" value="' + esc(acceso.departamento || '') + '"></div>';
   html += '<div class="field full"><label>Estacionamiento / cajón</label><input type="text" id="inp-acceso-estacionamiento-' + n + '" placeholder="Ej. Cajón 22, sótano 1" value="' + esc(acceso.estacionamiento || '') + '"></div>';
   html += '</div>';
+
+  /* Restricciones y comentarios */
+  html += '<hr class="acceso-sep">';
   html += '<div class="field full"><label>Restricciones importantes</label><textarea id="inp-acceso-restricciones-' + n + '" placeholder="Horarios, áreas restringidas, permisos, drone, amenidades..." style="min-height:80px">' + esc(acceso.restricciones || '') + '</textarea></div>';
   html += '<div class="field full"><label>Comentarios para llegar y entrar</label><textarea id="inp-acceso-comentarios-' + n + '" placeholder="Cualquier detalle para llegar y entrar sin perder tiempo." style="min-height:80px">' + esc(acceso.comentarios || '') + '</textarea></div>';
+
   html += '</div></div>';
   return html;
 }
@@ -952,7 +995,9 @@ function renderEtapa1() {
       (accesoActual.metodos || []).forEach(function(m) { accesoMetodos[n][m] = true; });
       accesoTipoEdificio[n] = accesoActual.tipoEdificio || '';
       accesoContactoTipo[n] = accesoActual.contactoAccesoTipo || (accesoActual.contactoAcceso ? 'otro' : 'yo');
-      accesoPuntoEncuentro[n] = accesoActual.puntoEncuentro || '';
+      var puntoGuardado = accesoActual.puntoEncuentro || '';
+      if (puntoGuardado === 'directo_departamento') puntoGuardado = 'afuera_departamento';
+      accesoPuntoEncuentro[n] = puntoGuardado;
       html += '<div class="card">';
       if (props.length > 1) {
         html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)">';
@@ -1116,11 +1161,11 @@ function renderEtapa1() {
   document.querySelectorAll('.acceso-btn').forEach(function(el) {
     el.addEventListener('click', function() { seleccionarAcceso(parseInt(el.dataset.prop, 10), el.dataset.valor); });
   });
-  document.querySelectorAll('.acceso-chip').forEach(function(el) {
+  document.querySelectorAll('.acceso-chip[data-metodo]').forEach(function(el) {
     el.addEventListener('click', function() { toggleMetodoAcceso(parseInt(el.dataset.prop, 10), el.dataset.metodo); });
   });
-  document.querySelectorAll('select[id^="inp-acceso-tipo-edificio-"]').forEach(function(el) {
-    el.addEventListener('change', function() { seleccionarTipoEdificio(parseInt(el.dataset.prop, 10), el.value); });
+  document.querySelectorAll('[data-tipo-prop]').forEach(function(el) {
+    el.addEventListener('click', function() { seleccionarTipoEdificio(parseInt(el.dataset.tipoProp, 10), el.dataset.tipoValor); });
   });
   document.querySelectorAll('[data-contacto-prop]').forEach(function(el) {
     el.addEventListener('click', function() { seleccionarContactoAcceso(parseInt(el.dataset.contactoProp, 10), el.dataset.contactoValor); });
@@ -1312,8 +1357,26 @@ function toggleMetodoAcceso(n, metodo) {
 }
 
 function seleccionarTipoEdificio(n, valor) {
-  accesoTipoEdificio[n] = valor || '';
+  accesoTipoEdificio[n] = valor !== undefined ? valor : '';
+  /* Actualizar estado visual de chips de tipo */
+  document.querySelectorAll('[data-tipo-prop="' + n + '"]').forEach(function(b) {
+    b.classList.toggle('activo', b.dataset.tipoValor === accesoTipoEdificio[n]);
+  });
+  /* Si el punto actual no existe en la nueva lista, limpiarlo */
+  var puntosNuevos = getPuntosParaTipo(accesoTipoEdificio[n]).map(function(p) { return p[0]; });
+  if (accesoPuntoEncuentro[n] && puntosNuevos.indexOf(accesoPuntoEncuentro[n]) === -1) {
+    accesoPuntoEncuentro[n] = '';
+  }
+  /* Re-renderizar chips de punto de encuentro */
+  var grid = document.getElementById('acceso-puntos-grid-' + n);
+  if (grid) {
+    grid.innerHTML = renderPuntosChips(n, accesoTipoEdificio[n], accesoPuntoEncuentro[n]);
+    grid.querySelectorAll('[data-punto-prop]').forEach(function(el) {
+      el.addEventListener('click', function() { seleccionarPuntoEncuentro(parseInt(el.dataset.puntoProp, 10), el.dataset.puntoValor); });
+    });
+  }
   actualizarBloqueEdificio(n);
+  actualizarPuntoEncuentro(n);
 }
 
 function seleccionarContactoAcceso(n, valor) {
@@ -1361,7 +1424,7 @@ function leerAccesoPropiedad(n) {
   Object.keys(accesoMetodos[n] || {}).forEach(function(m) {
     if (accesoMetodos[n][m]) metodos.push(m);
   });
-  var tipoEdificio = valorCampo('inp-acceso-tipo-edificio-' + n) || accesoTipoEdificio[n] || '';
+  var tipoEdificio = accesoTipoEdificio[n] || '';
   var contactoTipo = accesoContactoTipo[n] || 'yo';
   var puntoEncuentro = accesoPuntoEncuentro[n] || '';
   var acceso = {
