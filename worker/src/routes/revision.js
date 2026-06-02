@@ -38,13 +38,17 @@ export async function handleRevision(request, env, ctx, action) {
     if (!Array.isArray(revisiones) || !revisiones.length) return err('Sin revisiones');
 
     const fecha = now();
+    let insertadas = 0;
     for (const r of revisiones) {
       if (!r.descripcion_ajuste?.trim()) continue;
       await run(db,
         'INSERT INTO revisiones_video (contrato_id, minuto_segundo, descripcion_ajuste, fecha) VALUES (?, ?, ?, ?)',
         [token, (r.minuto_segundo || '').trim(), r.descripcion_ajuste.trim(), fecha]
       );
+      insertadas++;
     }
+
+    if (insertadas === 0) return err('Agrega al menos una nota con descripción');
 
     callAdapter(ctx, env, 'notificarRevision', {
       token,

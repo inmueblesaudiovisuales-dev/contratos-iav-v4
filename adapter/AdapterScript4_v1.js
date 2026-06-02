@@ -194,7 +194,7 @@ function procesarPDFsPendientes() {
       }
       enviarCorreoConPDF_(datos.contrato, datos.linkPortal, pdfUrl);
       props.deleteProperty(key);
-      firma.setTrashed(true);
+      if (datos.contrato.correo_cliente) firma.setTrashed(true);
     } catch (e) {
       console.error('Error procesando PDF para ' + datos.token + ':', e.message);
     }
@@ -601,10 +601,6 @@ function enviarCorreoEntrega(body) {
     'Hola ' + body.nombreCliente + ', tu material está listo. Descárgalo en: ' + body.linkPortal,
     { htmlBody: html }
   );
-}
-
-function notificarContratoCreado(body) {
-  // Solo guardar referencia — Bruno ve el admin, no necesita correo por cada contrato.
 }
 
 function notificarResena(body) {

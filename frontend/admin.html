@@ -2684,7 +2684,7 @@ async function guardarEntrega() {
   try {
     const data = await apiPost({ action: 'guardarEntrega', token: t, entregaDriveLink: driveLink, entregaLinksExtra: linksExtra });
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    setMsg('msg-entrega', 'Entrega guardada. Se envió correo al cliente.', 'ok');
+    setMsg('msg-entrega', 'Entrega guardada.', 'ok');
     cargarContratos();
     if (t && t === tokenActivo) {
       try {
@@ -2768,7 +2768,7 @@ async function marcarSesionCompletada() {
   try {
     const data = await apiPost({ action: 'marcarSesionCompletada', token: t });
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    setMsg('msg-sesion-completada', 'Sesión marcada. Se envió correo al cliente.', 'ok');
+    setMsg('msg-sesion-completada', 'Sesión marcada como completada.', 'ok');
     cargarContratos();
     if (t && t === tokenActivo) {
       try { await abrirPanel(t); panelRecargado = true; } catch(_) {}
@@ -3530,7 +3530,7 @@ function renderListaPaquetes() {
     '<th>Clave</th><th>Nombre</th><th>Tipo</th><th>Precio</th><th>Entregables</th><th>Add-on</th><th>Activo</th><th></th>' +
     '</tr></thead><tbody>';
   todosPaquetesAdmin.forEach(function(p) {
-    var inactivo = p.Activo === false || p.Activo === 'false' || p.Activo === 'No' ? true : false;
+    var inactivo = !p.Activo || p.Activo === 'false' || p.Activo === 'No';
     html += '<tr class="' + (inactivo ? 'paq-inactivo' : '') + '">' +
       '<td style="font-family:monospace;font-size:12px">' + esc(p.Clave || '') + '</td>' +
       '<td style="font-weight:600">' + esc(p.Nombre || '') + '</td>' +

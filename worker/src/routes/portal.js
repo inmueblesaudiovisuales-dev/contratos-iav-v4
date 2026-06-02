@@ -215,6 +215,7 @@ export async function handlePortal(request, env, ctx, action) {
         if (!clave) continue;
         if (typeof item === 'object' && item.precio && item.ofrecido) {
           // Custom offered add-on — use its own precio
+          if (item.precio < 0) continue;
           precioTotal += item.precio;
           adicionalesAceptados.push(item);
         } else {
