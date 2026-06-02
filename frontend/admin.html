@@ -3939,6 +3939,10 @@ async function crearContrato() {
     var entregables  = (document.getElementById('prop-entregables-' + i)    || {value:''}).value.trim();
     var fechaProp    = (document.getElementById('prop-fecha-' + i)           || {value:''}).value;
     var horaProp     = (document.getElementById('prop-hora-' + i)            || {value:'10:00'}).value;
+    var fmtSel       = document.getElementById('prop-formato-' + i);
+    var formatoVideo = fmtSel ? fmtSel.value : 'vertical_nativo';
+    var ocultarChk   = document.getElementById('prop-ocultar-fmt-' + i);
+    var ocultarFmt   = ocultarChk ? (ocultarChk.checked ? 1 : 0) : 1;
 
     if (!nombreSvc && !paqClave) {
       setMsg(msgId, 'Propiedad ' + i + ': necesitas un nombre de servicio o elegir un paquete.', 'error');
@@ -3953,12 +3957,14 @@ async function crearContrato() {
     if (i === 1) { paqueteBase = paqueteVal; tipoPaquete = tipoProp; }
 
     propiedades.push({
-      numPropiedad: i,
-      tipo:         tipoProp,
-      paquete:      paqueteVal,
-      entregables:  entregables,
-      fechaSesion:  fechaProp,
-      horaSesion:   horaProp,
+      numPropiedad:        i,
+      tipo:                tipoProp,
+      paquete:             paqueteVal,
+      entregables:         entregables,
+      fechaSesion:         fechaProp,
+      horaSesion:          horaProp,
+      formatoVideo:        formatoVideo,
+      ocultarFormatoVideo: ocultarFmt,
     });
   }
 
@@ -4376,6 +4382,18 @@ function renderPropCard(i, tipo) {
     '<div class="fila-2">' +
       '<div class="campo"><label>Fecha de sesión</label><input type="date" id="prop-fecha-' + i + '"></div>' +
       '<div class="campo"><label>Hora</label><input type="time" id="prop-hora-' + i + '" value="10:00"></div>' +
+    '</div>' +
+    '<div class="campo">' +
+      '<label>Formato de video</label>' +
+      '<select id="prop-formato-' + i + '" style="width:100%">' +
+        '<option value="vertical_nativo">Vertical (9:16 nativo) — Reels, TikTok, Shorts</option>' +
+        '<option value="horizontal_recorte_vertical">Horizontal (16:9) + recorte vertical — YouTube, sitio web</option>' +
+        '<option value="doble_nativo">Doble formato — dos pasadas en campo (+$1,500)</option>' +
+      '</select>' +
+      '<label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--ink-2);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500">' +
+        '<input type="checkbox" id="prop-ocultar-fmt-' + i + '" checked style="accent-color:var(--gold);width:14px;height:14px">' +
+        'Ocultar selector en el portal (cliente no elige)' +
+      '</label>' +
     '</div>' +
     '<details class="prop-accordion" style="margin-top:4px">' +
       '<summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--ink-2);padding:4px 0">Servicios adicionales</summary>' +

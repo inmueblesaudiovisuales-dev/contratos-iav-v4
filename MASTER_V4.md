@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 26 — Picker de formato mejorado + control desde admin)  
+> Última actualización: 2026-06-02 (Ronda 26 — Picker de formato + control en formulario de creación)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -281,24 +281,17 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
 
-### Ronda 26 — Picker de formato mejorado + control desde admin (2026-06-02)
+### Ronda 26 — Picker de formato + control en formulario de creación (2026-06-02)
 
-> **Migración D1 requerida** — ejecutar una sola vez desde terminal con Mac:
-> ```bash
-> wrangler d1 execute contratos-iav-v4 --remote --command="ALTER TABLE propiedades ADD COLUMN ocultar_formato_video INTEGER DEFAULT 1"
-> ```
-> La columna `formato_video` ya existe desde R18. Solo se agrega `ocultar_formato_video`.
+> **Migración D1** — ya ejecutada. Columna `ocultar_formato_video INTEGER DEFAULT 1` agregada a `propiedades`. La columna `formato_video` ya existía desde R18.
 
 | ID | Archivo | Cambio |
 |----|---------|--------|
-| R26-01 | `frontend/portal.html` CSS | Picker de formato rediseñado: cada opción muestra un preview visual del aspect ratio (rectangulos CSS), label más corto y descriptivo, badge "Recomendado" en Vertical. Nuevas clases `.fmt-preview`, `.fmt-box`, `.fmt-box-v`, `.fmt-box-h`, `.fmt-rec`. |
-| R26-02 | `frontend/portal.html` JS | `formatosVideo[n]` se inicializa desde `p.formatoVideo` (valor guardado en D1) en lugar de siempre defaultear a `vertical_nativo`. El botón activo refleja la selección pre-set por el admin. |
-| R26-03 | `frontend/portal.html` JS | Si `p.ocultarFormatoVideo === 1`, el bloque completo del picker no se renderiza. El formato ya fijado por el admin se usa silenciosamente al firmar. |
-| R26-04 | `worker/src/routes/portal.js` | `obtenerPortal` expone `formatoVideo` y `ocultarFormatoVideo` por propiedad en el response. |
-| R26-05 | `worker/src/routes/contratos.js` | Nuevo action `guardarFormatoPropiedad`: guarda `formato_video` y `ocultar_formato_video` en D1 para una propiedad específica. |
-| R26-06 | `frontend/admin.html` HTML | Prop-card muestra fila "Formato video" con el valor actual y badge "oculto en portal" si aplica. |
-| R26-07 | `frontend/admin.html` HTML | Nuevo botón "Formato" en `.prop-card-acciones`. Abre form colapsable con `<select>` de 3 opciones y checkbox "Ocultar selector en el portal". |
-| R26-08 | `frontend/admin.html` JS | Funciones `toggleFormato(numProp)` y `guardarFormato(numProp)`: llaman `guardarFormatoPropiedad`, actualizan el label en pantalla sin recargar el panel. |
+| R26-01 | `frontend/portal.html` CSS | Picker de formato rediseñado: cada opción muestra un preview visual del aspect ratio (rectangulos CSS), label más corto y descriptivo, badge "Recomendado" en Vertical. |
+| R26-02 | `frontend/portal.html` JS | `formatosVideo[n]` se inicializa desde `p.formatoVideo`. Si `p.ocultarFormatoVideo === 1` el picker no se renderiza — el cliente no elige. |
+| R26-03 | `worker/src/routes/portal.js` | `obtenerPortal` expone `formatoVideo` y `ocultarFormatoVideo` por propiedad. |
+| R26-04 | `worker/src/routes/contratos.js` | `crearContrato`: INSERT de propiedades incluye `formato_video` y `ocultar_formato_video`. Nuevo action `guardarFormatoPropiedad` para editar el formato de un contrato ya existente. |
+| R26-05 | `frontend/admin.html` HTML+JS | Formulario de nuevo contrato: cada prop-card incluye `<select>` de formato y checkbox "Ocultar selector en portal" (marcado por default). Prop-card del panel lateral muestra formato actual; botón "Formato" permite editarlo post-creación. |
 
 ---
 

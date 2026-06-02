@@ -158,13 +158,15 @@ export async function handleContratos(request, env, ctx, action) {
       ...propsData.map((p, i) => ({
         sql: `INSERT INTO propiedades (contrato_token, num_propiedad, tipo, paquete, entregables,
               fecha_sesion, hora_sesion, direccion, link_maps, orientacion, sobre_la_propiedad,
-              referencias, fachada_url, perimetro_url, logo_url, datos_especificos)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              referencias, fachada_url, perimetro_url, logo_url, datos_especificos,
+              formato_video, ocultar_formato_video)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         params: [token, i + 1, p.tipo || tipoPaqueteFinal, p.paquete || paqueteBaseFinal,
                  p.entregables || '', p.fechaSesion || '', p.horaSesion || '',
                  p.direccion || '', p.linkMaps || '', p.orientacion || '',
                  p.sobreLaPropiedad || '', p.referencias || '', p.fachadaUrl || '',
-                 p.perimetroUrl || '', p.logoUrl || '', JSON.stringify(p.datosEspecificos || {})]
+                 p.perimetroUrl || '', p.logoUrl || '', JSON.stringify(p.datosEspecificos || {}),
+                 p.formatoVideo || 'vertical_nativo', p.ocultarFormatoVideo ?? 1]
       })),
       {
         sql: 'INSERT INTO tokens (token, contrato_id, tipo, expira, usado) VALUES (?, ?, ?, ?, 0)',
