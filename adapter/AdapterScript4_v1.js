@@ -1,6 +1,7 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
+// Ultima modificacion: 2026-06-02 13:22:25 CST — R31: link Portal de equipo en Calendar (procesarFirma, primerAbono, reagendarPropiedad)
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
