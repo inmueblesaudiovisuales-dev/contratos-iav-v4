@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-01 (Ronda 17 — Fechas de entrega estimadas + fixes de auditoría)  
+> Última actualización: 2026-06-02 (Ronda 18 — Revisiones de video + preparación para automatización)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -18,6 +18,7 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
 | Admin | `https://contratos.inmueblesaudiovisuales.com/admin.html` |
 | Portal del cliente | `https://contratos.inmueblesaudiovisuales.com/portal.html?token=<token>` |
 | Checklist de rodaje | `https://contratos.inmueblesaudiovisuales.com/checklist.html?token=<token>` |
+| Revisión de video | `https://contratos.inmueblesaudiovisuales.com/revision.html?token=<token>` |
 | API base | `https://contratos.inmueblesaudiovisuales.com/api/<accion>` |
 
 ---
@@ -42,13 +43,15 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
 06. VERSION 4.0/
 ├── ARRANQUE.md              — guía de despliegue inicial (ya ejecutada)
 ├── MASTER_V4.md             — este archivo
+├── MASTER_AUTOMATIZACION.md — plan de automatización WhatsApp (3 fases)
 ├── PROMPT_DEEPSEEK_BUGS.md  — historial de bugs
 ├── adapter/
 │   └── AdapterScript4_v1.js — Apps Script desplegado en script.google.com
 ├── frontend/
-│   ├── admin.html           — panel de administración (~3557 líneas)
-│   ├── portal.html          — portal del cliente (firma, pagos, reseña) (~2231 líneas)
-│   └── checklist.html       — checklist de rodaje
+│   ├── admin.html           — panel de administración
+│   ├── portal.html          — portal del cliente (firma, pagos, reseña, revisión)
+│   ├── checklist.html       — checklist de rodaje
+│   └── revision.html        — página de notas de revisión de video (R18)
 └── worker/
     ├── wrangler.toml        — configuración del Worker
     ├── schema.sql           — estructura de D1 (referencia, ya aplicado)
@@ -69,7 +72,8 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
             ├── paquetes.js  — CRUD catálogo de paquetes
             ├── stats.js     — métricas por periodo
             ├── checklist.js — obtenerChecklist, guardarChecklist
-            └── archivos.js  — subirArchivo, subirArchivoAdmin
+            ├── archivos.js  — subirArchivo, subirArchivoAdmin
+            └── revision.js  — obtenerRevision, guardarRevision (R18)
 ```
 
 ---
@@ -133,9 +137,10 @@ Los archivos de `frontend/` se suben automáticamente como assets estáticos ví
 | `contratos` | Un registro por contrato. PK: `token` (UUID). Columna `entrega_express INTEGER DEFAULT 0` agregada en R17. |
 | `tokens` | Tokens de portal y configurar. FK: `contrato_id` → `contratos.token`. |
 | `abonos` | Pagos. FK: `contrato_token` → `contratos.token`. |
-| `propiedades` | Una o más propiedades por contrato. PK compuesta: `(contrato_token, num_propiedad)`. |
+| `propiedades` | Una o más propiedades por contrato. PK compuesta: `(contrato_token, num_propiedad)`. Columnas `formato_video TEXT DEFAULT 'vertical_nativo'` y `requiere_acceso INTEGER DEFAULT 0` agregadas en R18. |
 | `paquetes` | Catálogo. PK: `clave` (ej. `RES-COMBO`). |
 | `checklist` | Un checklist por contrato. PK: `contrato_token`. |
+| `revisiones_video` | Notas de revisión de video por contrato. FK: `contrato_id` → `contratos.token`. Columnas: `id`, `contrato_id`, `minuto_segundo`, `descripcion_ajuste`, `fecha`. Agregada en R18. |
 
 ### Nota importante — D1 no soporta foreign keys
 `PRAGMA foreign_keys` es ignorado en D1. Las cascadas de eliminación están implementadas manualmente en código con `db.batch()` en orden correcto: checklist → propiedades → abonos → tokens → contratos.
@@ -212,6 +217,7 @@ Además, el admin permite crear **add-ons personalizados** (nombre + precio libr
 | Sesión reagendada | Cliente | Apps Script async |
 | Material entregado | Cliente | Apps Script async |
 | Reseña nueva | Bruno | Apps Script async |
+| Notas de revisión de video | Bruno | Apps Script async (`notificarRevision`) |
 
 > Bruno NO recibe correo al crear ni al firmar contratos — ve el estado en el admin.
 > El cliente NO recibe correo al crear el contrato. El primer correo es el PDF cuando firma.
@@ -239,6 +245,7 @@ El Worker llama al adapter con `POST` y un JSON `{ action: '...', ...datos }`. L
 | `subirArchivoAdmin` | Sube archivo a carpeta (desde admin) |
 | `syncBackup` | Sobreescribe tabs en Sheets con datos de D1 |
 | `obtenerLogoCliente` | Busca logo precargado del cliente en Drive |
+| `notificarRevision` | Correo HTML a Bruno con tabla de timecodes y notas de revisión del cliente (R18) |
 
 ### Callbacks del adapter al Worker
 Apps Script llama de vuelta al Worker para guardar IDs de Google en D1:
@@ -273,6 +280,57 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 18 — Revisiones de video + preparación para automatización (2026-06-02)
+
+**Feature: Página de revisión de video**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R18-01 | `frontend/revision.html` | Nueva página para que el cliente envíe notas de revisión con timecode y descripción. Token desde URL `?token=X`. Muestra aviso de resolución reducida en nube, botón a carpeta Drive, links extra, revisiones anteriores (read-only), y formulario dinámico con filas timecode+descripción. |
+| R18-02 | `worker/src/routes/revision.js` | Nueva ruta. `obtenerRevision`: devuelve datos del contrato + array de `revisiones_video`. `guardarRevision`: inserta en `revisiones_video` y llama adapter `notificarRevision` async. |
+| R18-03 | `worker/src/index.js` | Importa `handleRevision`; agrega `RUTAS_REVISION = ['obtenerRevision','guardarRevision']`; enruta al handler. |
+| R18-04 | `frontend/portal.html` | Agrega botón "Enviar notas de revisión" en etapa de entrega — solo visible cuando hay material disponible y no revocado. Link a `revision.html?token=TOKEN`. |
+| R18-05 | `adapter/AdapterScript4_v1.js` | Registra `notificarRevision` en `handlers`. Nueva función que envía a Bruno correo HTML con tabla de timecodes y notas del cliente. |
+
+**Feature: Selector de formato de video en portal (firma)**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R18-06 | `frontend/portal.html` CSS | Nuevas clases `.formato-grid`, `.formato-btn`, `.acceso-grid`, `.acceso-btn` para selección visual. |
+| R18-07 | `frontend/portal.html` JS | Variables `formatosVideo` y `accesoCaseta` (objeto por propiedad). Inicializados en `renderEtapa1`. Default: `vertical_nativo` / `0`. |
+| R18-08 | `frontend/portal.html` JS | `seleccionarFormato(n, valor)`: mapea formato → orientación para compatibilidad con adapter. Llama `actualizarTotales()`. |
+| R18-09 | `frontend/portal.html` JS | `seleccionarAcceso(n, valor)`: actualiza estado y clases de botones. |
+| R18-10 | `frontend/portal.html` JS | `actualizarTotales()` suma $1,500 por cada propiedad con `doble_nativo`. |
+| R18-11 | `frontend/portal.html` JS | `buildAdicionalesSeleccionados()` auto-agrega `{ clave: 'doble-fmt-N', nombre: 'Doble Formato Nativo', precio: 1500, ofrecido: true }` por cada propiedad con `doble_nativo`. |
+| R18-12 | `frontend/portal.html` JS | `propsPayload` en `validarYFirmar` incluye `formatoVideo` y `requiereAcceso`. |
+| R18-13 | `worker/src/routes/portal.js` | `UPDATE propiedades` en `firmaCliente` guarda `formato_video` y `requiere_acceso`. |
+
+**Feature: Políticas de revisión en portal (checkbox)**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R18-14 | `frontend/portal.html` | Checkbox "Entiendo que el servicio contempla máximo 2 rondas de revisiones menores..." en tarjeta de firma. |
+| R18-15 | `frontend/portal.html` | `actualizarBtnFirmar()` requiere `chk-politicas` marcado además de firma y términos. |
+
+**Feature: Mejoras al admin (búsqueda + badges)**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R18-16 | `frontend/admin.html` | Búsqueda incluye `TelefonoCliente`. Placeholder actualizado. |
+| R18-17 | `frontend/admin.html` | Badge rojo `EXPRESS` en tabla de contratos cuando `EntregaExpress` es verdadero. |
+| R18-18 | `frontend/admin.html` | Campo "Origen" en acordeón "Datos del cliente" — muestra badge verde WhatsApp o gris Admin. |
+
+**Migraciones D1 ejecutadas (2026-06-02)**
+
+```bash
+ALTER TABLE propiedades ADD COLUMN formato_video TEXT DEFAULT 'vertical_nativo'
+ALTER TABLE propiedades ADD COLUMN requiere_acceso INTEGER DEFAULT 0
+CREATE TABLE IF NOT EXISTS revisiones_video (id INTEGER PRIMARY KEY AUTOINCREMENT, contrato_id TEXT NOT NULL, minuto_segundo TEXT DEFAULT '', descripcion_ajuste TEXT NOT NULL, fecha TEXT NOT NULL)
+ALTER TABLE contratos ADD COLUMN origen TEXT DEFAULT 'admin'
+```
+
+---
 
 ### Ronda 17 — Fechas de entrega estimadas + fixes de auditoría (2026-06-01)
 
@@ -606,9 +664,9 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 | Capa | Versión | Estado |
 |------|---------|--------|
-| Worker + Frontend | R17 | Desplegado |
-| D1 Schema | — | Actualizado (`carpeta_entregables_id`, `referencias`, `fachada_url`, `perimetro_url` en rondas anteriores; `entrega_express` en R17 — **requiere ALTER TABLE manual en DB existente**) |
-| Adapter Apps Script | — | Pendiente deploy (Rondas 4–11) |
+| Worker + Frontend | R18 | En rama `claude/determined-hamilton-TMJ0G` — pendiente merge a `main` |
+| D1 Schema | — | Migraciones R18 ejecutadas manualmente (ver Ronda 18). `entrega_express` de R17 también ejecutada. |
+| Adapter Apps Script | — | Pendiente deploy — incluye cambios de Rondas 4–11 + `notificarRevision` de R18 |
 
 ---
 
@@ -649,13 +707,12 @@ Features descartadas explícitamente. No incluirlas en ningún plan ni sugerirla
 ## Pendientes conocidos
 
 - [x] Adapter desplegado (2026-05-30).
+- [x] Migraciones D1 de R17 y R18 ejecutadas manualmente (2026-06-02).
+- [ ] **Adapter Apps Script:** desplegar nueva versión de `AdapterScript4_v1.js` en script.google.com — incluye `notificarRevision` (R18) y todos los cambios de Rondas 4–17.
+- [ ] **Merge a main:** la rama `claude/determined-hamilton-TMJ0G` contiene todos los cambios de R18. Hacer merge/PR para que GitHub Actions despliegue a Cloudflare.
 - [ ] `procesarPDFsPendientes` en Apps Script requiere trigger automático — verificar que esté configurado en script.google.com para correr cada minuto.
 - [ ] Cuando el correo del cliente está vacío al crear el contrato, no llega ningún correo en la firma. El cliente debe llenarlo en el portal antes de firmar.
 - [ ] El folio solo se genera para contratos estándar con fecha de sesión. Contratos particulares no tienen folio hasta configurar la propiedad.
-- [ ] **Migración D1 pendiente (R17):** ejecutar en la DB existente:
-  ```bash
-  wrangler d1 execute contratos-iav-v4 --remote --command="ALTER TABLE contratos ADD COLUMN entrega_express INTEGER DEFAULT 0"
-  ```
 
 ---
 
