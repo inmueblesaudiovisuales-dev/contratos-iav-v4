@@ -402,6 +402,7 @@ export async function handleContratos(request, env, ctx, action) {
     const { token } = await request.json();
     // D1 no respeta FOREIGN KEYS — cascada manual en orden correcto
     await batch(db, [
+      { sql: 'DELETE FROM revisiones_video WHERE contrato_id=?', params: [token] },
       { sql: 'DELETE FROM checklist WHERE contrato_token=?', params: [token] },
       { sql: 'DELETE FROM propiedades WHERE contrato_token=?', params: [token] },
       { sql: 'DELETE FROM abonos WHERE contrato_token=?', params: [token] },
