@@ -699,8 +699,12 @@
       font-size: 0 !important; letter-spacing: 0;
       padding: 0; flex: none;
       justify-content: center; gap: 0;
+      order: 2;
     }
     .bnav-fab i { font-size: 22px !important; color: var(--onyx); }
+    /* orden mobile: Contratos(1) / FAB(2) / Ajustes(3) */
+    .bnav-btn[data-tab="contratos"] { order: 1; }
+    .bnav-btn[data-tab="ajustes"]   { order: 3; }
 
     /* ── Modo selección masiva ── */
     .btn-seleccion { background: none; border: 1.5px solid var(--border2); border-radius: var(--r); padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
