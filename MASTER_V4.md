@@ -5,6 +5,12 @@
 
 ---
 
+## Rama de trabajo
+
+Todo el desarrollo va directo a `main`. No se crean ramas de feature ni se trabaja en ramas paralelas salvo instrucción explícita de Bruno. El flujo es: editar → commit → push a `main`.
+
+---
+
 ## Qué es v4.0
 
 Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cloudflare. El cambio central es velocidad: v3 tardaba 2-4 segundos por operación (Apps Script frío). v4 responde en < 200ms porque todas las operaciones de datos van a D1 (SQLite en edge). Google sigue siendo el backend para carpetas de Drive, calendario, correos y PDFs — pero se llama de forma asíncrona, el usuario no espera.

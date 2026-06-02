@@ -23,6 +23,7 @@
 
 ## Reglas simples
 
+- Trabajar siempre en `main`. No crear ramas salvo instrucción explícita de Bruno.
 - No usar emojis en archivos ni en interfaz.
 - Mantener CSS mobile-first.
 - Respetar las convenciones de DB y flujo ya documentadas.
