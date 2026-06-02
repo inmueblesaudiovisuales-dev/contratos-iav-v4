@@ -1047,6 +1047,12 @@ function formatearAccesoCalendar_(prop) {
     llamada_al_llegar: 'Llamada al llegar',
     otro: 'Otro'
   };
+  var puntos = {
+    directo_departamento: 'Pasamos directo al departamento',
+    lobby: 'Nos vemos en lobby',
+    estacionamiento: 'Nos vemos en estacionamiento',
+    otro: 'Otro punto'
+  };
   var lineas = [];
   if (acceso.metodos && acceso.metodos.length) {
     var metodos = [];
@@ -1061,9 +1067,9 @@ function formatearAccesoCalendar_(prop) {
   if (acceso.torre) lineas.push('Torre: ' + acceso.torre);
   if (acceso.piso) lineas.push('Piso: ' + acceso.piso);
   if (acceso.departamento) lineas.push('Departamento: ' + acceso.departamento);
-  if (acceso.elevador) lineas.push('Elevador: ' + acceso.elevador);
   if (acceso.estacionamiento) lineas.push('Estacionamiento: ' + acceso.estacionamiento);
-  if (acceso.horarioAcceso) lineas.push('Horario acceso: ' + acceso.horarioAcceso);
+  if (acceso.puntoEncuentro) lineas.push('Punto de encuentro: ' + (puntos[acceso.puntoEncuentro] || acceso.puntoEncuentro));
+  if (acceso.puntoEncuentroDetalle) lineas.push('Detalle encuentro: ' + acceso.puntoEncuentroDetalle);
   if (acceso.restricciones) lineas.push('Restricciones acceso: ' + acceso.restricciones);
   if (acceso.comentarios) lineas.push('Comentarios acceso: ' + acceso.comentarios);
   if (!lineas.length && requiere) lineas.push('Requiere acceso especial; sin instrucciones adicionales');

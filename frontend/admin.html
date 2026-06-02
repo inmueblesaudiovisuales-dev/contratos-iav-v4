@@ -2986,8 +2986,16 @@ function renderAccesoCaseta(p) {
   if (Array.isArray(acceso.metodos) && acceso.metodos.length) {
     filas.push(['Método', acceso.metodos.map(m => metodosLabels[m] || m).join(', ')]);
   }
+  const puntoLabels = {
+    directo_departamento: 'Pasamos directo al departamento',
+    lobby: 'Nos vemos en lobby',
+    estacionamiento: 'Nos vemos en estacionamiento',
+    otro: 'Otro punto'
+  };
   if (acceso.contactoAccesoTipo === 'yo') filas.push(['Contacto', 'Cliente']);
   if (acceso.contactoAccesoTipo === 'otro' && acceso.contactoAcceso) filas.push(['Contacto', acceso.contactoAcceso]);
+  if (acceso.puntoEncuentro) filas.push(['Punto de encuentro', puntoLabels[acceso.puntoEncuentro] || acceso.puntoEncuentro]);
+  if (acceso.puntoEncuentroDetalle) filas.push(['Detalle encuentro', acceso.puntoEncuentroDetalle]);
   [
     ['Registro', acceso.nombreRegistro],
     ['Caseta', acceso.instruccionesCaseta],
@@ -2995,9 +3003,7 @@ function renderAccesoCaseta(p) {
     ['Torre', acceso.torre],
     ['Piso', acceso.piso],
     ['Departamento', acceso.departamento],
-    ['Elevador', acceso.elevador],
     ['Estacionamiento', acceso.estacionamiento],
-    ['Horario', acceso.horarioAcceso],
     ['Restricciones', acceso.restricciones],
     ['Comentarios', acceso.comentarios],
   ].forEach(([label, value]) => {
