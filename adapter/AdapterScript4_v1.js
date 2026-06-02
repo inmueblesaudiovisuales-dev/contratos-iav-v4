@@ -1055,7 +1055,8 @@ function formatearAccesoCalendar_(prop) {
   }
   if (acceso.nombreRegistro) lineas.push('Registro: ' + acceso.nombreRegistro);
   if (acceso.instruccionesCaseta) lineas.push('Caseta: ' + acceso.instruccionesCaseta);
-  if (acceso.contactoAcceso) lineas.push('Contacto acceso: ' + acceso.contactoAcceso);
+  if (acceso.contactoAccesoTipo === 'yo') lineas.push('Contacto acceso: Cliente');
+  if (acceso.contactoAccesoTipo === 'otro' && acceso.contactoAcceso) lineas.push('Contacto acceso: ' + acceso.contactoAcceso);
   if (acceso.tipoEdificio) lineas.push('Tipo acceso: ' + acceso.tipoEdificio);
   if (acceso.torre) lineas.push('Torre: ' + acceso.torre);
   if (acceso.piso) lineas.push('Piso: ' + acceso.piso);

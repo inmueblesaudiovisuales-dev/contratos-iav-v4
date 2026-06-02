@@ -2986,10 +2986,11 @@ function renderAccesoCaseta(p) {
   if (Array.isArray(acceso.metodos) && acceso.metodos.length) {
     filas.push(['Método', acceso.metodos.map(m => metodosLabels[m] || m).join(', ')]);
   }
+  if (acceso.contactoAccesoTipo === 'yo') filas.push(['Contacto', 'Cliente']);
+  if (acceso.contactoAccesoTipo === 'otro' && acceso.contactoAcceso) filas.push(['Contacto', acceso.contactoAcceso]);
   [
     ['Registro', acceso.nombreRegistro],
     ['Caseta', acceso.instruccionesCaseta],
-    ['Contacto', acceso.contactoAcceso],
     ['Tipo acceso', acceso.tipoEdificio],
     ['Torre', acceso.torre],
     ['Piso', acceso.piso],

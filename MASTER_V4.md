@@ -289,12 +289,13 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 | ID | Archivo | Cambio |
 |----|---------|--------|
-| R29-01 | `frontend/portal.html` | La sección de privada/caseta ahora despliega campos opcionales cuando el cliente marca "Sí": método de acceso, registro, indicaciones para guardia, contacto, tipo de edificio, estacionamiento, horario, restricciones y comentarios logísticos. |
+| R29-01 | `frontend/portal.html` | La sección de privada/caseta ahora despliega campos opcionales cuando el cliente marca "Sí": método de acceso, dueño/contacto autorizado, indicaciones para guardia, contacto de acceso tipo "Yo/Otro", tipo de inmueble, estacionamiento, horario, restricciones y comentarios para llegar y entrar. |
 | R29-02 | `frontend/portal.html` | El payload de firma conserva `requiereAcceso` como booleano y guarda el detalle estructurado en `datosEspecificos.acceso`; también restaura los campos al volver desde la revisión. |
 | R29-03 | `frontend/portal.html` | El resumen previo a firma muestra "Acceso y caseta" cuando aplica. El upload "QR, invitación o referencia de acceso" se movió al bloque condicional de acceso/caseta. |
 | R29-04 | `worker/src/routes/portal.js` | `obtenerPortal` devuelve `requiereAcceso` por propiedad para que el portal pueda restaurar el estado guardado. |
 | R29-05 | `frontend/admin.html` | La tarjeta de cada propiedad muestra un bloque legible "Acceso y caseta" con los datos capturados, tolerando contratos viejos sin JSON de acceso. |
 | R29-06 | `adapter/AdapterScript4_v1.js` | La descripción del evento Calendar agrega el bloque de acceso/caseta en firma, primer abono legacy y reagenda. Requiere desplegar manualmente el adapter en Apps Script para producción. |
+| R29-07 | `adapter/AdapterScript4_v1.js` | 2026-06-02 12:11:43 CST: Calendar ahora distingue `contactoAccesoTipo` (`yo` → Cliente, `otro` → contacto capturado) dentro del bloque de acceso/caseta. Requiere despliegue manual en Apps Script. |
 
 ---
 
