@@ -285,7 +285,7 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 > **Migración D1 requerida** — ejecutar una sola vez desde terminal con Mac:
 > ```bash
-> wrangler d1 execute contratos-iav-v4 --remote --command="ALTER TABLE propiedades ADD COLUMN ocultar_formato_video INTEGER DEFAULT 0"
+> wrangler d1 execute contratos-iav-v4 --remote --command="ALTER TABLE propiedades ADD COLUMN ocultar_formato_video INTEGER DEFAULT 1"
 > ```
 > La columna `formato_video` ya existe desde R18. Solo se agrega `ocultar_formato_video`.
 
