@@ -541,6 +541,103 @@
     /* ── Panel sesión en header ──────────────────────── */
     .panel-sesion { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
 
+    /* ── Panel status pill ───────────────────────────── */
+    .panel-status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 11.5px; font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .panel-status-pill .psp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Panel contact line ──────────────────────────── */
+    .panel-contact {
+      font-size: 12px; color: var(--ink-3);
+      margin-top: 2px; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .panel-contact a { color: var(--ink-3); text-decoration: none; transition: color 100ms; }
+    .panel-contact a:hover { color: var(--gold); }
+    .panel-contact-sep { color: var(--border2); }
+
+    /* ── Panel KPI cards ────────────────────────────── */
+    .panel-kpi-row {
+      display: flex; gap: 8px;
+      padding: 16px 20px 0;
+      flex-shrink: 0;
+    }
+    .panel-kpi-card {
+      flex: 1;
+      background: var(--page);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .panel-kpi-label {
+      font-size: 9.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--ink-3); margin-bottom: 4px;
+    }
+    .panel-kpi-val {
+      font-size: 17px; font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink-1); letter-spacing: -0.4px;
+    }
+    .panel-kpi-val.amber { color: #D97706; }
+    .panel-kpi-val.green { color: #059669; }
+    .panel-kpi-sub { font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+
+    /* ── Panel pay progress bar ─────────────────────── */
+    .panel-pay-progress {
+      padding: 12px 20px 4px;
+      flex-shrink: 0;
+    }
+    .panel-pay-labels {
+      display: flex; justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .panel-pay-label { font-size: 11px; color: var(--ink-3); font-weight: 500; }
+    .panel-pay-label.strong { color: var(--ink-1); font-weight: 700; }
+    .panel-pay-bar-bg {
+      height: 6px; background: var(--border);
+      border-radius: 99px; overflow: hidden;
+    }
+    .panel-pay-bar-fill {
+      height: 6px; border-radius: 99px;
+      background: linear-gradient(90deg, #10B981 0%, #34D399 100%);
+      transition: width 600ms cubic-bezier(0.16,1,0.3,1);
+    }
+
+    /* ── Panel sticky action bar ────────────────────── */
+    .panel-action-bar {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 6px; flex-wrap: wrap;
+      background: var(--card);
+      flex-shrink: 0;
+      position: sticky; bottom: 0; z-index: 2;
+    }
+    .panel-action-btn {
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--page);
+      color: var(--ink-1);
+      display: flex; align-items: center; gap: 6px;
+      transition: border-color 100ms, background 100ms;
+      text-decoration: none;
+    }
+    .panel-action-btn:hover { border-color: var(--ink-4); background: var(--border); }
+    .panel-action-btn.primary { background: var(--gold); border-color: var(--gold); color: #1a1000; }
+    .panel-action-btn.primary:hover { filter: brightness(1.06); }
+    .panel-action-btn.danger { color: #DC2626; border-color: #FECACA; background: #FEF2F2; }
+    .panel-action-btn.danger:hover { background: #FEE2E2; border-color: #FCA5A5; }
+    .panel-action-btn.wa { background: #25D366; border-color: #25D366; color: #fff; }
+    .panel-action-btn.wa:hover { filter: brightness(0.95); }
+
     /* Overlay */
     #overlay { display: none; position: fixed; inset: 0; background: rgba(28,28,30,0.4); z-index: 190; }
     #overlay.visible { display: block; }
@@ -953,17 +1050,108 @@
         white-space: nowrap;
       }
 
-      /* ── TOOLBAR ── */
+      /* ── TOOLBAR unified ── */
+      /* contratos-tabs moves into the toolbar row */
+      .contratos-tabs {
+        display: flex !important;
+        border-bottom: none;
+        margin-bottom: 0;
+        flex-shrink: 0;
+      }
+      .contratos-tab {
+        padding: 0 14px;
+        height: 44px;
+        font-size: 12.5px;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+      }
+
       .barra {
-        padding: 10px 24px;
+        padding: 0 24px;
+        height: 44px;
         background: var(--card);
         border-bottom: 1px solid var(--border);
         margin: 0 -24px;
-        display: flex; flex-direction: row; align-items: center; gap: 12px;
+        display: flex; flex-direction: row; align-items: center; gap: 0;
         flex-shrink: 0;
       }
-      .barra-fila-principal { flex: 1; gap: 8px; }
+      .barra-fila-principal {
+        flex: 1;
+        display: flex; align-items: center; gap: 8px;
+        padding-left: 12px;
+      }
       .barra-filtros { display: none !important; }
+
+      /* search wrap with icon */
+      .search-wrap {
+        position: relative;
+        flex: 1; max-width: 280px;
+      }
+      .search-wrap .search-icon {
+        position: absolute; left: 10px; top: 50%;
+        transform: translateY(-50%);
+        color: var(--ink-3); font-size: 14px;
+        pointer-events: none;
+      }
+      .search-wrap input {
+        padding-left: 30px !important;
+        padding-right: 36px !important;
+        height: 30px;
+        background: var(--page);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 12px;
+        width: 100%;
+        outline: none;
+        transition: border-color 120ms, box-shadow 120ms;
+      }
+      .search-wrap input:focus {
+        border-color: var(--gold);
+        box-shadow: 0 0 0 3px var(--gold-light);
+        background: #fff;
+      }
+      .search-shortcut {
+        position: absolute; right: 8px; top: 50%;
+        transform: translateY(-50%);
+        font-size: 10px; color: var(--ink-4);
+        background: var(--border);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-weight: 600;
+        pointer-events: none;
+        font-family: system-ui, sans-serif;
+      }
+
+      /* toolbar separator */
+      .toolbar-sep {
+        width: 1px; height: 20px;
+        background: var(--border);
+        flex-shrink: 0;
+        margin: 0 4px;
+      }
+
+      /* filter chips */
+      .filter-chips { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+      .filter-chip {
+        height: 26px; padding: 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        background: none;
+        font-size: 11.5px; font-weight: 500;
+        color: var(--ink-2);
+        cursor: pointer; font-family: inherit;
+        display: flex; align-items: center; gap: 5px;
+        transition: all 100ms;
+        white-space: nowrap;
+      }
+      .filter-chip:hover { border-color: var(--ink-4); color: var(--ink-1); }
+      .filter-chip.on { background: var(--ink-1); border-color: var(--ink-1); color: #fff; }
+      .filter-chip.on .chip-dot { opacity: 0.8; }
+      .chip-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+      /* hide original select on desktop */
+      #filtro-estatus { display: none !important; }
+      #btn-filtros-toggle { display: none !important; }
 
       /* ── HOY STRIP ── */
       .hoy-strip {
@@ -1062,6 +1250,7 @@
       }
       .td-nombre { font-weight: 600; font-size: 13px; }
       .td-sub { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+      .td-monto { text-align: right; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink-1); }
 
       .td-avatar {
         width: 32px; height: 32px; border-radius: 50%;
@@ -1069,6 +1258,34 @@
         font-size: 11px; font-weight: 700; color: #fff;
         flex-shrink: 0;
       }
+
+      /* avatar gradient classes (by initial) */
+      .av-a { background: linear-gradient(135deg,#F59E0B,#D97706) !important; }
+      .av-b { background: linear-gradient(135deg,#3B82F6,#1D4ED8) !important; }
+      .av-c { background: linear-gradient(135deg,#EC4899,#DB2777) !important; }
+      .av-d { background: linear-gradient(135deg,#8B5CF6,#6D28D9) !important; }
+      .av-e { background: linear-gradient(135deg,#10B981,#059669) !important; }
+      .av-f { background: linear-gradient(135deg,#F97316,#EA580C) !important; }
+
+      /* status column: dot + label layout */
+      .td-status-wrap { display: flex; align-items: center; gap: 7px; }
+      .td-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+      .td-status-label { font-size: 12px; font-weight: 500; color: var(--ink-2); }
+      .td-status-age { font-size: 10.5px; color: var(--ink-4); margin-top: 2px; }
+
+      /* saldo mini bar */
+      .td-saldo-wrap { text-align: right; }
+      .td-saldo-val { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; display: block; }
+      .td-saldo-val.red    { color: #DC2626; }
+      .td-saldo-val.amber  { color: #D97706; }
+      .td-saldo-val.green  { color: #059669; }
+      .saldo-bar-wrap { margin-top: 3px; height: 2px; background: var(--border); border-radius: 99px; }
+      .saldo-bar-fill { height: 2px; border-radius: 99px; transition: width 400ms ease; }
+
+      /* fecha hoy / pronto (desktop override) */
+      .td-fecha-hoy   { color: var(--gold) !important; font-weight: 700; }
+      .td-fecha-pronto { color: #D97706 !important; font-weight: 600; }
+      .td-fecha-semana { color: #3B82F6 !important; font-weight: 600; }
 
       /* Hide mobile elements */
       #radar-sesiones, #sesiones-lista { display: none !important; }
@@ -1089,6 +1306,7 @@
         transform: translateX(100%);
         transition: transform 300ms cubic-bezier(0.16,1,0.3,1);
         z-index: 50;
+        overflow: hidden;
       }
       .panel-lateral.visible {
         transform: translateX(0);
@@ -1102,13 +1320,28 @@
         border-bottom: 1px solid var(--border);
         flex-shrink: 0;
         position: static;
+        overflow-y: visible;
       }
       .panel-header-info { flex: 1; min-width: 0; padding-right: 10px; }
       .panel-folio { font-size: 11px; }
       .panel-nombre { font-size: 20px; font-weight: 800; line-height: 1.2; letter-spacing: -0.3px; }
-      .panel-tabs { position: static; top: auto; }
+
+      /* kpis area (outside scroll) */
+      #panel-kpis { flex-shrink: 0; background: var(--card); }
+
+      .panel-tabs { position: static; top: auto; flex-shrink: 0; }
       .panel-tab-btn.activo { color: var(--ink-1); border-bottom-color: var(--ink-1); }
-      .panel-tab-pane { padding: 18px 20px; }
+
+      /* scrollable panes */
+      #pane-general, #pane-produccion, #pane-entrega {
+        flex: 1; overflow-y: auto; min-height: 0;
+      }
+      #pane-general.activo, #pane-produccion.activo, #pane-entrega.activo { display: flex; flex-direction: column; }
+      .panel-tab-pane { padding: 16px 20px; }
+
+      /* action bar sticks to bottom of panel */
+      #panel-action-bar { flex-shrink: 0; }
+      .panel-action-bar { position: static; border-top: 1px solid var(--border); }
 
       /* ── LIFECYCLE PIPELINE ── */
       .lifecycle {
@@ -1340,8 +1573,18 @@
       <!-- Toolbar -->
       <div class="barra">
         <div class="barra-fila-principal">
-          <div class="campo-busqueda">
-            <input type="text" id="busqueda" placeholder="Buscar por nombre, teléfono, correo o folio..." oninput="filtrarContratos()">
+          <div class="campo-busqueda search-wrap">
+            <i class="ti ti-search search-icon"></i>
+            <input type="text" id="busqueda" placeholder="Buscar nombre, teléfono, folio..." oninput="filtrarContratos()">
+            <span class="search-shortcut">⌘K</span>
+          </div>
+          <div class="toolbar-sep"></div>
+          <div class="filter-chips" id="filter-chips">
+            <button class="filter-chip" data-estatus="Pendiente firma" onclick="toggleChip(this)"><span class="chip-dot" style="background:#9CA3AF"></span>Pendiente</button>
+            <button class="filter-chip" data-estatus="Firmado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#3B82F6"></span>Firmado</button>
+            <button class="filter-chip" data-estatus="Anticipo recibido" onclick="toggleChip(this)"><span class="chip-dot" style="background:#F59E0B"></span>Anticipo</button>
+            <button class="filter-chip" data-estatus="En produccion" onclick="toggleChip(this)"><span class="chip-dot" style="background:#8B5CF6"></span>Producción</button>
+            <button class="filter-chip" data-estatus="Entregado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Entregado</button>
           </div>
           <select id="filtro-estatus" onchange="filtrarContratos()" style="width:auto">
             <option value="">Todos los estatus</option>
@@ -1394,13 +1637,13 @@
           <thead>
             <tr>
               <th id="th-check" style="display:none;width:36px"></th>
-              <th>Folio</th>
-              <th class="th-avatar" style="width:52px"></th>
+              <th style="padding-left:20px;width:130px">Folio</th>
+              <th style="width:52px"></th>
               <th>Cliente</th>
-              <th>Estatus</th>
-              <th>Sesión</th>
-              <th>Total</th>
-              <th>Saldo</th>
+              <th style="width:200px">Estatus</th>
+              <th style="width:130px">Sesión</th>
+              <th style="text-align:right;width:110px">Total</th>
+              <th style="text-align:right;width:130px">Saldo</th>
             </tr>
           </thead>
           <tbody id="tabla-body">
@@ -1638,26 +1881,27 @@
   <div class="panel-handle" style="display:none;width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 0;flex-shrink:0"></div>
   <div class="panel-header">
     <div class="panel-header-info">
+      <div id="panel-status-pill"></div>
       <div class="panel-folio" id="panel-folio">—</div>
       <div class="panel-nombre" id="panel-nombre">—</div>
+      <div id="panel-contact" class="panel-contact" style="display:none"></div>
       <div class="lifecycle-wrap"></div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px">
-        <div id="panel-badge"></div>
-        <div id="panel-sesion" class="panel-sesion" style="display:none"></div>
-      </div>
+      <div id="panel-sesion" class="panel-sesion" style="display:none"></div>
     </div>
     <button class="btn-cerrar" onclick="cerrarPanel()"><i class="ti ti-x"></i></button>
   </div>
+  <!-- KPI cards + pay progress (populated by renderPanel) -->
+  <div id="panel-kpis"></div>
   <div class="panel-tabs">
     <button class="panel-tab-btn activo" onclick="mostrarPanelTab('general', this)">General</button>
     <button class="panel-tab-btn" onclick="mostrarPanelTab('produccion', this)">Producción</button>
     <button class="panel-tab-btn" onclick="mostrarPanelTab('entrega', this)">Entrega</button>
   </div>
   <div id="pane-general" class="panel-tab-pane activo"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-
   <div id="pane-produccion" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-
   <div id="pane-entrega" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+  <!-- Sticky action bar (populated by renderPanel) -->
+  <div id="panel-action-bar"></div>
 </div>
 <div id="overlay" onclick="cerrarPanel()"></div>
 
@@ -2290,6 +2534,8 @@ function setCiclo(ciclo) {
   document.getElementById('radar-sesiones').style.display = ciclo === 'sesiones' ? 'none' : '';
   document.getElementById('filtro-estatus').style.display = ciclo === 'sesiones' ? 'none' : '';
   document.getElementById('btn-filtros-toggle').style.display = ciclo === 'sesiones' ? 'none' : '';
+  const fc = document.getElementById('filter-chips');
+  if (fc) fc.style.visibility = ciclo === 'sesiones' ? 'hidden' : '';
   filtrarContratos();
 }
 
@@ -2342,16 +2588,29 @@ function renderAlertas() {
 }
 
 
+function toggleChip(btn) {
+  btn.classList.toggle('on');
+  filtrarContratos();
+}
+
+function getChipEstatus() {
+  const chips = document.querySelectorAll('#filter-chips .filter-chip.on');
+  if (!chips.length) return null; // sin selección = todos
+  return Array.from(chips).map(c => c.dataset.estatus);
+}
+
 function filtrarContratos() {
   const q     = document.getElementById('busqueda').value.toLowerCase();
-  const st    = document.getElementById('filtro-estatus').value;
+  const chipSt = getChipEstatus();
+  const st    = chipSt ? null : document.getElementById('filtro-estatus').value;
   const desde = document.getElementById('filtro-fecha-desde').value;
   const hasta = document.getElementById('filtro-fecha-hasta').value;
   const hoy   = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 10);
   let lista = todosContratos.filter(c => {
     if (filtroCiclo === 'abiertos' && !ESTATUS_ABIERTOS.includes(c.Estatus)) return false;
     if (filtroCiclo === 'sesiones' && (!c.FechaSesion || String(c.FechaSesion).substring(0, 10) < hoy)) return false;
-    if (st && c.Estatus !== st) return false;
+    if (chipSt && !chipSt.includes(c.Estatus)) return false;
+    if (!chipSt && st && c.Estatus !== st) return false;
     if (q && !(((c.NombreCliente||'') + (c.CorreoCliente||'') + (c.Folio||'') + (c.TelefonoCliente||'')).toLowerCase().includes(q))) return false;
     if (filtroCiclo !== 'sesiones' && (desde || hasta)) {
       const fecha = String(c.FechaCreacion || '').substring(0, 10);
@@ -2445,11 +2704,44 @@ function renderTabla(lista) {
       : `<td class="td-fecha" style="color:var(--ink-4)">—</td>`;
     const statusColor = ESTATUS_COLOR[c.Estatus] ? `--row-color:${ESTATUS_COLOR[c.Estatus]}` : '';
     const iniciales = (c.NombreCliente||'?').split(' ').slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase();
-    const avatarColor = hashColor(iniciales);
-    const avatarCell = `<td class="td-avatar-desktop" style="padding-left:20px"><div class="td-avatar" style="background:${avatarColor}">${iniciales}</div></td>`;
+    // deterministic gradient by first initial
+    const avClasses = ['av-a','av-b','av-c','av-d','av-e','av-f'];
+    const avClass = avClasses[(iniciales.charCodeAt(0) || 0) % avClasses.length];
+    const avatarCell = `<td class="td-avatar-desktop" style="padding-left:20px"><div class="td-avatar ${avClass}">${iniciales}</div></td>`;
+
+    // status dot + label + age
+    const dotColor = ESTATUS_COLOR[c.Estatus] || '#9CA3AF';
+    const estatusLabel = c.Estatus === 'En produccion' ? 'En producción' : (c.Estatus || '—');
+    const ageText = dias > 0 ? `${dias} día${dias !== 1 ? 's' : ''}` : '';
+    const statusCell = `<td>
+      <div class="td-status-wrap">
+        <span class="td-status-dot" style="background:${dotColor}"></span>
+        <div>
+          <div class="td-status-label">${esc(estatusLabel)}${alertaExpiry ? ` <i class="ti ti-alert-triangle" style="color:var(--warn);font-size:11px;vertical-align:middle" title="Link próximo a expirar"></i>` : ''}</div>
+          ${ageText ? `<div class="td-status-age">${ageText}</div>` : ''}
+        </div>
+      </div>
+    </td>`;
+
+    // saldo bar
+    const saldoVal  = parseFloat(c.SaldoPendiente) || 0;
+    const precioVal = parseFloat(c.PrecioTotal) || 0;
+    const pagadoPct = precioVal > 0 ? Math.min(100, Math.round((precioVal - saldoVal) / precioVal * 100)) : 0;
+    const barColor  = saldoVal <= 0 ? '#10B981' : pagadoPct >= 50 ? '#F59E0B' : '#DC2626';
+    const saldoClass = saldoVal <= 0 ? 'green' : pagadoPct >= 50 ? 'amber' : 'red';
+    const saldoText  = saldoVal <= 0
+      ? '<i class="ti ti-check"></i> Liquidado'
+      : fmxn(saldoVal);
+    const saldoCell = `<td>
+      <div class="td-saldo-wrap">
+        <span class="td-saldo-val ${saldoClass}">${saldoText}</span>
+        <div class="saldo-bar-wrap"><div class="saldo-bar-fill" style="width:${pagadoPct}%;background:${barColor}"></div></div>
+      </div>
+    </td>`;
+
     return `<tr class="${[activo, sesClass].filter(Boolean).join(' ')}" ${rowClick} style="${statusColor}">
       ${checkCell}
-      <td class="td-folio">${esc(c.Folio) || '—'}</td>
+      <td class="td-folio" style="padding-left:20px">${esc(c.Folio) || '—'}</td>
       ${avatarCell}
       <td>
         <div class="td-nombre">
@@ -2458,18 +2750,10 @@ function renderTabla(lista) {
         <div class="td-sub td-email">${esc(c.CorreoCliente)}</div>
         ${c.PaqueteBase ? `<div class="td-sub" style="color:var(--ink-2)">${esc(c.PaqueteBase)}</div>` : ''}
       </td>
-      <td>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          ${badgeEstatus(c.Estatus)}
-          ${alertaExpiry ? `<i class="ti ti-alert-triangle" style="color:var(--warn);font-size:13px" title="Link próximo a expirar (más de 60 h en Pendiente firma)"></i>` : ''}
-        </div>
-        ${dias > 0 ? `<div class="td-sub" style="margin-top:3px">${dias} día${dias !== 1 ? 's' : ''} en este estatus</div>` : ''}
-      </td>
+      ${statusCell}
       ${sesCell}
       <td class="td-monto">${fmxn(c.PrecioTotal)}</td>
-      <td class="td-saldo${(c.SaldoPendiente ?? 0) <= 0 ? ' pagado' : ''}">
-        ${(c.SaldoPendiente ?? 0) > 0 ? fmxn(c.SaldoPendiente) : '<i class="ti ti-check" style="color:var(--success)"></i>'}
-      </td>
+      ${saldoCell}
     </tr>`;
   }).join('');
   actualizarStatsRibbon(todosContratos);
@@ -2540,7 +2824,14 @@ async function abrirPanel(token) {
 
   document.getElementById('panel-folio').textContent  = '...';
   document.getElementById('panel-nombre').textContent = 'Cargando...';
-  document.getElementById('panel-badge').innerHTML    = '';
+  const _psp = document.getElementById('panel-status-pill');
+  if (_psp) _psp.innerHTML = '';
+  const _pc = document.getElementById('panel-contact');
+  if (_pc) { _pc.innerHTML = ''; _pc.style.display = 'none'; }
+  const _pk = document.getElementById('panel-kpis');
+  if (_pk) _pk.innerHTML = '';
+  const _pab = document.getElementById('panel-action-bar');
+  if (_pab) _pab.innerHTML = '';
   ['general','produccion','entrega'].forEach(id =>
     document.getElementById('pane-' + id).innerHTML =
       '<p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:4px 0">Cargando...</p>'
@@ -2584,7 +2875,27 @@ function renderPanel(data) {
 
   document.getElementById('panel-folio').textContent  = c.Folio || 'Sin folio';
   document.getElementById('panel-nombre').textContent = c.NombreCliente;
-  document.getElementById('panel-badge').innerHTML    = badgeEstatus(c.Estatus);
+
+  // status pill
+  const _pillColor = ESTATUS_COLOR[c.Estatus] || '#9CA3AF';
+  const _pillBg    = _pillColor + '1A'; // ~10% opacity tint
+  const _pillLabel = c.Estatus === 'En produccion' ? 'En producción' : (c.Estatus || '—');
+  const _psp = document.getElementById('panel-status-pill');
+  if (_psp) _psp.innerHTML = `<span class="panel-status-pill" style="background:${_pillBg};color:${_pillColor}"><span class="psp-dot" style="background:${_pillColor}"></span>${esc(_pillLabel)}</span>`;
+
+  // contact line
+  const _pc = document.getElementById('panel-contact');
+  if (_pc) {
+    const parts = [];
+    if (c.CorreoCliente) parts.push(`<a href="mailto:${esc(c.CorreoCliente)}">${esc(c.CorreoCliente)}</a>`);
+    if (c.TelefonoCliente) {
+      if (parts.length) parts.push('<span class="panel-contact-sep">·</span>');
+      parts.push(`<a href="tel:${esc(c.TelefonoCliente)}">${esc(c.TelefonoCliente)}</a>`);
+    }
+    if (parts.length) { _pc.innerHTML = parts.join(''); _pc.style.display = ''; }
+    else _pc.style.display = 'none';
+  }
+
   var lw = document.querySelector('.lifecycle-wrap');
   if (lw) lw.innerHTML = renderLifecycle(c.Estatus);
   // Fecha de primera sesión en header — find() para contratos multi-propiedad donde [0] puede no tener fecha
@@ -2599,6 +2910,65 @@ function renderPanel(data) {
       panelSesionEl.style.display = 'none';
     }
   }
+
+  // KPI cards + payment progress bar
+  const _precioTotal  = parseFloat(c.PrecioTotal)   || 0;
+  const _totalAbonado = parseFloat(data.totalAbonado) || 0;
+  const _saldo        = parseFloat(c.SaldoPendiente)  || 0;
+  const _pct          = _precioTotal > 0 ? Math.min(100, Math.round(_totalAbonado / _precioTotal * 100)) : 0;
+  const _pk = document.getElementById('panel-kpis');
+  if (_pk) _pk.innerHTML = `
+    <div class="panel-kpi-row">
+      <div class="panel-kpi-card">
+        <div class="panel-kpi-label">Total</div>
+        <div class="panel-kpi-val">${fmxn(_precioTotal)}</div>
+        <div class="panel-kpi-sub">Precio contratado</div>
+      </div>
+      <div class="panel-kpi-card">
+        <div class="panel-kpi-label">Pagado</div>
+        <div class="panel-kpi-val green">${fmxn(_totalAbonado)}</div>
+        <div class="panel-kpi-sub">${_pct}% del total</div>
+      </div>
+      <div class="panel-kpi-card">
+        <div class="panel-kpi-label">Saldo</div>
+        <div class="panel-kpi-val${_saldo > 0 ? ' amber' : ' green'}">${fmxn(_saldo)}</div>
+        <div class="panel-kpi-sub">${_saldo > 0 ? 'Pendiente' : 'Liquidado'}</div>
+      </div>
+    </div>
+    <div class="panel-pay-progress">
+      <div class="panel-pay-labels">
+        <span class="panel-pay-label">Progreso de pago</span>
+        <span class="panel-pay-label strong">${_pct}% — ${fmxn(_totalAbonado)} de ${fmxn(_precioTotal)}</span>
+      </div>
+      <div class="panel-pay-bar-bg"><div class="panel-pay-bar-fill" style="width:${_pct}%"></div></div>
+    </div>`;
+
+  // Sticky action bar
+  const _waTelPortal = normalizarTelWA(c.TelefonoCliente);
+  const _nombre1wa   = (c.NombreCliente || '').split(' ')[0];
+  const _waTexto = (() => {
+    const st = c.Estatus || '';
+    if (st === 'Pendiente firma') return 'Hola ' + _nombre1wa + ', aquí está tu link para revisar y firmar tu contrato: ' + urlPortal;
+    if (st === 'Firmado')         return 'Hola ' + _nombre1wa + ', te recuerdo que tienes pendiente el anticipo de ' + fmxn(parseFloat(c.Anticipo) || 0) + '. Puedes realizar el pago aquí: ' + urlPortal;
+    return 'Hola ' + _nombre1wa + ', te comparto el link de tu portal: ' + urlPortal;
+  })();
+  const _waUrl = 'https://wa.me/' + _waTelPortal + '?text=' + encodeURIComponent(_waTexto);
+  const _pab = document.getElementById('panel-action-bar');
+  if (_pab) _pab.innerHTML = `
+    <div class="panel-action-bar">
+      <button class="panel-action-btn primary" onclick="const el=document.getElementById('abono-monto'); if(el){el.closest('details')&&(el.closest('details').open=true);el.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>el.focus(),300)}">
+        <i class="ti ti-cash"></i> Registrar abono
+      </button>
+      <a class="panel-action-btn wa" href="${esc(_waUrl)}" target="_blank" rel="noopener">
+        <i class="ti ti-brand-whatsapp"></i> WhatsApp
+      </a>
+      <a class="panel-action-btn" href="${esc(urlPortal)}" target="_blank" rel="noopener">
+        <i class="ti ti-world"></i> Portal
+      </a>
+      <button class="panel-action-btn" onclick="abrirModalUpsell()">
+        <i class="ti ti-plus"></i> Extra
+      </button>
+    </div>`;
 
   // ── PANE GENERAL ──
   const addHtml = adicionales.length
