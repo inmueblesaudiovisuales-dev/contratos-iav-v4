@@ -160,7 +160,9 @@ export async function handlePortal(request, env, ctx, action) {
         perimetroUrl: p.perimetro_url,
         datosEspecificos: JSON.parse(p.datos_especificos || '{}'),
         logoUrl: p.logo_url,
-        carpetaControlId: p.carpeta_control_id
+        carpetaControlId: p.carpeta_control_id,
+        formatoVideo: p.formato_video || 'vertical_nativo',
+        ocultarFormatoVideo: p.ocultar_formato_video ? 1 : 0
       })),
       paquetesDisponibles,
       extrasAcordados,

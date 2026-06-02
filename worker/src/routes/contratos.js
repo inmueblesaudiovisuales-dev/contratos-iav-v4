@@ -392,6 +392,15 @@ export async function handleContratos(request, env, ctx, action) {
     return ok({ ok: true });
   }
 
+  if (action === 'guardarFormatoPropiedad') {
+    const { token, numPropiedad, formatoVideo, ocultarFormatoVideo } = await request.json();
+    await run(db,
+      'UPDATE propiedades SET formato_video=?, ocultar_formato_video=? WHERE contrato_token=? AND num_propiedad=?',
+      [formatoVideo || 'vertical_nativo', ocultarFormatoVideo ? 1 : 0, token, numPropiedad]
+    );
+    return ok({ ok: true });
+  }
+
   if (action === 'ocultarContrato') {
     const { token } = await request.json();
     await run(db, 'UPDATE contratos SET oculto=1 WHERE token=?', [token]);

@@ -2396,6 +2396,32 @@ function toggleCaracteristicas(numProp) {
   if (div) div.style.display = div.style.display === 'none' ? 'block' : 'none';
 }
 
+function toggleFormato(numProp) {
+  const div = document.getElementById('form-formato-' + numProp);
+  if (div) div.style.display = div.style.display === 'none' ? 'block' : 'none';
+}
+
+async function guardarFormato(numProp) {
+  const ctx = window._contratoActivo;
+  if (!ctx) return;
+  const sel      = document.getElementById('formato-sel-' + numProp);
+  const chk      = document.getElementById('ocultar-fmt-' + numProp);
+  const msg      = document.getElementById('msg-formato-' + numProp);
+  const formatoVideo      = sel ? sel.value : 'vertical_nativo';
+  const ocultarFormatoVideo = chk ? (chk.checked ? 1 : 0) : 0;
+  if (msg) msg.textContent = 'Guardando...';
+  try {
+    const data = await apiPost({ action: 'guardarFormatoPropiedad', token: ctx.c.Token, numPropiedad: numProp, formatoVideo, ocultarFormatoVideo });
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    const etiquetas = { vertical_nativo: 'Vertical', horizontal_recorte_vertical: 'Horizontal + recorte', doble_nativo: 'Doble formato' };
+    const labelEl = document.getElementById('fmt-label-' + numProp);
+    if (labelEl) labelEl.textContent = etiquetas[formatoVideo] || formatoVideo;
+    if (msg) { msg.textContent = 'Guardado.'; setTimeout(() => { if (msg) msg.textContent = ''; toggleFormato(numProp); }, 1200); }
+  } catch(e) {
+    if (msg) msg.textContent = 'Error: ' + e.message;
+  }
+}
+
 async function guardarCaracteristicas(numProp) {
   const ctx = window._contratoActivo;
   if (!ctx) return;
@@ -3088,6 +3114,7 @@ function renderPanel(data) {
           ${entregaISO    ? `<div class="prop-dato"><span class="lbl">Entrega est. </span><span id="fecha-entrega-${numProp}" style="color:var(--ink-2)">${esc(fmxnFecha(entregaISO))}</span></div>` : ''}
           ${p.Direccion   ? `<div class="prop-dato"><span class="lbl">Dirección </span>${esc(p.Direccion)}</div>` : ''}
           ${p.LinkMaps    ? `<div class="prop-dato"><a href="${safeHref(p.LinkMaps)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px">Ver en Maps</a></div>` : ''}
+          <div class="prop-dato"><span class="lbl">Formato video </span><span id="fmt-label-${numProp}">${esc(p.FormatoVideo === 'horizontal_recorte_vertical' ? 'Horizontal + recorte' : p.FormatoVideo === 'doble_nativo' ? 'Doble formato' : 'Vertical')}</span>${p.OcultarFormatoVideo ? ' <span style="font-size:10px;background:var(--ink-3);color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle">oculto en portal</span>' : ''}</div>
           <div class="prop-dato"><span class="lbl">Características </span><span id="sobre-prop-${numProp}">${esc(p.SobreLaPropiedad || '—')}</span></div>
           ${p.DatosEspecificos && p.DatosEspecificos.comentarios ? `<div class="prop-dato" style="background:var(--gold-dim);border-radius:6px;padding:6px 8px;margin-top:4px"><span class="lbl" style="color:var(--gold-dark,#9a7a2f)">Comentarios del cliente </span><span style="font-size:12px;line-height:1.5;white-space:pre-wrap">${esc(p.DatosEspecificos.comentarios)}</span></div>` : ''}
           <div class="prop-card-acciones" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
@@ -3099,6 +3126,9 @@ function renderPanel(data) {
             </button>
             <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleNotaInterna(${numProp})">
               <i class="ti ti-note"></i> Nota interna
+            </button>
+            <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleFormato(${numProp})">
+              <i class="ti ti-video"></i> Formato
             </button>
           </div>
           <div id="form-caract-${numProp}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
@@ -3132,6 +3162,25 @@ function renderPanel(data) {
             <div style="display:flex;gap:6px">
               <button class="btn-primario gold btn-sm" onclick="confirmarReagendar(${numProp})">Confirmar</button>
               <button class="btn-secundario btn-sm" onclick="toggleReagendar(${numProp})">Cancelar</button>
+            </div>
+          </div>
+          <div id="form-formato-${numProp}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <div class="campo" style="margin:0 0 10px">
+              <label style="font-size:11px">Formato de video</label>
+              <select id="formato-sel-${numProp}" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:7px 8px;background:var(--page);color:var(--ink-1)">
+                <option value="vertical_nativo"${(p.FormatoVideo||'vertical_nativo')==='vertical_nativo'?' selected':''}>Vertical (9:16 nativo) — Reels, TikTok, Shorts</option>
+                <option value="horizontal_recorte_vertical"${p.FormatoVideo==='horizontal_recorte_vertical'?' selected':''}>Horizontal (16:9) + recorte vertical — YouTube, sitio web</option>
+                <option value="doble_nativo"${p.FormatoVideo==='doble_nativo'?' selected':''}>Doble formato — dos pasadas en campo (+$1,500)</option>
+              </select>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);cursor:pointer;margin-bottom:10px">
+              <input type="checkbox" id="ocultar-fmt-${numProp}" ${p.OcultarFormatoVideo ? 'checked' : ''} style="accent-color:var(--gold);width:14px;height:14px">
+              Ocultar selector en el portal (cliente no elige)
+            </label>
+            <div class="form-msg" id="msg-formato-${numProp}" style="margin-top:4px"></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn-primario gold btn-sm" onclick="guardarFormato(${numProp})">Guardar</button>
+              <button class="btn-secundario btn-sm" onclick="toggleFormato(${numProp})">Cancelar</button>
             </div>
           </div>
         </div>`;
