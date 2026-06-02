@@ -504,6 +504,20 @@
     .alerta-item { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; white-space: nowrap; }
     .stats-sep { color: var(--border2); font-size: 16px; }
 
+    /* ── Lifecycle pipeline (global — mobile + desktop) ── */
+    .lifecycle { display: flex; align-items: flex-start; margin: 14px 0 0; gap: 0; overflow: hidden; }
+    .lc-step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; padding-bottom: 8px; }
+    .lc-step::before { content: ''; position: absolute; top: 7px; left: calc(-50% + 8px); right: calc(50% + 8px); height: 2px; background: var(--border); }
+    .lc-step:first-child::before { display: none; }
+    .lc-step.done::before { background: var(--gold); }
+    .lc-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); background: var(--card); z-index: 1; display: flex; align-items: center; justify-content: center; }
+    .lc-step.done .lc-dot { border-color: var(--gold); background: var(--gold); }
+    .lc-step.current .lc-dot { border-color: var(--gold); border-width: 3px; }
+    .lc-dot-check { font-size: 8px; color: #fff; font-weight: 800; }
+    .lc-label { font-size: 9px; font-weight: 600; color: var(--ink-3); text-align: center; margin-top: 4px; line-height: 1.2; }
+    .lc-step.done .lc-label { color: var(--gold-text, #92720E); }
+    .lc-step.current .lc-label { color: #92580A; font-weight: 700; }
+
     /* ── Skeleton loading ───────────────────────────── */
     @keyframes skel-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
     .skel {
@@ -656,6 +670,11 @@
     }
     .bnav-inner { display: flex; }
     .bnav-section-label { display: none; }
+    .bnav-desktop-only { display: none !important; }
+    /* mobile: icon-box sin estilos de caja — solo el ícono */
+    .bnav-item-icon { display: contents; }
+    .bnav-item-icon i { font-size: 20px; }
+    .bnav-item-label { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
     /* desktop-only elements — ocultar en mobile */
     #statsRibbon { display: none; }
     .filter-chips { display: none; }
@@ -941,6 +960,7 @@
       .bnav-btn i { font-size: 15px; flex-shrink: 0; }
 
       /* ── item icon box ── */
+      .bnav-desktop-only { display: flex !important; }
       .bnav-item-icon {
         width: 28px; height: 28px;
         border-radius: 7px;
@@ -1533,25 +1553,28 @@
       </div>
     </div>
     <div class="bnav-inner">
-      <button class="bnav-btn bnav-fab" data-tab="nuevo" onclick="irANuevo()" title="Nuevo contrato"><span class="bnav-fab-icon"><i class="ti ti-plus"></i></span><span class="bnav-fab-label">Nuevo contrato</span></button>
+      <button class="bnav-btn bnav-fab" data-tab="nuevo" onclick="irANuevo()" title="Nuevo contrato">
+        <span class="bnav-fab-icon"><i class="ti ti-plus"></i></span>
+        <span class="bnav-fab-label">Nuevo contrato</span>
+      </button>
       <div class="bnav-section-label">Principal</div>
       <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)">
         <span class="bnav-item-icon"><i class="ti ti-file-text"></i></span>
         <span class="bnav-item-label">Contratos</span>
         <span class="bnav-badge" id="bnav-badge-contratos" style="display:none"></span>
       </button>
-      <button class="bnav-btn" data-subtab="clientes" onclick="irASubseccion('ajustes','clientes',this)">
+      <button class="bnav-btn bnav-desktop-only" data-subtab="clientes" onclick="irASubseccion('ajustes','clientes',this)">
         <span class="bnav-item-icon"><i class="ti ti-users"></i></span>
         <span class="bnav-item-label">Clientes</span>
         <span class="bnav-badge subtle" id="bnav-badge-clientes" style="display:none"></span>
       </button>
       <div class="bnav-section-label">Catálogos</div>
-      <button class="bnav-btn" data-subtab="paquetes" onclick="irASubseccion('ajustes','paquetes',this)">
+      <button class="bnav-btn bnav-desktop-only" data-subtab="paquetes" onclick="irASubseccion('ajustes','paquetes',this)">
         <span class="bnav-item-icon"><i class="ti ti-package"></i></span>
         <span class="bnav-item-label">Paquetes</span>
       </button>
       <div class="bnav-section-label">Reportes</div>
-      <button class="bnav-btn" data-subtab="metricas" onclick="irASubseccion('ajustes','metricas',this)">
+      <button class="bnav-btn bnav-desktop-only" data-subtab="metricas" onclick="irASubseccion('ajustes','metricas',this)">
         <span class="bnav-item-icon"><i class="ti ti-chart-bar"></i></span>
         <span class="bnav-item-label">Estadísticas</span>
       </button>
