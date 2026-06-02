@@ -626,12 +626,13 @@ function renderAccesoDetalle(n, acceso) {
   });
   html += '</div></div>';
   html += '<div class="acceso-fields">';
-  html += '<div class="field"><label>A nombre de quién registrar</label><input type="text" id="inp-acceso-registro-' + n + '" placeholder="Ej. Equipo Inmuebles Audiovisuales" value="' + esc(acceso.nombreRegistro || '') + '"></div>';
+  html += '<div class="field"><label>Nombre del dueño o contacto autorizado</label><input type="text" id="inp-acceso-registro-' + n + '" placeholder="Ej. Juan Pérez, propietario / administración / asesor" value="' + esc(acceso.nombreRegistro || '') + '"></div>';
   html += '<div class="field"><label>Contacto de acceso</label><input type="text" id="inp-acceso-contacto-' + n + '" placeholder="Nombre y teléfono, si aplica" value="' + esc(acceso.contactoAcceso || '') + '"></div>';
-  html += '<div class="field full"><label>Indicaciones para guardia o caseta</label><textarea id="inp-acceso-caseta-' + n + '" placeholder="Qué debe decir el equipo, acceso vehicular, caseta correcta..." style="min-height:88px">' + esc(acceso.instruccionesCaseta || '') + '</textarea></div>';
-  html += '<div class="field"><label>Tipo de edificio o acceso</label><select id="inp-acceso-tipo-edificio-' + n + '" data-prop="' + n + '">';
+  html += '<div class="field full"><label>Indicaciones para guardia o caseta</label><textarea id="inp-acceso-caseta-' + n + '" placeholder="Ej. El equipo ya queda en lista; decir que viene a foto/video. Si no los ubican, llamar al contacto autorizado." style="min-height:88px">' + esc(acceso.instruccionesCaseta || '') + '</textarea></div>';
+  html += '<div class="field full">' + renderUploadField('fachada', n - 1, 'QR, invitación o referencia de acceso', 'Si tienes QR, invitación digital, código o imagen de referencia para caseta, puedes subirla aquí. También puedes enviarla por WhatsApp después.') + '</div>';
+  html += '<div class="field"><label>Tipo de acceso o inmueble</label><select id="inp-acceso-tipo-edificio-' + n + '" data-prop="' + n + '">';
   [
-    ['', 'No aplica / casa'],
+    ['', 'Casa / privada'],
     ['departamento', 'Departamento'],
     ['condominio_horizontal', 'Condominio horizontal'],
     ['oficina_torre', 'Oficina / torre'],
@@ -649,7 +650,7 @@ function renderAccesoDetalle(n, acceso) {
   html += '<div class="field full"><label>Estacionamiento / cajón</label><input type="text" id="inp-acceso-estacionamiento-' + n + '" placeholder="Ej. Cajón 22, sótano 1" value="' + esc(acceso.estacionamiento || '') + '"></div>';
   html += '</div>';
   html += '<div class="field full"><label>Restricciones importantes</label><textarea id="inp-acceso-restricciones-' + n + '" placeholder="Horarios, áreas restringidas, permisos, drone, amenidades..." style="min-height:80px">' + esc(acceso.restricciones || '') + '</textarea></div>';
-  html += '<div class="field full"><label>Comentarios logísticos</label><textarea id="inp-acceso-comentarios-' + n + '" placeholder="Cualquier detalle para llegar y entrar sin perder tiempo." style="min-height:80px">' + esc(acceso.comentarios || '') + '</textarea></div>';
+  html += '<div class="field full"><label>Comentarios para llegar y entrar</label><textarea id="inp-acceso-comentarios-' + n + '" placeholder="Cualquier detalle para llegar y entrar sin perder tiempo." style="min-height:80px">' + esc(acceso.comentarios || '') + '</textarea></div>';
   html += '</div></div>';
   return html;
 }
@@ -1044,10 +1045,6 @@ function renderEtapa1() {
   html += '<div class="card"><p class="section-title">Archivos del proyecto</p>';
   html += '<p class="upload-hint" style="margin-bottom:16px">Opcional. Puedes subir estos archivos ahora o enviárnoslos por WhatsApp después. No bloquean la firma.</p>';
   html += renderUploadField('logo', 0, 'Logo de la agencia o cliente', 'Opcional. PNG con fondo transparente y buena resolución.');
-  props.forEach(function(p, i) {
-    var sufijo = props.length > 1 ? ' — Propiedad ' + (i + 1) : '';
-    html += renderUploadField('fachada', i, 'QR, invitación o referencia de acceso' + sufijo, 'Si tienes QR, invitación digital, código o imagen de referencia para caseta, puedes subirla aquí. También puedes enviarla por WhatsApp después.');
-  });
   html += '</div>';
 
   // --- Términos y condiciones (cerrados por defecto) ---
