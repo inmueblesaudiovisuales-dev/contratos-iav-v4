@@ -124,6 +124,8 @@
   .fmt-text { flex: 1; }
   .fmt-titulo { font-size: 13px; font-weight: 800; color: var(--charcoal); line-height: 1.3; margin-bottom: 3px; }
   .fmt-desc { font-size: 11px; color: var(--concrete); line-height: 1.55; }
+  .fmt-canal { color: #B0ADA6; font-weight: 700; }
+  .fmt-grabado { color: var(--charcoal); font-weight: 800; }
   .fmt-precio { font-size: 12px; font-weight: 700; color: var(--gold); margin-top: 4px; }
   /* Mockups */
   .fmt-phone { width: 24px; height: 42px; border: 2.5px solid var(--border-strong); border-radius: 5px; background: var(--white); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: border-color 0.18s; }
@@ -145,9 +147,10 @@
     .formato-btn { flex-direction: column; align-items: center; text-align: center; padding: 26px 18px 18px; display: flex; gap: 12px; min-height: 204px; }
     .fmt-mockup-zone { width: auto; height: 54px; align-items: flex-end; justify-content: center; gap: 7px; flex-shrink: 0; }
     .fmt-text { display: flex; flex: 1; flex-direction: column; width: 100%; align-items: center; justify-content: flex-start; gap: 6px; }
-    .fmt-titulo { margin: 0; font-size: 13px; line-height: 1.25; }
+    .fmt-titulo { display: none; }
     .fmt-desc { font-size: 11px; line-height: 1.45; max-width: 190px; }
-    .fmt-grabado { margin-top: auto !important; }
+    .fmt-canal { font-size: 12px; line-height: 1.35; }
+    .fmt-grabado { margin-top: auto !important; font-size: 12px; line-height: 1.35; }
     .fmt-precio { margin-top: auto; padding-top: 2px; font-size: 14px; align-self: center; }
   }
   /* Acceso/caseta */
@@ -829,10 +832,9 @@ function renderEtapa1() {
           '<div class="formato-btn' + (fmtActual === 'vertical_nativo' ? ' activo' : '') + '" id="fmt-v-' + n + '" data-prop="' + n + '" data-valor="vertical_nativo">' +
             '<div class="fmt-mockup-zone"><div class="fmt-phone"><div class="fmt-fill"></div></div></div>' +
             '<div class="fmt-text">' +
-              '<div class="fmt-titulo">Solo redes sociales</div>' +
-              '<div class="fmt-desc" style="color:#B0ADA6;font-weight:600">Instagram · TikTok · Reels · Shorts</div>' +
+              '<div class="fmt-desc fmt-canal">Instagram · TikTok · Reels · Shorts</div>' +
+              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en vertical</div>' +
               '<div class="fmt-desc" style="margin-top:3px">· No incluye versión horizontal</div>' +
-              '<div class="fmt-desc fmt-grabado" style="margin-top:3px;color:#B0ADA6;font-weight:600">Grabado en vertical</div>' +
             '</div>' +
             '<div></div>' +
           '</div>' +
@@ -843,10 +845,9 @@ function renderEtapa1() {
           '<div class="formato-btn' + (fmtActual === 'horizontal_recorte_vertical' ? ' activo' : '') + '" id="fmt-h-' + n + '" data-prop="' + n + '" data-valor="horizontal_recorte_vertical">' +
             '<div class="fmt-mockup-zone"><div class="fmt-screen"><div class="fmt-screen-fill"></div></div><div class="fmt-phone"><div class="fmt-bar"></div><div class="fmt-mid"></div><div class="fmt-bar"></div></div></div>' +
             '<div class="fmt-text">' +
-              '<div class="fmt-titulo">Web o YouTube</div>' +
-              '<div class="fmt-desc" style="color:#B0ADA6;font-weight:600">YouTube · Sitio web</div>' +
+              '<div class="fmt-desc fmt-canal">YouTube · Sitio web</div>' +
+              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en horizontal</div>' +
               '<div class="fmt-desc" style="margin-top:3px">· En redes se verá con franjas negras</div>' +
-              '<div class="fmt-desc fmt-grabado" style="margin-top:3px;color:#B0ADA6;font-weight:600">Grabado en horizontal</div>' +
             '</div>' +
             '<div></div>' +
           '</div>' +
@@ -857,8 +858,8 @@ function renderEtapa1() {
           '<div class="formato-btn' + (fmtActual === 'doble_nativo' ? ' activo' : '') + '" id="fmt-d-' + n + '" data-prop="' + n + '" data-valor="doble_nativo">' +
             '<div class="fmt-mockup-zone"><div class="fmt-phone"><div class="fmt-fill"></div></div><div class="fmt-screen"><div class="fmt-screen-fill"></div></div></div>' +
             '<div class="fmt-text">' +
-              '<div class="fmt-titulo">Los dos formatos</div>' +
-              '<div class="fmt-desc" style="color:#B0ADA6;font-weight:600">Redes + web · Calidad nativa en ambos</div>' +
+              '<div class="fmt-desc fmt-canal">Redes + web · Calidad nativa en ambos</div>' +
+              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en ambos formatos</div>' +
               '<div class="fmt-desc" style="margin-top:3px">· Se graba dos veces en la misma visita</div>' +
               '<div class="fmt-precio">+$1,500</div>' +
             '</div>' +
