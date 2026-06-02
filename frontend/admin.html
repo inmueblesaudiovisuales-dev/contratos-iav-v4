@@ -814,7 +814,7 @@
       <div class="barra">
         <div class="barra-fila-principal">
           <div class="campo-busqueda">
-            <input type="text" id="busqueda" placeholder="Buscar por nombre, correo o folio..." oninput="filtrarContratos()">
+            <input type="text" id="busqueda" placeholder="Buscar por nombre, teléfono, correo o folio..." oninput="filtrarContratos()">
           </div>
           <select id="filtro-estatus" onchange="filtrarContratos()" style="width:auto">
             <option value="">Todos los estatus</option>
@@ -1788,7 +1788,7 @@ function filtrarContratos() {
     if (filtroCiclo === 'abiertos' && !ESTATUS_ABIERTOS.includes(c.Estatus)) return false;
     if (filtroCiclo === 'sesiones' && (!c.FechaSesion || String(c.FechaSesion).substring(0, 10) < hoy)) return false;
     if (st && c.Estatus !== st) return false;
-    if (q && !(((c.NombreCliente||'') + (c.CorreoCliente||'') + (c.Folio||'')).toLowerCase().includes(q))) return false;
+    if (q && !(((c.NombreCliente||'') + (c.CorreoCliente||'') + (c.Folio||'') + (c.TelefonoCliente||'')).toLowerCase().includes(q))) return false;
     if (filtroCiclo !== 'sesiones' && (desde || hasta)) {
       const fecha = String(c.FechaCreacion || '').substring(0, 10);
       if (desde && fecha < desde) return false;
@@ -1873,7 +1873,9 @@ function renderTabla(lista) {
       ${checkCell}
       <td class="td-folio">${esc(c.Folio) || '—'}</td>
       <td>
-        <div class="td-nombre">${esc(c.NombreCliente)}</div>
+        <div class="td-nombre">
+          ${c.EntregaExpress ? `<span style="background:#ef4444;color:#fff;font-size:9px;font-weight:800;letter-spacing:.8px;padding:1px 6px;border-radius:3px;margin-right:5px;vertical-align:middle">EXPRESS</span>` : ''}${esc(c.NombreCliente)}
+        </div>
         <div class="td-sub td-email">${esc(c.CorreoCliente)}</div>
         ${c.PaqueteBase ? `<div class="td-sub" style="color:var(--ink-2)">${esc(c.PaqueteBase)}</div>` : ''}
       </td>
@@ -2142,6 +2144,7 @@ function renderPanel(data) {
         <div class="info-fila"><span class="etiq">Correo</span><span class="val"><a href="mailto:${esc(c.CorreoCliente)}" style="color:var(--gold);text-decoration:none">${esc(c.CorreoCliente)}</a></span></div>
         <div class="info-fila"><span class="etiq">Teléfono</span><span class="val">${esc(c.TelefonoCliente) || '—'}</span></div>
         <div class="info-fila"><span class="etiq">Tipo</span><span class="val">${c.TipoContrato === 'estandar' ? 'Estándar' : 'Particular'}</span></div>
+        <div class="info-fila"><span class="etiq">Origen</span><span class="val">${c.Origen === 'whatsapp' ? '<span style="background:#25D366;color:#fff;font-size:10px;font-weight:700;padding:1px 8px;border-radius:20px">WhatsApp</span>' : '<span style="background:var(--page);border:1px solid var(--border);font-size:10px;font-weight:600;padding:1px 8px;border-radius:20px;color:var(--ink-2)">Admin</span>'}</span></div>
         ${c.PaqueteBase ? `<div class="info-fila"><span class="etiq">Paquete</span><span class="val">${esc(c.PaqueteBase)}</span></div>` : ''}
         <div class="info-fila"><span class="etiq">Adicionales</span><span class="val">${addHtml}</span></div>
       </div>
