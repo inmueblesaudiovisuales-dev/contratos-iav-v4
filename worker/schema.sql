@@ -103,3 +103,15 @@ CREATE INDEX IF NOT EXISTS idx_contratos_oculto ON contratos(oculto);
 CREATE INDEX IF NOT EXISTS idx_abonos_token ON abonos(contrato_token);
 CREATE INDEX IF NOT EXISTS idx_propiedades_token ON propiedades(contrato_token);
 CREATE INDEX IF NOT EXISTS idx_tokens_contrato ON tokens(contrato_id);
+
+CREATE TABLE IF NOT EXISTS prospectos (
+  id TEXT PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  telefono TEXT NOT NULL,
+  interes TEXT DEFAULT '',
+  fecha_llamada TEXT NOT NULL,
+  hora_llamada TEXT NOT NULL,
+  notas TEXT DEFAULT '',
+  estatus TEXT DEFAULT 'pendiente',
+  fecha_creacion TEXT NOT NULL
+);

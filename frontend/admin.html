@@ -1558,6 +1558,11 @@
         <span class="bnav-item-label">Clientes</span>
         <span class="bnav-badge subtle" id="bnav-badge-clientes" style="display:none"></span>
       </button>
+      <button class="bnav-btn bnav-desktop-only" data-tab="prospectos" onclick="mostrarTab('prospectos',this)">
+        <span class="bnav-item-icon"><i class="ti ti-phone-call"></i></span>
+        <span class="bnav-item-label">Prospectos</span>
+        <span class="bnav-badge subtle" id="bnav-badge-prospectos" style="display:none"></span>
+      </button>
       <div class="bnav-section-label">Catálogos</div>
       <button class="bnav-btn bnav-desktop-only" data-subtab="paquetes" onclick="irASubseccion('ajustes','paquetes',this)">
         <span class="bnav-item-icon"><i class="ti ti-package"></i></span>
@@ -1792,6 +1797,62 @@
 
     <!-- ── MÉTRICAS ─────────────────────────────────── -->
     <!-- ── AJUSTES (incluye Métricas, Paquetes y Clientes) ──── -->
+    <!-- ── PROSPECTOS ──────────────────────────────────── -->
+    <div id="sec-prospectos" class="seccion">
+      <div class="barra" style="margin-bottom:16px">
+        <div>
+          <div style="font-size:17px;font-weight:600;color:var(--ink-1)">Prospectos</div>
+          <div style="font-size:13px;color:var(--ink-3);margin-top:2px">Agenda llamadas y da seguimiento a clientes potenciales</div>
+        </div>
+        <button class="btn-secundario btn-sm" onclick="cargarProspectos()"><i class="ti ti-refresh"></i></button>
+      </div>
+
+      <!-- Formulario nueva llamada -->
+      <div class="card" style="margin-bottom:18px;padding:18px 20px">
+        <div style="font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.05em">Agendar llamada</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 14px">
+          <div class="campo">
+            <label>Nombre *</label>
+            <input type="text" id="prosp-nombre" placeholder="Nombre del prospecto">
+          </div>
+          <div class="campo">
+            <label>Teléfono *</label>
+            <input type="tel" id="prosp-telefono" placeholder="81...">
+          </div>
+          <div class="campo">
+            <label>Fecha de la llamada *</label>
+            <input type="date" id="prosp-fecha">
+          </div>
+          <div class="campo">
+            <label>Hora *</label>
+            <input type="time" id="prosp-hora" value="10:00">
+          </div>
+          <div class="campo" style="grid-column:1/-1">
+            <label>¿Qué le interesa?</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="prosp-interes-btns">
+              <button class="par-tipo-btn" data-val="foto" onclick="seleccionarInteresProsp(this)">Fotografía</button>
+              <button class="par-tipo-btn" data-val="video" onclick="seleccionarInteresProsp(this)">Video + Drone</button>
+              <button class="par-tipo-btn" data-val="360" onclick="seleccionarInteresProsp(this)">Recorrido 360°</button>
+              <button class="par-tipo-btn" data-val="combo" onclick="seleccionarInteresProsp(this)">Paquete completo</button>
+            </div>
+          </div>
+          <div class="campo" style="grid-column:1/-1">
+            <label>Notas</label>
+            <textarea id="prosp-notas" rows="2" placeholder="Lo que platicaron por WhatsApp, qué propiedad es, zona, etc." style="resize:vertical"></textarea>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+          <button class="btn-primario gold" onclick="crearProspecto()"><i class="ti ti-calendar-plus"></i> Agendar llamada</button>
+          <span id="prosp-msg" style="font-size:13px"></span>
+        </div>
+      </div>
+
+      <!-- Lista de prospectos -->
+      <div id="lista-prospectos">
+        <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
+      </div>
+    </div>
+
     <div id="sec-ajustes" class="seccion">
       <div class="ajustes-tabs">
         <button id="atab-metricas" class="ajustes-tab activo-atab" onclick="setAjustesTab('metricas')">
@@ -2261,6 +2322,7 @@ function mostrarTab(id, btn) {
   const tabBtn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
   if (tabBtn) tabBtn.classList.add('activo');
   if (id === 'contratos') cargarContratos();
+  if (id === 'prospectos') cargarProspectos();
   if (id === 'ajustes') {
     const paneActivo = document.querySelector('.ajustes-pane.activo-apane');
     if (paneActivo?.id === 'apane-clientes') cargarCRM();
@@ -5088,6 +5150,121 @@ function renderLifecycle(estatus) {
     var cls = i<idx?'done':i===idx?'current':'';
     return '<div class="lc-step '+cls+'"><div class="lc-dot">'+(i<idx?'<span class="lc-dot-check">&#10003;</span>':'')+'</div><div class="lc-label">'+labels[i]+'</div></div>';
   }).join('')+'</div>';
+}
+
+// ── PROSPECTOS ────────────────────────────────────────────────────────────────
+
+var _interesProspecto = '';
+
+function seleccionarInteresProsp(btn) {
+  document.querySelectorAll('#prosp-interes-btns .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
+  btn.classList.add('activo-par');
+  _interesProspecto = btn.dataset.val;
+}
+
+function crearProspecto() {
+  var nombre   = (document.getElementById('prosp-nombre').value || '').trim();
+  var telefono = (document.getElementById('prosp-telefono').value || '').trim();
+  var fecha    = document.getElementById('prosp-fecha').value;
+  var hora     = document.getElementById('prosp-hora').value;
+  var notas    = (document.getElementById('prosp-notas').value || '').trim();
+  var msg      = document.getElementById('prosp-msg');
+
+  if (!nombre || !telefono || !fecha || !hora) {
+    msg.style.color = '#c0392b';
+    msg.textContent = 'Nombre, teléfono, fecha y hora son requeridos.';
+    return;
+  }
+
+  msg.style.color = 'var(--ink-3)';
+  msg.textContent = 'Agendando...';
+
+  apiPost('crearProspecto', { nombre: nombre, telefono: telefono, interes: _interesProspecto,
+    fechaLlamada: fecha, horaLlamada: hora, notas: notas })
+    .then(function(r) {
+      if (r.ok) {
+        msg.style.color = '#27ae60';
+        msg.textContent = 'Llamada agendada y evento creado en Calendar.';
+        document.getElementById('prosp-nombre').value = '';
+        document.getElementById('prosp-telefono').value = '';
+        document.getElementById('prosp-fecha').value = '';
+        document.getElementById('prosp-hora').value = '10:00';
+        document.getElementById('prosp-notas').value = '';
+        document.querySelectorAll('#prosp-interes-btns .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
+        _interesProspecto = '';
+        cargarProspectos();
+      } else {
+        msg.style.color = '#c0392b';
+        msg.textContent = r.error || 'Error al agendar.';
+      }
+    })
+    .catch(function() {
+      msg.style.color = '#c0392b';
+      msg.textContent = 'Error de conexión.';
+    });
+}
+
+function cargarProspectos() {
+  var el = document.getElementById('lista-prospectos');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>';
+
+  apiGet('listarProspectos')
+    .then(function(r) {
+      var items = r.prospectos || [];
+      if (!items.length) {
+        el.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">No hay prospectos registrados.</p>';
+        return;
+      }
+
+      var interesLabels = { foto: 'Fotografía', video: 'Video + Drone', '360': 'Recorrido 360°', combo: 'Paquete completo' };
+      var estatusColors = { pendiente: '#e67e22', contactado: '#2980b9', convertido: '#27ae60', descartado: '#95a5a6' };
+      var estatusLabels = { pendiente: 'Pendiente', contactado: 'Contactado', convertido: 'Convertido', descartado: 'Descartado' };
+
+      var html = '<div style="display:flex;flex-direction:column;gap:8px">';
+      items.forEach(function(p) {
+        var color = estatusColors[p.estatus] || '#aaa';
+        var label = estatusLabels[p.estatus] || p.estatus;
+        var interesStr = interesLabels[p.interes] || p.interes || '—';
+        var fechaStr = p.fecha_llamada ? p.fecha_llamada.substring(0,10) : '—';
+        html += '<div class="card" style="padding:14px 16px;display:flex;align-items:flex-start;gap:14px">';
+        html += '<div style="flex:1;min-width:0">';
+        html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">';
+        html += '<span style="font-weight:600;font-size:14px;color:var(--ink-1)">'+esc(p.nombre)+'</span>';
+        html += '<span style="font-size:12px;color:var(--ink-3)">'+esc(p.telefono)+'</span>';
+        html += '<span style="font-size:11px;font-weight:600;color:'+color+';background:'+color+'18;border-radius:20px;padding:2px 8px">'+label+'</span>';
+        html += '</div>';
+        html += '<div style="font-size:12px;color:var(--ink-3);display:flex;gap:12px;flex-wrap:wrap">';
+        html += '<span><i class="ti ti-calendar"></i> '+fechaStr+' '+esc(p.hora_llamada||'')+'</span>';
+        if (p.interes) html += '<span><i class="ti ti-star"></i> '+interesStr+'</span>';
+        html += '</div>';
+        if (p.notas) html += '<div style="font-size:12px;color:var(--ink-2);margin-top:5px;white-space:pre-wrap">'+esc(p.notas)+'</div>';
+        html += '</div>';
+        html += '<select onchange="cambiarEstatusProspecto(\''+p.id+'\', this.value)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--ink-1);cursor:pointer">';
+        ['pendiente','contactado','convertido','descartado'].forEach(function(s){
+          html += '<option value="'+s+'"'+(p.estatus===s?' selected':'')+'>'+estatusLabels[s]+'</option>';
+        });
+        html += '</select>';
+        html += '</div>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+
+      var badge = document.getElementById('bnav-badge-prospectos');
+      if (badge) {
+        var pendientes = items.filter(function(p){ return p.estatus === 'pendiente'; }).length;
+        if (pendientes > 0) { badge.textContent = pendientes; badge.style.display = ''; }
+        else badge.style.display = 'none';
+      }
+    })
+    .catch(function() {
+      el.innerHTML = '<p style="color:#c0392b;font-size:13px">Error al cargar prospectos.</p>';
+    });
+}
+
+function cambiarEstatusProspecto(id, estatus) {
+  apiPost('actualizarEstatusProspecto', { id: id, estatus: estatus })
+    .then(function(r) { if (r.ok) cargarProspectos(); });
 }
 </script>
 </body>

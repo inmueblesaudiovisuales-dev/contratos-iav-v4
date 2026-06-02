@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 31 — Portal de equipo equipo.html)
+> Última actualización: 2026-06-02 (Ronda 32 — Prospectos: agendar llamadas + Calendar)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -326,6 +326,24 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 32 — Prospectos: agendar llamadas + Calendar (2026-06-02)
+
+> **Migración D1 requerida — ejecutar manualmente:**
+> ```bash
+> wrangler d1 execute contratos-iav-v4 --remote --command="CREATE TABLE IF NOT EXISTS prospectos (id TEXT PRIMARY KEY, nombre TEXT NOT NULL, telefono TEXT NOT NULL, interes TEXT DEFAULT '', fecha_llamada TEXT NOT NULL, hora_llamada TEXT NOT NULL, notas TEXT DEFAULT '', estatus TEXT DEFAULT 'pendiente', fecha_creacion TEXT NOT NULL)"
+> ```
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R32-01 | `worker/src/routes/prospectos.js` | Nueva ruta. `crearProspecto`: guarda en D1 y llama adapter async para crear evento en Calendar. `listarProspectos`: devuelve últimos 100 ordenados por fecha. `actualizarEstatusProspecto`: cambia estatus (pendiente/contactado/convertido/descartado). |
+| R32-02 | `worker/src/index.js` | Importa `handleProspectos`; agrega `RUTAS_PROSPECTOS`; enruta al handler. |
+| R32-03 | `adapter/AdapterScript4_v1.js` | `agendarLlamadaProspecto`: crea evento de 30 min en Calendar con nombre, teléfono, interés y notas del prospecto. Requiere despliegue manual en Apps Script. |
+| R32-04 | `frontend/admin.html` | Tab "Prospectos" en sidebar (desktop). Sección `sec-prospectos` con formulario (nombre, teléfono, fecha, hora, interés por chips, notas) + lista con estatus editable por dropdown. Badge dorado muestra count de pendientes. |
+| R32-05 | `worker/schema.sql` | Tabla `prospectos` agregada. |
+| R32-06 | `MASTER_V4.md` | Documenta R32. |
+
+---
 
 ### Ronda 31 — Portal de equipo equipo.html (2026-06-02)
 

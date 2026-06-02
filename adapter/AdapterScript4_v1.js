@@ -1,7 +1,7 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-02 13:22:25 CST — R31: link Portal de equipo en Calendar (procesarFirma, primerAbono, reagendarPropiedad)
+// Ultima modificacion: 2026-06-02 — R32: agendarLlamadaProspecto — crea evento en Calendar para llamadas de prospecto
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -39,7 +39,8 @@ function doPost(e) {
       enviarRecordatorioPago: enviarRecordatorioPago,
       notificarUpsell: notificarUpsell,
       obtenerLogoCliente: obtenerLogoCliente,
-      syncBackup: syncBackup
+      syncBackup: syncBackup,
+      agendarLlamadaProspecto: agendarLlamadaProspecto
     };
     if (!handlers[action]) return jsonResp({ error: 'Acción no reconocida: ' + action });
     var result = handlers[action](body);
@@ -1100,4 +1101,54 @@ function obtenerOCrearCarpetaContratosFirmados_() {
   var carpeta = DriveApp.getRootFolder().createFolder('IAV — Contratos Firmados v4');
   props.setProperty('CARPETA_CONTRATOS_V4_ID', carpeta.getId());
   return carpeta;
+}
+
+// ── PROSPECTOS — agenda llamada en Calendar ──────────────────────────────────
+
+function agendarLlamadaProspecto(body) {
+  var nombre       = body.nombre || '';
+  var telefono     = body.telefono || '';
+  var interes      = body.interes || '';
+  var fechaLlamada = body.fechaLlamada || '';
+  var horaLlamada  = body.horaLlamada || '09:00';
+  var notas        = body.notas || '';
+
+  if (!fechaLlamada) return { error: 'fechaLlamada requerida' };
+
+  var partesFecha = fechaLlamada.split('-');
+  var partesHora  = horaLlamada.split(':');
+  var inicio = new Date(
+    parseInt(partesFecha[0]),
+    parseInt(partesFecha[1]) - 1,
+    parseInt(partesFecha[2]),
+    parseInt(partesHora[0]),
+    parseInt(partesHora[1] || 0),
+    0
+  );
+  var fin = new Date(inicio.getTime() + 30 * 60 * 1000); // 30 minutos
+
+  var interesLabels = {
+    'foto':  'Fotografía',
+    'video': 'Video + Drone',
+    '360':   'Recorrido 360°',
+    'combo': 'Paquete completo'
+  };
+  var interesLabel = interesLabels[interes] || interes || 'Sin especificar';
+
+  var descripcion = [
+    'Llamada con prospecto — IAV Contratos',
+    '',
+    'Nombre: ' + nombre,
+    'Teléfono: ' + telefono,
+    'Le interesa: ' + interesLabel,
+    notas ? 'Notas: ' + notas : ''
+  ].filter(Boolean).join('\n');
+
+  var titulo = 'Llamada prospecto — ' + nombre + ' (' + interesLabel + ')';
+
+  CalendarApp.getDefaultCalendar().createEvent(titulo, inicio, fin, {
+    description: descripcion
+  });
+
+  return { ok: true };
 }

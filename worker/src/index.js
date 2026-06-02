@@ -7,6 +7,7 @@ import { handleChecklist } from './routes/checklist.js';
 import { handleArchivos } from './routes/archivos.js';
 import { handleRevision } from './routes/revision.js';
 import { handleEquipo } from './routes/equipo.js';
+import { handleProspectos } from './routes/prospectos.js';
 import { syncToSheets } from './cron.js';
 import { err } from './auth.js';
 
@@ -31,7 +32,8 @@ const RUTAS_PAQUETES = ['listarPaquetes','listarPaquetesTodos','crearPaquete','e
 const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];
 const RUTAS_ARCHIVOS = ['subirArchivo','subirArchivoAdmin'];
 const RUTAS_REVISION = ['obtenerRevision','guardarRevision'];
-const RUTAS_EQUIPO   = ['obtenerEquipo','marcarListos'];
+const RUTAS_EQUIPO       = ['obtenerEquipo','marcarListos'];
+const RUTAS_PROSPECTOS   = ['crearProspecto','listarProspectos','actualizarEstatusProspecto'];
 
 export default {
   async fetch(request, env, ctx) {
@@ -73,6 +75,8 @@ export default {
       response = await handleRevision(request, env, ctx, action);
     } else if (RUTAS_EQUIPO.includes(action)) {
       response = await handleEquipo(request, env, ctx, action);
+    } else if (RUTAS_PROSPECTOS.includes(action)) {
+      response = await handleProspectos(request, env, ctx, action);
     } else {
       response = err('Acción no encontrada', 404);
     }
