@@ -5334,7 +5334,7 @@ function cargarProspectos() {
   if (!el) return;
   el.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>';
 
-  apiGet('listarProspectos')
+  apiGet({ action: 'listarProspectos' })
     .then(function(r) {
       var items = r.prospectos || [];
       _renderListaProspectos(items, 'lista-prospectos', '');
@@ -5397,7 +5397,7 @@ function cargarProspectosM() {
   if (!el) return;
   el.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>';
 
-  apiGet('listarProspectos')
+  apiGet({ action: 'listarProspectos' })
     .then(function(r) {
       _renderListaProspectos(r.prospectos || [], 'lista-prospectos-m', 'm');
     })
