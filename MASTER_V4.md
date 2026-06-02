@@ -716,6 +716,29 @@ Features descartadas explícitamente. No incluirlas en ningún plan ni sugerirla
 
 ---
 
+## Cómo verificar un commit de Claude o DeepSeek
+
+**Nunca leer los archivos del disco local para verificar un commit remoto.** El disco local puede estar desactualizado.
+
+Método correcto:
+
+```bash
+# 1. Traer el commit remoto
+git fetch origin <rama>
+
+# 2. Leer el archivo directamente del SHA del commit
+git show <sha>:ruta/al/archivo
+
+# Ejemplos:
+git show 37c05c4:worker/src/routes/portal.js | grep -n "precio < 0"
+git show 37c05c4:frontend/admin.html | grep -n "Entrega guardada"
+git show 37c05c4:adapter/AdapterScript4_v1.js | grep -n "notificarContratoCreado"
+```
+
+`git show <sha>:archivo` consulta el objeto git del commit directamente — no depende del estado del working tree ni de si se hizo checkout. Es la única fuente confiable para verificar qué contiene un commit específico.
+
+---
+
 ## Comandos útiles de mantenimiento
 
 ```bash
