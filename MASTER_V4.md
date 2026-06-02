@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 24 — Stats KPI cards rediseñadas)  
+> Última actualización: 2026-06-02 (Ronda 25 — Fixes mobile nav, panel y barra de alertas)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -280,6 +280,23 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 25 — Fixes mobile nav, panel sheet y barra de alertas (2026-06-02)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R25-01 | `frontend/admin.html` CSS | `#stats-bar` y `.stats-linea`: `display:none !important` global. Bloque desktop `#stats-bar` eliminado. `renderAlertas()` sigue existiendo sin errores JS pero el elemento está permanentemente oculto en desktop y mobile. |
+| R25-02 | `frontend/admin.html` CSS | `.panel-header`: eliminado `position:sticky; top:0; z-index:1` en CSS global. El panel mobile (bottom sheet) ahora scrollea completo — el header no flota sobre el contenido. |
+| R25-03 | `frontend/admin.html` CSS | `.panel-tabs`: eliminado `position:sticky; top:80px; z-index:1` en CSS global. Los tabs también scrollean con el contenido en mobile. |
+| R25-04 | `frontend/admin.html` CSS | Nav mobile restaurado a R18: solo 3 ítems visibles — Contratos / FAB circular / Ajustes. Items extra (Clientes, Paquetes, Estadísticas) marcados con `.bnav-desktop-only { display:none !important }` en mobile, restaurados en desktop con `display:flex !important`. |
+| R25-05 | `frontend/admin.html` CSS | `.bnav-item-icon { display:contents }` en mobile — elimina el cuadro de fondo en el bottom nav, dejando solo el ícono directo. En desktop se sobreescribe con `display:flex` + dimensiones + background. |
+| R25-06 | `frontend/admin.html` CSS | FAB en mobile: `order:2` para que quede al centro. `.bnav-btn[data-tab="contratos"]` tiene `order:1`, `.bnav-btn[data-tab="ajustes"]` tiene `order:3`. Esto solo afecta el flex-row del bottom nav mobile. |
+| R25-07 | `frontend/admin.html` CSS | Desktop: `order:0 !important` en `.bnav-btn` y `.bnav-fab` dentro de `@media (min-width:1024px)` para cancelar los `order` de mobile. |
+| R25-08 | `frontend/admin.html` CSS | `.bnav-item-label` en desktop: `font-size:12.5px; text-transform:none; letter-spacing:0.01em; font-weight:500` con `!important` para sobreescribir los estilos mobile (`9px uppercase`). |
+| R25-09 | `frontend/admin.html` CSS | Lifecycle pipeline (`.lifecycle`, `.lc-step`, `.lc-dot`, `.lc-label`) movido de `@media (min-width:1024px)` a CSS global — ahora se renderiza correctamente en mobile como pipeline horizontal con dots y líneas. |
+| R25-10 | `frontend/admin.html` CSS | `#statsRibbon`, `.filter-chips`, `.search-icon`, `.search-shortcut`, `.toolbar-sep`: `display:none` en CSS global, restaurados en desktop con sus valores correctos. |
+
+---
 
 ### Ronda 24 — Stats KPI cards rediseñadas (2026-06-02)
 
