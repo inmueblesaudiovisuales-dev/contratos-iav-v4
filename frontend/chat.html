@@ -652,6 +652,20 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
   .bot-toggle span.label { display: none; }
 }
 
+/* ── FOCUS VISIBLE (navegación por teclado) ──────── */
+.conv-item:focus-visible,
+.filter-btn:focus-visible,
+.bot-toggle:focus-visible,
+.contract-btn:focus-visible,
+.icon-btn:focus-visible,
+.send-btn:focus-visible,
+.back-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.search-input:focus-visible,
+.compose-input:focus-visible { outline: none; }
+
 /* ── SCROLLBAR ───────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -710,7 +724,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
 
       <!-- Header -->
       <div class="chat-header">
-        <button class="back-btn" onclick="closeChatMobile()">
+        <button class="back-btn" onclick="closeChatMobile()" aria-label="Volver a la lista de conversaciones">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
@@ -721,14 +735,14 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
           <div class="header-phone" id="headerPhone"></div>
         </div>
         <div class="header-actions">
-          <button class="bot-toggle bot-on" id="botToggle" onclick="toggleBot()">
+          <button class="bot-toggle bot-on" id="botToggle" onclick="toggleBot()" role="switch" aria-checked="true" aria-label="Bot automático">
             <div class="bot-dot"></div>
             <span class="label" id="botToggleLabel">Bot activo</span>
           </button>
           <button class="contract-btn" id="contractBtn" onclick="openContract()">
             <span>Ver contrato</span> ↗
           </button>
-          <button class="icon-btn" title="Más opciones">
+          <button class="icon-btn" title="Más opciones" aria-label="Más opciones">
             <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
               <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
             </svg>
@@ -737,7 +751,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
       </div>
 
       <!-- Messages -->
-      <div class="chat-messages" id="chatMessages">
+      <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Mensajes de la conversación">
         <div class="typing-indicator" id="typingIndicator">
           <div class="typing-dot"></div>
           <div class="typing-dot"></div>
@@ -763,7 +777,7 @@ html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Sego
           onkeydown="handleKey(event)"
           oninput="autoResize(this)"
         ></textarea>
-        <button class="send-btn" onclick="sendMessage()">
+        <button class="send-btn" onclick="sendMessage()" aria-label="Enviar mensaje">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
           </svg>
@@ -908,6 +922,25 @@ function avatarColor(idx) {
   return COLORS[idx % COLORS.length];
 }
 
+// Escapa HTML para evitar XSS (nombres y mensajes vienen del cliente en producción)
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Deriva la etiqueta de día desde el time string del mensaje ("Ayer 16:20" → "Ayer")
+const DIAS = ['Ayer','Lun','Mar','Mié','Mie','Jue','Vie','Sáb','Sab','Dom'];
+function dayLabel(time) {
+  const dia = DIAS.find(d => time.startsWith(d));
+  if (dia) return dia === 'Mie' ? 'Mié' : dia === 'Sab' ? 'Sáb' : dia;
+  return 'Hoy';
+}
+function stripDay(time) {
+  const dia = DIAS.find(d => time.startsWith(d));
+  return dia ? time.slice(dia.length).trim() : time;
+}
+
 function initials(name) {
   return name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
 }
@@ -930,19 +963,26 @@ function renderConvList() {
       const item = document.createElement('div');
       item.className = 'conv-item' + (conv.id === activeConvId ? ' active' : '');
       item.id = 'conv-' + conv.id;
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('aria-label',
+        `${conv.name}, ${conv.unread > 0 ? conv.unread + ' mensajes sin leer, ' : ''}${conv.lastMsg}`);
       item.onclick = () => openConv(conv.id);
+      item.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openConv(conv.id); }
+      };
       item.innerHTML = `
         <div class="conv-avatar" style="background:${bg};color:${fg}">
-          ${initials(conv.name)}
+          ${esc(initials(conv.name))}
           <div class="avatar-badge ${conv.botActive && conv.status !== 'resuelto' ? 'badge-bot' : 'badge-manual'}"
                style="${conv.status === 'resuelto' ? 'display:none' : ''}"></div>
         </div>
         <div class="conv-info">
           <div class="conv-name-row">
-            <div class="conv-name">${conv.name}</div>
-            <div class="conv-time">${conv.lastTime}</div>
+            <div class="conv-name">${esc(conv.name)}</div>
+            <div class="conv-time">${esc(conv.lastTime)}</div>
           </div>
-          <div class="conv-preview">${conv.lastMsg}</div>
+          <div class="conv-preview">${esc(conv.lastMsg)}</div>
           <div class="conv-meta">
             <div style="display:flex;gap:4px">${getStatusLabel(conv)} ${getBotBadge(conv)}</div>
             ${conv.unread > 0 ? `<div class="unread-badge">${conv.unread}</div>` : ''}
@@ -1008,40 +1048,75 @@ function openConv(id) {
   renderConvList();
 }
 
+// Estado de render incremental: qué conversación y cuántos mensajes ya pintamos
+let renderedConvId = null;
+let renderedCount = 0;
+let lastDayShown = null;
+
+function buildDivider(label) {
+  const divider = document.createElement('div');
+  divider.className = 'date-divider';
+  divider.innerHTML = `<span>${esc(label)}</span>`;
+  return divider;
+}
+
+function buildMessageRow(msg) {
+  const row = document.createElement('div');
+  row.className = `msg-row ${msg.type}`;
+
+  let senderLabel = '';
+  if (msg.type === 'bot')   senderLabel = '<div class="msg-sender-label">🤖 Bot</div>';
+  if (msg.type === 'agent') senderLabel = '<div class="msg-sender-label">Bruno</div>';
+
+  // esc() neutraliza HTML; luego \n → <br> sobre el texto ya escapado
+  const safeText = esc(msg.text).replace(/\n/g, '<br>');
+
+  row.innerHTML = `
+    ${senderLabel}
+    <div class="msg-bubble">${safeText}</div>
+    <div class="msg-footer">
+      <span class="msg-time">${esc(stripDay(msg.time))}</span>
+      ${msg.type !== 'client' ? '<span class="msg-status" aria-label="Entregado">✓✓</span>' : ''}
+    </div>`;
+  return row;
+}
+
 function renderMessages(conv) {
   const container = document.getElementById('chatMessages');
   const typing = document.getElementById('typingIndicator');
 
-  // Limpiar (excepto typing)
-  [...container.children].forEach(el => {
-    if (el !== typing) el.remove();
-  });
+  // Append incremental: misma conversación y solo crecieron mensajes nuevos.
+  // Evita reconstruir todo (que volvía a disparar la animación en cada mensaje).
+  const incremental = conv.id === renderedConvId && conv.messages.length >= renderedCount;
 
-  // Agrupar por fecha (simplificado — todos "hoy" en el mock)
-  const divider = document.createElement('div');
-  divider.className = 'date-divider';
-  divider.innerHTML = '<span>Hoy</span>';
-  container.insertBefore(divider, typing);
+  if (!incremental) {
+    [...container.children].forEach(el => { if (el !== typing) el.remove(); });
+    renderedCount = 0;
+    lastDayShown = null;
+  }
 
-  conv.messages.forEach(msg => {
-    const row = document.createElement('div');
-    row.className = `msg-row ${msg.type}`;
+  const nearBottom = isNearBottom();
 
-    let senderLabel = '';
-    if (msg.type === 'bot')   senderLabel = '<div class="msg-sender-label">🤖 Bot</div>';
-    if (msg.type === 'agent') senderLabel = '<div class="msg-sender-label">Bruno</div>';
+  for (let i = renderedCount; i < conv.messages.length; i++) {
+    const msg = conv.messages[i];
+    const day = dayLabel(msg.time);
+    if (day !== lastDayShown) {
+      container.insertBefore(buildDivider(day), typing);
+      lastDayShown = day;
+    }
+    container.insertBefore(buildMessageRow(msg), typing);
+  }
 
-    row.innerHTML = `
-      ${senderLabel}
-      <div class="msg-bubble">${msg.text.replace(/\n/g,'<br>')}</div>
-      <div class="msg-footer">
-        <span class="msg-time">${msg.time}</span>
-        ${msg.type !== 'client' ? '<span class="msg-status">✓✓</span>' : ''}
-      </div>`;
-    container.insertBefore(row, typing);
-  });
+  renderedConvId = conv.id;
+  renderedCount = conv.messages.length;
 
-  scrollBottom();
+  // Scroll inteligente: solo bajar si ya estabas cerca del fondo o cambiaste de chat
+  if (!incremental || nearBottom) scrollBottom();
+}
+
+function isNearBottom() {
+  const c = document.getElementById('chatMessages');
+  return c.scrollHeight - c.scrollTop - c.clientHeight < 120;
 }
 
 function scrollBottom() {
@@ -1065,9 +1140,11 @@ function updateBotToggleUI(conv) {
   const label = document.getElementById('botToggleLabel');
   if (conv.botActive) {
     btn.className = 'bot-toggle bot-on';
+    btn.setAttribute('aria-checked', 'true');
     label.textContent = 'Bot activo';
   } else {
     btn.className = 'bot-toggle bot-off';
+    btn.setAttribute('aria-checked', 'false');
     label.textContent = 'Bot pausado';
   }
 }
@@ -1124,7 +1201,11 @@ function setFilter(filter, btn) {
   renderConvList();
 }
 
-function filterConvs() { renderConvList(); }
+let searchTimer = null;
+function filterConvs() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(renderConvList, 150);
+}
 
 // ── MOBILE ────────────────────────────────────────────────────────────────────
 
@@ -1174,6 +1255,7 @@ function simulateIncoming() {
       conv.unread++;
     }
 
+    notificar(conv, newMsg.text);
     renderConvList();
 
     // Respuesta del bot después de 1.5s
@@ -1204,8 +1286,29 @@ function simulateIncoming() {
   }, 2000);
 }
 
+// ── NOTIFICACIONES DEL NAVEGADOR ──────────────────────────────────────────────
+
+function pedirPermisoNotif() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+// Notifica si la pestaña está en segundo plano o no estás viendo esa conversación
+function notificar(conv, texto) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (document.visibilityState === 'visible' && activeConvId === conv.id) return;
+  const n = new Notification(conv.name, {
+    body: texto,
+    tag: 'iav-chat-' + conv.id,
+    icon: '/favicon.ico'
+  });
+  n.onclick = () => { window.focus(); openConv(conv.id); n.close(); };
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 
+pedirPermisoNotif();
 renderConvList();
 
 // Simular mensaje entrante a los 4 segundos
