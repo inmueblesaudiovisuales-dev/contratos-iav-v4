@@ -676,29 +676,13 @@
     .toolbar-sep { display: none; }
     .bnav-btn {
       flex: 1; display: flex; flex-direction: column; align-items: center;
-      gap: 2px; background: none; border: none; padding: 6px 2px;
+      gap: 3px; background: none; border: none; padding: 8px 4px 6px;
       font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
       text-transform: uppercase; color: var(--ink-3); cursor: pointer;
       transition: color 120ms;
     }
-    .bnav-btn i { font-size: 20px; }
+    .bnav-btn i { font-size: 22px; }
     .bnav-btn.activo { color: var(--gold); }
-    /* FAB central — botón Nuevo en mobile */
-    .bnav-fab {
-      width: 52px; height: 52px; border-radius: 50%;
-      background: var(--gold); color: var(--onyx) !important;
-      margin-top: -18px; border: 3px solid var(--page);
-      box-shadow: 0 4px 16px rgba(201,168,76,0.4);
-      font-size: 0 !important; letter-spacing: 0;
-      padding: 0; flex: none;
-      justify-content: center; gap: 0;
-      order: 2;
-    }
-    .bnav-fab i { font-size: 22px !important; color: var(--onyx); }
-    /* orden mobile: Contratos(1) / FAB(2) / Prospectos(3) / Ajustes(4) */
-    .bnav-btn[data-tab="contratos"]   { order: 1; }
-    .bnav-btn[data-tab="prospectos"]  { order: 3; }
-    .bnav-btn[data-tab="ajustes"]     { order: 4; }
 
     /* ── Modo selección masiva ── */
     .btn-seleccion { background: none; border: 1.5px solid var(--border2); border-radius: var(--r); padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
@@ -970,37 +954,24 @@
       }
       .bnav-btn.activo .bnav-item-icon { background: rgba(201,168,76,0.2); color: var(--gold); }
       .bnav-item-label { flex: 1; font-size: 12.5px !important; text-transform: none !important; letter-spacing: 0.01em !important; font-weight: 500 !important; }
-      /* reset order — mobile usa order para reordenar FAB al centro, desktop no */
+      /* reset order — desktop no reordena */
       .bnav-btn { order: 0 !important; }
-      .bnav-fab { order: 0 !important; }
 
-      /* FAB → full-width button */
-      .bnav-fab {
+      /* "Nuevo" en desktop → botón dorado full-width */
+      .bnav-btn[data-tab="nuevo"] {
         width: calc(100% - 28px) !important;
-        height: auto !important;
-        border-radius: 6px !important;
-        margin: 12px 14px 8px !important;
-        border: none !important;
-        font-size: 12.5px !important;
-        font-weight: 700 !important;
-        justify-content: flex-start !important;
-        gap: 8px !important;
+        margin: 10px 14px 6px !important;
         padding: 9px 12px !important;
-        flex: none;
         background: var(--gold) !important;
         color: #1a1000 !important;
-        transition: filter 120ms ease !important;
+        border-radius: 6px !important;
+        font-weight: 700 !important;
+        font-size: 12.5px !important;
+        flex: none;
       }
-      .bnav-fab:hover { filter: brightness(1.08); }
-      .bnav-fab-icon {
-        width: 18px; height: 18px;
-        background: rgba(0,0,0,0.15);
-        border-radius: 4px;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-      }
-      .bnav-fab i { font-size: 14px !important; color: #1a1000 !important; }
-      .bnav-fab-label { display: inline !important; font-size: 12.5px; font-weight: 700; color: #1a1000; }
+      .bnav-btn[data-tab="nuevo"]:hover { filter: brightness(1.08); background: var(--gold) !important; color: #1a1000 !important; }
+      .bnav-btn[data-tab="nuevo"] .bnav-item-icon { background: rgba(0,0,0,0.15) !important; color: #1a1000 !important; }
+      .bnav-btn[data-tab="nuevo"].activo::before { display: none; }
 
       .bnav-logout {
         display: flex !important;
@@ -1545,35 +1516,18 @@
       </div>
     </div>
     <div class="bnav-inner">
-      <button class="bnav-btn bnav-fab" data-tab="nuevo" onclick="irANuevo()" title="Nuevo contrato">
-        <span class="bnav-fab-icon"><i class="ti ti-plus"></i></span>
-        <span class="bnav-fab-label">Nuevo contrato</span>
-      </button>
-      <div class="bnav-section-label">Principal</div>
       <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)">
         <span class="bnav-item-icon"><i class="ti ti-file-text"></i></span>
         <span class="bnav-item-label">Contratos</span>
-        <span class="bnav-badge" id="bnav-badge-contratos" style="display:none"></span>
       </button>
-      <button class="bnav-btn bnav-desktop-only" data-subtab="clientes" onclick="irASubseccion('ajustes','clientes',this)">
-        <span class="bnav-item-icon"><i class="ti ti-users"></i></span>
-        <span class="bnav-item-label">Clientes</span>
-        <span class="bnav-badge subtle" id="bnav-badge-clientes" style="display:none"></span>
+      <button class="bnav-btn" data-tab="nuevo" onclick="irANuevo()">
+        <span class="bnav-item-icon"><i class="ti ti-file-plus"></i></span>
+        <span class="bnav-item-label">Nuevo</span>
       </button>
       <button class="bnav-btn" data-tab="prospectos" onclick="mostrarTabMobile('prospectos',this)">
         <span class="bnav-item-icon"><i class="ti ti-phone-call"></i></span>
         <span class="bnav-item-label">Prospectos</span>
         <span class="bnav-badge subtle" id="bnav-badge-prospectos" style="display:none"></span>
-      </button>
-      <div class="bnav-section-label">Catálogos</div>
-      <button class="bnav-btn bnav-desktop-only" data-subtab="paquetes" onclick="irASubseccion('ajustes','paquetes',this)">
-        <span class="bnav-item-icon"><i class="ti ti-package"></i></span>
-        <span class="bnav-item-label">Paquetes</span>
-      </button>
-      <div class="bnav-section-label">Reportes</div>
-      <button class="bnav-btn bnav-desktop-only" data-subtab="metricas" onclick="irASubseccion('ajustes','metricas',this)">
-        <span class="bnav-item-icon"><i class="ti ti-chart-bar"></i></span>
-        <span class="bnav-item-label">Estadísticas</span>
       </button>
       <button class="bnav-btn" data-tab="ajustes" onclick="mostrarTabMobile('ajustes',this)">
         <span class="bnav-item-icon"><i class="ti ti-settings"></i></span>
