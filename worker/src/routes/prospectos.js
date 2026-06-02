@@ -23,7 +23,7 @@ export async function handleProspectos(request, env, ctx, action) {
       [id, nombre, telefono, interes || '', fechaLlamada, horaLlamada, notas || '', now()]
     );
 
-    ctx.waitUntil(callAdapter(env, 'agendarLlamadaProspecto', {
+    ctx.waitUntil(callAdapter(ctx, env, 'agendarLlamadaProspecto', {
       id, nombre, telefono, interes: interes || '', fechaLlamada, horaLlamada, notas: notas || ''
     }));
 

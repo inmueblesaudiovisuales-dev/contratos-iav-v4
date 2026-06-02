@@ -695,9 +695,10 @@
       order: 2;
     }
     .bnav-fab i { font-size: 22px !important; color: var(--onyx); }
-    /* orden mobile: Contratos(1) / FAB(2) / Ajustes(3) */
-    .bnav-btn[data-tab="contratos"] { order: 1; }
-    .bnav-btn[data-tab="ajustes"]   { order: 3; }
+    /* orden mobile: Contratos(1) / FAB(2) / Prospectos(3) / Ajustes(4) */
+    .bnav-btn[data-tab="contratos"]   { order: 1; }
+    .bnav-btn[data-tab="prospectos"]  { order: 3; }
+    .bnav-btn[data-tab="ajustes"]     { order: 4; }
 
     /* ── Modo selección masiva ── */
     .btn-seleccion { background: none; border: 1.5px solid var(--border2); border-radius: var(--r); padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
@@ -854,6 +855,7 @@
        DESKTOP LAYOUT — min-width: 1024px
        ════════════════════════════════════════════════ */
     @media (min-width: 1024px) {
+      #prosp-layout { grid-template-columns: 380px 1fr !important; }
       :root {
         --sidebar-w: 224px;
         --panel-w: 488px;
@@ -1558,7 +1560,7 @@
         <span class="bnav-item-label">Clientes</span>
         <span class="bnav-badge subtle" id="bnav-badge-clientes" style="display:none"></span>
       </button>
-      <button class="bnav-btn bnav-desktop-only" data-tab="prospectos" onclick="mostrarTab('prospectos',this)">
+      <button class="bnav-btn" data-tab="prospectos" onclick="mostrarTabMobile('prospectos',this)">
         <span class="bnav-item-icon"><i class="ti ti-phone-call"></i></span>
         <span class="bnav-item-label">Prospectos</span>
         <span class="bnav-badge subtle" id="bnav-badge-prospectos" style="display:none"></span>
@@ -1810,7 +1812,7 @@
       </div>
 
       <!-- Layout 2 columnas desktop: form izq, lista der -->
-      <div style="display:grid;grid-template-columns:380px 1fr;gap:24px;align-items:start">
+      <div id="prosp-layout" style="display:grid;grid-template-columns:1fr;gap:20px;align-items:start">
 
         <!-- Formulario -->
         <div style="background:var(--card);border-radius:14px;border:1.5px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,0.05);overflow:hidden">
@@ -1885,9 +1887,6 @@
         <button id="atab-clientes" class="ajustes-tab" onclick="setAjustesTab('clientes')">
           <i class="ti ti-users"></i> Clientes
         </button>
-        <button id="atab-prospectos" class="ajustes-tab" onclick="setAjustesTab('prospectos')">
-          <i class="ti ti-phone-call"></i> Prospectos
-        </button>
       </div>
 
       <!-- Pane: Métricas -->
@@ -1927,43 +1926,6 @@
         </div>
       </div>
 
-      <!-- Pane: Prospectos (mobile) -->
-      <div id="apane-prospectos" class="ajustes-pane">
-        <div style="background:var(--card);border-radius:14px;border:1.5px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:18px">
-          <div style="padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
-            <div style="width:30px;height:30px;border-radius:8px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <i class="ti ti-calendar-plus" style="font-size:15px;color:var(--gold)"></i>
-            </div>
-            <div style="font-size:13px;font-weight:700;color:var(--ink-1)">Agendar llamada</div>
-          </div>
-          <div style="padding:16px">
-            <div class="campo"><label>Nombre *</label><input type="text" id="prosp-nombre-m" placeholder="Nombre del prospecto"></div>
-            <div class="campo"><label>Teléfono *</label><div style="position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:15px;pointer-events:none">📱</span><input type="tel" id="prosp-telefono-m" placeholder="81 1234 5678" style="padding-left:36px"></div></div>
-            <div class="fila-2">
-              <div class="campo"><label>Fecha *</label><input type="date" id="prosp-fecha-m"></div>
-              <div class="campo"><label>Hora *</label><input type="time" id="prosp-hora-m" value="10:00"></div>
-            </div>
-            <div class="campo">
-              <label>¿Qué le interesa?</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px" id="prosp-interes-btns-m">
-                <button class="par-tipo-btn" data-val="foto" onclick="seleccionarInteresProspM(this)"><i class="ti ti-camera" style="font-size:12px;margin-right:3px"></i>Fotografía</button>
-                <button class="par-tipo-btn" data-val="video" onclick="seleccionarInteresProspM(this)"><i class="ti ti-video" style="font-size:12px;margin-right:3px"></i>Video + Drone</button>
-                <button class="par-tipo-btn" data-val="360" onclick="seleccionarInteresProspM(this)"><i class="ti ti-360" style="font-size:12px;margin-right:3px"></i>Recorrido 360°</button>
-                <button class="par-tipo-btn" data-val="combo" onclick="seleccionarInteresProspM(this)"><i class="ti ti-layout-grid" style="font-size:12px;margin-right:3px"></i>Paquete completo</button>
-              </div>
-              <input type="text" id="prosp-interes-otro-m" placeholder="O escribe qué le interesa…" style="margin-top:8px;font-size:13px">
-            </div>
-            <div class="campo" style="margin-bottom:0"><label>Notas</label><textarea id="prosp-notas-m" rows="3" placeholder="Zona, tipo de propiedad, lo que platicaron…" style="resize:vertical;font-size:13px"></textarea></div>
-          </div>
-          <div style="padding:12px 16px 16px;display:flex;align-items:center;gap:10px">
-            <button class="btn-primario gold" style="flex:1;justify-content:center" onclick="crearProspectoM()"><i class="ti ti-calendar-plus"></i> Agendar</button>
-            <span id="prosp-msg-m" style="font-size:12px;line-height:1.3;max-width:110px"></span>
-          </div>
-        </div>
-        <div id="lista-prospectos-m">
-          <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -2402,7 +2364,6 @@ function setAjustesTab(pane) {
   if (pane === 'metricas') cargarMetricas();
   if (pane === 'paquetes') cargarPaquetesAdmin();
   if (pane === 'clientes') cargarCRM();
-  if (pane === 'prospectos') cargarProspectosM();
 }
 
 
@@ -5352,64 +5313,9 @@ function cargarProspectos() {
 
 function cambiarEstatusProspecto(id, estatus) {
   apiPost('actualizarEstatusProspecto', { id: id, estatus: estatus })
-    .then(function(r) { if (r.ok) { cargarProspectos(); cargarProspectosM(); } });
+    .then(function(r) { if (r.ok) cargarProspectos(); });
 }
 
-// ── PROSPECTOS MOBILE ─────────────────────────────────────────────────────────
-
-var _interesProspectoM = '';
-
-function seleccionarInteresProspM(btn) {
-  document.querySelectorAll('#prosp-interes-btns-m .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
-  btn.classList.add('activo-par');
-  _interesProspectoM = btn.dataset.val;
-  document.getElementById('prosp-interes-otro-m').value = '';
-}
-
-function crearProspectoM() {
-  var nombre   = (document.getElementById('prosp-nombre-m').value || '').trim();
-  var telefono = (document.getElementById('prosp-telefono-m').value || '').trim();
-  var fecha    = document.getElementById('prosp-fecha-m').value;
-  var hora     = document.getElementById('prosp-hora-m').value;
-  var notas    = (document.getElementById('prosp-notas-m').value || '').trim();
-  var interes  = _getInteres(_interesProspectoM, 'prosp-interes-otro-m');
-  var msg      = document.getElementById('prosp-msg-m');
-
-  if (!nombre || !telefono || !fecha || !hora) {
-    msg.style.color='var(--red,#c0392b)'; msg.textContent='Nombre, teléfono, fecha y hora son requeridos.'; return;
-  }
-  msg.style.color='var(--ink-3)'; msg.textContent='Agendando…';
-
-  apiPost('crearProspecto', { nombre:nombre, telefono:telefono, interes:interes, fechaLlamada:fecha, horaLlamada:hora, notas:notas })
-    .then(function(r) {
-      if (r.ok) {
-        msg.style.color='#1E8449'; msg.textContent='¡Agendado!';
-        _limpiarFormProsp('m');
-        cargarProspectosM();
-        setTimeout(function(){ msg.textContent=''; }, 4000);
-      } else { msg.style.color='var(--red,#c0392b)'; msg.textContent=r.error||'Error al agendar.'; }
-    })
-    .catch(function(){ msg.style.color='var(--red,#c0392b)'; msg.textContent='Error de conexión.'; });
-}
-
-function cargarProspectosM() {
-  var el = document.getElementById('lista-prospectos-m');
-  if (!el) return;
-  el.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>';
-
-  apiGet({ action: 'listarProspectos' })
-    .then(function(r) {
-      _renderListaProspectos(r.prospectos || [], 'lista-prospectos-m', 'm');
-    })
-    .catch(function() {
-      el.innerHTML = '<p style="color:#c0392b;font-size:13px">Error al cargar prospectos.</p>';
-    });
-}
-
-function cambiarEstatusProspectoM(id, estatus) {
-  apiPost('actualizarEstatusProspecto', { id: id, estatus: estatus })
-    .then(function(r) { if (r.ok) cargarProspectosM(); });
-}
 
 </script>
 </body>
