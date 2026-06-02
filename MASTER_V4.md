@@ -135,7 +135,22 @@ Los archivos de `frontend/` se suben automáticamente como assets estáticos ví
 
 **El adapter de Apps Script sí requiere acción manual de Bruno**: pegar el contenido de `adapter/AdapterScript4_v1.js` en script.google.com y desplegar nueva versión. Claude entrega el archivo listo.
 
-**Regla de trazabilidad del adapter (agregada 2026-06-02 12:00:09 CST):** cada vez que se modifique `adapter/AdapterScript4_v1.js`, documentar en este `MASTER_V4.md` la fecha y hora local del cambio, qué función/flujo se tocó y si requiere despliegue manual en Apps Script.
+---
+
+> ⚠️ **REGLA CRÍTICA — OBLIGATORIA EN CADA MODIFICACIÓN AL ADAPTER**
+>
+> Cada vez que se modifique `adapter/AdapterScript4_v1.js`:
+>
+> 1. Documentar en este `MASTER_V4.md` con el formato exacto:
+>    `YYYY-MM-DD HH:MM:SS CST` — usando siempre la hora de **Monterrey** (`TZ="America/Monterrey" date`)
+> 2. Indicar qué función/flujo se tocó
+> 3. Indicar si requiere despliegue manual en Apps Script (casi siempre sí)
+>
+> **No omitir la hora. No usar "aprox". Ejecutar `TZ="America/Monterrey" date "+%Y-%m-%d %H:%M:%S %Z"` antes de documentar.**
+>
+> *(Regla original agregada 2026-06-02 12:00:09 CST)*
+
+---
 
 ---
 
@@ -329,7 +344,7 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 | R31-05 | `frontend/admin.html` | Botón "Equipo" en la barra de acciones del panel lateral (junto a Portal). Link `equipo.html?token=<token>`. |
 | R31-06 | `frontend/admin.html` | Bloque "Portal de equipo" con link copiable + botón WhatsApp en la sección de links del panel lateral (junto al bloque de Checklist). |
 | R31-07 | `frontend/admin.html` | Constante `EQUIPO_BASE` agregada. |
-| R31-08 | `adapter/AdapterScript4_v1.js` | 2026-06-02 (hora aprox. de la sesión) CST: Línea `'Portal de equipo: ...'` agregada en la descripción de eventos Calendar de `procesarFirma`, `primerAbono` y `reagendarPropiedad`. Requiere despliegue manual en Apps Script. |
+| R31-08 | `adapter/AdapterScript4_v1.js` | 2026-06-02 13:22:25 CST: Línea `'Portal de equipo: ...'` agregada en la descripción de eventos Calendar de `procesarFirma`, `primerAbono` y `reagendarPropiedad`. Requiere despliegue manual en Apps Script. |
 | R31-09 | `MASTER_V4.md` | Documenta R31. URL `equipo.html` agregada a tabla de URLs. |
 
 ---
