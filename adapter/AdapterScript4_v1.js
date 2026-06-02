@@ -148,6 +148,7 @@ function procesarFirma(body) {
           prop.perimetro_url      ? 'Perímetro: '               + prop.perimetro_url        : '',
           prop.sobre_la_propiedad ? 'Notas: '                   + prop.sobre_la_propiedad   : '',
           de.comentarios          ? 'Comentarios del cliente: ' + de.comentarios            : '',
+          formatearAccesoCalendar_(prop),
           urlPDF                  ? 'PDF Referencias: '         + urlPDF                    : '',
           carpetaUrl              ? 'Carpeta Drive: '           + carpetaUrl                : '',
           'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
@@ -414,6 +415,7 @@ function primerAbono(body) {
         prop.perimetro_url      ? 'Perímetro: '             + prop.perimetro_url                   : '',
         prop.sobre_la_propiedad ? 'Notas: '                + prop.sobre_la_propiedad              : '',
         de.comentarios        ? 'Comentarios del cliente: '+ de.comentarios                       : '',
+        formatearAccesoCalendar_(prop),
         urlPDF                ? 'PDF Referencias: '        + urlPDF                               : '',
         carpetaUrl            ? 'Carpeta Drive: '          + carpetaUrl                           : '',
         'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
@@ -790,6 +792,7 @@ function reagendarPropiedad(body) {
           propiedad.perimetro_url      ? 'Perímetro: '               + propiedad.perimetro_url        : '',
           propiedad.sobre_la_propiedad ? 'Notas: '                   + propiedad.sobre_la_propiedad   : '',
           de.comentarios               ? 'Comentarios del cliente: ' + de.comentarios                 : '',
+          formatearAccesoCalendar_(propiedad),
           urlPDFNuevo                  ? 'PDF Referencias: '         + urlPDFNuevo                    : '',
           propiedad.carpeta_control_id ? 'Carpeta Drive: '           + (function() { try { return DriveApp.getFolderById(propiedad.carpeta_control_id).getUrl(); } catch(e) { return ''; } })() : '',
           'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
@@ -1021,6 +1024,49 @@ function limpiarLinkMaps_(url) {
   var m = url.match(/[?&]q=([^&]+)/);
   if (m) return decodeURIComponent(m[1]);
   return url;
+}
+
+function formatearAccesoCalendar_(prop) {
+  if (!prop) return '';
+  var datos = {};
+  try {
+    datos = typeof prop.datos_especificos === 'string'
+      ? JSON.parse(prop.datos_especificos || '{}')
+      : (prop.datos_especificos || {});
+  } catch(e) {
+    datos = {};
+  }
+  var acceso = datos && datos.acceso ? datos.acceso : {};
+  var requiere = prop.requiere_acceso === 1 || prop.requiere_acceso === true || prop.requiere_acceso === '1';
+  var labels = {
+    qr: 'QR',
+    invitacion_digital: 'Invitación digital',
+    codigo: 'Código',
+    lista_acceso: 'Lista de acceso',
+    registro_previo: 'Registro previo',
+    llamada_al_llegar: 'Llamada al llegar',
+    otro: 'Otro'
+  };
+  var lineas = [];
+  if (acceso.metodos && acceso.metodos.length) {
+    var metodos = [];
+    for (var i = 0; i < acceso.metodos.length; i++) metodos.push(labels[acceso.metodos[i]] || acceso.metodos[i]);
+    lineas.push('Método de acceso: ' + metodos.join(', '));
+  }
+  if (acceso.nombreRegistro) lineas.push('Registro: ' + acceso.nombreRegistro);
+  if (acceso.instruccionesCaseta) lineas.push('Caseta: ' + acceso.instruccionesCaseta);
+  if (acceso.contactoAcceso) lineas.push('Contacto acceso: ' + acceso.contactoAcceso);
+  if (acceso.tipoEdificio) lineas.push('Tipo acceso: ' + acceso.tipoEdificio);
+  if (acceso.torre) lineas.push('Torre: ' + acceso.torre);
+  if (acceso.piso) lineas.push('Piso: ' + acceso.piso);
+  if (acceso.departamento) lineas.push('Departamento: ' + acceso.departamento);
+  if (acceso.elevador) lineas.push('Elevador: ' + acceso.elevador);
+  if (acceso.estacionamiento) lineas.push('Estacionamiento: ' + acceso.estacionamiento);
+  if (acceso.horarioAcceso) lineas.push('Horario acceso: ' + acceso.horarioAcceso);
+  if (acceso.restricciones) lineas.push('Restricciones acceso: ' + acceso.restricciones);
+  if (acceso.comentarios) lineas.push('Comentarios acceso: ' + acceso.comentarios);
+  if (!lineas.length && requiere) lineas.push('Requiere acceso especial; sin instrucciones adicionales');
+  return lineas.length ? 'Acceso y caseta:\n' + lineas.join('\n') : '';
 }
 
 function obtenerOCrearCarpetaFirmas_() {

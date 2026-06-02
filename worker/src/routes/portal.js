@@ -162,6 +162,7 @@ export async function handlePortal(request, env, ctx, action) {
         logoUrl: p.logo_url,
         carpetaControlId: p.carpeta_control_id,
         formatoVideo: p.formato_video || 'vertical_nativo',
+        requiereAcceso: p.requiere_acceso ? 1 : 0,
         ocultarFormatoVideo: p.ocultar_formato_video ? 1 : 0
       })),
       paquetesDisponibles,

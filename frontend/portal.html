@@ -162,6 +162,26 @@
   .acceso-btn { flex: 1; background: var(--bg-chip); border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 12px; cursor: pointer; text-align: center; transition: all 0.15s; font-size: 13px; font-weight: 700; color: var(--charcoal); }
   .acceso-btn:hover { border-color: var(--gold); }
   .acceso-btn.activo { border-color: var(--gold); border-width: 2px; background: var(--gold-dim); }
+  .acceso-detalle { display: none; margin-top: -6px; margin-bottom: 18px; padding: 14px; border: 1.5px solid var(--border); border-radius: 10px; background: rgba(201,168,76,0.06); }
+  .acceso-detalle.visible { display: block; }
+  .acceso-intro { font-size: 12px; color: var(--concrete); line-height: 1.6; margin-bottom: 14px; }
+  .acceso-chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .acceso-chip { background: var(--bg-chip); border: 1.5px solid var(--border-strong); border-radius: 20px; padding: 8px 12px; cursor: pointer; transition: all 0.15s; font-size: 11px; font-weight: 700; color: var(--charcoal); }
+  .acceso-chip:hover { border-color: var(--gold); }
+  .acceso-chip.activo { border-color: var(--gold); background: var(--gold-dim); color: var(--charcoal); }
+  .acceso-fields { display: grid; grid-template-columns: 1fr; gap: 0; }
+  .acceso-edificio { display: none; }
+  .acceso-edificio.visible { display: contents; }
+  .field select {
+    width: 100%; padding: 11px 13px; border: 1.5px solid var(--border-strong); border-radius: 8px;
+    font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 500; color: var(--charcoal);
+    background: var(--bg-chip); outline: none; transition: border-color 0.15s, background 0.15s;
+  }
+  .field select:focus { border-color: var(--gold); background: var(--white); }
+  @media (min-width: 760px) {
+    .acceso-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; }
+    .acceso-fields .full { grid-column: 1 / -1; }
+  }
 
   /* Add-ons */
   .addon-card { border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.15s; display: flex; align-items: flex-start; gap: 14px; background: var(--bg-chip); }
@@ -433,6 +453,8 @@ var adicionalesOnProp   = {};
 var orientaciones     = {};
 var formatosVideo     = {};
 var accesoCaseta      = {};
+var accesoMetodos     = {};
+var accesoTipoEdificio = {};
 var hasStroke         = false;
 var isDrawing         = false;
 var _pctAnticipo      = 0.5; // porcentaje fijado por Bruno; se deriva al cargar datos
@@ -545,6 +567,93 @@ function safeHref(url) {
   return /^https?:\/\//i.test(u) ? esc(u) : '#';
 }
 
+var ACCESO_METODOS = [
+  ['qr', 'QR'],
+  ['invitacion_digital', 'Invitación digital'],
+  ['codigo', 'Código'],
+  ['lista_acceso', 'Lista de acceso'],
+  ['registro_previo', 'Registro previo'],
+  ['llamada_al_llegar', 'Llamada al llegar'],
+  ['otro', 'Otro']
+];
+
+var ACCESO_METODO_LABELS = ACCESO_METODOS.reduce(function(acc, item) {
+  acc[item[0]] = item[1];
+  return acc;
+}, {});
+
+function getAccesoExistente(p) {
+  return (p && p.datosEspecificos && p.datosEspecificos.acceso) ? p.datosEspecificos.acceso : {};
+}
+
+function requiereDatosEdificio(tipo) {
+  return ['departamento', 'oficina_torre', 'otro'].indexOf(tipo || '') !== -1;
+}
+
+function accesoTieneDatos(acceso) {
+  if (!acceso) return false;
+  return ['nombreRegistro','instruccionesCaseta','contactoAcceso','tipoEdificio','torre','piso','departamento','elevador','estacionamiento','horarioAcceso','restricciones','comentarios'].some(function(k) {
+    return !!(acceso[k] && String(acceso[k]).trim());
+  }) || !!(acceso.metodos && acceso.metodos.length);
+}
+
+function resumenAcceso(acceso) {
+  if (!accesoTieneDatos(acceso)) return 'Requiere acceso especial; sin instrucciones adicionales';
+  var partes = [];
+  if (acceso.metodos && acceso.metodos.length) partes.push('Método: ' + acceso.metodos.map(function(m) { return ACCESO_METODO_LABELS[m] || m; }).join(', '));
+  if (acceso.nombreRegistro) partes.push('Registro: ' + acceso.nombreRegistro);
+  if (acceso.instruccionesCaseta) partes.push('Caseta: ' + acceso.instruccionesCaseta);
+  if (acceso.contactoAcceso) partes.push('Contacto: ' + acceso.contactoAcceso);
+  var edificio = [acceso.tipoEdificio, acceso.torre, acceso.piso, acceso.departamento].filter(Boolean).join(' · ');
+  if (edificio) partes.push('Edificio: ' + edificio);
+  if (acceso.elevador) partes.push('Elevador: ' + acceso.elevador);
+  if (acceso.estacionamiento) partes.push('Estacionamiento: ' + acceso.estacionamiento);
+  if (acceso.horarioAcceso) partes.push('Horario: ' + acceso.horarioAcceso);
+  if (acceso.restricciones) partes.push('Restricciones: ' + acceso.restricciones);
+  if (acceso.comentarios) partes.push('Comentarios: ' + acceso.comentarios);
+  return partes.join('\n');
+}
+
+function renderAccesoDetalle(n, acceso) {
+  acceso = acceso || {};
+  var metodos = acceso.metodos || [];
+  var html = '<div class="acceso-detalle" id="acceso-detalle-' + n + '">';
+  html += '<p class="acceso-intro">Estos datos ayudan a que el equipo llegue, se registre y entre sin perder tiempo el día de la sesión.</p>';
+  html += '<div class="field full"><label>Método de acceso (opcional)</label><div class="acceso-chip-grid">';
+  ACCESO_METODOS.forEach(function(item) {
+    var activo = metodos.indexOf(item[0]) !== -1 ? ' activo' : '';
+    html += '<button type="button" class="acceso-chip' + activo + '" data-prop="' + n + '" data-metodo="' + item[0] + '">' + esc(item[1]) + '</button>';
+  });
+  html += '</div></div>';
+  html += '<div class="acceso-fields">';
+  html += '<div class="field"><label>A nombre de quién registrar</label><input type="text" id="inp-acceso-registro-' + n + '" placeholder="Ej. Equipo Inmuebles Audiovisuales" value="' + esc(acceso.nombreRegistro || '') + '"></div>';
+  html += '<div class="field"><label>Contacto de acceso</label><input type="text" id="inp-acceso-contacto-' + n + '" placeholder="Nombre y teléfono, si aplica" value="' + esc(acceso.contactoAcceso || '') + '"></div>';
+  html += '<div class="field full"><label>Indicaciones para guardia o caseta</label><textarea id="inp-acceso-caseta-' + n + '" placeholder="Qué debe decir el equipo, acceso vehicular, caseta correcta..." style="min-height:88px">' + esc(acceso.instruccionesCaseta || '') + '</textarea></div>';
+  html += '<div class="field"><label>Tipo de edificio o acceso</label><select id="inp-acceso-tipo-edificio-' + n + '" data-prop="' + n + '">';
+  [
+    ['', 'No aplica / casa'],
+    ['departamento', 'Departamento'],
+    ['condominio_horizontal', 'Condominio horizontal'],
+    ['oficina_torre', 'Oficina / torre'],
+    ['otro', 'Otro']
+  ].forEach(function(opt) {
+    html += '<option value="' + opt[0] + '"' + ((acceso.tipoEdificio || '') === opt[0] ? ' selected' : '') + '>' + esc(opt[1]) + '</option>';
+  });
+  html += '</select></div>';
+  html += '<div class="field"><label>Horario especial de acceso</label><input type="text" id="inp-acceso-horario-' + n + '" placeholder="Ej. Solo 9:00 a 11:00" value="' + esc(acceso.horarioAcceso || '') + '"></div>';
+  html += '<div class="acceso-edificio" id="acceso-edificio-' + n + '">';
+  html += '<div class="field"><label>Torre</label><input type="text" id="inp-acceso-torre-' + n + '" placeholder="Ej. Torre B" value="' + esc(acceso.torre || '') + '"></div>';
+  html += '<div class="field"><label>Piso</label><input type="text" id="inp-acceso-piso-' + n + '" placeholder="Ej. 7" value="' + esc(acceso.piso || '') + '"></div>';
+  html += '<div class="field"><label>Departamento / interior</label><input type="text" id="inp-acceso-depa-' + n + '" placeholder="Ej. 704" value="' + esc(acceso.departamento || '') + '"></div>';
+  html += '<div class="field"><label>Elevador</label><input type="text" id="inp-acceso-elevador-' + n + '" placeholder="Ej. Elevador de servicio" value="' + esc(acceso.elevador || '') + '"></div>';
+  html += '<div class="field full"><label>Estacionamiento / cajón</label><input type="text" id="inp-acceso-estacionamiento-' + n + '" placeholder="Ej. Cajón 22, sótano 1" value="' + esc(acceso.estacionamiento || '') + '"></div>';
+  html += '</div>';
+  html += '<div class="field full"><label>Restricciones importantes</label><textarea id="inp-acceso-restricciones-' + n + '" placeholder="Horarios, áreas restringidas, permisos, drone, amenidades..." style="min-height:80px">' + esc(acceso.restricciones || '') + '</textarea></div>';
+  html += '<div class="field full"><label>Comentarios logísticos</label><textarea id="inp-acceso-comentarios-' + n + '" placeholder="Cualquier detalle para llegar y entrar sin perder tiempo." style="min-height:80px">' + esc(acceso.comentarios || '') + '</textarea></div>';
+  html += '</div></div>';
+  return html;
+}
+
 /* ── STEPPER ────────────────────────────────────────────────────────────────── */
 
 function actualizarStepper(paso) {
@@ -613,6 +722,8 @@ function renderEtapa1() {
   orientaciones = {};
   formatosVideo = {};
   accesoCaseta  = {};
+  accesoMetodos = {};
+  accesoTipoEdificio = {};
   mostrarEstado('');
   var d           = portalData;
   var props        = d.propiedades || [];
@@ -804,7 +915,11 @@ function renderEtapa1() {
       var esTerreno = (p.tipo || '').toLowerCase() === 'terreno';
       orientaciones[n] = 'Vertical (9:16) — Reels, TikTok e Instagram';
       formatosVideo[n] = p.formatoVideo || 'vertical_nativo';
-      accesoCaseta[n]  = 0;
+      var accesoActual = getAccesoExistente(p);
+      accesoCaseta[n]  = p.requiereAcceso ? 1 : 0;
+      accesoMetodos[n] = {};
+      (accesoActual.metodos || []).forEach(function(m) { accesoMetodos[n][m] = true; });
+      accesoTipoEdificio[n] = accesoActual.tipoEdificio || '';
       html += '<div class="card">';
       if (props.length > 1) {
         html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)">';
@@ -874,9 +989,10 @@ function renderEtapa1() {
       }
       html += '<div class="field"><label>¿La propiedad está en privada o requiere registro en caseta?</label>';
       html += '<div class="acceso-grid">';
-      html += '<div class="acceso-btn" id="acc-no-' + n + '" data-prop="' + n + '" data-valor="0">No</div>';
-      html += '<div class="acceso-btn" id="acc-si-' + n + '" data-prop="' + n + '" data-valor="1">Sí</div>';
+      html += '<div class="acceso-btn' + (!accesoCaseta[n] ? ' activo' : '') + '" id="acc-no-' + n + '" data-prop="' + n + '" data-valor="0">No</div>';
+      html += '<div class="acceso-btn' + (accesoCaseta[n] ? ' activo' : '') + '" id="acc-si-' + n + '" data-prop="' + n + '" data-valor="1">Sí</div>';
       html += '</div></div>';
+      html += renderAccesoDetalle(n, accesoActual);
 
       if (!esTerreno) {
         html += '<div class="field"><label>Sobre la propiedad (opcional)</label><textarea id="inp-sobre-' + n + '" placeholder="Recámaras, baños, m², amenidades, lo que la hace especial, historia, vista..." style="min-height:100px"></textarea><p class="field-hint">Entre más nos cuentes, mejor enfocamos el video.</p></div>';
@@ -930,7 +1046,7 @@ function renderEtapa1() {
   html += renderUploadField('logo', 0, 'Logo de la agencia o cliente', 'Opcional. PNG con fondo transparente y buena resolución.');
   props.forEach(function(p, i) {
     var sufijo = props.length > 1 ? ' — Propiedad ' + (i + 1) : '';
-    html += renderUploadField('fachada', i, 'Código QR de acceso' + sufijo, 'Solo si la propiedad está en fraccionamiento o condominio cerrado. La foto de la fachada mándanosla después por WhatsApp.');
+    html += renderUploadField('fachada', i, 'QR, invitación o referencia de acceso' + sufijo, 'Si tienes QR, invitación digital, código o imagen de referencia para caseta, puedes subirla aquí. También puedes enviarla por WhatsApp después.');
   });
   html += '</div>';
 
@@ -970,6 +1086,17 @@ function renderEtapa1() {
   });
   document.querySelectorAll('.acceso-btn').forEach(function(el) {
     el.addEventListener('click', function() { seleccionarAcceso(parseInt(el.dataset.prop, 10), el.dataset.valor); });
+  });
+  document.querySelectorAll('.acceso-chip').forEach(function(el) {
+    el.addEventListener('click', function() { toggleMetodoAcceso(parseInt(el.dataset.prop, 10), el.dataset.metodo); });
+  });
+  document.querySelectorAll('select[id^="inp-acceso-tipo-edificio-"]').forEach(function(el) {
+    el.addEventListener('change', function() { seleccionarTipoEdificio(parseInt(el.dataset.prop, 10), el.value); });
+  });
+  props.forEach(function(p, i) {
+    var n = i + 1;
+    actualizarBloqueAcceso(n);
+    actualizarBloqueEdificio(n);
   });
   var chkPol = document.getElementById('chk-politicas');
   if (chkPol) chkPol.addEventListener('change', actualizarBtnFirmar);
@@ -1132,6 +1259,97 @@ function seleccionarAcceso(n, valor) {
   document.querySelectorAll('.acceso-btn[data-prop="' + n + '"]').forEach(function(b) {
     b.classList.toggle('activo', b.dataset.valor === String(valor));
   });
+  actualizarBloqueAcceso(n);
+}
+
+function actualizarBloqueAcceso(n) {
+  var detalle = document.getElementById('acceso-detalle-' + n);
+  if (detalle) detalle.classList.toggle('visible', !!accesoCaseta[n]);
+}
+
+function toggleMetodoAcceso(n, metodo) {
+  if (!accesoMetodos[n]) accesoMetodos[n] = {};
+  accesoMetodos[n][metodo] = !accesoMetodos[n][metodo];
+  var el = document.querySelector('.acceso-chip[data-prop="' + n + '"][data-metodo="' + CSS.escape(metodo) + '"]');
+  if (el) el.classList.toggle('activo', !!accesoMetodos[n][metodo]);
+}
+
+function seleccionarTipoEdificio(n, valor) {
+  accesoTipoEdificio[n] = valor || '';
+  actualizarBloqueEdificio(n);
+}
+
+function actualizarBloqueEdificio(n) {
+  var el = document.getElementById('acceso-edificio-' + n);
+  if (el) el.classList.toggle('visible', requiereDatosEdificio(accesoTipoEdificio[n]));
+}
+
+function valorCampo(id) {
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function leerAccesoPropiedad(n) {
+  var metodos = [];
+  Object.keys(accesoMetodos[n] || {}).forEach(function(m) {
+    if (accesoMetodos[n][m]) metodos.push(m);
+  });
+  var tipoEdificio = valorCampo('inp-acceso-tipo-edificio-' + n) || accesoTipoEdificio[n] || '';
+  var acceso = {
+    metodos: metodos,
+    nombreRegistro: valorCampo('inp-acceso-registro-' + n),
+    instruccionesCaseta: valorCampo('inp-acceso-caseta-' + n),
+    contactoAcceso: valorCampo('inp-acceso-contacto-' + n),
+    tipoEdificio: tipoEdificio,
+    horarioAcceso: valorCampo('inp-acceso-horario-' + n),
+    restricciones: valorCampo('inp-acceso-restricciones-' + n),
+    comentarios: valorCampo('inp-acceso-comentarios-' + n)
+  };
+  if (requiereDatosEdificio(tipoEdificio)) {
+    acceso.torre = valorCampo('inp-acceso-torre-' + n);
+    acceso.piso = valorCampo('inp-acceso-piso-' + n);
+    acceso.departamento = valorCampo('inp-acceso-depa-' + n);
+    acceso.elevador = valorCampo('inp-acceso-elevador-' + n);
+    acceso.estacionamiento = valorCampo('inp-acceso-estacionamiento-' + n);
+  }
+  Object.keys(acceso).forEach(function(k) {
+    if (Array.isArray(acceso[k])) {
+      if (!acceso[k].length) delete acceso[k];
+    } else if (!acceso[k]) {
+      delete acceso[k];
+    }
+  });
+  return acceso;
+}
+
+function restaurarAccesoDesdePayload(n, acceso, forzarVisible) {
+  acceso = acceso || {};
+  accesoMetodos[n] = {};
+  (acceso.metodos || []).forEach(function(m) { accesoMetodos[n][m] = true; });
+  accesoTipoEdificio[n] = acceso.tipoEdificio || '';
+  seleccionarAcceso(n, forzarVisible || accesoTieneDatos(acceso) ? 1 : 0);
+  ACCESO_METODOS.forEach(function(item) {
+    var chip = document.querySelector('.acceso-chip[data-prop="' + n + '"][data-metodo="' + item[0] + '"]');
+    if (chip) chip.classList.toggle('activo', !!accesoMetodos[n][item[0]]);
+  });
+  [
+    ['inp-acceso-registro-' + n, acceso.nombreRegistro],
+    ['inp-acceso-contacto-' + n, acceso.contactoAcceso],
+    ['inp-acceso-caseta-' + n, acceso.instruccionesCaseta],
+    ['inp-acceso-tipo-edificio-' + n, acceso.tipoEdificio],
+    ['inp-acceso-horario-' + n, acceso.horarioAcceso],
+    ['inp-acceso-torre-' + n, acceso.torre],
+    ['inp-acceso-piso-' + n, acceso.piso],
+    ['inp-acceso-depa-' + n, acceso.departamento],
+    ['inp-acceso-elevador-' + n, acceso.elevador],
+    ['inp-acceso-estacionamiento-' + n, acceso.estacionamiento],
+    ['inp-acceso-restricciones-' + n, acceso.restricciones],
+    ['inp-acceso-comentarios-' + n, acceso.comentarios]
+  ].forEach(function(pair) {
+    var el = document.getElementById(pair[0]);
+    if (el) el.value = pair[1] || '';
+  });
+  actualizarBloqueEdificio(n);
 }
 
 /* ── SIGNATURE CANVAS ───────────────────────────────────────────────────────── */
@@ -1285,12 +1503,18 @@ function validarYRevisar() {
       var comsEl = document.getElementById('inp-comentarios');
       if (comsEl) datosEsp.comentarios = comsEl.value.trim();
     }
+    if (accesoCaseta[n]) {
+      var acceso = leerAccesoPropiedad(n);
+      if (accesoTieneDatos(acceso)) datosEsp.acceso = acceso;
+    }
     propsPayload.push({
       numPropiedad     : n,
       direccion        : dir,
       linkMaps         : maps,
       referencias      : (document.getElementById('inp-referencias-' + n) || {value:''}).value.trim(),
       orientacion      : ori,
+      formatoVideo     : formatosVideo[n] || 'vertical_nativo',
+      requiereAcceso   : accesoCaseta[n] || 0,
       sobreLaPropiedad : (document.getElementById('inp-sobre-' + n) || {value:''}).value.trim(),
       datosEspecificos : datosEsp,
       logoUrl          : archivosSubidos['logo-0'] || '',
@@ -1391,6 +1615,10 @@ function validarYFirmar() {
     if (i === 0) {
       var comsEl = document.getElementById('inp-comentarios');
       if (comsEl) datosEsp.comentarios = comsEl.value.trim();
+    }
+    if (accesoCaseta[n]) {
+      var acceso = leerAccesoPropiedad(n);
+      if (accesoTieneDatos(acceso)) datosEsp.acceso = acceso;
     }
     propsPayload.push({
       numPropiedad     : n,
@@ -1606,6 +1834,10 @@ function renderRevision() {
     }
     if (fp.direccion) html += '<div class="resumen-fila"><span class="resumen-label">Dirección</span><span class="resumen-valor">' + esc(fp.direccion) + '</span></div>';
     if (fp.orientacion) html += '<div class="resumen-fila"><span class="resumen-label">Orientación del video</span><span class="resumen-valor">' + esc(fp.orientacion.split(' — ')[0] || fp.orientacion) + '</span></div>';
+    if (fp.requiereAcceso) {
+      var accesoResumen = resumenAcceso((fp.datosEspecificos && fp.datosEspecificos.acceso) || {});
+      html += '<div class="resumen-fila"><span class="resumen-label">Acceso y caseta</span><span class="resumen-valor" style="text-align:right;white-space:pre-wrap">' + esc(accesoResumen) + '</span></div>';
+    }
   });
 
   var extrasAcordadosRev = (portalData && portalData.extrasAcordados) || [];
@@ -1682,6 +1914,9 @@ function renderRevision() {
           if (cEl) cEl.value = p.datosEspecificos.comentarios;
         }
         if (p.orientacion) seleccionarOrientacion(n, p.orientacion);
+        if (p.formatoVideo) seleccionarFormato(n, p.formatoVideo);
+        if (p.requiereAcceso) restaurarAccesoDesdePayload(n, (p.datosEspecificos && p.datosEspecificos.acceso) || {}, true);
+        else seleccionarAcceso(n, 0);
       });
       adicionalesOnGlobal = Object.assign({}, formData.adicionalesSnapshotGlobal);
       adicionalesOnProp   = JSON.parse(JSON.stringify(formData.adicionalesSnapshotProp));

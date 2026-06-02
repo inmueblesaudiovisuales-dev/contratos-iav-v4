@@ -2969,6 +2969,49 @@ function cerrarPanel() {
   document.querySelectorAll('#tabla-body tr').forEach(tr => tr.classList.remove('activo'));
 }
 
+function renderAccesoCaseta(p) {
+  const datos = p && typeof p.DatosEspecificos === 'object' ? p.DatosEspecificos : {};
+  const acceso = datos && typeof datos.acceso === 'object' ? datos.acceso : {};
+  const requiere = !!(p && p.RequiereAcceso);
+  const metodosLabels = {
+    qr: 'QR',
+    invitacion_digital: 'Invitación digital',
+    codigo: 'Código',
+    lista_acceso: 'Lista de acceso',
+    registro_previo: 'Registro previo',
+    llamada_al_llegar: 'Llamada al llegar',
+    otro: 'Otro'
+  };
+  const filas = [];
+  if (Array.isArray(acceso.metodos) && acceso.metodos.length) {
+    filas.push(['Método', acceso.metodos.map(m => metodosLabels[m] || m).join(', ')]);
+  }
+  [
+    ['Registro', acceso.nombreRegistro],
+    ['Caseta', acceso.instruccionesCaseta],
+    ['Contacto', acceso.contactoAcceso],
+    ['Tipo acceso', acceso.tipoEdificio],
+    ['Torre', acceso.torre],
+    ['Piso', acceso.piso],
+    ['Departamento', acceso.departamento],
+    ['Elevador', acceso.elevador],
+    ['Estacionamiento', acceso.estacionamiento],
+    ['Horario', acceso.horarioAcceso],
+    ['Restricciones', acceso.restricciones],
+    ['Comentarios', acceso.comentarios],
+  ].forEach(([label, value]) => {
+    if (value && String(value).trim()) filas.push([label, value]);
+  });
+  if (!requiere && !filas.length) return '';
+  if (!filas.length) {
+    filas.push(['Estado', 'Requiere acceso especial; sin instrucciones adicionales']);
+  }
+  return `<div class="prop-dato" style="background:var(--gold-pale);border:1px solid var(--gold-border);border-radius:6px;padding:8px 10px;margin-top:6px">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);margin-bottom:5px">Acceso y caseta</div>
+    ${filas.map(([label, value]) => `<div style="font-size:12px;line-height:1.5;margin-top:3px"><span class="lbl">${esc(label)} </span><span style="white-space:pre-wrap">${esc(value)}</span></div>`).join('')}
+  </div>`;
+}
+
 function renderPanel(data) {
   const c   = data.contrato;
   const tok = c.Token;
@@ -3116,6 +3159,7 @@ function renderPanel(data) {
           ${p.LinkMaps    ? `<div class="prop-dato"><a href="${safeHref(p.LinkMaps)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px">Ver en Maps</a></div>` : ''}
           <div class="prop-dato"><span class="lbl">Formato video </span><span id="fmt-label-${numProp}">${esc(p.FormatoVideo === 'horizontal_recorte_vertical' ? 'Horizontal + recorte' : p.FormatoVideo === 'doble_nativo' ? 'Doble formato' : 'Vertical')}</span>${p.OcultarFormatoVideo ? ' <span style="font-size:10px;background:var(--ink-3);color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle">oculto en portal</span>' : ''}</div>
           <div class="prop-dato"><span class="lbl">Características </span><span id="sobre-prop-${numProp}">${esc(p.SobreLaPropiedad || '—')}</span></div>
+          ${renderAccesoCaseta(p)}
           ${p.DatosEspecificos && p.DatosEspecificos.comentarios ? `<div class="prop-dato" style="background:var(--gold-dim);border-radius:6px;padding:6px 8px;margin-top:4px"><span class="lbl" style="color:var(--gold-dark,#9a7a2f)">Comentarios del cliente </span><span style="font-size:12px;line-height:1.5;white-space:pre-wrap">${esc(p.DatosEspecificos.comentarios)}</span></div>` : ''}
           <div class="prop-card-acciones" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleReagendar(${numProp})">
