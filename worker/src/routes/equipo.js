@@ -36,7 +36,11 @@ export async function handleEquipo(request, env, ctx, action) {
       estatus: contrato.estatus,
       entregaExpress: contrato.entrega_express ? 1 : 0,
       paqueteBase: pkMap[contrato.paquete_base] || contrato.paquete_base,
-      precioTotal: contrato.precio_total,
+      fotografiaLista: contrato.fotografia_lista || null,
+      videoListo: contrato.video_listo || null,
+      recorridoListo: contrato.recorrido_listo || null,
+      recorridoUrl: contrato.recorrido_url || '',
+      tieneRecorrido: contrato.tiene_recorrido === 0 ? 0 : 1,
       extrasAcordados,
       propiedades: propiedades.map(p => ({
         numPropiedad: p.num_propiedad,
@@ -53,15 +57,15 @@ export async function handleEquipo(request, env, ctx, action) {
         requiereAcceso: p.requiere_acceso ? 1 : 0,
         datosAcceso: JSON.parse(p.datos_especificos || '{}').acceso || null,
         formatoVideo: p.formato_video || 'vertical_nativo',
-        fotosListas: p.fotos_listas ? 1 : 0,
-        videoListo: p.video_listo ? 1 : 0
+        carpetaControlId: p.carpeta_control_id || '',
+        carpetaEntregablesId: p.carpeta_entregables_id || '',
       }))
     });
   }
 
-  if (action === 'marcarListos') {
+  if (action === 'marcarProduccion') {
     const body = await request.json();
-    const { token, numPropiedad, fotosListas, videoListo } = body;
+    const { token, fotografiaLista, videoListo, recorridoListo, recorridoUrl, tieneRecorrido } = body;
     if (!token) return err('Token requerido');
 
     const contrato = await queryOne(db, 'SELECT token FROM contratos WHERE token = ?', [token]);
@@ -69,15 +73,15 @@ export async function handleEquipo(request, env, ctx, action) {
 
     const sets = [];
     const vals = [];
-    if (fotosListas !== undefined) { sets.push('fotos_listas=?'); vals.push(fotosListas ? 1 : 0); }
-    if (videoListo !== undefined) { sets.push('video_listo=?'); vals.push(videoListo ? 1 : 0); }
+    if (fotografiaLista !== undefined) { sets.push('fotografia_lista=?'); vals.push(fotografiaLista ? now() : null); }
+    if (videoListo !== undefined) { sets.push('video_listo=?'); vals.push(videoListo ? now() : null); }
+    if (recorridoListo !== undefined) { sets.push('recorrido_listo=?'); vals.push(recorridoListo ? now() : null); }
+    if (recorridoUrl !== undefined) { sets.push('recorrido_url=?'); vals.push(recorridoUrl || ''); }
+    if (tieneRecorrido !== undefined) { sets.push('tiene_recorrido=?'); vals.push(tieneRecorrido ? 1 : 0); }
     if (!sets.length) return err('Nada que actualizar');
 
-    vals.push(token, numPropiedad);
-    await run(db,
-      `UPDATE propiedades SET ${sets.join(', ')} WHERE contrato_token=? AND num_propiedad=?`,
-      vals
-    );
+    vals.push(token);
+    await run(db, `UPDATE contratos SET ${sets.join(', ')} WHERE token=?`, vals);
     return ok({ ok: true });
   }
 

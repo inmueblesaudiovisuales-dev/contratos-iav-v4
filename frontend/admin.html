@@ -3515,6 +3515,7 @@ function renderPanel(data) {
   const prodFotoHecho      = !!(c.FotografiaLista && String(c.FotografiaLista).trim());
   const prodVideoHecho     = !!(c.VideoListo && String(c.VideoListo).trim());
   const prodRecorridoHecho = !!(c.RecorridoListo && String(c.RecorridoListo).trim());
+  const tieneRecorridoVal  = c.TieneRecorrido === 0 ? false : true;
 
   document.getElementById('pane-produccion').innerHTML = `
     <p class="sec-label" style="margin-bottom:2px">Estado del contrato</p>
@@ -3534,15 +3535,23 @@ function renderPanel(data) {
       <input type="checkbox" id="prod-video" ${prodVideoHecho ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
       <span>Video listo${prodVideoHecho && c.VideoListo ? ` <span style="font-size:11px;color:var(--ink-3)">· ${fmxnFecha(c.VideoListo)}</span>` : ''}</span>
     </label>
-    <label style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:13px;color:var(--ink-1)">
-      <input type="checkbox" id="prod-recorrido" ${prodRecorridoHecho ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
-      <span>Recorrido virtual listo${prodRecorridoHecho && c.RecorridoListo ? ` <span style="font-size:11px;color:var(--ink-3)">· ${fmxnFecha(c.RecorridoListo)}</span>` : ''}</span>
-    </label>
-    <div class="campo" style="margin-top:10px"><label>Liga del recorrido virtual</label>
-      <input type="url" id="prod-recorrido-url" value="${esc(c.RecorridoURL || '')}" placeholder="https://...">
-      <p class="form-hint">Se agrega sola a la pestaña Entrega como link adicional.</p>
+    <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:10px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:12px;color:var(--ink-2);margin-bottom:8px">
+        <input type="checkbox" id="prod-tiene-recorrido" ${tieneRecorridoVal ? 'checked' : ''} onchange="toggleRecorridoAdmin(this.checked)" style="width:16px;height:16px;accent-color:var(--gold);flex-shrink:0">
+        Incluye recorrido 360 en este contrato
+      </label>
+      <div id="prod-recorrido-wrap" style="${tieneRecorridoVal ? '' : 'opacity:0.4;pointer-events:none'}">
+        <label style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:13px;color:var(--ink-1)">
+          <input type="checkbox" id="prod-recorrido" ${prodRecorridoHecho ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
+          <span>Recorrido virtual listo${prodRecorridoHecho && c.RecorridoListo ? ` <span style="font-size:11px;color:var(--ink-3)">· ${fmxnFecha(c.RecorridoListo)}</span>` : ''}</span>
+        </label>
+        <div class="campo" style="margin-top:4px"><label>Liga del recorrido virtual</label>
+          <input type="url" id="prod-recorrido-url" value="${esc(c.RecorridoURL || '')}" placeholder="https://...">
+          <p class="form-hint">Se agrega sola a la pestaña Entrega como link adicional.</p>
+        </div>
+      </div>
     </div>
-    <button class="btn-primario gold" style="width:100%" id="btn-produccion" onclick="guardarProduccion()">
+    <button class="btn-primario gold" style="width:100%;margin-top:12px" id="btn-produccion" onclick="guardarProduccion()">
       <i class="ti ti-check"></i> Guardar producción
     </button>
     <div class="form-msg" id="msg-produccion"></div>`;
@@ -3892,6 +3901,11 @@ async function guardarEntrega() {
 
 // ── GUARDAR PRODUCCIÓN ────────────────────────────────────────────────────────
 
+function toggleRecorridoAdmin(checked) {
+  const wrap = document.getElementById('prod-recorrido-wrap');
+  if (wrap) { wrap.style.opacity = checked ? '' : '0.4'; wrap.style.pointerEvents = checked ? '' : 'none'; }
+}
+
 async function guardarProduccion() {
   const t = tokenActivo;
   const btn = document.getElementById('btn-produccion');
@@ -3904,8 +3918,9 @@ async function guardarProduccion() {
       token: t,
       fotografiaLista: document.getElementById('prod-foto').checked,
       videoListo:      document.getElementById('prod-video').checked,
-      recorridoListo:  document.getElementById('prod-recorrido').checked,
-      recorridoUrl:    document.getElementById('prod-recorrido-url').value.trim(),
+      recorridoListo:  document.getElementById('prod-recorrido') ? document.getElementById('prod-recorrido').checked : false,
+      recorridoUrl:    document.getElementById('prod-recorrido-url') ? document.getElementById('prod-recorrido-url').value.trim() : '',
+      tieneRecorrido:  document.getElementById('prod-tiene-recorrido') ? document.getElementById('prod-tiene-recorrido').checked : true,
     });
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
     setMsg('msg-produccion', 'Producción guardada.', 'ok');

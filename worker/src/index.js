@@ -32,7 +32,7 @@ const RUTAS_PAQUETES = ['listarPaquetes','listarPaquetesTodos','crearPaquete','e
 const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];
 const RUTAS_ARCHIVOS = ['subirArchivo','subirArchivoAdmin'];
 const RUTAS_REVISION = ['obtenerRevision','guardarRevision'];
-const RUTAS_EQUIPO       = ['obtenerEquipo','marcarListos'];
+const RUTAS_EQUIPO       = ['obtenerEquipo','marcarProduccion'];
 const RUTAS_PROSPECTOS   = ['crearProspecto','listarProspectos','actualizarEstatusProspecto'];
 
 export default {

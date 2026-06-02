@@ -1,7 +1,7 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-02 — R32: agendarLlamadaProspecto — crea evento en Calendar para llamadas de prospecto
+// Ultima modificacion: 2026-06-02 14:31:23 CST — R34: simplifica descripcion Calendar (procesarFirma, primerAbono, reagendarPropiedad); quita PDF/Drive/checklist/detalles internos
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -141,19 +141,9 @@ function procesarFirma(body) {
         var mapsOk = limpiarLinkMaps_(prop.link_maps);
         var descripcion = [
           (prop.tipo || '') + (prop.paquete ? ' — ' + prop.paquete : ''),
-          prop.direccion          ? 'Dirección: '               + prop.direccion            : '',
-          mapsOk                  ? 'Mapa: '                    + mapsOk                    : '',
-          prop.orientacion        ? 'Orientación: '             + prop.orientacion          : '',
-          prop.entregables        ? 'Entregables: '             + prop.entregables          : '',
-          prop.referencias        ? 'Cómo llegar: '             + prop.referencias          : '',
-          prop.fachada_url        ? 'Foto de fachada: '         + prop.fachada_url          : '',
-          prop.perimetro_url      ? 'Perímetro: '               + prop.perimetro_url        : '',
-          prop.sobre_la_propiedad ? 'Notas: '                   + prop.sobre_la_propiedad   : '',
-          de.comentarios          ? 'Comentarios del cliente: ' + de.comentarios            : '',
-          formatearAccesoCalendar_(prop),
-          urlPDF                  ? 'PDF Referencias: '         + urlPDF                    : '',
-          carpetaUrl              ? 'Carpeta Drive: '           + carpetaUrl                : '',
-          'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
+          prop.direccion  ? 'Dirección: '   + prop.direccion  : '',
+          mapsOk          ? 'Mapa: '        + mapsOk          : '',
+          prop.referencias ? 'Cómo llegar: ' + prop.referencias : '',
           'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
         ].filter(Boolean).join('\n');
         var titulo = folio + ' IA ' + contrato.nombre_cliente + ' — ' + (prop.paquete || contrato.paquete_base || '');
@@ -409,19 +399,9 @@ function primerAbono(body) {
 
       var descripcion = [
         (prop.tipo || '') + (prop.paquete ? ' — ' + prop.paquete : ''),
-        prop.direccion        ? 'Dirección: '              + prop.direccion                       : '',
-        mapsOk                ? 'Mapa: '                   + mapsOk                               : '',
-        prop.orientacion      ? 'Orientación: '            + prop.orientacion                     : '',
-        prop.entregables      ? 'Entregables: '            + prop.entregables                     : '',
-        prop.referencias        ? 'Cómo llegar: '           + prop.referencias                     : '',
-        prop.fachada_url        ? 'Foto de fachada: '       + prop.fachada_url                     : '',
-        prop.perimetro_url      ? 'Perímetro: '             + prop.perimetro_url                   : '',
-        prop.sobre_la_propiedad ? 'Notas: '                + prop.sobre_la_propiedad              : '',
-        de.comentarios        ? 'Comentarios del cliente: '+ de.comentarios                       : '',
-        formatearAccesoCalendar_(prop),
-        urlPDF                ? 'PDF Referencias: '        + urlPDF                               : '',
-        carpetaUrl            ? 'Carpeta Drive: '          + carpetaUrl                           : '',
-        'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
+        prop.direccion   ? 'Dirección: '    + prop.direccion   : '',
+        mapsOk           ? 'Mapa: '         + mapsOk           : '',
+        prop.referencias ? 'Cómo llegar: '  + prop.referencias : '',
         'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
       ].filter(Boolean).join('\n');
 
@@ -787,19 +767,9 @@ function reagendarPropiedad(body) {
         var mapsOkR = limpiarLinkMaps_(propiedad.link_maps);
         var nuevaDescripcion = [
           (propiedad.tipo || '') + (propiedad.paquete ? ' — ' + propiedad.paquete : ''),
-          propiedad.direccion          ? 'Dirección: '               + propiedad.direccion            : '',
-          mapsOkR                      ? 'Mapa: '                    + mapsOkR                        : '',
-          propiedad.orientacion        ? 'Orientación: '             + propiedad.orientacion          : '',
-          propiedad.entregables        ? 'Entregables: '             + propiedad.entregables          : '',
-          propiedad.referencias        ? 'Cómo llegar: '             + propiedad.referencias          : '',
-          propiedad.fachada_url        ? 'Foto de fachada: '         + propiedad.fachada_url          : '',
-          propiedad.perimetro_url      ? 'Perímetro: '               + propiedad.perimetro_url        : '',
-          propiedad.sobre_la_propiedad ? 'Notas: '                   + propiedad.sobre_la_propiedad   : '',
-          de.comentarios               ? 'Comentarios del cliente: ' + de.comentarios                 : '',
-          formatearAccesoCalendar_(propiedad),
-          urlPDFNuevo                  ? 'PDF Referencias: '         + urlPDFNuevo                    : '',
-          propiedad.carpeta_control_id ? 'Carpeta Drive: '           + (function() { try { return DriveApp.getFolderById(propiedad.carpeta_control_id).getUrl(); } catch(e) { return ''; } })() : '',
-          'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
+          propiedad.direccion   ? 'Dirección: '    + propiedad.direccion   : '',
+          mapsOkR               ? 'Mapa: '         + mapsOkR               : '',
+          propiedad.referencias ? 'Cómo llegar: '  + propiedad.referencias : '',
           'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
         ].filter(Boolean).join('\n');
         evento.setDescription(nuevaDescripcion);

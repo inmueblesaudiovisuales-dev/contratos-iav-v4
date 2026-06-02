@@ -325,10 +325,10 @@ export async function handleContratos(request, env, ctx, action) {
   }
 
   if (action === 'guardarProduccion') {
-    const { token, fotografiaLista, videoListo, recorridoListo, recorridoUrl } = await request.json();
+    const { token, fotografiaLista, videoListo, recorridoListo, recorridoUrl, tieneRecorrido } = await request.json();
     await run(db,
-      'UPDATE contratos SET fotografia_lista=?, video_listo=?, recorrido_listo=?, recorrido_url=? WHERE token=?',
-      [fotografiaLista ?? null, videoListo ?? null, recorridoListo ?? null, recorridoUrl || '', token]
+      'UPDATE contratos SET fotografia_lista=?, video_listo=?, recorrido_listo=?, recorrido_url=?, tiene_recorrido=? WHERE token=?',
+      [fotografiaLista ?? null, videoListo ?? null, recorridoListo ?? null, recorridoUrl || '', tieneRecorrido === false ? 0 : 1, token]
     );
     return ok({ ok: true });
   }

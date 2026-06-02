@@ -123,6 +123,27 @@
       text-align: center;
     }
 
+    /* DRIVE LINKS */
+    .drive-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .drive-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #F0FFF4; border: 1px solid #BBF7D0; border-radius: 8px;
+      padding: 8px 12px; font-size: 12px; font-weight: 600;
+      color: #166534; text-decoration: none;
+    }
+    .drive-link:hover { background: #DCFCE7; }
+
+    /* ENTREGABLES LISTA */
+    .entregables-lista { margin-top: 4px; }
+    .entregable-item {
+      font-size: 12px; font-weight: 500; color: var(--ink-1);
+      padding: 3px 0; display: flex; align-items: center; gap: 6px;
+    }
+    .entregable-item::before {
+      content: ''; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--gold); flex-shrink: 0;
+    }
+
     /* ADDONS */
     .addon-pill {
       display: inline-flex; align-items: center; gap: 5px;
@@ -131,37 +152,58 @@
       color: var(--ink-1); margin: 3px 4px 3px 0;
     }
 
-    /* ESTATUS PRODUCCION */
+    /* POST-PRODUCCION */
     .prod-row {
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 0; border-bottom: 1px solid var(--border);
     }
     .prod-row:last-child { border-bottom: none; }
-    .prod-label { font-size: 13px; font-weight: 600; }
-    .prod-right { display: flex; align-items: center; gap: 10px; }
+    .prod-row-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
     .prod-check {
-      width: 22px; height: 22px; border-radius: 50%;
-      border: 2px solid var(--border);
-      background: var(--page);
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid var(--border); background: var(--page);
       display: flex; align-items: center; justify-content: center;
       transition: background 0.2s, border-color 0.2s;
     }
     .prod-check.listo { background: var(--success); border-color: var(--success); }
-    .prod-check-icon { font-size: 13px; color: #fff; display: none; }
+    .prod-check-icon { font-size: 12px; color: #fff; display: none; font-weight: 700; }
     .prod-check.listo .prod-check-icon { display: block; }
+    .prod-label-wrap { min-width: 0; }
+    .prod-label { font-size: 13px; font-weight: 600; }
+    .prod-fecha { font-size: 10px; color: var(--ink-3); margin-top: 1px; }
     .btn-marcar {
       font-family: inherit; font-size: 11px; font-weight: 700;
       padding: 6px 14px; border-radius: 20px; cursor: pointer;
-      border: 1px solid; transition: filter 0.15s;
+      border: 1px solid; transition: filter 0.15s; flex-shrink: 0;
     }
-    .btn-marcar.pendiente {
-      background: var(--onyx); color: #fff; border-color: var(--onyx);
-    }
-    .btn-marcar.listo {
-      background: #F0FFF4; color: var(--success); border-color: #BBF7D0;
-    }
+    .btn-marcar.pendiente { background: var(--onyx); color: #fff; border-color: var(--onyx); }
+    .btn-marcar.listo { background: #F0FFF4; color: var(--success); border-color: #BBF7D0; }
     .btn-marcar:hover { filter: brightness(0.92); }
     .btn-marcar:disabled { opacity: 0.5; cursor: default; }
+
+    /* RECORRIDO URL INPUT */
+    .recorrido-url-wrap { padding: 8px 0 4px; }
+    .recorrido-url-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin-bottom: 6px; }
+    .recorrido-url-row { display: flex; gap: 8px; }
+    .recorrido-url-input {
+      flex: 1; font-family: inherit; font-size: 12px; font-weight: 500;
+      padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--page); color: var(--ink-1); min-width: 0;
+    }
+    .recorrido-url-input:focus { outline: none; border-color: var(--gold); }
+    .btn-guardar-url {
+      font-family: inherit; font-size: 11px; font-weight: 700;
+      padding: 8px 14px; border-radius: 8px; cursor: pointer;
+      background: var(--onyx); color: #fff; border: none; flex-shrink: 0;
+    }
+    .btn-guardar-url:disabled { opacity: 0.5; cursor: default; }
+
+    /* TOGGLE RECORRIDO */
+    .recorrido-toggle {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 0 4px; font-size: 11px; color: var(--ink-3); cursor: pointer;
+    }
+    .recorrido-toggle input { accent-color: var(--gold); width: 14px; height: 14px; cursor: pointer; }
 
     /* PROP TAB SELECTOR */
     .prop-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
@@ -184,7 +226,7 @@
       text-decoration: none; margin-bottom: 12px;
       font-size: 13px; font-weight: 600;
     }
-    .checklist-link span { font-size: 18px; }
+    .checklist-link-arrow { font-size: 18px; }
 
     /* LOADING / ERROR */
     .estado { text-align: center; padding: 60px 20px; color: var(--ink-2); font-size: 13px; }
@@ -195,6 +237,10 @@
       letter-spacing: 0.08em; color: var(--ink-3); margin: 12px 0 6px;
     }
     .prop-sec-titulo:first-child { margin-top: 0; }
+
+    /* FORM MSG */
+    .form-msg-inline { font-size: 11px; color: var(--success); margin-top: 4px; min-height: 16px; }
+    .form-msg-inline.error { color: #dc2626; }
   </style>
 </head>
 <body>
@@ -217,8 +263,26 @@
 
     <a id="checklist-link" class="checklist-link" href="#" target="_blank" rel="noopener">
       Abrir checklist de rodaje
-      <span>&#8599;</span>
+      <span class="checklist-link-arrow">&#8599;</span>
     </a>
+
+    <!-- Cliente -->
+    <div class="seccion">
+      <div class="sec-header">
+        <div class="sec-icon">&#128100;</div>
+        <div class="sec-titulo">Cliente</div>
+      </div>
+      <div class="sec-body">
+        <div class="dato-row">
+          <div class="dato-label">Nombre</div>
+          <div class="dato-val" id="cliente-nombre"></div>
+        </div>
+        <div class="dato-row" id="cliente-tel-row" style="display:none">
+          <div class="dato-label">Telefono</div>
+          <div class="dato-val" id="cliente-tel"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Propiedades (tabs si hay mas de una) -->
     <div class="seccion">
@@ -230,19 +294,19 @@
       <div id="prop-paneles"></div>
     </div>
 
-    <!-- Estatus de produccion -->
+    <!-- Post-produccion -->
     <div class="seccion">
       <div class="sec-header">
-        <div class="sec-icon">&#9989;</div>
-        <div class="sec-titulo">Estatus de produccion</div>
+        <div class="sec-icon">&#9999;</div>
+        <div class="sec-titulo">Post-produccion</div>
       </div>
       <div class="sec-body" id="prod-body"></div>
     </div>
 
-    <!-- Adicionales y entregables -->
+    <!-- Adicionales contratados -->
     <div id="addons-sec" class="seccion" style="display:none">
       <div class="sec-header">
-        <div class="sec-icon">&#10133;</div>
+        <div class="sec-icon">&#43;</div>
         <div class="sec-titulo">Adicionales contratados</div>
       </div>
       <div class="sec-body" id="addons-body"></div>
@@ -258,8 +322,11 @@ const BASE = 'https://contratos.inmueblesaudiovisuales.com';
 const FORMATO_LABEL = {
   vertical_nativo: 'Vertical (redes)',
   horizontal_nativo: 'Horizontal (web/YouTube)',
-  doble_nativo: 'Vertical + Horizontal'
+  doble_nativo: 'Vertical + Horizontal',
+  horizontal_recorte_vertical: 'Horizontal + recorte vertical'
 };
+
+let _data = null;
 
 function esc(s) {
   if (!s) return '';
@@ -273,6 +340,17 @@ function fmxnFecha(iso) {
   const [y,m,d] = iso.substring(0,10).split('-').map(Number);
   const fecha = new Date(y,m-1,d,12);
   return fecha.toLocaleDateString('es-MX', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+
+function fmtFechaCorta(iso) {
+  if (!iso) return '';
+  const [y,m,d] = iso.substring(0,10).split('-').map(Number);
+  return new Date(y,m-1,d,12).toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' });
+}
+
+function splitEntregables(txt) {
+  if (!txt) return [];
+  return txt.split(/\s*[·\n|]\s*/).map(s => s.trim()).filter(Boolean);
 }
 
 const params = new URLSearchParams(location.search);
@@ -289,6 +367,7 @@ async function cargar() {
     const res = await fetch(API + '/obtenerEquipo?token=' + encodeURIComponent(TOKEN));
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Error al cargar');
+    _data = data;
     renderApp(data);
   } catch (e) {
     document.getElementById('estado').textContent = 'Error: ' + e.message;
@@ -305,6 +384,15 @@ function renderApp(data) {
 
   document.getElementById('checklist-link').href =
     BASE + '/checklist.html?token=' + encodeURIComponent(TOKEN);
+
+  // Cliente
+  document.getElementById('cliente-nombre').textContent = data.nombreCliente || '—';
+  if (data.telefonoCliente) {
+    const telRow = document.getElementById('cliente-tel-row');
+    const telEl  = document.getElementById('cliente-tel');
+    telEl.innerHTML = '<a href="tel:' + esc(data.telefonoCliente) + '">' + esc(data.telefonoCliente) + '</a>';
+    telRow.style.display = '';
+  }
 
   // Propiedades
   const props = data.propiedades || [];
@@ -335,13 +423,12 @@ function renderApp(data) {
     panelesEl.appendChild(div);
   });
 
-  // Estatus de produccion
-  renderProduccion(data);
+  // Post-produccion
+  renderPostProduccion(data);
 
   // Adicionales
   if (data.extrasAcordados && data.extrasAcordados.length) {
-    const addSec = document.getElementById('addons-sec');
-    addSec.style.display = '';
+    document.getElementById('addons-sec').style.display = '';
     document.getElementById('addons-body').innerHTML =
       data.extrasAcordados.map(a =>
         '<span class="addon-pill">' + esc(a.nombre) + '</span>'
@@ -354,22 +441,33 @@ function renderApp(data) {
 function renderPropiedad(p) {
   let html = '';
 
-  // Fecha y hora
+  // Sesion
   html += '<div class="prop-sec-titulo">Sesion</div>';
   html += '<div class="dato-row"><div class="dato-label">Fecha</div><div class="dato-val">' + esc(fmxnFecha(p.fechaSesion)) + '</div></div>';
   if (p.horaSesion) html += '<div class="dato-row"><div class="dato-label">Hora</div><div class="dato-val">' + esc(p.horaSesion) + '</div></div>';
-  if (p.tipo) html += '<div class="dato-row"><div class="dato-label">Tipo</div><div class="dato-val">' + esc(p.tipo) + '</div></div>';
-  if (p.paquete) html += '<div class="dato-row"><div class="dato-label">Paquete</div><div class="dato-val">' + esc(p.paquete) + '</div></div>';
+  if (p.tipo)       html += '<div class="dato-row"><div class="dato-label">Tipo</div><div class="dato-val">' + esc(p.tipo) + '</div></div>';
+  if (p.paquete)    html += '<div class="dato-row"><div class="dato-label">Paquete</div><div class="dato-val">' + esc(p.paquete) + '</div></div>';
   if (p.formatoVideo) html += '<div class="dato-row"><div class="dato-label">Formato video</div><div class="dato-val">' + esc(FORMATO_LABEL[p.formatoVideo] || p.formatoVideo) + '</div></div>';
+
+  // Entregables
+  const items = splitEntregables(p.entregables);
+  if (items.length) {
+    html += '<div class="prop-sec-titulo">Entregables</div>';
+    html += '<div class="entregables-lista">';
+    items.forEach(item => {
+      html += '<div class="entregable-item">' + esc(item) + '</div>';
+    });
+    html += '</div>';
+  }
 
   // Ubicacion
   html += '<div class="prop-sec-titulo">Ubicacion</div>';
   if (p.direccion) {
-    let mapsHref = p.linkMaps || ('https://maps.google.com/?q=' + encodeURIComponent(p.direccion));
+    const mapsHref = p.linkMaps || ('https://maps.google.com/?q=' + encodeURIComponent(p.direccion));
     html += '<div class="dato-row"><div class="dato-label">Direccion</div><div class="dato-val">' +
       esc(p.direccion) + '<br><a href="' + esc(mapsHref) + '" target="_blank" rel="noopener">Ver en Google Maps &rarr;</a></div></div>';
   }
-  if (p.referencias) html += '<div class="dato-row"><div class="dato-label">Como llegar</div><div class="dato-val">' + esc(p.referencias) + '</div></div>';
+  if (p.referencias)      html += '<div class="dato-row"><div class="dato-label">Como llegar</div><div class="dato-val">' + esc(p.referencias) + '</div></div>';
   if (p.sobreLaPropiedad) html += '<div class="dato-row"><div class="dato-label">Notas</div><div class="dato-val">' + esc(p.sobreLaPropiedad) + '</div></div>';
 
   // Acceso / caseta
@@ -378,7 +476,7 @@ function renderPropiedad(p) {
     html += renderAcceso(p.datosAcceso);
   }
 
-  // Archivos
+  // Archivos de referencia
   const archivos = [];
   if (p.fachadaUrl) archivos.push({ url: p.fachadaUrl, label: 'QR / Referencia' });
   if (archivos.length) {
@@ -397,9 +495,18 @@ function renderPropiedad(p) {
     html += '</div>';
   }
 
-  if (p.entregables) {
-    html += '<div class="prop-sec-titulo">Entregables</div>';
-    html += '<div class="dato-val" style="font-size:12px;color:var(--ink-2)">' + esc(p.entregables) + '</div>';
+  // Carpetas Drive
+  const links = [];
+  if (p.carpetaEntregablesId) links.push({ id: p.carpetaEntregablesId, label: 'Carpeta entregables' });
+  if (p.carpetaControlId)     links.push({ id: p.carpetaControlId,     label: 'Carpeta control interno' });
+  if (links.length) {
+    html += '<div class="prop-sec-titulo">Drive</div>';
+    html += '<div class="drive-links">';
+    links.forEach(l => {
+      const url = 'https://drive.google.com/drive/folders/' + encodeURIComponent(l.id);
+      html += '<a href="' + esc(url) + '" target="_blank" rel="noopener" class="drive-link">&#128194; ' + esc(l.label) + '</a>';
+    });
+    html += '</div>';
   }
 
   return html;
@@ -417,19 +524,19 @@ function renderAcceso(ac) {
   };
   let html = '<div class="acceso-bloque">';
   const filas = [];
-  if (ac.tipoEdificio) filas.push(['Tipo de inmueble', ac.tipoEdificio]);
-  if (ac.metodoAcceso) filas.push(['Metodo de acceso', METODO_LABEL[ac.metodoAcceso] || ac.metodoAcceso]);
-  if (ac.puntoEncuentro) filas.push(['Punto de encuentro', PUNTO_LABEL[ac.puntoEncuentro] || ac.puntoEncuentro]);
-  if (ac.puntoEncuentroDetalle) filas.push(['Detalle punto', ac.puntoEncuentroDetalle]);
+  if (ac.tipoEdificio)          filas.push(['Tipo de inmueble',        ac.tipoEdificio]);
+  if (ac.metodoAcceso)          filas.push(['Metodo de acceso',        METODO_LABEL[ac.metodoAcceso] || ac.metodoAcceso]);
+  if (ac.puntoEncuentro)        filas.push(['Punto de encuentro',      PUNTO_LABEL[ac.puntoEncuentro] || ac.puntoEncuentro]);
+  if (ac.puntoEncuentroDetalle) filas.push(['Detalle punto',           ac.puntoEncuentroDetalle]);
   if (ac.contactoAccesoTipo === 'otro' && ac.contactoAccesoNombre) {
     filas.push(['Contacto de acceso', ac.contactoAccesoNombre + (ac.contactoAccesoTelefono ? ' — ' + ac.contactoAccesoTelefono : '')]);
   } else if (ac.contactoAccesoTipo === 'yo') {
     filas.push(['Contacto de acceso', 'El mismo cliente']);
   }
-  if (ac.indicacionesGuardia) filas.push(['Indicaciones para guardia', ac.indicacionesGuardia]);
-  if (ac.estacionamiento) filas.push(['Estacionamiento', ac.estacionamiento]);
-  if (ac.restricciones) filas.push(['Restricciones', ac.restricciones]);
-  if (ac.comentariosAcceso) filas.push(['Comentarios', ac.comentariosAcceso]);
+  if (ac.indicacionesGuardia)  filas.push(['Indicaciones para guardia', ac.indicacionesGuardia]);
+  if (ac.estacionamiento)      filas.push(['Estacionamiento',           ac.estacionamiento]);
+  if (ac.restricciones)        filas.push(['Restricciones',             ac.restricciones]);
+  if (ac.comentariosAcceso)    filas.push(['Comentarios',               ac.comentariosAcceso]);
 
   filas.forEach(([label, val]) => {
     html += '<div class="acceso-item"><strong>' + esc(label) + ':</strong> ' + esc(val) + '</div>';
@@ -438,68 +545,90 @@ function renderAcceso(ac) {
   return html;
 }
 
-function renderProduccion(data) {
-  const props = data.propiedades || [];
+function renderPostProduccion(data) {
+  const fotosListo  = !!(data.fotografiaLista && String(data.fotografiaLista).trim());
+  const videoListo  = !!(data.videoListo      && String(data.videoListo).trim());
+  const recListo    = !!(data.recorridoListo  && String(data.recorridoListo).trim());
+  const tieneRec    = data.tieneRecorrido !== 0;
+
   let html = '';
-  props.forEach(p => {
-    const titulo = props.length > 1 ? 'Prop. ' + p.numPropiedad + ' — ' : '';
 
-    // Fotos
-    const fotosListas = p.fotosListas === 1;
-    html += '<div class="prod-row">' +
-      '<div class="prod-label">' + esc(titulo) + 'Fotos listas</div>' +
-      '<div class="prod-right">' +
-        '<div class="prod-check' + (fotosListas ? ' listo' : '') + '" id="chk-fotos-' + p.numPropiedad + '">' +
-          '<span class="prod-check-icon">&#10003;</span>' +
-        '</div>' +
-        '<button class="btn-marcar ' + (fotosListas ? 'listo' : 'pendiente') + '" ' +
-          'id="btn-fotos-' + p.numPropiedad + '" ' +
-          'onclick="toggleListo(' + p.numPropiedad + ', \'fotos\')">' +
-          (fotosListas ? 'Listas' : 'Marcar listas') +
-        '</button>' +
-      '</div>' +
-    '</div>';
+  // Fotografía
+  html += prodRow('fotos', fotosListo, 'Fotografía lista', data.fotografiaLista);
+  // Video
+  html += prodRow('video', videoListo, 'Video listo', data.videoListo);
 
-    // Video (solo si el paquete incluye video)
-    const tieneVideo = p.paquete && /video|combo/i.test(p.paquete);
-    if (tieneVideo) {
-      const videoListo = p.videoListo === 1;
-      html += '<div class="prod-row">' +
-        '<div class="prod-label">' + esc(titulo) + 'Video listo</div>' +
-        '<div class="prod-right">' +
-          '<div class="prod-check' + (videoListo ? ' listo' : '') + '" id="chk-video-' + p.numPropiedad + '">' +
-            '<span class="prod-check-icon">&#10003;</span>' +
-          '</div>' +
-          '<button class="btn-marcar ' + (videoListo ? 'listo' : 'pendiente') + '" ' +
-            'id="btn-video-' + p.numPropiedad + '" ' +
-            'onclick="toggleListo(' + p.numPropiedad + ', \'video\')">' +
-            (videoListo ? 'Listo' : 'Marcar listo') +
-          '</button>' +
-        '</div>' +
-      '</div>';
-    }
-  });
-  document.getElementById('prod-body').innerHTML = html || '<div style="color:var(--ink-2);font-size:13px">Sin propiedades</div>';
+  // Toggle recorrido
+  html += '<div class="recorrido-toggle">' +
+    '<input type="checkbox" id="toggle-recorrido" ' + (tieneRec ? 'checked' : '') + ' onchange="toggleRecorrido(this.checked)">' +
+    '<label for="toggle-recorrido">Incluye recorrido 360</label>' +
+  '</div>';
+
+  // Recorrido (condicional)
+  html += '<div id="recorrido-wrap" style="' + (tieneRec ? '' : 'display:none') + '">';
+  html += prodRow('recorrido', recListo, 'Recorrido 360 listo', data.recorridoListo);
+  // URL del recorrido
+  html += '<div class="recorrido-url-wrap">';
+  html += '<div class="recorrido-url-label">URL del recorrido virtual</div>';
+  html += '<div class="recorrido-url-row">';
+  html += '<input type="url" class="recorrido-url-input" id="recorrido-url-input" placeholder="https://my.matterport.com/..." value="' + esc(data.recorridoUrl || '') + '">';
+  html += '<button class="btn-guardar-url" onclick="guardarRecorridoUrl()">Guardar</button>';
+  html += '</div>';
+  html += '<div class="form-msg-inline" id="msg-recorrido-url"></div>';
+  html += '</div>';
+  html += '</div>';
+
+  document.getElementById('prod-body').innerHTML = html;
 }
 
-async function toggleListo(numProp, tipo) {
-  const btnId = 'btn-' + tipo + '-' + numProp;
-  const chkId = 'chk-' + tipo + '-' + numProp;
-  const btn = document.getElementById(btnId);
-  const chk = document.getElementById(chkId);
+function prodRow(tipo, listo, label, fechaVal) {
+  const fecha = listo && fechaVal ? fmtFechaCorta(fechaVal) : '';
+  return '<div class="prod-row">' +
+    '<div class="prod-row-left">' +
+      '<div class="prod-check' + (listo ? ' listo' : '') + '" id="chk-' + tipo + '">' +
+        '<span class="prod-check-icon">&#10003;</span>' +
+      '</div>' +
+      '<div class="prod-label-wrap">' +
+        '<div class="prod-label">' + esc(label) + '</div>' +
+        (fecha ? '<div class="prod-fecha">' + esc(fecha) + '</div>' : '') +
+      '</div>' +
+    '</div>' +
+    '<button class="btn-marcar ' + (listo ? 'listo' : 'pendiente') + '" ' +
+      'id="btn-' + tipo + '" onclick="toggleProd(\'' + tipo + '\')">' +
+      (listo ? 'Listo' : 'Marcar listo') +
+    '</button>' +
+  '</div>';
+}
+
+async function toggleRecorrido(checked) {
+  try {
+    const wrap = document.getElementById('recorrido-wrap');
+    if (wrap) wrap.style.display = checked ? '' : 'none';
+    await fetch(API + '/marcarProduccion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: TOKEN, tieneRecorrido: checked })
+    });
+    if (_data) _data.tieneRecorrido = checked ? 1 : 0;
+  } catch(e) { /* silencioso */ }
+}
+
+async function toggleProd(tipo) {
+  const btn = document.getElementById('btn-' + tipo);
+  const chk = document.getElementById('chk-' + tipo);
   if (!btn) return;
 
   const eraListo = btn.classList.contains('listo');
   const nuevoValor = !eraListo;
-
   btn.disabled = true;
 
   try {
-    const body = { token: TOKEN, numPropiedad: numProp };
-    if (tipo === 'fotos') body.fotosListas = nuevoValor;
-    else body.videoListo = nuevoValor;
+    const body = { token: TOKEN };
+    if (tipo === 'fotos')     body.fotografiaLista = nuevoValor;
+    if (tipo === 'video')     body.videoListo      = nuevoValor;
+    if (tipo === 'recorrido') body.recorridoListo  = nuevoValor;
 
-    const res = await fetch(API + '/marcarListos', {
+    const res = await fetch(API + '/marcarProduccion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -509,15 +638,49 @@ async function toggleListo(numProp, tipo) {
 
     if (nuevoValor) {
       btn.classList.replace('pendiente', 'listo');
-      btn.textContent = tipo === 'fotos' ? 'Listas' : 'Listo';
+      btn.textContent = 'Listo';
       chk.classList.add('listo');
+      const wrap = btn.closest('.prod-row').querySelector('.prod-label-wrap');
+      if (wrap) {
+        let fd = wrap.querySelector('.prod-fecha');
+        if (!fd) { fd = document.createElement('div'); fd.className = 'prod-fecha'; wrap.appendChild(fd); }
+        fd.textContent = new Date().toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' });
+      }
     } else {
       btn.classList.replace('listo', 'pendiente');
-      btn.textContent = tipo === 'fotos' ? 'Marcar listas' : 'Marcar listo';
+      btn.textContent = 'Marcar listo';
       chk.classList.remove('listo');
+      const fd = btn.closest('.prod-row').querySelector('.prod-fecha');
+      if (fd) fd.textContent = '';
     }
   } catch (e) {
     alert('Error al guardar: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function guardarRecorridoUrl() {
+  const input = document.getElementById('recorrido-url-input');
+  const msg   = document.getElementById('msg-recorrido-url');
+  const btn   = document.querySelector('.btn-guardar-url');
+  if (!input) return;
+
+  btn.disabled = true;
+  if (msg) { msg.textContent = ''; msg.className = 'form-msg-inline'; }
+
+  try {
+    const res = await fetch(API + '/marcarProduccion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: TOKEN, recorridoUrl: input.value.trim() })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Error');
+    if (msg) { msg.textContent = 'Guardado.'; }
+    setTimeout(() => { if (msg) msg.textContent = ''; }, 3000);
+  } catch (e) {
+    if (msg) { msg.textContent = 'Error: ' + e.message; msg.className = 'form-msg-inline error'; }
   } finally {
     btn.disabled = false;
   }

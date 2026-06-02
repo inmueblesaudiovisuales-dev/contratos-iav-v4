@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 33 — Bottom nav rediseño: 4 items iguales)
+> Última actualización: 2026-06-02 (Ronda 34 — Mejoras portal equipo: post-produccion, cliente, entregables, Drive, Calendar simplificado)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -328,6 +328,26 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 34 — Mejoras portal equipo + Calendar simplificado (2026-06-02)
+
+> **Migración D1 requerida — ejecutar manualmente:**
+> ```bash
+> wrangler d1 execute contratos-iav-v4 --remote --command="ALTER TABLE contratos ADD COLUMN tiene_recorrido INTEGER DEFAULT 1"
+> ```
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R34-01 | `frontend/equipo.html` | Sección "Cliente" con nombre y teléfono (link tel:). Entregables formateados como lista (split por `·`, `\n`, `\|`). Links a carpetas Drive (Entregables + Control Interno) por propiedad. |
+| R34-02 | `frontend/equipo.html` | Sección "Post-produccion" a nivel contrato: Fotografía lista, Video listo, Recorrido 360 listo (toggle + campo URL). Toggle "Incluye recorrido 360" que muestra/oculta la sección y persiste en D1. Llama `POST /api/marcarProduccion`. |
+| R34-03 | `worker/src/routes/equipo.js` | `obtenerEquipo` expone `fotografiaLista`, `videoListo`, `recorridoListo`, `recorridoUrl`, `tieneRecorrido` (del contrato) y `carpetaControlId`, `carpetaEntregablesId` (por propiedad). Acción `marcarProduccion` reemplaza `marcarListos`: actualiza columnas de post-produccion en `contratos` por token (sin admin key). |
+| R34-04 | `worker/src/index.js` | `marcarListos` reemplazado por `marcarProduccion` en `RUTAS_EQUIPO`. |
+| R34-05 | `worker/src/routes/contratos.js` | `guardarProduccion` agrega `tiene_recorrido` al UPDATE. |
+| R34-06 | `frontend/admin.html` | Tab Producción: checkbox "Incluye recorrido 360 en este contrato" que controla visibilidad de los campos de recorrido. Función `toggleRecorridoAdmin`. `tieneRecorrido` incluido en payload de `guardarProduccion`. |
+| R34-07 | `adapter/AdapterScript4_v1.js` | 2026-06-02 14:31:23 CST: Descripcion de eventos Calendar simplificada en `procesarFirma`, `primerAbono` y `reagendarPropiedad`. Solo quedan: tipo/paquete, Dirección, Mapa, Cómo llegar, Portal de equipo. Eliminados: Orientación, Entregables, Foto fachada, Perímetro, Notas, Comentarios, bloque acceso, PDF Referencias, Carpeta Drive, Checklist. Requiere despliegue manual en Apps Script. |
+| R34-08 | `MASTER_V4.md` | Documenta R34. |
+
+---
 
 ### Ronda 33 — Bottom nav rediseño: 4 items iguales (2026-06-02)
 
