@@ -152,6 +152,7 @@ function procesarFirma(body) {
           urlPDF                  ? 'PDF Referencias: '         + urlPDF                    : '',
           carpetaUrl              ? 'Carpeta Drive: '           + carpetaUrl                : '',
           'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
+          'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
         ].filter(Boolean).join('\n');
         var titulo = folio + ' IA ' + contrato.nombre_cliente + ' — ' + (prop.paquete || contrato.paquete_base || '');
         var evento = CalendarApp.getDefaultCalendar().createEvent(titulo, fechaEv, fin,
@@ -419,6 +420,7 @@ function primerAbono(body) {
         urlPDF                ? 'PDF Referencias: '        + urlPDF                               : '',
         carpetaUrl            ? 'Carpeta Drive: '          + carpetaUrl                           : '',
         'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
+        'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
       ].filter(Boolean).join('\n');
 
       var titulo = (folio || token) + ' IA ' + contrato.nombre_cliente + ' — ' + (prop.paquete || contrato.paquete_base || '');
@@ -796,6 +798,7 @@ function reagendarPropiedad(body) {
           urlPDFNuevo                  ? 'PDF Referencias: '         + urlPDFNuevo                    : '',
           propiedad.carpeta_control_id ? 'Carpeta Drive: '           + (function() { try { return DriveApp.getFolderById(propiedad.carpeta_control_id).getUrl(); } catch(e) { return ''; } })() : '',
           'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
+          'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
         ].filter(Boolean).join('\n');
         evento.setDescription(nuevaDescripcion);
       }

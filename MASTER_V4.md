@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 30 — Rediseño UI bloque acceso/caseta en portal)
+> Última actualización: 2026-06-02 (Ronda 31 — Portal de equipo equipo.html)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -23,6 +23,7 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
 |--------|-----|
 | Admin | `https://contratos.inmueblesaudiovisuales.com/admin.html` |
 | Portal del cliente | `https://contratos.inmueblesaudiovisuales.com/portal.html?token=<token>` |
+| Portal de equipo | `https://contratos.inmueblesaudiovisuales.com/equipo.html?token=<token>` |
 | Checklist de rodaje | `https://contratos.inmueblesaudiovisuales.com/checklist.html?token=<token>` |
 | Revisión de video | `https://contratos.inmueblesaudiovisuales.com/revision.html?token=<token>` |
 | API base | `https://contratos.inmueblesaudiovisuales.com/api/<accion>` |
@@ -57,6 +58,7 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
 │   ├── admin.html           — panel de administración
 │   ├── portal.html          — portal del cliente (firma, pagos, reseña, revisión)
 │   ├── checklist.html       — checklist de rodaje
+│   ├── equipo.html          — portal de equipo (solo lectura + estatus produccion) (R31)
 │   └── revision.html        — página de notas de revisión de video (R18)
 └── worker/
     ├── wrangler.toml        — configuración del Worker
@@ -79,7 +81,8 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
             ├── stats.js     — métricas por periodo
             ├── checklist.js — obtenerChecklist, guardarChecklist
             ├── archivos.js  — subirArchivo, subirArchivoAdmin
-            └── revision.js  — obtenerRevision, guardarRevision (R18)
+            ├── revision.js  — obtenerRevision, guardarRevision (R18)
+            └── equipo.js    — obtenerEquipo, marcarListos (R31)
 ```
 
 ---
@@ -289,7 +292,7 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 ## Próximo trabajo sugerido
 
-### Portal de producción para el equipo (R31 — pendiente)
+### Portal de producción para el equipo (R31 — completado)
 
 Reemplazar el PDF que se genera desde Drive por una página web dinámica accesible con token. Objetivo: que el fotógrafo/camarógrafo llegue el día de la sesión y tenga toda la información sin depender de un PDF.
 
@@ -308,6 +311,28 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 31 — Portal de equipo equipo.html (2026-06-02)
+
+> **Migración D1 requerida — ejecutar manualmente:**
+> ```bash
+> wrangler d1 execute contratos-iav-v4 --remote --command="ALTER TABLE propiedades ADD COLUMN fotos_listas INTEGER DEFAULT 0"
+> wrangler d1 execute contratos-iav-v4 --remote --command="ALTER TABLE propiedades ADD COLUMN video_listo INTEGER DEFAULT 0"
+> ```
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R31-01 | `frontend/equipo.html` | Nueva página de solo lectura para el equipo (fotógrafo/camarógrafo). Accesible con el mismo token del portal (`equipo.html?token=<token>`). Muestra: fecha/hora/tipo/paquete/formato de video, dirección + enlace Google Maps, cómo llegar, bloque de acceso/caseta estructurado (método, contacto, indicaciones para guardia, restricciones), archivos de referencia (QR/fachada), entregables, add-ons acordados, link al checklist. Tabs por propiedad si hay más de una. |
+| R31-02 | `frontend/equipo.html` | Sección "Estatus de produccion" con botones por propiedad: "Marcar fotos listas" y "Marcar video listo" (solo si el paquete incluye video). Llaman a `POST /api/marcarListos` y actualizan el DOM sin recargar. |
+| R31-03 | `worker/src/routes/equipo.js` | Nueva ruta. `obtenerEquipo`: devuelve datos del contrato, propiedades con `datosAcceso` del JSON de `datos_especificos`, add-ons acordados y estatus de produccion (`fotosListas`, `videoListo`). `marcarListos`: actualiza columnas `fotos_listas` / `video_listo` en `propiedades`. |
+| R31-04 | `worker/src/index.js` | Importa `handleEquipo`; agrega `RUTAS_EQUIPO = ['obtenerEquipo','marcarListos']`; enruta al handler. |
+| R31-05 | `frontend/admin.html` | Botón "Equipo" en la barra de acciones del panel lateral (junto a Portal). Link `equipo.html?token=<token>`. |
+| R31-06 | `frontend/admin.html` | Bloque "Portal de equipo" con link copiable + botón WhatsApp en la sección de links del panel lateral (junto al bloque de Checklist). |
+| R31-07 | `frontend/admin.html` | Constante `EQUIPO_BASE` agregada. |
+| R31-08 | `adapter/AdapterScript4_v1.js` | Línea `'Portal de equipo: ...'` agregada en la descripción de eventos Calendar de `procesarFirma`, `primerAbono` y `reagendarPropiedad`. **Requiere despliegue manual en Apps Script.** 2026-06-02: funciones `procesarFirma`, `primerAbono`, `reagendarPropiedad` en Calendar. |
+| R31-09 | `MASTER_V4.md` | Documenta R31. URL `equipo.html` agregada a tabla de URLs. |
+
+---
 
 ### Ronda 30 — Rediseño UI bloque acceso/caseta en portal (2026-06-02)
 

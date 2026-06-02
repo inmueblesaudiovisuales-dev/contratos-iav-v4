@@ -6,6 +6,7 @@ import { handleStats } from './routes/stats.js';
 import { handleChecklist } from './routes/checklist.js';
 import { handleArchivos } from './routes/archivos.js';
 import { handleRevision } from './routes/revision.js';
+import { handleEquipo } from './routes/equipo.js';
 import { syncToSheets } from './cron.js';
 import { err } from './auth.js';
 
@@ -21,7 +22,7 @@ const RUTAS_CONTRATOS = [
   'marcarSesionCompletada','guardarProduccion','guardarEntrega','revocarEntrega',
   'guardarCaracteristicas','reagendarPropiedad','exportarCSV','enviarRecordatorio',
   'guardarNotaPropiedad','actualizarCarpeta','actualizarPdfUrl','actualizarCalendarEvent',
-  'actualizarExpress'
+  'actualizarExpress','guardarFormatoPropiedad'
 ];
 
 const RUTAS_PORTAL = ['obtenerPortal','firmaCliente','guardarResena','guardarConfiguracion'];
@@ -30,6 +31,7 @@ const RUTAS_PAQUETES = ['listarPaquetes','listarPaquetesTodos','crearPaquete','e
 const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];
 const RUTAS_ARCHIVOS = ['subirArchivo','subirArchivoAdmin'];
 const RUTAS_REVISION = ['obtenerRevision','guardarRevision'];
+const RUTAS_EQUIPO   = ['obtenerEquipo','marcarListos'];
 
 export default {
   async fetch(request, env, ctx) {
@@ -69,6 +71,8 @@ export default {
       response = await handleArchivos(request, env, ctx, action);
     } else if (RUTAS_REVISION.includes(action)) {
       response = await handleRevision(request, env, ctx, action);
+    } else if (RUTAS_EQUIPO.includes(action)) {
+      response = await handleEquipo(request, env, ctx, action);
     } else {
       response = err('Acción no encontrada', 404);
     }

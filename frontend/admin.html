@@ -1989,6 +1989,7 @@
 <script>
 const API         = 'https://contratos.inmueblesaudiovisuales.com/api';
 const PORTAL_BASE = 'https://contratos.inmueblesaudiovisuales.com/portal.html';
+const EQUIPO_BASE = 'https://contratos.inmueblesaudiovisuales.com/equipo.html';
 const PASSWORD    = 'framedock';
 
 let paquetes       = [];
@@ -3121,6 +3122,9 @@ function renderPanel(data) {
       <a class="panel-action-btn" href="${esc(urlPortal)}" target="_blank" rel="noopener">
         <i class="ti ti-world"></i> Portal
       </a>
+      <a class="panel-action-btn" href="${esc(EQUIPO_BASE + '?token=' + tok)}" target="_blank" rel="noopener">
+        <i class="ti ti-camera"></i> Equipo
+      </a>
       <button class="panel-action-btn" onclick="abrirModalUpsell()">
         <i class="ti ti-plus"></i> Extra
       </button>
@@ -3328,6 +3332,16 @@ function renderPanel(data) {
         </a>
         <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
            href="${'https://wa.me/?' + new URLSearchParams({ text: 'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener">
+          <i class="ti ti-brand-whatsapp"></i> Compartir
+        </a>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+        <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
+           href="${EQUIPO_BASE + '?token=' + esc(c.Token)}" target="_blank" rel="noopener">
+          <i class="ti ti-camera"></i> Portal de equipo
+        </a>
+        <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
+           href="${'https://wa.me/?' + new URLSearchParams({ text: 'Portal de sesion: ' + EQUIPO_BASE + '?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener">
           <i class="ti ti-brand-whatsapp"></i> Compartir
         </a>
       </div>
