@@ -5221,7 +5221,7 @@ function crearProspecto() {
   }
   msg.style.color = 'var(--ink-3)'; msg.textContent = 'Agendando…';
 
-  apiPost('crearProspecto', { nombre:nombre, telefono:telefono, interes:interes, fechaLlamada:fecha, horaLlamada:hora, notas:notas })
+  apiPost({ action:'crearProspecto', nombre:nombre, telefono:telefono, interes:interes, fechaLlamada:fecha, horaLlamada:hora, notas:notas })
     .then(function(r) {
       if (r.ok) {
         msg.style.color = '#1E8449'; msg.textContent = '¡Agendado! Evento creado en Calendar.';
@@ -5312,7 +5312,7 @@ function cargarProspectos() {
 }
 
 function cambiarEstatusProspecto(id, estatus) {
-  apiPost('actualizarEstatusProspecto', { id: id, estatus: estatus })
+  apiPost({ action:'actualizarEstatusProspecto', id: id, estatus: estatus })
     .then(function(r) { if (r.ok) cargarProspectos(); });
 }
 
