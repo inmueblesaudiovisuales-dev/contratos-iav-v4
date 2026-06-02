@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-01 (Ronda 15 — Rediseño tab Contratos + Radar de Sesiones)  
+> Última actualización: 2026-06-02 (Ronda 26 — Picker de formato mejorado + control desde admin)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -18,6 +18,7 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
 | Admin | `https://contratos.inmueblesaudiovisuales.com/admin.html` |
 | Portal del cliente | `https://contratos.inmueblesaudiovisuales.com/portal.html?token=<token>` |
 | Checklist de rodaje | `https://contratos.inmueblesaudiovisuales.com/checklist.html?token=<token>` |
+| Revisión de video | `https://contratos.inmueblesaudiovisuales.com/revision.html?token=<token>` |
 | API base | `https://contratos.inmueblesaudiovisuales.com/api/<accion>` |
 
 ---
@@ -42,13 +43,15 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
 06. VERSION 4.0/
 ├── ARRANQUE.md              — guía de despliegue inicial (ya ejecutada)
 ├── MASTER_V4.md             — este archivo
+├── MASTER_AUTOMATIZACION.md — plan de automatización WhatsApp (3 fases)
 ├── PROMPT_DEEPSEEK_BUGS.md  — historial de bugs
 ├── adapter/
 │   └── AdapterScript4_v1.js — Apps Script desplegado en script.google.com
 ├── frontend/
-│   ├── admin.html           — panel de administración (~3557 líneas)
-│   ├── portal.html          — portal del cliente (firma, pagos, reseña) (~2231 líneas)
-│   └── checklist.html       — checklist de rodaje
+│   ├── admin.html           — panel de administración
+│   ├── portal.html          — portal del cliente (firma, pagos, reseña, revisión)
+│   ├── checklist.html       — checklist de rodaje
+│   └── revision.html        — página de notas de revisión de video (R18)
 └── worker/
     ├── wrangler.toml        — configuración del Worker
     ├── schema.sql           — estructura de D1 (referencia, ya aplicado)
@@ -59,7 +62,7 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
         ├── auth.js          — requireAdmin(), ok(), err()
         ├── db.js            — helpers D1: query(), queryOne(), run(), batch()
         ├── tokens.js        — crearTokenPortal(), crearTokenConfigurar(), refrescarExpiry(), marcarUsado()
-        ├── folios.js        — generarFolio() → "IAV-YYMM.DD"
+        ├── folios.js        — generarFolio() base + asignarFolio() → "IAV-YYMM.DD-A" (con sufijo letra)
         ├── google.js        — callAdapter() async, callAdapterSync()
         ├── cron.js          — syncToSheets() para backup horario
         └── routes/
@@ -69,7 +72,8 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
             ├── paquetes.js  — CRUD catálogo de paquetes
             ├── stats.js     — métricas por periodo
             ├── checklist.js — obtenerChecklist, guardarChecklist
-            └── archivos.js  — subirArchivo, subirArchivoAdmin
+            ├── archivos.js  — subirArchivo, subirArchivoAdmin
+            └── revision.js  — obtenerRevision, guardarRevision (R18)
 ```
 
 ---
@@ -130,12 +134,13 @@ Los archivos de `frontend/` se suben automáticamente como assets estáticos ví
 
 | Tabla | Descripción |
 |-------|-------------|
-| `contratos` | Un registro por contrato. PK: `token` (UUID). |
+| `contratos` | Un registro por contrato. PK: `token` (UUID). Columna `entrega_express INTEGER DEFAULT 0` agregada en R17. |
 | `tokens` | Tokens de portal y configurar. FK: `contrato_id` → `contratos.token`. |
 | `abonos` | Pagos. FK: `contrato_token` → `contratos.token`. |
-| `propiedades` | Una o más propiedades por contrato. PK compuesta: `(contrato_token, num_propiedad)`. |
+| `propiedades` | Una o más propiedades por contrato. PK compuesta: `(contrato_token, num_propiedad)`. Columnas `formato_video TEXT DEFAULT 'vertical_nativo'` y `requiere_acceso INTEGER DEFAULT 0` agregadas en R18. |
 | `paquetes` | Catálogo. PK: `clave` (ej. `RES-COMBO`). |
 | `checklist` | Un checklist por contrato. PK: `contrato_token`. |
+| `revisiones_video` | Notas de revisión de video por contrato. FK: `contrato_id` → `contratos.token`. Columnas: `id`, `contrato_id`, `minuto_segundo`, `descripcion_ajuste`, `fecha`. Agregada en R18. |
 
 ### Nota importante — D1 no soporta foreign keys
 `PRAGMA foreign_keys` es ignorado en D1. Las cascadas de eliminación están implementadas manualmente en código con `db.batch()` en orden correcto: checklist → propiedades → abonos → tokens → contratos.
@@ -212,6 +217,7 @@ Además, el admin permite crear **add-ons personalizados** (nombre + precio libr
 | Sesión reagendada | Cliente | Apps Script async |
 | Material entregado | Cliente | Apps Script async |
 | Reseña nueva | Bruno | Apps Script async |
+| Notas de revisión de video | Bruno | Apps Script async (`notificarRevision`) |
 
 > Bruno NO recibe correo al crear ni al firmar contratos — ve el estado en el admin.
 > El cliente NO recibe correo al crear el contrato. El primer correo es el PDF cuando firma.
@@ -239,6 +245,7 @@ El Worker llama al adapter con `POST` y un JSON `{ action: '...', ...datos }`. L
 | `subirArchivoAdmin` | Sube archivo a carpeta (desde admin) |
 | `syncBackup` | Sobreescribe tabs en Sheets con datos de D1 |
 | `obtenerLogoCliente` | Busca logo precargado del cliente en Drive |
+| `notificarRevision` | Correo HTML a Bruno con tabla de timecodes y notas de revisión del cliente (R18) |
 
 ### Callbacks del adapter al Worker
 Apps Script llama de vuelta al Worker para guardar IDs de Google en D1:
@@ -273,6 +280,292 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 26 — Picker de formato mejorado + control desde admin (2026-06-02)
+
+> **Migración D1 requerida** — ejecutar una sola vez desde terminal con Mac:
+> ```bash
+> wrangler d1 execute contratos-iav-v4 --remote --command="ALTER TABLE propiedades ADD COLUMN ocultar_formato_video INTEGER DEFAULT 1"
+> ```
+> La columna `formato_video` ya existe desde R18. Solo se agrega `ocultar_formato_video`.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R26-01 | `frontend/portal.html` CSS | Picker de formato rediseñado: cada opción muestra un preview visual del aspect ratio (rectangulos CSS), label más corto y descriptivo, badge "Recomendado" en Vertical. Nuevas clases `.fmt-preview`, `.fmt-box`, `.fmt-box-v`, `.fmt-box-h`, `.fmt-rec`. |
+| R26-02 | `frontend/portal.html` JS | `formatosVideo[n]` se inicializa desde `p.formatoVideo` (valor guardado en D1) en lugar de siempre defaultear a `vertical_nativo`. El botón activo refleja la selección pre-set por el admin. |
+| R26-03 | `frontend/portal.html` JS | Si `p.ocultarFormatoVideo === 1`, el bloque completo del picker no se renderiza. El formato ya fijado por el admin se usa silenciosamente al firmar. |
+| R26-04 | `worker/src/routes/portal.js` | `obtenerPortal` expone `formatoVideo` y `ocultarFormatoVideo` por propiedad en el response. |
+| R26-05 | `worker/src/routes/contratos.js` | Nuevo action `guardarFormatoPropiedad`: guarda `formato_video` y `ocultar_formato_video` en D1 para una propiedad específica. |
+| R26-06 | `frontend/admin.html` HTML | Prop-card muestra fila "Formato video" con el valor actual y badge "oculto en portal" si aplica. |
+| R26-07 | `frontend/admin.html` HTML | Nuevo botón "Formato" en `.prop-card-acciones`. Abre form colapsable con `<select>` de 3 opciones y checkbox "Ocultar selector en el portal". |
+| R26-08 | `frontend/admin.html` JS | Funciones `toggleFormato(numProp)` y `guardarFormato(numProp)`: llaman `guardarFormatoPropiedad`, actualizan el label en pantalla sin recargar el panel. |
+
+---
+
+### Ronda 25 — Fixes mobile nav, panel sheet y barra de alertas (2026-06-02)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R25-01 | `frontend/admin.html` CSS | `#stats-bar` y `.stats-linea`: `display:none !important` global. Bloque desktop `#stats-bar` eliminado. `renderAlertas()` sigue existiendo sin errores JS pero el elemento está permanentemente oculto en desktop y mobile. |
+| R25-02 | `frontend/admin.html` CSS | `.panel-header`: eliminado `position:sticky; top:0; z-index:1` en CSS global. El panel mobile (bottom sheet) ahora scrollea completo — el header no flota sobre el contenido. |
+| R25-03 | `frontend/admin.html` CSS | `.panel-tabs`: eliminado `position:sticky; top:80px; z-index:1` en CSS global. Los tabs también scrollean con el contenido en mobile. |
+| R25-04 | `frontend/admin.html` CSS | Nav mobile restaurado a R18: solo 3 ítems visibles — Contratos / FAB circular / Ajustes. Items extra (Clientes, Paquetes, Estadísticas) marcados con `.bnav-desktop-only { display:none !important }` en mobile, restaurados en desktop con `display:flex !important`. |
+| R25-05 | `frontend/admin.html` CSS | `.bnav-item-icon { display:contents }` en mobile — elimina el cuadro de fondo en el bottom nav, dejando solo el ícono directo. En desktop se sobreescribe con `display:flex` + dimensiones + background. |
+| R25-06 | `frontend/admin.html` CSS | FAB en mobile: `order:2` para que quede al centro. `.bnav-btn[data-tab="contratos"]` tiene `order:1`, `.bnav-btn[data-tab="ajustes"]` tiene `order:3`. Esto solo afecta el flex-row del bottom nav mobile. |
+| R25-07 | `frontend/admin.html` CSS | Desktop: `order:0 !important` en `.bnav-btn` y `.bnav-fab` dentro de `@media (min-width:1024px)` para cancelar los `order` de mobile. |
+| R25-08 | `frontend/admin.html` CSS | `.bnav-item-label` en desktop: `font-size:12.5px; text-transform:none; letter-spacing:0.01em; font-weight:500` con `!important` para sobreescribir los estilos mobile (`9px uppercase`). |
+| R25-09 | `frontend/admin.html` CSS | Lifecycle pipeline (`.lifecycle`, `.lc-step`, `.lc-dot`, `.lc-label`) movido de `@media (min-width:1024px)` a CSS global — ahora se renderiza correctamente en mobile como pipeline horizontal con dots y líneas. |
+| R25-10 | `frontend/admin.html` CSS | `#statsRibbon`, `.filter-chips`, `.search-icon`, `.search-shortcut`, `.toolbar-sep`: `display:none` en CSS global, restaurados en desktop con sus valores correctos. |
+
+---
+
+### Ronda 24 — Stats KPI cards rediseñadas (2026-06-02)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R24-01 | `frontend/admin.html` CSS | `.stats-ribbon` cambia de flex horizontal full-bleed a CSS grid 4 columnas con `gap:10px` y `padding:14px 24px` sobre `var(--page)`. Las cards ya no se separan con bordes; flotan sobre el fondo cálido. |
+| R24-02 | `frontend/admin.html` CSS | `.stat-card` rediseñada: `background:var(--card)`, `border-radius:10px`, borde sutil `var(--border)`, `flex-direction:column`. Hover con `box-shadow` y `border-color` más oscuro. |
+| R24-03 | `frontend/admin.html` CSS | Nueva clase `.stat-head` (`display:flex; justify-content:space-between`) para la fila label + ícono. Ícono movido a esquina superior derecha, reducido a 28px. |
+| R24-04 | `frontend/admin.html` CSS | `.stat-label` ahora 10px uppercase con `letter-spacing:0.07em` (antes 10.5px sin transformación). `.stat-value` sube a 22px/800/letter-spacing:-0.5px (antes 18px/700). |
+| R24-05 | `frontend/admin.html` CSS | `.stat-delta` rediseñada: `margin-top:5px; display:flex; align-items:center; gap:3px` (antes `margin-left:auto` — empujado a la derecha). |
+| R24-06 | `frontend/admin.html` HTML | HTML de las 4 cards reestructurado con `.stat-head` wrapping label + ícono. Íconos actualizados: `ti-camera` (sesiones), `ti-signature` (pendientes firma), `ti-video` (producción), `ti-trending-up` (cobrado). |
+
+---
+
+### Ronda 23 — Sidebar nav items premium (2026-06-02)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R23-01 | `frontend/admin.html` CSS | `.bnav-btn` en desktop: `border-radius:6px`, `margin:1px 8px`, `width:calc(100% - 16px)` — nav items como pastillas redondeadas en lugar de barras full-bleed. |
+| R23-02 | `frontend/admin.html` CSS | `.bnav-btn.activo`: `font-weight:600` (antes 500 igual que inactivos), `background:rgba(255,255,255,0.09)` (antes 0.07). |
+| R23-03 | `frontend/admin.html` CSS | `.bnav-btn.activo::before` ajustada: `left:-8px` para anclar la barra dorada al borde del sidebar, no al borde del item redondeado. |
+| R23-04 | `frontend/admin.html` CSS | `.bnav-item-icon`: `background:rgba(255,255,255,0.09)` (antes 0.06) — icon box visible sobre fondo oscuro. |
+| R23-05 | `frontend/admin.html` CSS | `.bnav-fab` en desktop: `justify-content:flex-start` (antes `center`), hover `filter:brightness(1.08)` con transición, `border-radius:6px`. |
+| R23-06 | `frontend/admin.html` CSS | Nueva clase `.bnav-fab-icon` (18px, dark square `rgba(0,0,0,0.15)`, border-radius 4px) — envuelve el ícono `+` dentro del FAB. |
+| R23-07 | `frontend/admin.html` CSS | `.bnav-section-label`: `display:none` global (mobile), `display:block` en `@media (min-width:1024px)`. Spacing top aumentado de 10px a 16px. |
+| R23-08 | `frontend/admin.html` HTML | FAB actualizado: `<span class="bnav-fab-icon"><i class="ti ti-plus"></i></span>` + `<span class="bnav-fab-label">`. |
+
+---
+
+### Ronda 22 — Tabla premium + toolbar chips + panel upgrade (2026-06-02)
+
+**Fase A — Tabla premium**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R22-A1 | `frontend/admin.html` CSS | Clases de avatar por gradiente: `.av-a` (ámbar) `.av-b` (azul) `.av-c` (rosa) `.av-d` (morado) `.av-e` (verde) `.av-f` (naranja) — asignadas determinísticamente por `charCode % 6`. |
+| R22-A2 | `frontend/admin.html` CSS | `.td-status-wrap` / `.td-status-dot` / `.td-status-label` / `.td-status-age` — columna estatus reemplazada: punto de color + label + días transcurridos. |
+| R22-A3 | `frontend/admin.html` CSS | `.td-saldo-wrap` / `.td-saldo-val` (rojo/ámbar/verde) / `.saldo-bar-wrap` / `.saldo-bar-fill` — columna saldo con valor coloreado + barra de progreso 2px. |
+| R22-A4 | `frontend/admin.html` JS | `renderTabla()` actualizado: avatar usa `avClasses[charCode % 6]` en lugar de `hashColor()`. Status cell con dot + label + age. Saldo cell con porcentaje pagado y color condicional. |
+
+**Fase B — Toolbar chips**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R22-B1 | `frontend/admin.html` CSS | `.filter-chips` / `.filter-chip` / `.filter-chip.on` / `.chip-dot` — chips de filtro por estatus que reemplazan el `<select>` en desktop. |
+| R22-B2 | `frontend/admin.html` CSS | `.search-wrap` con `.search-icon` (lupa) y `.search-shortcut` (⌘K decorativo). `.toolbar-sep` separador vertical. |
+| R22-B3 | `frontend/admin.html` CSS | `#filtro-estatus` y `#btn-filtros-toggle` ocultos en desktop (`display:none !important`). |
+| R22-B4 | `frontend/admin.html` HTML | Toolbar reestructurado: search input con ícono incrustado + chips de 5 estados (Pendiente/Firmado/Anticipo/Producción/Entregado) con punto de color. |
+| R22-B5 | `frontend/admin.html` JS | Nueva función `toggleChip(btn)` y `getChipEstatus()`. `filtrarContratos()` actualizado para usar chips como filtro primario en desktop. |
+
+**Fase C — Panel upgrade**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R22-C1 | `frontend/admin.html` CSS | `.panel-status-pill` con fondo tenue del color del estatus y punto interno `.psp-dot`. |
+| R22-C2 | `frontend/admin.html` CSS | `.panel-contact` — fila de contacto (email + teléfono como links) bajo el nombre. |
+| R22-C3 | `frontend/admin.html` CSS | `.panel-kpi-row` / `.panel-kpi-card` / `.panel-kpi-label` / `.panel-kpi-val` — 3 KPI cards (Total/Pagado/Saldo). |
+| R22-C4 | `frontend/admin.html` CSS | `.panel-pay-progress` / `.panel-pay-bar-bg` / `.panel-pay-bar-fill` — barra de progreso gradiente verde bajo las KPIs. |
+| R22-C5 | `frontend/admin.html` CSS | `.panel-action-bar` / `.panel-action-btn` — barra de acciones sticky en la base del panel (Registrar abono / WhatsApp / Portal / Extra). |
+| R22-C6 | `frontend/admin.html` CSS | Desktop: panel con `overflow:hidden`, panes activos `display:flex; flex-direction:column`, scroll en el pane (`flex:1; overflow-y:auto; min-height:0`), action bar `position:static`. |
+| R22-C7 | `frontend/admin.html` HTML | Panel reestructurado: `#panel-status-pill`, `#panel-contact`, `#panel-kpis`, `#panel-action-bar` como IDs nuevos. `#panel-badge` eliminado. |
+| R22-C8 | `frontend/admin.html` JS | `renderPanel()` actualizado: genera pill con color tenue, links de contacto, 3 KPI cards con barra de progreso, action bar con 4 botones. |
+
+---
+
+### Ronda 21 — Fixes visuales desktop post-R19/R20 (2026-06-02)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R21-01 | `frontend/admin.html` CSS | Tabla de contratos: `border-collapse:separate; border-spacing:0` + `border-radius:10px` en el wrapper. Filas con `border-bottom` sutil en lugar de `border` completo. |
+| R21-02 | `frontend/admin.html` CSS | `.td-avatar` (columna avatar en desktop): 32px, border-radius 50%, gradient dorado por defecto. Solo visible en `≥1024px` vía `.td-avatar-desktop`. |
+| R21-03 | `frontend/admin.html` CSS | Left border accent en filas: `border-left: 3px solid var(--row-color)` usando custom property `--row-color` seteada por JS en cada `<tr>` según estatus. |
+| R21-04 | `frontend/admin.html` CSS | Panel lateral desktop: `width:var(--panel-w)`, `position:fixed`, `right:0; top:0; bottom:0`, `transform:translateX(100%)` → `translateX(0)` al abrir. |
+| R21-05 | `frontend/admin.html` CSS | `#stats-bar` estilizado como topbar: `height:52px`, `background:var(--card)`, `border-bottom:1px solid var(--border)`. |
+| R21-06 | `frontend/admin.html` JS | `renderTabla()` agrega columna avatar (`td-avatar-desktop`) y setea `--row-color` en cada `<tr>` usando `ESTATUS_COLOR` map. |
+| R21-07 | `frontend/admin.html` JS | `abrirPanel()` actualiza `body.panel-abierto` para que `.contenido` tenga `margin-right:var(--panel-w)` y el contenido no quede tapado. |
+
+---
+
+### Ronda 20 — Sidebar completo + stats delta (2026-06-02)
+
+**Fase A: Sidebar — secciones, nav items y badges**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R20-01 | `frontend/admin.html` CSS | Nuevas clases desktop: `.bnav-section-label` (labels de sección en el sidebar), `.bnav-badge` (dorado) y `.bnav-badge.subtle` (gris), `.bnav-user-avatar`, `.bnav-user-name`, `.bnav-user-role` para el footer del sidebar. |
+| R20-02 | `frontend/admin.html` HTML | Sidebar `.bnav-inner` reestructurado con 3 secciones: "Principal" (Contratos, Nuevo, Clientes), "Catálogos" (Paquetes), "Reportes" (Estadísticas, Ajustes). |
+| R20-03 | `frontend/admin.html` HTML | Badge `#bnav-badge-contratos` (dorado) en ítem Contratos — muestra count de contratos abiertos. Badge `#bnav-badge-clientes` (sutil) en ítem Clientes — muestra total de clientes únicos. |
+| R20-04 | `frontend/admin.html` HTML | Footer sidebar `.bnav-logout` actualizado: agrega `.bnav-user-avatar` (IAV), `.bnav-user-info` (nombre + rol), botón logout con solo ícono. |
+| R20-05 | `frontend/admin.html` JS | Nueva función `actualizarNavBadges(contratos)` — calcula abiertos y clientes únicos por correo. Solo ejecuta en ≥1024px. Llamada desde `renderTabla()`. |
+| R20-06 | `frontend/admin.html` JS | Nueva función `irASubseccion(tab, subtab, btn)` — navega a una sección y subtab en un solo paso, luego marca el ítem del sidebar como activo. Usada por los nuevos nav items (Clientes, Paquetes, Estadísticas). |
+
+**Fase B: Stats ribbon — delta mes actual vs anterior**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R20-07 | `frontend/admin.html` CSS | Nueva clase `.stat-delta` (verde, `margin-left:auto`) y `.stat-delta.neg` (rojo) para mostrar variación porcentual. |
+| R20-08 | `frontend/admin.html` HTML | Card "Cobrado este mes" agrega `#statDeltaCobrado` con clase `.stat-delta`. |
+| R20-09 | `frontend/admin.html` JS | `actualizarStatsRibbon()` refactorizado: `cobrado` ahora filtra por `FechaCreacion` del mes actual (antes sumaba todo el histórico). Calcula `cobradoAnterior` del mes previo. Muestra delta "↑ X%" / "↓ X%" solo si hay datos del mes anterior; oculto si no hay base de comparación. |
+
+---
+
+### Ronda 19 — Rediseño desktop admin v2 (2026-06-02)
+
+**Feature: Layout desktop completo con sidebar, stats ribbon, hoy strip y lifecycle pipeline**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R19-01 | `frontend/admin.html` CSS | `@media (min-width: 1024px)` reescrito completo. Variables: `--sidebar-w:224px`, `--panel-w:488px`, `--gold`, `--gold-light`, `--gold-text`, `--ink-1/2/3/4`, `--page:#EFEDE8`, `--sidebar-bg:#0D0D10`. Scrollbar estilizado. |
+| R19-02 | `frontend/admin.html` CSS | Sidebar: `.bottom-nav` se convierte en sidebar fija izquierda (224px, fondo `#0D0D10`). Logo con ícono dorado `bnav-logo-icon` gradiente. Botón "Nuevo contrato" full-width dorado. Ítems de navegación con indicador izquierdo dorado en activo. Footer con avatar y botón logout. |
+| R19-03 | `frontend/admin.html` CSS | Stats ribbon: 4 cards horizontales (`stats-ribbon`) con íconos coloreados (gold, blue, purple, green). Valores grandes (18px), labels pequeñas. Borde derecho entre cards. |
+| R19-04 | `frontend/admin.html` CSS | Hoy strip: sección horizontal con header "Hoy" + fecha, divisor vertical, y `session-card`s scrolleables. Cada card con accent izquierdo del color de estatus, hora, nombre, meta, y badge de estatus con dot. |
+| R19-05 | `frontend/admin.html` CSS | Tabla: `#tabla-contratos-card` con header sticky, `--row-color` como borde izquierdo de 3px por estatus. Hover agranda borde a 4px. Fila activa fondo `#FBF9F3`. Columna avatar con círculo de color generado por iniciales. |
+| R19-06 | `frontend/admin.html` CSS | Panel lateral: `position:fixed; right:0; top:0; bottom:0; width:488px`. Transición `transform: translateX` 300ms cubic-bezier. Sin overlay. `.main.panel-open` → `body.panel-abierto .contenido { margin-right: var(--panel-w) }`. |
+| R19-07 | `frontend/admin.html` CSS | Lifecycle pipeline: 6 pasos horizontales con dots y líneas conectoras. Done = dorado con check. Current = naranja con sombra. Labels debajo. |
+| R19-08 | `frontend/admin.html` HTML | Sidebar: `bnav-logo-icon` (IAV), `bnav-logo-marca`, `bnav-logo-sub`. Botón `bnav-fab` con label "Nuevo". Footer con avatar y logout. |
+| R19-09 | `frontend/admin.html` HTML | `stats-ribbon` con 4 `stat-card`s: sesiones hoy, pendientes firma, en producción, cobrado este mes. IDs para JS: `statSesionesHoy`, `statPendientesFirma`, `statEnProduccion`, `statCobradoMes`. |
+| R19-10 | `frontend/admin.html` HTML | `hoy-strip` con `hoy-header`, `hoy-divider`, `hoy-cards`. Oculto por defecto, JS lo muestra si hay sesiones hoy. |
+| R19-11 | `frontend/admin.html` HTML | `lifecycle-wrap` en `panel-header` después de `panel-nombre`. JS lo llena con `renderLifecycle()`. |
+| R19-12 | `frontend/admin.html` HTML | Columna avatar en `thead`: `<th class="th-avatar">`. Oculto en mobile con `.th-avatar { display:none }`. |
+| R19-13 | `frontend/admin.html` JS | `hashColor(str)`: genera color desde iniciales usando hash multiplicativo módulo 6 colores predefinidos. |
+| R19-14 | `frontend/admin.html` JS | `actualizarStatsRibbon(contratos)`: llena los 4 stat cards con datos reales. Sesiones hoy por `FechaSesion`, pendientes por `Estatus.includes('pendiente')`, producción por `Estatus.includes('produccion')`, cobrado suma `PrecioTotal - SaldoPendiente` de completados/liquidados. Solo ejecuta en ≥1024px. |
+| R19-15 | `frontend/admin.html` JS | `renderHoyStrip(contratos)`: filtra contratos con `FechaSesion` hoy, renderiza `session-card`s con color de estatus, hora, nombre, paquete y badge. Solo ejecuta en ≥1024px. |
+| R19-16 | `frontend/admin.html` JS | `renderLifecycle(estatus)`: genera HTML del pipeline de 6 etapas. Calcula índice del estatus actual. Pasos anteriores = `done` con check dorado. Paso actual = `current` con dot naranja. |
+| R19-17 | `frontend/admin.html` JS | `renderTabla()` modificado: agrega `td-avatar-desktop` con iniciales y color via `hashColor()`. Usa `--row-color` (antes `--row-status-color`). Llama `actualizarStatsRibbon(todosContratos)` y `renderHoyStrip(todosContratos)` al final. |
+| R19-18 | `frontend/admin.html` JS | `renderPanel()` modificado: después de setear `panel-badge`, busca `.lifecycle-wrap` y le asigna `renderLifecycle(c.Estatus)`. |
+| R19-19 | `frontend/admin.html` JS | `panel-abierto` ya existía en `abrirPanel()` y `cerrarPanel()`. Sin cambios necesarios. |
+| R19-20 | `frontend/admin.html` JS | Colspans actualizados de 6→7 y 7→8 para acomodar nueva columna avatar. |
+| R19-21 | `frontend/admin.html` CSS | `.th-avatar` y `.td-avatar-desktop` ocultos en mobile (`display:none`) para no romper vista de cards. |
+
+**Diseño de referencia:** `mockup-desktop.html` (raíz del repo).  
+**Branch:** `claude/determined-hamilton-TMJ0G` → mergeado a `main`.
+
+---
+
+### Ronda 18 — Revisiones de video + preparación para automatización (2026-06-02)
+
+**Feature: Página de revisión de video**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R18-01 | `frontend/revision.html` | Nueva página para que el cliente envíe notas de revisión con timecode y descripción. Token desde URL `?token=X`. Muestra aviso de resolución reducida en nube, botón a carpeta Drive, links extra, revisiones anteriores (read-only), y formulario dinámico con filas timecode+descripción. |
+| R18-02 | `worker/src/routes/revision.js` | Nueva ruta. `obtenerRevision`: devuelve datos del contrato + array de `revisiones_video`. `guardarRevision`: inserta en `revisiones_video` y llama adapter `notificarRevision` async. |
+| R18-03 | `worker/src/index.js` | Importa `handleRevision`; agrega `RUTAS_REVISION = ['obtenerRevision','guardarRevision']`; enruta al handler. |
+| R18-04 | `frontend/portal.html` | Agrega botón "Enviar notas de revisión" en etapa de entrega — solo visible cuando hay material disponible y no revocado. Link a `revision.html?token=TOKEN`. |
+| R18-05 | `adapter/AdapterScript4_v1.js` | Registra `notificarRevision` en `handlers`. Nueva función que envía a Bruno correo HTML con tabla de timecodes y notas del cliente. |
+
+**Feature: Selector de formato de video en portal (firma)**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R18-06 | `frontend/portal.html` CSS | Nuevas clases `.formato-grid`, `.formato-btn`, `.acceso-grid`, `.acceso-btn` para selección visual. |
+| R18-07 | `frontend/portal.html` JS | Variables `formatosVideo` y `accesoCaseta` (objeto por propiedad). Inicializados en `renderEtapa1`. Default: `vertical_nativo` / `0`. |
+| R18-08 | `frontend/portal.html` JS | `seleccionarFormato(n, valor)`: mapea formato → orientación para compatibilidad con adapter. Llama `actualizarTotales()`. |
+| R18-09 | `frontend/portal.html` JS | `seleccionarAcceso(n, valor)`: actualiza estado y clases de botones. |
+| R18-10 | `frontend/portal.html` JS | `actualizarTotales()` suma $1,500 por cada propiedad con `doble_nativo`. |
+| R18-11 | `frontend/portal.html` JS | `buildAdicionalesSeleccionados()` auto-agrega `{ clave: 'doble-fmt-N', nombre: 'Doble Formato Nativo', precio: 1500, ofrecido: true }` por cada propiedad con `doble_nativo`. |
+| R18-12 | `frontend/portal.html` JS | `propsPayload` en `validarYFirmar` incluye `formatoVideo` y `requiereAcceso`. |
+| R18-13 | `worker/src/routes/portal.js` | `UPDATE propiedades` en `firmaCliente` guarda `formato_video` y `requiere_acceso`. |
+
+**Feature: Políticas de revisión en portal (checkbox)**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R18-14 | `frontend/portal.html` | Checkbox "Entiendo que el servicio contempla máximo 2 rondas de revisiones menores..." en tarjeta de firma. |
+| R18-15 | `frontend/portal.html` | `actualizarBtnFirmar()` requiere `chk-politicas` marcado además de firma y términos. |
+
+**Feature: Mejoras al admin (búsqueda + badges)**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R18-16 | `frontend/admin.html` | Búsqueda incluye `TelefonoCliente`. Placeholder actualizado. |
+| R18-17 | `frontend/admin.html` | Badge rojo `EXPRESS` en tabla de contratos cuando `EntregaExpress` es verdadero. |
+| R18-18 | `frontend/admin.html` | Campo "Origen" en acordeón "Datos del cliente" — muestra badge verde WhatsApp o gris Admin. |
+
+**Migraciones D1 ejecutadas (2026-06-02)**
+
+```bash
+ALTER TABLE propiedades ADD COLUMN formato_video TEXT DEFAULT 'vertical_nativo'
+ALTER TABLE propiedades ADD COLUMN requiere_acceso INTEGER DEFAULT 0
+CREATE TABLE IF NOT EXISTS revisiones_video (id INTEGER PRIMARY KEY AUTOINCREMENT, contrato_id TEXT NOT NULL, minuto_segundo TEXT DEFAULT '', descripcion_ajuste TEXT NOT NULL, fecha TEXT NOT NULL)
+ALTER TABLE contratos ADD COLUMN origen TEXT DEFAULT 'admin'
+```
+
+---
+
+### Ronda 17 — Fechas de entrega estimadas + fixes de auditoría (2026-06-01)
+
+**Feature: Entrega express y fechas estimadas**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R17-01 | `schema.sql` | Nueva columna `entrega_express INTEGER DEFAULT 0` en `contratos` |
+| R17-02 | `contratos.js` | Nueva acción `actualizarExpress` — actualiza el flag, usa `result.meta.changes` para 404 |
+| R17-03 | `index.js` | `actualizarExpress` agregado a `RUTAS_CONTRATOS` |
+| R17-04 | `admin.html` | Toggle "Entrega express (1 día natural)" en acordeón Propiedades |
+| R17-05 | `admin.html` | Fecha de entrega estimada por tarjeta: sesión + 5 días (estándar) o + 1 día (express) |
+| R17-06 | `admin.html` | `calcFechaEntrega(fechaISO, express)` — aritmética local pura (split + `new Date(y,m,d)`) sin conversión UTC |
+
+**Fixes post-auditoría (8 bugs)**
+
+| ID | Archivo | Fix |
+|----|---------|-----|
+| R17-F1 | `index.js` | `actualizarExpress` faltaba en `RUTAS_CONTRATOS` — siempre retornaba 404 |
+| R17-F2 | `contratos.js` | `reagendarPropiedad` valida formato YYYY-MM-DD (inconsistencia con `crearContrato`) |
+| R17-F3 | `admin.html` | `guardarExpress` actualiza DOM solo tras API exitoso; revierte checkbox en error |
+| R17-F4 | `admin.html` | `calcFechaEntrega` usa `substring(0,10)` para manejar datetime strings con timezone |
+| R17-F5 | `contratos.js` | `actualizarExpress` usa `result.meta.changes` en lugar de SELECT+UPDATE innecesario |
+| R17-F6 | `admin.html` | `guardarExpress` verifica `tok === tokenActivo` post-await (evita mensaje en panel incorrecto) |
+| R17-F7 | `admin.html` | `guardarExpress` usa `setMsg()` helper (estilos ok/error consistentes con el resto) |
+
+---
+
+### Ronda 16 — Corrección masiva de bugs + Folios con sufijo de letra (2026-06-01)
+
+**Bugs corregidos (auditoría pre-E2E)**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| B-1 | `portal.js` | Verificación de expiración del token de firma movida a `firmaCliente` — ya no bloquea la vista del portal |
+| B-2 | `contratos.js` | `TRANSICIONES_BLOQUEADAS`: desde `Pendiente firma` no se puede saltar a producción/entrega; desde `Firmado` no se puede saltar a entrega |
+| B-3 | `abonos.js` | Guard: no se puede registrar abono si estatus es `Pendiente firma` |
+| B-5 | `contratos.js` | `crearContrato` usa `batch()` atómico — contrato + propiedades + token de portal en una sola transacción |
+| B-6 | `abonos.js` | Contrato en `Completado` que recibe abono mantiene `Completado` (no regresa a `Liquidado`) |
+| B-7 | `contratos.js` | `guardarEntrega` solo llama adapter si `c.correo_cliente` es truthy |
+| B-8 | `portal.js` | Deduplicación de `adicionalesSeleccionados` por clave antes de procesar |
+| B-10 | `contratos.js` | `estatusAbiertos` en `listarContratos` incluye `'Completado'` |
+| B-12 | `contratos.js` | `revocarEntrega` agrega guards `if (!cr) return err(...)` en ambas ramas |
+| B-13 | `contratos.js` | `actualizarCarpeta` solo incluye campo en SET si el valor es truthy |
+| A-1 | `admin.html` | `esAd()` maneja `true`, `1` y strings (D1 devuelve enteros, no booleans) |
+| A-2 | `admin.html` | Select de estatus incluye opción `'Completado'` |
+| A-3 | `admin.html` | Race condition en reload del panel: captura token antes del setTimeout |
+| A-4 | `admin.html` | WhatsApp checklist URL usa `esc(c.Token)` |
+| P-1 | `portal.html` | `addonsGlobal.push` usa `Object.assign({}, a, ...)` — no muta `portalData` |
+| P-4 | `portal.html` | Guard `hasStroke` al inicio de `enviarFirma` — previene submit sin firma dibujada |
+| C-1 | `checklist.html` | Migración para formato antiguo: `{completado: bool}` → `{foto, video, t360}` |
+
+**Feature: Folios con sufijo de letra**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| F-1 | `folios.js` | Nueva función `asignarFolio(db, fecha)` — detecta colisiones por fecha y asigna letra secuencial (A, B, C…). Formato: `IAV-AAMM.DD-A`. |
+| F-2 | `contratos.js` | `crearContrato` usa `asignarFolio()` en lugar de `generarFolio()` |
+| F-3 | `contratos.js` | `reagendarPropiedad` usa `asignarFolio()` al cambiar fecha de propiedad 1 |
+
+> Folios: si dos clientes tienen la misma fecha, reciben `IAV-2506.15-A` y `IAV-2506.15-B`. Si el cliente A reagenda, su folio cambia pero el B conserva su `-B` permanentemente.
+
+---
 
 ### Ronda 15 — Rediseño tab Contratos + Radar de Sesiones (2026-06-01)
 
@@ -543,9 +836,9 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 | Capa | Versión | Estado |
 |------|---------|--------|
-| Worker + Frontend | R15 | Desplegado |
-| D1 Schema | — | Actualizado (`carpeta_entregables_id`, `referencias`, `fachada_url`, `perimetro_url` agregados) |
-| Adapter Apps Script | — | Pendiente deploy (Rondas 4–11) |
+| Worker + Frontend | R18 | En rama `claude/determined-hamilton-TMJ0G` — pendiente merge a `main` |
+| D1 Schema | — | Migraciones R18 ejecutadas manualmente (ver Ronda 18). `entrega_express` de R17 también ejecutada. |
+| Adapter Apps Script | — | Pendiente deploy — incluye cambios de Rondas 4–11 + `notificarRevision` de R18 |
 
 ---
 
@@ -586,9 +879,35 @@ Features descartadas explícitamente. No incluirlas en ningún plan ni sugerirla
 ## Pendientes conocidos
 
 - [x] Adapter desplegado (2026-05-30).
+- [x] Migraciones D1 de R17 y R18 ejecutadas manualmente (2026-06-02).
+- [ ] **Adapter Apps Script:** desplegar nueva versión de `AdapterScript4_v1.js` en script.google.com — incluye `notificarRevision` (R18) y todos los cambios de Rondas 4–17.
+- [ ] **Merge a main:** la rama `claude/determined-hamilton-TMJ0G` contiene todos los cambios de R18. Hacer merge/PR para que GitHub Actions despliegue a Cloudflare.
 - [ ] `procesarPDFsPendientes` en Apps Script requiere trigger automático — verificar que esté configurado en script.google.com para correr cada minuto.
 - [ ] Cuando el correo del cliente está vacío al crear el contrato, no llega ningún correo en la firma. El cliente debe llenarlo en el portal antes de firmar.
 - [ ] El folio solo se genera para contratos estándar con fecha de sesión. Contratos particulares no tienen folio hasta configurar la propiedad.
+
+---
+
+## Cómo verificar un commit de Claude o DeepSeek
+
+**Nunca leer los archivos del disco local para verificar un commit remoto.** El disco local puede estar desactualizado.
+
+Método correcto:
+
+```bash
+# 1. Traer el commit remoto
+git fetch origin <rama>
+
+# 2. Leer el archivo directamente del SHA del commit
+git show <sha>:ruta/al/archivo
+
+# Ejemplos:
+git show 37c05c4:worker/src/routes/portal.js | grep -n "precio < 0"
+git show 37c05c4:frontend/admin.html | grep -n "Entrega guardada"
+git show 37c05c4:adapter/AdapterScript4_v1.js | grep -n "notificarContratoCreado"
+```
+
+`git show <sha>:archivo` consulta el objeto git del commit directamente — no depende del estado del working tree ni de si se hizo checkout. Es la única fuente confiable para verificar qué contiene un commit específico.
 
 ---
 

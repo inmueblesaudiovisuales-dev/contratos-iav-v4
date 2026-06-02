@@ -84,6 +84,43 @@
     }
     .btn-logout:hover { border-color: rgba(255,255,255,0.4); color: white; }
 
+    /* ── Botón Ajustes en topbar ────────────────────── */
+    .btn-ajustes {
+      background: none; border: none; color: rgba(255,255,255,0.55);
+      border-radius: var(--r); padding: 6px 12px; font-size: 12px;
+      font-weight: 600; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; gap: 6px; transition: color 120ms;
+    }
+    .btn-ajustes:hover { color: rgba(255,255,255,0.9); }
+    .btn-ajustes.activo { color: var(--gold); }
+    .btn-ajustes i { font-size: 16px; }
+
+    /* ── Sección Ajustes ────────────────────────────── */
+    .ajustes-tabs {
+      display: flex; gap: 4px;
+      border-bottom: 2px solid var(--border); margin-bottom: 20px;
+    }
+    .ajustes-tab {
+      background: none; border: none; border-bottom: 2.5px solid transparent;
+      margin-bottom: -2px; padding: 10px 18px;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      color: var(--ink-2); cursor: pointer;
+      display: flex; align-items: center; gap: 7px; transition: color 120ms;
+    }
+    .ajustes-tab:hover { color: var(--ink-1); }
+    .ajustes-tab.activo-atab { color: var(--ink-1); border-bottom-color: var(--gold); }
+    .ajustes-pane { display: none; }
+    .ajustes-pane.activo-apane { display: block; }
+
+    /* ── Botón volver en sec-nuevo ──────────────────── */
+    .btn-volver {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: none; border: none; color: var(--ink-3);
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      cursor: pointer; padding: 0; margin-bottom: 18px; transition: color 120ms;
+    }
+    .btn-volver:hover { color: var(--ink-1); }
+
     .contenido { max-width: 1140px; margin: 0 auto; padding: 24px 24px 80px; }
 
     /* Tabs principales */
@@ -373,7 +410,6 @@
     .panel-header {
       display: flex; align-items: flex-start; justify-content: space-between;
       padding: 18px 20px 14px;
-      position: sticky; top: 0; background: var(--card); z-index: 1;
       border-bottom: 1px solid var(--border);
     }
     .panel-header-info { flex: 1; min-width: 0; padding-right: 10px; }
@@ -390,7 +426,6 @@
     .panel-tabs {
       display: flex; border-bottom: 1px solid var(--border);
       padding: 0 20px; background: var(--card);
-      position: sticky; top: 80px; z-index: 1;
     }
     .panel-tab-btn {
       flex: 1; padding: 10px 0;
@@ -458,6 +493,158 @@
     .crm-proyecto { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-top: 1px solid var(--border); font-size: 12px; }
     .crm-folio { font-family: 'Courier New', monospace; color: var(--ink-2); font-size: 11px; }
 
+    /* ── Alertas accionables ────────────────────────── */
+    #stats-bar { display: none !important; }
+    .stats-linea { display: none !important; }
+
+    /* ── Lifecycle pipeline (global — mobile + desktop) ── */
+    .lifecycle { display: flex; align-items: flex-start; margin: 14px 0 0; gap: 0; overflow: hidden; }
+    .lc-step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; padding-bottom: 8px; }
+    .lc-step::before { content: ''; position: absolute; top: 7px; left: calc(-50% + 8px); right: calc(50% + 8px); height: 2px; background: var(--border); }
+    .lc-step:first-child::before { display: none; }
+    .lc-step.done::before { background: var(--gold); }
+    .lc-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); background: var(--card); z-index: 1; display: flex; align-items: center; justify-content: center; }
+    .lc-step.done .lc-dot { border-color: var(--gold); background: var(--gold); }
+    .lc-step.current .lc-dot { border-color: var(--gold); border-width: 3px; }
+    .lc-dot-check { font-size: 8px; color: #fff; font-weight: 800; }
+    .lc-label { font-size: 9px; font-weight: 600; color: var(--ink-3); text-align: center; margin-top: 4px; line-height: 1.2; }
+    .lc-step.done .lc-label { color: var(--gold-text, #92720E); }
+    .lc-step.current .lc-label { color: #92580A; font-weight: 700; }
+
+    /* ── Skeleton loading ───────────────────────────── */
+    @keyframes skel-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+    .skel {
+      display: inline-block; border-radius: 5px;
+      background: var(--border); animation: skel-pulse 1.4s ease infinite;
+    }
+
+    /* ── Tabla — hover con borde izquierdo ──────────── */
+    .tabla-card tbody tr {
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 100ms, border-left-color 100ms;
+    }
+    .tabla-card tbody tr:hover { background: var(--gold-pale); border-left-color: var(--gold-border); }
+    .tabla-card tbody tr.activo { background: var(--gold-pale); border-left-color: var(--gold); }
+
+    /* ── Panel acordeón ─────────────────────────────── */
+    .panel-acord { border-top: 1px solid var(--border); }
+    .panel-acord:first-of-type { border-top: none; }
+    .panel-acord > summary {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 0; cursor: pointer; list-style: none;
+      font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      color: var(--ink-3); user-select: none;
+    }
+    .panel-acord > summary::-webkit-details-marker { display: none; }
+    .panel-acord > summary::after {
+      content: '›'; font-size: 16px; color: var(--ink-4);
+      transition: transform 180ms; transform: rotate(90deg);
+      font-weight: 400; letter-spacing: 0; text-transform: none;
+    }
+    .panel-acord[open] > summary::after { transform: rotate(270deg); }
+    .panel-acord-body { padding-bottom: 14px; }
+
+    /* ── Panel sesión en header ──────────────────────── */
+    .panel-sesion { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+
+    /* ── Panel status pill ───────────────────────────── */
+    .panel-status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 11.5px; font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .panel-status-pill .psp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Panel contact line ──────────────────────────── */
+    .panel-contact {
+      font-size: 12px; color: var(--ink-3);
+      margin-top: 2px; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .panel-contact a { color: var(--ink-3); text-decoration: none; transition: color 100ms; }
+    .panel-contact a:hover { color: var(--gold); }
+    .panel-contact-sep { color: var(--border2); }
+
+    /* ── Panel KPI cards ────────────────────────────── */
+    .panel-kpi-row {
+      display: flex; gap: 8px;
+      padding: 16px 20px 0;
+      flex-shrink: 0;
+    }
+    .panel-kpi-card {
+      flex: 1;
+      background: var(--page);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .panel-kpi-label {
+      font-size: 9.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--ink-3); margin-bottom: 4px;
+    }
+    .panel-kpi-val {
+      font-size: 17px; font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink-1); letter-spacing: -0.4px;
+    }
+    .panel-kpi-val.amber { color: #D97706; }
+    .panel-kpi-val.green { color: #059669; }
+    .panel-kpi-sub { font-size: 10px; color: var(--ink-3); margin-top: 2px; }
+
+    /* ── Panel pay progress bar ─────────────────────── */
+    .panel-pay-progress {
+      padding: 12px 20px 4px;
+      flex-shrink: 0;
+    }
+    .panel-pay-labels {
+      display: flex; justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .panel-pay-label { font-size: 11px; color: var(--ink-3); font-weight: 500; }
+    .panel-pay-label.strong { color: var(--ink-1); font-weight: 700; }
+    .panel-pay-bar-bg {
+      height: 6px; background: var(--border);
+      border-radius: 99px; overflow: hidden;
+    }
+    .panel-pay-bar-fill {
+      height: 6px; border-radius: 99px;
+      background: linear-gradient(90deg, #10B981 0%, #34D399 100%);
+      transition: width 600ms cubic-bezier(0.16,1,0.3,1);
+    }
+
+    /* ── Panel sticky action bar ────────────────────── */
+    .panel-action-bar {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 6px; flex-wrap: wrap;
+      background: var(--card);
+      flex-shrink: 0;
+      position: sticky; bottom: 0; z-index: 2;
+    }
+    .panel-action-btn {
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      border: 1px solid var(--border);
+      background: var(--page);
+      color: var(--ink-1);
+      display: flex; align-items: center; gap: 6px;
+      transition: border-color 100ms, background 100ms;
+      text-decoration: none;
+    }
+    .panel-action-btn:hover { border-color: var(--ink-4); background: var(--border); }
+    .panel-action-btn.primary { background: var(--gold); border-color: var(--gold); color: #1a1000; }
+    .panel-action-btn.primary:hover { filter: brightness(1.06); }
+    .panel-action-btn.danger { color: #DC2626; border-color: #FECACA; background: #FEF2F2; }
+    .panel-action-btn.danger:hover { background: #FEE2E2; border-color: #FCA5A5; }
+    .panel-action-btn.wa { background: #25D366; border-color: #25D366; color: #fff; }
+    .panel-action-btn.wa:hover { filter: brightness(0.95); }
+
     /* Overlay */
     #overlay { display: none; position: fixed; inset: 0; background: rgba(28,28,30,0.4); z-index: 190; }
     #overlay.visible { display: block; }
@@ -475,6 +662,18 @@
       padding: 6px 0 env(safe-area-inset-bottom, 6px);
     }
     .bnav-inner { display: flex; }
+    .bnav-section-label { display: none; }
+    .bnav-desktop-only { display: none !important; }
+    /* mobile: icon-box sin estilos de caja — solo el ícono */
+    .bnav-item-icon { display: contents; }
+    .bnav-item-icon i { font-size: 20px; }
+    .bnav-item-label { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    /* desktop-only elements — ocultar en mobile */
+    #statsRibbon { display: none; }
+    .filter-chips { display: none; }
+    .search-icon { display: none; }
+    .search-shortcut { display: none; }
+    .toolbar-sep { display: none; }
     .bnav-btn {
       flex: 1; display: flex; flex-direction: column; align-items: center;
       gap: 2px; background: none; border: none; padding: 6px 2px;
@@ -484,6 +683,21 @@
     }
     .bnav-btn i { font-size: 20px; }
     .bnav-btn.activo { color: var(--gold); }
+    /* FAB central — botón Nuevo en mobile */
+    .bnav-fab {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--gold); color: var(--onyx) !important;
+      margin-top: -18px; border: 3px solid var(--page);
+      box-shadow: 0 4px 16px rgba(201,168,76,0.4);
+      font-size: 0 !important; letter-spacing: 0;
+      padding: 0; flex: none;
+      justify-content: center; gap: 0;
+      order: 2;
+    }
+    .bnav-fab i { font-size: 22px !important; color: var(--onyx); }
+    /* orden mobile: Contratos(1) / FAB(2) / Ajustes(3) */
+    .bnav-btn[data-tab="contratos"] { order: 1; }
+    .bnav-btn[data-tab="ajustes"]   { order: 3; }
 
     /* ── Modo selección masiva ── */
     .btn-seleccion { background: none; border: 1.5px solid var(--border2); border-radius: var(--r); padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
@@ -518,14 +732,22 @@
       .bottom-nav { display: block; }
       .bulk-bar { bottom: 76px; }
 
-      /* Barra: filtros colapsables en mobile */
-      .barra-fila-principal .campo-busqueda { min-width: 0; }
+      /* Barra: toolbar reestructurado para mobile */
+      /* Search ocupa línea propia (order -1 lo pone primero) */
+      .barra-fila-principal .campo-busqueda { width: 100%; min-width: 0; order: -1; flex: none; }
+      /* Status select crece para llenar el espacio disponible */
       #filtro-estatus { flex: 1; min-width: 0; }
       #filtro-fecha-desde, #filtro-fecha-hasta { flex: 1; min-width: 0; }
+      /* Botones de menor prioridad ocultos — FAB los reemplaza o no aplican */
+      #btn-nuevo-toolbar, #btn-refresh-tabla, #btn-export-csv { display: none !important; }
+      /* Email oculto en cards — selector doble para ganar especificidad sobre .td-sub */
+      .td-sub.td-email { display: none !important; }
 
       /* Tabla → cards en mobile */
       .tabla-card table, .tabla-card thead { display: block; }
       .tabla-card thead { display: none; }
+      .th-avatar { display: none !important; }
+      .td-avatar-desktop { display: none !important; }
       .tabla-card tbody { display: flex; flex-direction: column; gap: 0; }
       .tabla-card tr {
         display: flex; flex-wrap: wrap; align-items: center;
@@ -542,9 +764,9 @@
       .td-fecha { font-size: 11px; color: var(--ink-3); width: 100%; margin-top: 4px; }
       .td-check { padding-left: 0 !important; }
 
-      /* Stats bar: 2 columnas; 5ta tarjeta ocupa fila completa si queda sola */
-      #stats-bar { grid-template-columns: repeat(2,1fr) !important; }
-      #stats-bar > *:last-child:nth-child(odd) { grid-column: 1 / -1; }
+      /* Stats bar — en mobile la linea se reduce de tamaño */
+      .stats-linea { padding: 8px 12px; gap: 8px; }
+      .stats-item { font-size: 12px; }
 
       /* Panel lateral como bottom sheet */
       .panel-lateral {
@@ -627,6 +849,650 @@
       font-size: 11px; color: var(--ink-3);
       margin-top: 4px; font-style: italic;
     }
+
+    /* ════════════════════════════════════════════════
+       DESKTOP LAYOUT — min-width: 1024px
+       ════════════════════════════════════════════════ */
+    @media (min-width: 1024px) {
+      :root {
+        --sidebar-w: 224px;
+        --panel-w: 488px;
+        --gold-light: rgba(201,168,76,0.14);
+        --gold-text: #92720E;
+        --ink-1: #111827;
+        --ink-2: #4B5563;
+        --ink-3: #9CA3AF;
+        --ink-4: #D1D5DB;
+        --page: #EFEDE8;
+        --card: #FFFFFF;
+        --border: #E5E3DD;
+        --sidebar-bg: #0D0D10;
+        --sidebar-border: rgba(255,255,255,0.07);
+      }
+
+      html, body { height: 100vh; overflow: hidden; background: var(--page); }
+      #pantalla-admin { height: 100vh; overflow: hidden; }
+
+      /* ── SIDEBAR ── */
+      .bottom-nav {
+        display: flex !important;
+        flex-direction: column;
+        position: fixed;
+        left: 0; top: 0; bottom: 0;
+        width: var(--sidebar-w);
+        height: 100dvh;
+        background: var(--sidebar-bg);
+        border-top: none;
+        border-right: 1px solid var(--sidebar-border);
+        padding: 0;
+        z-index: 100;
+      }
+      .bnav-logo {
+        display: flex !important;
+        align-items: center; gap: 10px;
+        padding: 20px 18px 16px;
+        border-bottom: 1px solid var(--sidebar-border);
+        flex-shrink: 0;
+      }
+      .bnav-logo-icon {
+        width: 30px; height: 30px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #C9A84C 0%, #8B6914 100%);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        font-size: 13px; font-weight: 800; color: #fff;
+        letter-spacing: -0.5px;
+      }
+      .bnav-logo-marca {
+        font-size: 11.5px; font-weight: 700;
+        color: rgba(255,255,255,0.9);
+        line-height: 1.3;
+        letter-spacing: 0.01em;
+        text-transform: none;
+      }
+      .bnav-logo-sub {
+        font-size: 10px;
+        color: rgba(255,255,255,0.2);
+        margin-top: 1px;
+      }
+      .bnav-inner {
+        flex-direction: column;
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px 0;
+        align-items: stretch;
+        gap: 0;
+      }
+      .bnav-btn {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 7px 10px;
+        margin: 1px 8px;
+        width: calc(100% - 16px);
+        font-size: 12.5px; font-weight: 500;
+        letter-spacing: 0.01em;
+        text-transform: none;
+        color: rgba(255,255,255,0.4);
+        text-align: left;
+        border-radius: 6px;
+        position: relative;
+        transition: color 120ms ease, background 120ms ease;
+      }
+      .bnav-btn:hover { color: rgba(255,255,255,0.78); background: rgba(255,255,255,0.06); }
+      .bnav-btn.activo {
+        color: rgba(255,255,255,0.95);
+        font-weight: 600;
+        background: rgba(255,255,255,0.09);
+      }
+      .bnav-btn.activo::before {
+        content: '';
+        position: absolute;
+        left: -8px; top: 6px; bottom: 6px;
+        width: 3px;
+        background: var(--gold);
+        border-radius: 0 2px 2px 0;
+      }
+      .bnav-btn i { font-size: 15px; flex-shrink: 0; }
+
+      /* ── item icon box ── */
+      .bnav-desktop-only { display: flex !important; }
+      .bnav-item-icon {
+        width: 28px; height: 28px;
+        border-radius: 7px;
+        background: rgba(255,255,255,0.09);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; flex-shrink: 0;
+        transition: background 120ms ease;
+      }
+      .bnav-btn.activo .bnav-item-icon { background: rgba(201,168,76,0.2); color: var(--gold); }
+      .bnav-item-label { flex: 1; font-size: 12.5px !important; text-transform: none !important; letter-spacing: 0.01em !important; font-weight: 500 !important; }
+      /* reset order — mobile usa order para reordenar FAB al centro, desktop no */
+      .bnav-btn { order: 0 !important; }
+      .bnav-fab { order: 0 !important; }
+
+      /* FAB → full-width button */
+      .bnav-fab {
+        width: calc(100% - 28px) !important;
+        height: auto !important;
+        border-radius: 6px !important;
+        margin: 12px 14px 8px !important;
+        border: none !important;
+        font-size: 12.5px !important;
+        font-weight: 700 !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+        padding: 9px 12px !important;
+        flex: none;
+        background: var(--gold) !important;
+        color: #1a1000 !important;
+        transition: filter 120ms ease !important;
+      }
+      .bnav-fab:hover { filter: brightness(1.08); }
+      .bnav-fab-icon {
+        width: 18px; height: 18px;
+        background: rgba(0,0,0,0.15);
+        border-radius: 4px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+      }
+      .bnav-fab i { font-size: 14px !important; color: #1a1000 !important; }
+      .bnav-fab-label { display: inline !important; font-size: 12.5px; font-weight: 700; color: #1a1000; }
+
+      .bnav-logout {
+        display: flex !important;
+        padding: 12px 14px;
+        border-top: 1px solid var(--sidebar-border);
+        align-items: center; gap: 10px;
+        flex-shrink: 0;
+      }
+      .bnav-logout-btn {
+        background: none; border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+        color: rgba(255,255,255,0.3); font-size: 12px;
+        font-weight: 600; cursor: pointer; font-family: inherit;
+        display: flex; align-items: center; justify-content: center;
+        width: 26px; height: 26px;
+        padding: 0;
+      }
+      .bnav-logout-btn i { font-size: 12px; }
+      .bnav-logout-btn:hover { color: rgba(255,255,255,0.65); border-color: rgba(255,255,255,0.2); }
+
+      /* ── Hide mobile topbar ── */
+      .topbar { display: none !important; }
+      .tabs { display: none !important; }
+
+      /* ── MAIN CONTENT ── */
+      .contenido {
+        margin-left: var(--sidebar-w);
+        max-width: none;
+        padding: 0 24px 0 !important;
+        min-height: 0;
+        height: 100vh;
+        overflow-y: auto;
+        transition: margin-right 300ms cubic-bezier(0.16,1,0.3,1);
+        background: var(--page);
+      }
+      .contenido::-webkit-scrollbar { width: 5px; }
+      .contenido::-webkit-scrollbar-track { background: transparent; }
+      .contenido::-webkit-scrollbar-thumb { background: var(--ink-4); border-radius: 99px; }
+
+      body.panel-abierto .contenido { margin-right: var(--panel-w); }
+
+
+      /* ── STATS RIBBON ── */
+      #statsRibbon { display: grid; }
+      .stats-ribbon {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        background: var(--page);
+        border-bottom: 1px solid var(--border);
+        margin: 0 -24px;
+        padding: 14px 24px;
+        flex-shrink: 0;
+      }
+      .stat-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex; flex-direction: column;
+        cursor: default;
+        transition: box-shadow 150ms ease, border-color 150ms ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .stat-card:hover {
+        border-color: var(--border-strong);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      }
+      .stat-head {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 10px;
+      }
+      .stat-icon {
+        width: 28px; height: 28px;
+        border-radius: 7px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px; flex-shrink: 0;
+      }
+      .stat-icon.gold { background: var(--gold-light); color: #C9A84C; }
+      .stat-icon.blue { background: rgba(59,130,246,0.1); color: #3B82F6; }
+      .stat-icon.purple { background: rgba(139,92,246,0.1); color: #8B5CF6; }
+      .stat-icon.green { background: rgba(16,185,129,0.1); color: #10B981; }
+      .stat-icon i { font-size: 13px; }
+      .stat-label {
+        font-size: 10px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.07em;
+        color: var(--ink-3);
+        white-space: nowrap;
+      }
+      .stat-value {
+        font-size: 22px; font-weight: 800;
+        color: var(--ink-1);
+        line-height: 1;
+        letter-spacing: -0.5px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ── TOOLBAR unified ── */
+      /* contratos-tabs moves into the toolbar row */
+      .contratos-tabs {
+        display: flex !important;
+        border-bottom: none;
+        margin-bottom: 0;
+        flex-shrink: 0;
+      }
+      .contratos-tab {
+        padding: 0 14px;
+        height: 44px;
+        font-size: 12.5px;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+      }
+
+      .barra {
+        padding: 0 24px;
+        height: 44px;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        margin: 0 -24px;
+        display: flex; flex-direction: row; align-items: center; gap: 0;
+        flex-shrink: 0;
+      }
+      .barra-fila-principal {
+        flex: 1;
+        display: flex; align-items: center; gap: 8px;
+        padding-left: 12px;
+      }
+      .barra-filtros { display: none !important; }
+
+      /* search wrap with icon */
+      .search-wrap {
+        position: relative;
+        flex: 1; max-width: 280px;
+      }
+      .search-wrap .search-icon {
+        display: block;
+        position: absolute; left: 10px; top: 50%;
+        transform: translateY(-50%);
+        color: var(--ink-3); font-size: 14px;
+        pointer-events: none;
+      }
+      .search-wrap input {
+        padding-left: 30px !important;
+        padding-right: 36px !important;
+        height: 30px;
+        background: var(--page);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 12px;
+        width: 100%;
+        outline: none;
+        transition: border-color 120ms, box-shadow 120ms;
+      }
+      .search-wrap input:focus {
+        border-color: var(--gold);
+        box-shadow: 0 0 0 3px var(--gold-light);
+        background: #fff;
+      }
+      .search-shortcut {
+        display: block;
+        position: absolute; right: 8px; top: 50%;
+        transform: translateY(-50%);
+        font-size: 10px; color: var(--ink-4);
+        background: var(--border);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-weight: 600;
+        pointer-events: none;
+        font-family: system-ui, sans-serif;
+      }
+
+      /* toolbar separator */
+      .toolbar-sep {
+        display: block;
+        width: 1px; height: 20px;
+        background: var(--border);
+        flex-shrink: 0;
+        margin: 0 4px;
+      }
+
+      /* filter chips */
+      .filter-chips { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+      .filter-chip {
+        height: 26px; padding: 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        background: none;
+        font-size: 11.5px; font-weight: 500;
+        color: var(--ink-2);
+        cursor: pointer; font-family: inherit;
+        display: flex; align-items: center; gap: 5px;
+        transition: all 100ms;
+        white-space: nowrap;
+      }
+      .filter-chip:hover { border-color: var(--ink-4); color: var(--ink-1); }
+      .filter-chip.on { background: var(--ink-1); border-color: var(--ink-1); color: #fff; }
+      .filter-chip.on .chip-dot { opacity: 0.8; }
+      .chip-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+
+      /* hide original select on desktop */
+      #filtro-estatus { display: none !important; }
+      #btn-filtros-toggle { display: none !important; }
+
+      /* ── HOY STRIP ── */
+      .hoy-strip {
+        padding: 10px 24px;
+        background: var(--page);
+        border-bottom: 1px solid var(--border);
+        display: flex; align-items: stretch; gap: 10px;
+        margin: 0 -24px;
+        flex-shrink: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .hoy-strip::-webkit-scrollbar { display: none; }
+      .hoy-header {
+        display: flex; flex-direction: column; justify-content: center;
+        margin-right: 4px; flex-shrink: 0;
+      }
+      .hoy-title {
+        font-size: 11px; font-weight: 800;
+        letter-spacing: 0.09em; text-transform: uppercase;
+        color: var(--ink-2);
+      }
+      .hoy-date { font-size: 10px; color: var(--ink-3); margin-top: 1px; }
+      .hoy-divider { width: 1px; background: var(--border); flex-shrink: 0; }
+
+      .session-card {
+        display: flex; align-items: stretch;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        flex-shrink: 0;
+        cursor: pointer;
+        overflow: hidden;
+        width: 220px;
+      }
+      .session-card:hover { border-color: var(--ink-4); }
+      .session-card.active-card { border-color: var(--gold); }
+      .session-card-accent { width: 4px; flex-shrink: 0; }
+      .session-card-body { padding: 9px 12px; flex: 1; min-width: 0; }
+      .session-card-hora { font-size: 12px; font-weight: 800; }
+      .session-card-nombre {
+        font-size: 12px; font-weight: 600;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        margin-top: 1px;
+      }
+      .session-card-meta { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+      .session-card-status {
+        display: inline-flex; align-items: center; gap: 4px;
+        margin-top: 5px;
+        font-size: 10.5px; font-weight: 600;
+        color: var(--ink-2);
+      }
+      .session-card-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+      /* ── TABLE ── */
+      #tabla-contratos-card {
+        margin: 0 -24px;
+        border: none; border-radius: 0;
+        flex: 1; overflow-y: auto;
+      }
+      #tabla-contratos-card table { width: 100%; border-collapse: collapse; }
+      #tabla-contratos-card thead tr {
+        border-bottom: 1px solid var(--border);
+        background: var(--card);
+        position: sticky; top: 0; z-index: 2;
+      }
+      #tabla-contratos-card th {
+        padding: 9px 16px;
+        text-align: left;
+        font-size: 10px; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--ink-3);
+        white-space: nowrap;
+        background: var(--card);
+      }
+      #tabla-contratos-card td {
+        padding: 12px 16px; vertical-align: middle;
+        border-bottom: 1px solid var(--border);
+      }
+      #tabla-contratos-card tbody tr {
+        background: var(--card);
+        cursor: pointer;
+        border-left: 3px solid var(--row-color, transparent);
+        border-bottom: 1px solid var(--border);
+      }
+      #tabla-contratos-card tbody tr:hover { background: #FAFAF8; }
+      #tabla-contratos-card tbody tr:hover { border-left-width: 4px; }
+      #tabla-contratos-card tbody tr.activo { background: #FBF9F3; }
+      #tabla-contratos-card tbody tr.activo { border-left-width: 4px; }
+
+      .td-folio {
+        font-size: 11px; font-weight: 600;
+        color: var(--ink-3); font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
+        font-family: 'Courier New', monospace;
+      }
+      .td-nombre { font-weight: 600; font-size: 13px; }
+      .td-sub { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+      .td-monto { text-align: right; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink-1); }
+
+      .td-avatar {
+        width: 32px; height: 32px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 700; color: #fff;
+        flex-shrink: 0;
+      }
+
+      /* avatar gradient classes (by initial) */
+      .av-a { background: linear-gradient(135deg,#F59E0B,#D97706) !important; }
+      .av-b { background: linear-gradient(135deg,#3B82F6,#1D4ED8) !important; }
+      .av-c { background: linear-gradient(135deg,#EC4899,#DB2777) !important; }
+      .av-d { background: linear-gradient(135deg,#8B5CF6,#6D28D9) !important; }
+      .av-e { background: linear-gradient(135deg,#10B981,#059669) !important; }
+      .av-f { background: linear-gradient(135deg,#F97316,#EA580C) !important; }
+
+      /* status column: dot + label layout */
+      .td-status-wrap { display: flex; align-items: center; gap: 7px; }
+      .td-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+      .td-status-label { font-size: 12px; font-weight: 500; color: var(--ink-2); }
+      .td-status-age { font-size: 10.5px; color: var(--ink-4); margin-top: 2px; }
+
+      /* saldo mini bar */
+      .td-saldo-wrap { text-align: right; }
+      .td-saldo-val { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; display: block; }
+      .td-saldo-val.red    { color: #DC2626; }
+      .td-saldo-val.amber  { color: #D97706; }
+      .td-saldo-val.green  { color: #059669; }
+      .saldo-bar-wrap { margin-top: 3px; height: 2px; background: var(--border); border-radius: 99px; }
+      .saldo-bar-fill { height: 2px; border-radius: 99px; transition: width 400ms ease; }
+
+      /* fecha hoy / pronto (desktop override) */
+      .td-fecha-hoy   { color: var(--gold) !important; font-weight: 700; }
+      .td-fecha-pronto { color: #D97706 !important; font-weight: 600; }
+      .td-fecha-semana { color: #3B82F6 !important; font-weight: 600; }
+
+      /* Hide mobile elements */
+      #radar-sesiones, #sesiones-lista { display: none !important; }
+      #btn-filtros-toggle, #filtro-fecha-desde, #filtro-fecha-hasta,
+      .filtro-fecha-label, .btn-seleccion, #btn-export-csv,
+      #btn-refresh-tabla, #btn-seccion, #btn-seleccion { display: none !important; }
+      .barra .btn-primario.gold { display: none !important; }
+      .barra .btn-secundario.btn-sm { display: none !important; }
+
+      /* ── PANEL ── */
+      .panel-lateral {
+        position: fixed;
+        right: 0; top: 0; bottom: 0;
+        width: var(--panel-w);
+        background: var(--card);
+        border-left: 1px solid var(--border);
+        display: flex; flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 300ms cubic-bezier(0.16,1,0.3,1);
+        z-index: 50;
+        overflow: hidden;
+      }
+      .panel-lateral.visible {
+        transform: translateX(0);
+        box-shadow: -12px 0 40px rgba(0,0,0,0.07);
+      }
+      .panel-handle { display: none !important; }
+      #overlay.visible { display: none !important; }
+
+      .panel-header {
+        padding: 20px 20px 0;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        position: static;
+        overflow-y: visible;
+      }
+      .panel-header-info { flex: 1; min-width: 0; padding-right: 10px; }
+      .panel-folio { font-size: 11px; }
+      .panel-nombre { font-size: 20px; font-weight: 800; line-height: 1.2; letter-spacing: -0.3px; }
+
+      /* kpis area (outside scroll) */
+      #panel-kpis { flex-shrink: 0; background: var(--card); }
+
+      .panel-tabs { position: static; top: auto; flex-shrink: 0; }
+      .panel-tab-btn.activo { color: var(--ink-1); border-bottom-color: var(--ink-1); }
+
+      /* scrollable panes */
+      #pane-general, #pane-produccion, #pane-entrega {
+        flex: 1; overflow-y: auto; min-height: 0;
+      }
+      #pane-general.activo, #pane-produccion.activo, #pane-entrega.activo { display: flex; flex-direction: column; }
+      .panel-tab-pane { padding: 16px 20px; }
+
+      /* action bar sticks to bottom of panel */
+      #panel-action-bar { flex-shrink: 0; }
+      .panel-action-bar { position: static; border-top: 1px solid var(--border); }
+
+      /* ── LIFECYCLE PIPELINE ── */
+      .lifecycle {
+        display: flex; align-items: center;
+        margin: 14px 0 0;
+        gap: 0;
+        overflow: hidden;
+      }
+      .lc-step {
+        flex: 1;
+        display: flex; flex-direction: column; align-items: center;
+        position: relative;
+        padding-bottom: 10px;
+      }
+      .lc-step::before {
+        content: '';
+        position: absolute;
+        top: 7px; left: calc(-50% + 8px); right: calc(50% + 8px);
+        height: 2px;
+        background: var(--border);
+      }
+      .lc-step:first-child::before { display: none; }
+      .lc-step.done::before { background: var(--gold); }
+      .lc-dot {
+        width: 16px; height: 16px; border-radius: 50%;
+        border: 2px solid var(--border);
+        background: var(--card);
+        z-index: 1;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .lc-step.done .lc-dot {
+        border-color: var(--gold);
+        background: var(--gold);
+      }
+      .lc-step.current .lc-dot {
+        border-color: #F59E0B;
+        background: #F59E0B;
+        box-shadow: 0 0 0 3px rgba(245,158,11,0.2);
+      }
+      .lc-dot-check { font-size: 8px; color: #fff; font-weight: 800; }
+      .lc-label {
+        font-size: 9px; font-weight: 600;
+        color: var(--ink-3);
+        margin-top: 5px;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .lc-step.done .lc-label { color: var(--gold-text); }
+      .lc-step.current .lc-label { color: #92580A; font-weight: 700; }
+
+      /* Override mobile panel tabs */
+      .panel-tab-btn { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+
+      /* ── SIDEBAR — section labels & badges ── */
+      .bnav-section-label {
+        display: block;
+        padding: 16px 18px 5px;
+        font-size: 9.5px; font-weight: 700;
+        letter-spacing: 0.1em; text-transform: uppercase;
+        color: rgba(255,255,255,0.18);
+      }
+      .bnav-badge {
+        font-size: 10px; font-weight: 700;
+        background: var(--gold);
+        color: #1a1000;
+        border-radius: 10px;
+        padding: 1px 7px;
+        min-width: 20px; text-align: center;
+        margin-left: auto;
+      }
+      .bnav-badge.subtle {
+        background: rgba(255,255,255,0.08);
+        color: rgba(255,255,255,0.35);
+      }
+
+      /* ── SIDEBAR — user footer ── */
+      .bnav-user-avatar {
+        width: 30px; height: 30px; border-radius: 50%;
+        background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 700; color: #fff;
+        flex-shrink: 0;
+      }
+      .bnav-user-info { flex: 1; min-width: 0; }
+      .bnav-user-name {
+        font-size: 12px; font-weight: 600;
+        color: rgba(255,255,255,0.7);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .bnav-user-role { font-size: 10.5px; color: rgba(255,255,255,0.25); margin-top: 1px; }
+
+      /* ── STATS RIBBON — delta ── */
+      .stat-delta {
+        font-size: 11px; font-weight: 600;
+        color: #10B981;
+        white-space: nowrap;
+        margin-top: 5px;
+        display: flex; align-items: center; gap: 3px;
+      }
+      .stat-delta.neg { color: #EF4444; }
+    }
   </style>
 </head>
 <body>
@@ -661,17 +1527,59 @@
     <span class="topbar-marca">Inmuebles Audiovisuales</span>
     <span class="topbar-sep">/</span>
     <span class="topbar-titulo">Contratos v4</span>
+    <button class="btn-ajustes" id="btn-topbar-ajustes" onclick="mostrarTab('ajustes', null)" title="Ajustes">
+      <i class="ti ti-settings"></i><span class="btn-ajustes-label">Ajustes</span>
+    </button>
     <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
   </div>
 
-  <!-- Bottom nav — solo visible en mobile -->
+  <!-- Nav — bottom en mobile, sidebar izquierda en desktop -->
   <nav class="bottom-nav">
+    <div class="bnav-logo" style="display:none">
+      <div class="bnav-logo-icon">IAV</div>
+      <div>
+        <div class="bnav-logo-marca">Inmuebles<br>Audiovisuales</div>
+        <div class="bnav-logo-sub">Contratos v4</div>
+      </div>
+    </div>
     <div class="bnav-inner">
-      <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)"><i class="ti ti-file-text"></i>Contratos</button>
-      <button class="bnav-btn" data-tab="nuevo"      onclick="mostrarTabMobile('nuevo',this)"><i class="ti ti-plus"></i>Nuevo</button>
-      <button class="bnav-btn" data-tab="crm"        onclick="mostrarTabMobile('crm',this)"><i class="ti ti-users"></i>Clientes</button>
-      <button class="bnav-btn" data-tab="metricas"   onclick="mostrarTabMobile('metricas',this)"><i class="ti ti-chart-bar"></i>Métricas</button>
-      <button class="bnav-btn" data-tab="paquetes"   onclick="mostrarTabMobile('paquetes',this)"><i class="ti ti-package"></i>Paquetes</button>
+      <button class="bnav-btn bnav-fab" data-tab="nuevo" onclick="irANuevo()" title="Nuevo contrato">
+        <span class="bnav-fab-icon"><i class="ti ti-plus"></i></span>
+        <span class="bnav-fab-label">Nuevo contrato</span>
+      </button>
+      <div class="bnav-section-label">Principal</div>
+      <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)">
+        <span class="bnav-item-icon"><i class="ti ti-file-text"></i></span>
+        <span class="bnav-item-label">Contratos</span>
+        <span class="bnav-badge" id="bnav-badge-contratos" style="display:none"></span>
+      </button>
+      <button class="bnav-btn bnav-desktop-only" data-subtab="clientes" onclick="irASubseccion('ajustes','clientes',this)">
+        <span class="bnav-item-icon"><i class="ti ti-users"></i></span>
+        <span class="bnav-item-label">Clientes</span>
+        <span class="bnav-badge subtle" id="bnav-badge-clientes" style="display:none"></span>
+      </button>
+      <div class="bnav-section-label">Catálogos</div>
+      <button class="bnav-btn bnav-desktop-only" data-subtab="paquetes" onclick="irASubseccion('ajustes','paquetes',this)">
+        <span class="bnav-item-icon"><i class="ti ti-package"></i></span>
+        <span class="bnav-item-label">Paquetes</span>
+      </button>
+      <div class="bnav-section-label">Reportes</div>
+      <button class="bnav-btn bnav-desktop-only" data-subtab="metricas" onclick="irASubseccion('ajustes','metricas',this)">
+        <span class="bnav-item-icon"><i class="ti ti-chart-bar"></i></span>
+        <span class="bnav-item-label">Estadísticas</span>
+      </button>
+      <button class="bnav-btn" data-tab="ajustes" onclick="mostrarTabMobile('ajustes',this)">
+        <span class="bnav-item-icon"><i class="ti ti-settings"></i></span>
+        <span class="bnav-item-label">Ajustes</span>
+      </button>
+    </div>
+    <div class="bnav-logout" style="display:none">
+      <div class="bnav-user-avatar">IA</div>
+      <div class="bnav-user-info">
+        <div class="bnav-user-name">Admin IAV</div>
+        <div class="bnav-user-role">Administrador</div>
+      </div>
+      <button class="bnav-logout-btn" onclick="cerrarSesion()" title="Cerrar sesión"><i class="ti ti-logout"></i></button>
     </div>
   </nav>
 
@@ -684,18 +1592,47 @@
 
   <div class="contenido">
     <div class="tabs">
-      <button class="tab-btn activo" data-tab="contratos"  onclick="mostrarTab('contratos', this)">Contratos</button>
-      <button class="tab-btn" data-tab="nuevo"      onclick="mostrarTab('nuevo', this)">Nuevo contrato</button>
-      <button class="tab-btn" data-tab="crm"        onclick="mostrarTab('crm', this)">Clientes</button>
-      <button class="tab-btn" data-tab="metricas"   onclick="mostrarTab('metricas', this)">Métricas</button>
-      <button class="tab-btn" data-tab="paquetes"   onclick="mostrarTab('paquetes', this)">Paquetes</button>
+      <button class="tab-btn activo" data-tab="contratos" onclick="mostrarTab('contratos', this)">Contratos</button>
     </div>
 
     <!-- ── CONTRATOS ──────────────────────────────────── -->
     <div id="sec-contratos" class="seccion activa">
 
-      <!-- Stats bar simplificada (3 tarjetas — JS las llena) -->
-      <div id="stats-bar" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px"></div>
+      <!-- Stats — línea compacta (JS la llena) -->
+      <div id="stats-bar"></div>
+
+      <!-- Stats ribbon desktop -->
+      <div class="stats-ribbon" id="statsRibbon">
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">Sesiones hoy</span>
+            <div class="stat-icon gold"><i class="ti ti-camera"></i></div>
+          </div>
+          <div class="stat-value" id="statSesionesHoy">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">Pendientes firma</span>
+            <div class="stat-icon blue"><i class="ti ti-signature"></i></div>
+          </div>
+          <div class="stat-value" id="statPendientesFirma">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">En producción</span>
+            <div class="stat-icon purple"><i class="ti ti-video"></i></div>
+          </div>
+          <div class="stat-value" id="statEnProduccion">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-head">
+            <span class="stat-label">Cobrado este mes</span>
+            <div class="stat-icon green"><i class="ti ti-trending-up"></i></div>
+          </div>
+          <div class="stat-value" id="statCobradoMes">—</div>
+          <div class="stat-delta" id="statDeltaCobrado" style="display:none"></div>
+        </div>
+      </div>
 
       <!-- Tabs de navegación con contadores -->
       <div class="contratos-tabs">
@@ -716,8 +1653,18 @@
       <!-- Toolbar -->
       <div class="barra">
         <div class="barra-fila-principal">
-          <div class="campo-busqueda">
-            <input type="text" id="busqueda" placeholder="Buscar por nombre, correo o folio..." oninput="filtrarContratos()">
+          <div class="campo-busqueda search-wrap">
+            <i class="ti ti-search search-icon"></i>
+            <input type="text" id="busqueda" placeholder="Buscar nombre, teléfono, folio..." oninput="filtrarContratos()">
+            <span class="search-shortcut">⌘K</span>
+          </div>
+          <div class="toolbar-sep"></div>
+          <div class="filter-chips" id="filter-chips">
+            <button class="filter-chip" data-estatus="Pendiente firma" onclick="toggleChip(this)"><span class="chip-dot" style="background:#9CA3AF"></span>Pendiente</button>
+            <button class="filter-chip" data-estatus="Firmado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#3B82F6"></span>Firmado</button>
+            <button class="filter-chip" data-estatus="Anticipo recibido" onclick="toggleChip(this)"><span class="chip-dot" style="background:#F59E0B"></span>Anticipo</button>
+            <button class="filter-chip" data-estatus="En produccion" onclick="toggleChip(this)"><span class="chip-dot" style="background:#8B5CF6"></span>Producción</button>
+            <button class="filter-chip" data-estatus="Entregado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Entregado</button>
           </div>
           <select id="filtro-estatus" onchange="filtrarContratos()" style="width:auto">
             <option value="">Todos los estatus</option>
@@ -733,13 +1680,13 @@
             <i class="ti ti-calendar-search"></i> Fechas
             <span id="badge-filtros" class="filtros-badge" style="display:none">1</span>
           </button>
-          <button class="btn-primario gold" onclick="irANuevo()">
+          <button class="btn-primario gold" id="btn-nuevo-toolbar" onclick="irANuevo()">
             <i class="ti ti-plus"></i> Nuevo
           </button>
-          <button class="btn-secundario btn-sm" onclick="cargarContratos()" title="Actualizar">
+          <button class="btn-secundario btn-sm" id="btn-refresh-tabla" onclick="cargarContratos()" title="Actualizar">
             <i class="ti ti-refresh"></i>
           </button>
-          <button class="btn-secundario btn-sm" onclick="descargarCSV()" title="Exportar CSV">
+          <button class="btn-secundario btn-sm" id="btn-export-csv" onclick="descargarCSV()" title="Exportar CSV">
             <i class="ti ti-table-export"></i>
           </button>
           <button class="btn-seleccion" id="btn-seleccion" onclick="toggleModoSeleccion()" title="Selección masiva">
@@ -757,22 +1704,30 @@
         </div>
       </div>
 
+      <!-- Hoy strip desktop -->
+      <div class="hoy-strip" id="hoyStrip" style="display:none">
+        <div class="hoy-header"><div class="hoy-title">Hoy</div><div class="hoy-date" id="hoyDate"></div></div>
+        <div class="hoy-divider"></div>
+        <div class="hoy-cards" id="hoyCards" style="display:flex;gap:10px"></div>
+      </div>
+
       <!-- Tabla de contratos -->
       <div class="tabla-card" id="tabla-contratos-card">
         <table>
           <thead>
             <tr>
               <th id="th-check" style="display:none;width:36px"></th>
-              <th>Folio</th>
+              <th style="padding-left:20px;width:130px">Folio</th>
+              <th style="width:52px"></th>
               <th>Cliente</th>
-              <th>Estatus</th>
-              <th>Total</th>
-              <th>Saldo</th>
-              <th>Creado</th>
+              <th style="width:200px">Estatus</th>
+              <th style="width:130px">Sesión</th>
+              <th style="text-align:right;width:110px">Total</th>
+              <th style="text-align:right;width:130px">Saldo</th>
             </tr>
           </thead>
           <tbody id="tabla-body">
-            <tr><td colspan="6" class="tabla-vacio">Cargando...</td></tr>
+            <tr><td colspan="7" class="tabla-vacio">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -785,6 +1740,9 @@
     <!-- ── NUEVO CONTRATO ─────────────────────────────── -->
     <div id="sec-nuevo" class="seccion">
       <div class="form-card">
+        <button class="btn-volver" onclick="mostrarTab('contratos', null)">
+          <i class="ti ti-arrow-left"></i> Contratos
+        </button>
         <h2>Nuevo contrato</h2>
         <p class="form-desc">Configura el contrato para tu cliente. Agrega una o más propiedades.</p>
 
@@ -833,149 +1791,167 @@
     <!-- ── SESIONES ─────────────────────────────────── -->
 
     <!-- ── MÉTRICAS ─────────────────────────────────── -->
-    <div id="sec-metricas" class="seccion">
-      <div class="barra" style="margin-bottom:14px">
-        <div style="display:flex;gap:6px">
-          <button class="ciclo-btn activo-ciclo" id="met-btn-mes"       onclick="setMetPeriodo('mes',this)">Este mes</button>
-          <button class="ciclo-btn" id="met-btn-trimestre" onclick="setMetPeriodo('trimestre',this)">Trimestre</button>
-          <button class="ciclo-btn" id="met-btn-anio"      onclick="setMetPeriodo('anio',this)">Este año</button>
-          <button class="ciclo-btn" id="met-btn-todo"      onclick="setMetPeriodo('todo',this)">Todo</button>
-        </div>
-        <button class="btn-secundario btn-sm" onclick="cargarMetricas()"><i class="ti ti-refresh"></i></button>
+    <!-- ── AJUSTES (incluye Métricas, Paquetes y Clientes) ──── -->
+    <div id="sec-ajustes" class="seccion">
+      <div class="ajustes-tabs">
+        <button id="atab-metricas" class="ajustes-tab activo-atab" onclick="setAjustesTab('metricas')">
+          <i class="ti ti-chart-bar"></i> Métricas
+        </button>
+        <button id="atab-paquetes" class="ajustes-tab" onclick="setAjustesTab('paquetes')">
+          <i class="ti ti-package"></i> Paquetes
+        </button>
+        <button id="atab-clientes" class="ajustes-tab" onclick="setAjustesTab('clientes')">
+          <i class="ti ti-users"></i> Clientes
+        </button>
       </div>
-      <div id="metricas-body"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p></div>
+
+      <!-- Pane: Métricas -->
+      <div id="apane-metricas" class="ajustes-pane activo-apane">
+        <div class="barra" style="margin-bottom:14px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="ciclo-btn activo-ciclo" id="met-btn-mes"       onclick="setMetPeriodo('mes',this)">Este mes</button>
+            <button class="ciclo-btn" id="met-btn-trimestre" onclick="setMetPeriodo('trimestre',this)">Trimestre</button>
+            <button class="ciclo-btn" id="met-btn-anio"      onclick="setMetPeriodo('anio',this)">Este año</button>
+            <button class="ciclo-btn" id="met-btn-todo"      onclick="setMetPeriodo('todo',this)">Todo</button>
+          </div>
+          <button class="btn-secundario btn-sm" onclick="cargarMetricas()"><i class="ti ti-refresh"></i></button>
+        </div>
+        <div id="metricas-body"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p></div>
+      </div>
+
+      <!-- Pane: Paquetes -->
+      <div id="apane-paquetes" class="ajustes-pane">
+        <div class="barra">
+          <p style="font-size:13px;color:var(--ink-3);flex:1">Paquetes y add-ons disponibles en el sistema.</p>
+          <button class="btn-secundario btn-sm" onclick="cargarPaquetesAdmin()"><i class="ti ti-refresh"></i> Actualizar</button>
+          <button class="btn-primario gold btn-sm" onclick="abrirModalNuevoPaquete()"><i class="ti ti-plus"></i> Nuevo paquete</button>
+        </div>
+        <div id="lista-paquetes-admin">
+          <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
+        </div>
+      </div>
+
+      <!-- Pane: Clientes -->
+      <div id="apane-clientes" class="ajustes-pane">
+        <div class="barra">
+          <p style="font-size:13px;color:var(--ink-3);flex:1">Clientes únicos con historial de proyectos.</p>
+          <button class="btn-secundario btn-sm" onclick="cargarCRM()"><i class="ti ti-refresh"></i> Actualizar</button>
+        </div>
+        <div class="crm-grid" id="crm-grid">
+          <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODALES GLOBALES (fuera de .seccion para que funcionen desde cualquier tab) ═══ -->
+
+<!-- Modal nuevo / editar paquete -->
+<div id="modal-paquete" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <p class="section-title" id="modal-paq-titulo">Nuevo paquete</p>
+    <input type="hidden" id="mp-clave-original">
+    <div class="campo">
+      <label>Clave *</label>
+      <input type="text" id="mp-clave" placeholder="PREM-RES" style="text-transform:uppercase">
+    </div>
+    <div class="campo">
+      <label>Nombre *</label>
+      <input type="text" id="mp-nombre" placeholder="Premium Residencial">
+    </div>
+    <div class="campo">
+      <label>Tipo</label>
+      <select id="mp-tipo">
+        <option value="Ambos">Ambos</option>
+        <option value="Residencial">Residencial</option>
+        <option value="Terreno">Terreno</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Precio (MXN)</label>
+      <input type="number" id="mp-precio" placeholder="0" min="0" step="100">
+    </div>
+    <div class="campo">
+      <label>Entregables</label>
+      <textarea id="mp-entregables" maxlength="2000" placeholder="Video 4K · Fotografías · Tour virtual" style="min-height:70px"></textarea>
+    </div>
+    <div class="campo" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="mp-es-adicional" style="width:auto;margin:0" onchange="document.getElementById('campo-mp-alcance').style.display = this.checked ? 'block' : 'none'">
+      <label for="mp-es-adicional" style="margin:0;font-weight:400">Es add-on (adicional)</label>
+    </div>
+    <div class="campo" id="campo-mp-alcance" style="display:none">
+      <label>Alcance</label>
+      <select id="mp-alcance">
+        <option value="por_propiedad">Por propiedad</option>
+        <option value="global">Global</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn-primario gold" style="flex:1" onclick="guardarPaqueteAdmin()">Guardar</button>
+      <button class="btn-secundario" style="flex:1" onclick="cerrarModalPaquete()">Cancelar</button>
+    </div>
+    <div id="modal-paq-error" style="color:var(--danger);font-size:12px;margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- Modal: añadir servicio extra / subir precio -->
+<div id="modal-upsell" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <p class="section-title">Añadir servicio extra / subir precio</p>
+    <p style="font-size:12px;color:var(--ink-3);margin-top:-4px;margin-bottom:14px">Útil cuando durante o después de la sesión el cliente pide algo adicional. El portal del cliente refleja el nuevo total al instante.</p>
+
+    <div class="campo">
+      <label>Adicionales del catálogo (no aplicados aún)</label>
+      <div id="upsell-adicionales" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
+        <p style="font-size:12px;color:var(--ink-3);font-style:italic">Cargando...</p>
+      </div>
     </div>
 
-    <!-- ── CRM ────────────────────────────────────────── -->
-    <div id="sec-crm" class="seccion">
-      <div class="barra">
-        <p style="font-size:13px;color:var(--ink-3);flex:1">Clientes únicos con historial de proyectos.</p>
-        <button class="btn-secundario btn-sm" onclick="cargarCRM()"><i class="ti ti-refresh"></i> Actualizar</button>
-      </div>
-      <div class="crm-grid" id="crm-grid">
-        <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
-      </div>
+    <div class="campo">
+      <label>Servicio fuera de catálogo (opcional)</label>
+      <input type="text" id="upsell-libre-nombre" placeholder="Ej. Toma extra con drone">
+      <input type="number" id="upsell-libre-precio" placeholder="Precio MXN" min="0" step="100" style="margin-top:6px">
     </div>
 
-    <!-- ── PAQUETES ──────────────────────────────────── -->
-    <div id="sec-paquetes" class="seccion">
-      <div class="barra">
-        <p style="font-size:13px;color:var(--ink-3);flex:1">Paquetes y add-ons disponibles en el sistema.</p>
-        <button class="btn-secundario btn-sm" onclick="cargarPaquetesAdmin()"><i class="ti ti-refresh"></i> Actualizar</button>
-        <button class="btn-primario gold btn-sm" onclick="abrirModalNuevoPaquete()"><i class="ti ti-plus"></i> Nuevo paquete</button>
-      </div>
-      <div id="lista-paquetes-admin">
-        <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
-      </div>
+    <div class="campo">
+      <label>O establecer precio total manualmente</label>
+      <input type="number" id="upsell-precio-manual" placeholder="(opcional, reemplaza todo el cálculo)" min="0" step="100">
+      <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Si llenas este campo, ignora las selecciones de arriba y fija ese precio total.</p>
+    </div>
 
-      <!-- Modal nuevo / editar paquete -->
-      <div id="modal-paquete" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
-        <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)">
-          <p class="section-title" id="modal-paq-titulo">Nuevo paquete</p>
-          <input type="hidden" id="mp-clave-original">
-          <div class="campo">
-            <label>Clave *</label>
-            <input type="text" id="mp-clave" placeholder="PREM-RES" style="text-transform:uppercase">
-          </div>
-          <div class="campo">
-            <label>Nombre *</label>
-            <input type="text" id="mp-nombre" placeholder="Premium Residencial">
-          </div>
-          <div class="campo">
-            <label>Tipo</label>
-            <select id="mp-tipo">
-              <option value="Ambos">Ambos</option>
-              <option value="Residencial">Residencial</option>
-              <option value="Terreno">Terreno</option>
-            </select>
-          </div>
-          <div class="campo">
-            <label>Precio (MXN)</label>
-            <input type="number" id="mp-precio" placeholder="0" min="0" step="100">
-          </div>
-          <div class="campo">
-            <label>Entregables</label>
-            <textarea id="mp-entregables" maxlength="2000" placeholder="Video 4K · Fotografías · Tour virtual" style="min-height:70px"></textarea>
-          </div>
-          <div class="campo" style="display:flex;align-items:center;gap:10px">
-            <input type="checkbox" id="mp-es-adicional" style="width:auto;margin:0" onchange="document.getElementById('campo-mp-alcance').style.display = this.checked ? 'block' : 'none'">
-            <label for="mp-es-adicional" style="margin:0;font-weight:400">Es add-on (adicional)</label>
-          </div>
-          <div class="campo" id="campo-mp-alcance" style="display:none">
-            <label>Alcance</label>
-            <select id="mp-alcance">
-              <option value="por_propiedad">Por propiedad</option>
-              <option value="global">Global</option>
-            </select>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:20px">
-            <button class="btn-primario gold" style="flex:1" onclick="guardarPaqueteAdmin()">Guardar</button>
-            <button class="btn-secundario" style="flex:1" onclick="cerrarModalPaquete()">Cancelar</button>
-          </div>
-          <div id="modal-paq-error" style="color:var(--danger);font-size:12px;margin-top:10px;display:none"></div>
-        </div>
-      </div>
+    <div class="campo">
+      <label>Nota interna (opcional)</label>
+      <input type="text" id="upsell-nota" maxlength="500" placeholder="Acordado durante la sesión, etc.">
+    </div>
 
-      <!-- Modal: añadir servicio extra / subir precio -->
-      <div id="modal-upsell" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
-        <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25)">
-          <p class="section-title">Añadir servicio extra / subir precio</p>
-          <p style="font-size:12px;color:var(--ink-3);margin-top:-4px;margin-bottom:14px">Útil cuando durante o después de la sesión el cliente pide algo adicional. El portal del cliente refleja el nuevo total al instante.</p>
+    <div class="campo" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="upsell-notificar" style="width:auto;margin:0" checked>
+      <label for="upsell-notificar" style="margin:0;font-weight:400">Notificar al cliente por correo</label>
+    </div>
 
-          <div class="campo">
-            <label>Adicionales del catálogo (no aplicados aún)</label>
-            <div id="upsell-adicionales" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
-              <p style="font-size:12px;color:var(--ink-3);font-style:italic">Cargando...</p>
-            </div>
-          </div>
+    <div id="upsell-resumen" style="background:var(--page);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;margin:14px 0;display:none">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">Precio actual</span><span id="upsell-precio-actual">—</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:700"><span>Nuevo total</span><span id="upsell-precio-nuevo" style="color:var(--gold)">—</span></div>
+    </div>
 
-          <div class="campo">
-            <label>Servicio fuera de catálogo (opcional)</label>
-            <input type="text" id="upsell-libre-nombre" placeholder="Ej. Toma extra con drone">
-            <input type="number" id="upsell-libre-precio" placeholder="Precio MXN" min="0" step="100" style="margin-top:6px">
-          </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-primario gold" style="flex:1" onclick="guardarUpsell()" id="btn-upsell-guardar">Guardar</button>
+      <button class="btn-secundario" style="flex:1" onclick="cerrarModalUpsell()">Cancelar</button>
+    </div>
+    <div id="modal-upsell-error" style="color:var(--danger);font-size:12px;margin-top:10px;display:none"></div>
+  </div>
+</div>
 
-          <div class="campo">
-            <label>O establecer precio total manualmente</label>
-            <input type="number" id="upsell-precio-manual" placeholder="(opcional, reemplaza todo el cálculo)" min="0" step="100">
-            <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Si llenas este campo, ignora las selecciones de arriba y fija ese precio total.</p>
-          </div>
-
-          <div class="campo">
-            <label>Nota interna (opcional)</label>
-            <input type="text" id="upsell-nota" maxlength="500" placeholder="Acordado durante la sesión, etc.">
-          </div>
-
-          <div class="campo" style="display:flex;align-items:center;gap:10px">
-            <input type="checkbox" id="upsell-notificar" style="width:auto;margin:0" checked>
-            <label for="upsell-notificar" style="margin:0;font-weight:400">Notificar al cliente por correo</label>
-          </div>
-
-          <div id="upsell-resumen" style="background:var(--page);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;margin:14px 0;display:none">
-            <div style="display:flex;justify-content:space-between"><span style="color:var(--ink-3)">Precio actual</span><span id="upsell-precio-actual">—</span></div>
-            <div style="display:flex;justify-content:space-between;font-weight:700"><span>Nuevo total</span><span id="upsell-precio-nuevo" style="color:var(--gold)">—</span></div>
-          </div>
-
-          <div style="display:flex;gap:10px;margin-top:8px">
-            <button class="btn-primario gold" style="flex:1" onclick="guardarUpsell()" id="btn-upsell-guardar">Guardar</button>
-            <button class="btn-secundario" style="flex:1" onclick="cerrarModalUpsell()">Cancelar</button>
-          </div>
-          <div id="modal-upsell-error" style="color:var(--danger);font-size:12px;margin-top:10px;display:none"></div>
-        </div>
-      </div>
-
-      <!-- Modal: abono excede saldo -->
-      <div id="modal-exceso" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
-        <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
-          <p class="section-title">El abono excede el saldo</p>
-          <div id="modal-exceso-detalle" style="font-size:13px;color:var(--ink-2);line-height:1.55;margin-bottom:18px"></div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button class="btn-primario gold" onclick="confirmarAbonoConExceso()">Subir precio del contrato y registrar abono completo</button>
-            <button class="btn-secundario" onclick="ajustarAbonoAlSaldo()">Registrar solo el saldo pendiente</button>
-            <button class="btn-secundario" onclick="cerrarModalExceso()">Cancelar</button>
-          </div>
-        </div>
-      </div>
+<!-- Modal: abono excede saldo -->
+<div id="modal-exceso" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--r);padding:28px;width:100%;max-width:460px;box-shadow:0 8px 40px rgba(0,0,0,.25)">
+    <p class="section-title">El abono excede el saldo</p>
+    <div id="modal-exceso-detalle" style="font-size:13px;color:var(--ink-2);line-height:1.55;margin-bottom:18px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-primario gold" onclick="confirmarAbonoConExceso()">Subir precio del contrato y registrar abono completo</button>
+      <button class="btn-secundario" onclick="ajustarAbonoAlSaldo()">Registrar solo el saldo pendiente</button>
+      <button class="btn-secundario" onclick="cerrarModalExceso()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -985,22 +1961,27 @@
   <div class="panel-handle" style="display:none;width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 0;flex-shrink:0"></div>
   <div class="panel-header">
     <div class="panel-header-info">
+      <div id="panel-status-pill"></div>
       <div class="panel-folio" id="panel-folio">—</div>
       <div class="panel-nombre" id="panel-nombre">—</div>
-      <div id="panel-badge"></div>
+      <div id="panel-contact" class="panel-contact" style="display:none"></div>
+      <div class="lifecycle-wrap"></div>
+      <div id="panel-sesion" class="panel-sesion" style="display:none"></div>
     </div>
     <button class="btn-cerrar" onclick="cerrarPanel()"><i class="ti ti-x"></i></button>
   </div>
+  <!-- KPI cards + pay progress (populated by renderPanel) -->
+  <div id="panel-kpis"></div>
   <div class="panel-tabs">
     <button class="panel-tab-btn activo" onclick="mostrarPanelTab('general', this)">General</button>
     <button class="panel-tab-btn" onclick="mostrarPanelTab('produccion', this)">Producción</button>
     <button class="panel-tab-btn" onclick="mostrarPanelTab('entrega', this)">Entrega</button>
   </div>
   <div id="pane-general" class="panel-tab-pane activo"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-
   <div id="pane-produccion" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-
   <div id="pane-entrega" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+  <!-- Sticky action bar (populated by renderPanel) -->
+  <div id="panel-action-bar"></div>
 </div>
 <div id="overlay" onclick="cerrarPanel()"></div>
 
@@ -1269,15 +2250,33 @@ function mostrarTab(id, btn) {
   document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
   document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('activo'));
+  // Gear button de topbar refleja estado activo de ajustes
+  const btnGear = document.getElementById('btn-topbar-ajustes');
+  if (btnGear) btnGear.classList.toggle('activo', id === 'ajustes');
   document.getElementById('sec-' + id).classList.add('activa');
   if (btn) btn.classList.add('activo');
   const bnavBtn = document.querySelector(`.bnav-btn[data-tab="${id}"]`);
   if (bnavBtn) bnavBtn.classList.add('activo');
+  const tabBtn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+  if (tabBtn) tabBtn.classList.add('activo');
   if (id === 'contratos') cargarContratos();
-  if (id === 'crm') cargarCRM();
-  if (id === 'paquetes') cargarPaquetesAdmin();
-  if (id === 'metricas') cargarMetricas();
+  if (id === 'ajustes') {
+    const paneActivo = document.querySelector('.ajustes-pane.activo-apane');
+    if (paneActivo?.id === 'apane-clientes') cargarCRM();
+    else if (paneActivo?.id === 'apane-paquetes') cargarPaquetesAdmin();
+    else cargarMetricas();
+  }
   if (id === 'nuevo') cargarClientesParaAutocomplete();
+}
+
+function setAjustesTab(pane) {
+  document.querySelectorAll('.ajustes-tab').forEach(b => b.classList.remove('activo-atab'));
+  document.querySelectorAll('.ajustes-pane').forEach(p => p.classList.remove('activo-apane'));
+  document.getElementById('atab-' + pane).classList.add('activo-atab');
+  document.getElementById('apane-' + pane).classList.add('activo-apane');
+  if (pane === 'metricas') cargarMetricas();
+  if (pane === 'paquetes') cargarPaquetesAdmin();
+  if (pane === 'clientes') cargarCRM();
 }
 
 
@@ -1289,8 +2288,35 @@ function mostrarPanelTab(id, btn) {
 }
 
 function irANuevo() {
-  const btn = document.querySelector('.tab-btn[data-tab="nuevo"]');
-  mostrarTab('nuevo', btn);
+  mostrarTab('nuevo', null);
+}
+
+function actualizarNavBadges(contratos) {
+  if (window.innerWidth < 1024) return;
+  var abiertos = contratos.filter(function(c){
+    var e = c.Estatus||'';
+    return e !== 'Completado' && e !== 'Liquidado';
+  }).length;
+  var bdgContratos = document.getElementById('bnav-badge-contratos');
+  if (bdgContratos) {
+    if (abiertos > 0) { bdgContratos.textContent = abiertos; bdgContratos.style.display = ''; }
+    else bdgContratos.style.display = 'none';
+  }
+  // clientes únicos por correo (para badge sutil)
+  var correos = new Set(contratos.map(function(c){ return c.CorreoCliente||''; }).filter(Boolean));
+  var bdgClientes = document.getElementById('bnav-badge-clientes');
+  if (bdgClientes && correos.size > 0) {
+    bdgClientes.textContent = correos.size;
+    bdgClientes.style.display = '';
+  }
+}
+
+function irASubseccion(tab, subtab, btn) {
+  mostrarTab(tab, null);
+  setAjustesTab(subtab);
+  // marcar el item del sidebar como activo (mostrarTab ya limpió todos)
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('activo'));
+  if (btn) btn.classList.add('activo');
 }
 
 async function enviarRecordatorio() {
@@ -1303,6 +2329,29 @@ async function enviarRecordatorio() {
     alert('Recordatorio enviado a ' + ctx.c.CorreoCliente);
   } catch(e) {
     alert('Error: ' + e.message);
+  }
+}
+
+async function guardarExpress(checked) {
+  const tok = tokenActivo;
+  if (!tok) return;
+  setMsg('msg-express', 'Guardando…', '');
+  try {
+    const r = await apiPost({ action: 'actualizarExpress', token: tok, express: checked });
+    if (tok !== tokenActivo) return;
+    if (!r.ok) throw new Error(r.error || 'Error');
+    const props = (window._contratoActivo && window._contratoActivo.propiedades) || [];
+    props.forEach(function(p) {
+      const el = document.getElementById('fecha-entrega-' + p.NumPropiedad);
+      if (el && p.FechaSesion) el.textContent = fmxnFecha(calcFechaEntrega(p.FechaSesion, checked));
+    });
+    setMsg('msg-express', 'Guardado', 'ok');
+    setTimeout(function() { setMsg('msg-express', '', ''); }, 2000);
+  } catch(e) {
+    if (tok !== tokenActivo) return;
+    const cb = document.getElementById('toggle-express');
+    if (cb) cb.checked = !checked;
+    setMsg('msg-express', 'Error: ' + e.message, 'error');
   }
 }
 
@@ -1345,6 +2394,32 @@ async function guardarNotaInterna(numProp) {
 function toggleCaracteristicas(numProp) {
   const div = document.getElementById('form-caract-' + numProp);
   if (div) div.style.display = div.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleFormato(numProp) {
+  const div = document.getElementById('form-formato-' + numProp);
+  if (div) div.style.display = div.style.display === 'none' ? 'block' : 'none';
+}
+
+async function guardarFormato(numProp) {
+  const ctx = window._contratoActivo;
+  if (!ctx) return;
+  const sel      = document.getElementById('formato-sel-' + numProp);
+  const chk      = document.getElementById('ocultar-fmt-' + numProp);
+  const msg      = document.getElementById('msg-formato-' + numProp);
+  const formatoVideo      = sel ? sel.value : 'vertical_nativo';
+  const ocultarFormatoVideo = chk ? (chk.checked ? 1 : 0) : 0;
+  if (msg) msg.textContent = 'Guardando...';
+  try {
+    const data = await apiPost({ action: 'guardarFormatoPropiedad', token: ctx.c.Token, numPropiedad: numProp, formatoVideo, ocultarFormatoVideo });
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    const etiquetas = { vertical_nativo: 'Vertical', horizontal_recorte_vertical: 'Horizontal + recorte', doble_nativo: 'Doble formato' };
+    const labelEl = document.getElementById('fmt-label-' + numProp);
+    if (labelEl) labelEl.textContent = etiquetas[formatoVideo] || formatoVideo;
+    if (msg) { msg.textContent = 'Guardado.'; setTimeout(() => { if (msg) msg.textContent = ''; toggleFormato(numProp); }, 1200); }
+  } catch(e) {
+    if (msg) msg.textContent = 'Error: ' + e.message;
+  }
 }
 
 async function guardarCaracteristicas(numProp) {
@@ -1536,7 +2611,7 @@ function actualizarAnticipo(p) {
 async function cargarContratos(tokenInicial) {
   if (_cargandoContratos) return;
   _cargandoContratos = true;
-  document.getElementById('tabla-body').innerHTML = '<tr><td colspan="6" class="tabla-vacio">Cargando...</td></tr>';
+  document.getElementById('tabla-body').innerHTML = skeletonRows();
   try {
     const dataC = await apiGet({ action: 'listarContratos' });
     if (!dataC.ok) throw new Error(dataC.error || 'Error desconocido');
@@ -1547,15 +2622,12 @@ async function cargarContratos(tokenInicial) {
     if (tok) abrirPanel(tok);
   } catch (e) {
     document.getElementById('tabla-body').innerHTML =
-      `<tr><td colspan="6" style="color:var(--danger);padding:24px;text-align:center">Error: ${esc(e.message)}</td></tr>`;
+      `<tr><td colspan="${modoSeleccion ? 8 : 7}" style="color:var(--danger);padding:24px;text-align:center">Error: ${esc(e.message)}</td></tr>`;
     _cargandoContratos = false;
     return;
   }
-  // Stats no bloquean la tabla — se cargan en paralelo al display de contratos.
   _cargandoContratos = false;
-  apiGet({ action: 'listarStats', periodo: 'mes' })
-    .then(dataS => { if (dataS?.ok) renderStatsBar(dataS); })
-    .catch(() => {});
+  renderAlertas();
 }
 
 function setCiclo(ciclo) {
@@ -1568,38 +2640,84 @@ function setCiclo(ciclo) {
   document.getElementById('radar-sesiones').style.display = ciclo === 'sesiones' ? 'none' : '';
   document.getElementById('filtro-estatus').style.display = ciclo === 'sesiones' ? 'none' : '';
   document.getElementById('btn-filtros-toggle').style.display = ciclo === 'sesiones' ? 'none' : '';
+  const fc = document.getElementById('filter-chips');
+  if (fc) fc.style.visibility = ciclo === 'sesiones' ? 'hidden' : '';
   filtrarContratos();
 }
 
-function renderStatsBar(s) {
+function renderAlertas() {
   const bar = document.getElementById('stats-bar');
   if (!bar) return;
-  const tarjetas = [
-    { label: 'Facturado este mes',  valor: fmxn(s.facturado),  sub: '',                   color: 'var(--gold)' },
-    { label: 'Cobrado este mes',    valor: fmxn(s.cobrado),    sub: '',                   color: 'var(--success)' },
-    { label: 'Por cobrar (total)',  valor: fmxn(s.porCobrar),  sub: 'contratos abiertos', color: 'var(--warn)' },
-  ];
-  bar.innerHTML = tarjetas.map(t => `
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px">
-      <p style="font-size:11px;color:var(--ink-3);margin:0 0 4px;text-transform:uppercase;letter-spacing:.05em">${t.label}</p>
-      <p style="font-size:20px;font-weight:700;color:${t.color};margin:0 0 2px">${t.valor}</p>
-      ${t.sub ? `<p style="font-size:11px;color:var(--ink-3);margin:0">${t.sub}</p>` : ''}
-    </div>`).join('');
+
+  const tzOff  = new Date().getTimezoneOffset() * 60000;
+  const ahora  = Date.now();
+  const hoy    = new Date(ahora - tzOff).toISOString().substring(0, 10);
+  const manana = new Date(ahora - tzOff + 86400000).toISOString().substring(0, 10);
+  const en7    = new Date(ahora - tzOff + 7 * 86400000).toISOString().substring(0, 10);
+
+  const activos = todosContratos.filter(c => !['Completado', 'Cancelado'].includes(c.Estatus));
+
+  const sesHoy    = activos.filter(c => c.FechaSesion && String(c.FechaSesion).substring(0, 10) === hoy).length;
+  const sesManana = activos.filter(c => c.FechaSesion && String(c.FechaSesion).substring(0, 10) === manana).length;
+  const sesSemana = activos.filter(c => {
+    const f = c.FechaSesion ? String(c.FechaSesion).substring(0, 10) : '';
+    return f > manana && f <= en7;
+  }).length;
+  const pendFirma = activos.filter(c => c.Estatus === 'Pendiente firma').length;
+  const expirando = activos.filter(c =>
+    c.Estatus === 'Pendiente firma' &&
+    c.FechaCreacion &&
+    (ahora - new Date(c.FechaCreacion).getTime()) / (1000 * 60 * 60) > 60
+  ).length;
+  const cobros = activos.filter(c =>
+    (c.SaldoPendiente ?? 0) > 0 &&
+    ['Firmado', 'Anticipo recibido', 'En produccion', 'Entregado'].includes(c.Estatus)
+  ).length;
+
+  const items = [];
+  if (sesHoy)    items.push(`<span class="alerta-item" style="color:var(--gold)"><i class="ti ti-camera"></i>${sesHoy === 1 ? '1 sesión hoy' : sesHoy + ' sesiones hoy'}</span>`);
+  if (sesManana) items.push(`<span class="alerta-item" style="color:#B45309"><i class="ti ti-calendar-event"></i>${sesManana} sesión${sesManana > 1 ? 'es' : ''} mañana</span>`);
+  if (sesSemana) items.push(`<span class="alerta-item" style="color:#2563EB"><i class="ti ti-calendar"></i>${sesSemana} esta semana</span>`);
+  if (pendFirma) items.push(`<span class="alerta-item" style="color:var(--ink-1)"><i class="ti ti-signature"></i>${pendFirma} pendiente${pendFirma > 1 ? 's' : ''} de firma${expirando ? ` <span style="color:var(--warn);font-size:11px">(${expirando} por expirar)</span>` : ''}</span>`);
+  if (cobros)    items.push(`<span class="alerta-item" style="color:var(--ink-2)"><i class="ti ti-cash"></i>${cobros} cobro${cobros > 1 ? 's' : ''} pendiente${cobros > 1 ? 's' : ''}</span>`);
+
+  if (!items.length) {
+    bar.innerHTML = '';
+    bar.style.display = 'none';
+    actualizarBadgesTabs();
+    return;
+  }
+
+  bar.style.display = '';
+  bar.innerHTML = `<div class="stats-linea">${items.join('<span class="stats-sep" style="color:var(--border2)">·</span>')}</div>`;
   actualizarBadgesTabs();
 }
 
 
+function toggleChip(btn) {
+  btn.classList.toggle('on');
+  filtrarContratos();
+}
+
+function getChipEstatus() {
+  const chips = document.querySelectorAll('#filter-chips .filter-chip.on');
+  if (!chips.length) return null; // sin selección = todos
+  return Array.from(chips).map(c => c.dataset.estatus);
+}
+
 function filtrarContratos() {
   const q     = document.getElementById('busqueda').value.toLowerCase();
-  const st    = document.getElementById('filtro-estatus').value;
+  const chipSt = getChipEstatus();
+  const st    = chipSt ? null : document.getElementById('filtro-estatus').value;
   const desde = document.getElementById('filtro-fecha-desde').value;
   const hasta = document.getElementById('filtro-fecha-hasta').value;
   const hoy   = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 10);
   let lista = todosContratos.filter(c => {
     if (filtroCiclo === 'abiertos' && !ESTATUS_ABIERTOS.includes(c.Estatus)) return false;
     if (filtroCiclo === 'sesiones' && (!c.FechaSesion || String(c.FechaSesion).substring(0, 10) < hoy)) return false;
-    if (st && c.Estatus !== st) return false;
-    if (q && !(((c.NombreCliente||'') + (c.CorreoCliente||'') + (c.Folio||'')).toLowerCase().includes(q))) return false;
+    if (chipSt && !chipSt.includes(c.Estatus)) return false;
+    if (!chipSt && st && c.Estatus !== st) return false;
+    if (q && !(((c.NombreCliente||'') + (c.CorreoCliente||'') + (c.Folio||'') + (c.TelefonoCliente||'')).toLowerCase().includes(q))) return false;
     if (filtroCiclo !== 'sesiones' && (desde || hasta)) {
       const fecha = String(c.FechaCreacion || '').substring(0, 10);
       if (desde && fecha < desde) return false;
@@ -1629,10 +2747,36 @@ function diasEnEstatus(c) {
   return Math.max(0, Math.floor((ahora - d.getTime()) / (1000 * 60 * 60 * 24)));
 }
 
+function skeletonRows() {
+  return Array.from({length: 5}).map(() => `
+    <tr style="pointer-events:none">
+      ${modoSeleccion ? '<td style="width:32px"></td>' : ''}
+      <td class="td-folio"><span class="skel" style="width:64px;height:12px"></span></td>
+      <td>
+        <span class="skel" style="width:130px;height:13px;display:block;margin-bottom:5px"></span>
+        <span class="skel" style="width:90px;height:11px;display:block"></span>
+      </td>
+      <td><span class="skel" style="width:80px;height:20px;border-radius:20px"></span></td>
+      <td class="td-fecha"><span class="skel" style="width:60px;height:12px"></span></td>
+      <td class="td-monto"><span class="skel" style="width:55px;height:12px"></span></td>
+      <td class="td-saldo"><span class="skel" style="width:50px;height:12px"></span></td>
+    </tr>`).join('');
+}
+
+const ESTATUS_COLOR = {
+  'Pendiente firma':   '#9CA3AF',
+  'Firmado':           '#3B82F6',
+  'Anticipo recibido': '#F59E0B',
+  'En produccion':     '#8B5CF6',
+  'Entregado':         '#14B8A6',
+  'Liquidado':         '#10B981',
+  'Completado':        '#10B981',
+};
+
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="${modoSeleccion ? 7 : 6}" class="tabla-vacio">Sin contratos que mostrar.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${modoSeleccion ? 8 : 7}" class="tabla-vacio">Sin contratos que mostrar.</td></tr>`;
     return;
   }
   const ahora  = Date.now();
@@ -1656,28 +2800,71 @@ function renderTabla(lista) {
          : fs <= en2Str ? 'tr-ses-pronto'
          : fs <= en7Str ? 'tr-ses-semana' : '')
       : '';
-    return `<tr class="${[activo, sesClass].filter(Boolean).join(' ')}" ${rowClick}>
-      ${checkCell}
-      <td class="td-folio">${esc(c.Folio) || '—'}</td>
-      <td>
-        <div class="td-nombre">${esc(c.NombreCliente)}</div>
-        <div class="td-sub">${esc(c.CorreoCliente)}</div>
-        ${(c.FechaSesion || c.PaqueteBase) ? `<div class="td-sub" style="color:var(--ink-2)">${[c.FechaSesion ? fmxnFecha(c.FechaSesion) : '', c.PaqueteBase || ''].filter(Boolean).join(' · ')}</div>` : ''}
-      </td>
-      <td>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          ${badgeEstatus(c.Estatus)}
-          ${alertaExpiry ? `<i class="ti ti-alert-triangle" style="color:var(--warn);font-size:13px" title="Link próximo a expirar (más de 60 h en Pendiente firma)"></i>` : ''}
+    // Celda de sesión: fecha coloreada por proximidad
+    const sesColorStyle = sesClass === 'tr-ses-hoy'   ? 'color:var(--gold);font-weight:700'
+                        : sesClass === 'tr-ses-pronto' ? 'color:var(--warn);font-weight:600'
+                        : sesClass === 'tr-ses-semana' ? 'color:#3B82F6;font-weight:600'
+                        : 'color:var(--ink-3)';
+    const sesCell = fs
+      ? `<td class="td-fecha" style="${sesColorStyle}">${fmxnFecha(fs)}</td>`
+      : `<td class="td-fecha" style="color:var(--ink-4)">—</td>`;
+    const statusColor = ESTATUS_COLOR[c.Estatus] ? `--row-color:${ESTATUS_COLOR[c.Estatus]}` : '';
+    const iniciales = (c.NombreCliente||'?').split(' ').slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase();
+    // deterministic gradient by first initial
+    const avClasses = ['av-a','av-b','av-c','av-d','av-e','av-f'];
+    const avClass = avClasses[(iniciales.charCodeAt(0) || 0) % avClasses.length];
+    const avatarCell = `<td class="td-avatar-desktop" style="padding-left:20px"><div class="td-avatar ${avClass}">${iniciales}</div></td>`;
+
+    // status dot + label + age
+    const dotColor = ESTATUS_COLOR[c.Estatus] || '#9CA3AF';
+    const estatusLabel = c.Estatus === 'En produccion' ? 'En producción' : (c.Estatus || '—');
+    const ageText = dias > 0 ? `${dias} día${dias !== 1 ? 's' : ''}` : '';
+    const statusCell = `<td>
+      <div class="td-status-wrap">
+        <span class="td-status-dot" style="background:${dotColor}"></span>
+        <div>
+          <div class="td-status-label">${esc(estatusLabel)}${alertaExpiry ? ` <i class="ti ti-alert-triangle" style="color:var(--warn);font-size:11px;vertical-align:middle" title="Link próximo a expirar"></i>` : ''}</div>
+          ${ageText ? `<div class="td-status-age">${ageText}</div>` : ''}
         </div>
-        ${dias > 0 ? `<div class="td-sub" style="margin-top:3px">${dias} día${dias !== 1 ? 's' : ''} en este estatus</div>` : ''}
+      </div>
+    </td>`;
+
+    // saldo bar
+    const saldoVal  = parseFloat(c.SaldoPendiente) || 0;
+    const precioVal = parseFloat(c.PrecioTotal) || 0;
+    const pagadoPct = precioVal > 0 ? Math.min(100, Math.round((precioVal - saldoVal) / precioVal * 100)) : 0;
+    const barColor  = saldoVal <= 0 ? '#10B981' : pagadoPct >= 50 ? '#F59E0B' : '#DC2626';
+    const saldoClass = saldoVal <= 0 ? 'green' : pagadoPct >= 50 ? 'amber' : 'red';
+    const saldoText  = saldoVal <= 0
+      ? '<i class="ti ti-check"></i> Liquidado'
+      : fmxn(saldoVal);
+    const saldoCell = `<td>
+      <div class="td-saldo-wrap">
+        <span class="td-saldo-val ${saldoClass}">${saldoText}</span>
+        <div class="saldo-bar-wrap"><div class="saldo-bar-fill" style="width:${pagadoPct}%;background:${barColor}"></div></div>
+      </div>
+    </td>`;
+
+    return `<tr class="${[activo, sesClass].filter(Boolean).join(' ')}" ${rowClick} style="${statusColor}">
+      ${checkCell}
+      <td class="td-folio" style="padding-left:20px">${esc(c.Folio) || '—'}</td>
+      ${avatarCell}
+      <td>
+        <div class="td-nombre">
+          ${c.EntregaExpress ? `<span style="background:#ef4444;color:#fff;font-size:9px;font-weight:800;letter-spacing:.8px;padding:1px 6px;border-radius:3px;margin-right:5px;vertical-align:middle">EXPRESS</span>` : ''}${esc(c.NombreCliente)}
+        </div>
+        <div class="td-sub td-email">${esc(c.CorreoCliente)}</div>
+        ${c.PaqueteBase ? `<div class="td-sub" style="color:var(--ink-2)">${esc(c.PaqueteBase)}</div>` : ''}
       </td>
+      ${statusCell}
+      ${sesCell}
       <td class="td-monto">${fmxn(c.PrecioTotal)}</td>
-      <td class="td-saldo${(c.SaldoPendiente ?? 0) <= 0 ? ' pagado' : ''}">
-        ${(c.SaldoPendiente ?? 0) > 0 ? fmxn(c.SaldoPendiente) : '<i class="ti ti-check" style="color:var(--success)"></i>'}
-      </td>
-      <td class="td-fecha">${fmxnFecha(c.FechaCreacion)}</td>
+      ${saldoCell}
     </tr>`;
   }).join('');
+  actualizarStatsRibbon(todosContratos);
+  actualizarNavBadges(todosContratos);
+  renderHoyStrip(todosContratos);
 }
 
 function renderSesiones(lista) {
@@ -1743,13 +2930,21 @@ async function abrirPanel(token) {
 
   document.getElementById('panel-folio').textContent  = '...';
   document.getElementById('panel-nombre').textContent = 'Cargando...';
-  document.getElementById('panel-badge').innerHTML    = '';
+  const _psp = document.getElementById('panel-status-pill');
+  if (_psp) _psp.innerHTML = '';
+  const _pc = document.getElementById('panel-contact');
+  if (_pc) { _pc.innerHTML = ''; _pc.style.display = 'none'; }
+  const _pk = document.getElementById('panel-kpis');
+  if (_pk) _pk.innerHTML = '';
+  const _pab = document.getElementById('panel-action-bar');
+  if (_pab) _pab.innerHTML = '';
   ['general','produccion','entrega'].forEach(id =>
     document.getElementById('pane-' + id).innerHTML =
       '<p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:4px 0">Cargando...</p>'
   );
   document.getElementById('panel-lateral').classList.add('visible');
   document.getElementById('overlay').classList.add('visible');
+  document.body.classList.add('panel-abierto');
   document.querySelectorAll('.panel-tab-btn').forEach((b,i) => b.classList.toggle('activo', i===0));
   document.querySelectorAll('.panel-tab-pane').forEach((p,i) => p.classList.toggle('activo', i===0));
 
@@ -1770,6 +2965,7 @@ function cerrarPanel() {
   if (history.replaceState) history.replaceState({}, '', location.pathname);
   document.getElementById('panel-lateral').classList.remove('visible');
   document.getElementById('overlay').classList.remove('visible');
+  document.body.classList.remove('panel-abierto');
   document.querySelectorAll('#tabla-body tr').forEach(tr => tr.classList.remove('activo'));
 }
 
@@ -1785,7 +2981,100 @@ function renderPanel(data) {
 
   document.getElementById('panel-folio').textContent  = c.Folio || 'Sin folio';
   document.getElementById('panel-nombre').textContent = c.NombreCliente;
-  document.getElementById('panel-badge').innerHTML    = badgeEstatus(c.Estatus);
+
+  // status pill
+  const _pillColor = ESTATUS_COLOR[c.Estatus] || '#9CA3AF';
+  const _pillBg    = _pillColor + '1A'; // ~10% opacity tint
+  const _pillLabel = c.Estatus === 'En produccion' ? 'En producción' : (c.Estatus || '—');
+  const _psp = document.getElementById('panel-status-pill');
+  if (_psp) _psp.innerHTML = `<span class="panel-status-pill" style="background:${_pillBg};color:${_pillColor}"><span class="psp-dot" style="background:${_pillColor}"></span>${esc(_pillLabel)}</span>`;
+
+  // contact line
+  const _pc = document.getElementById('panel-contact');
+  if (_pc) {
+    const parts = [];
+    if (c.CorreoCliente) parts.push(`<a href="mailto:${esc(c.CorreoCliente)}">${esc(c.CorreoCliente)}</a>`);
+    if (c.TelefonoCliente) {
+      if (parts.length) parts.push('<span class="panel-contact-sep">·</span>');
+      parts.push(`<a href="tel:${esc(c.TelefonoCliente)}">${esc(c.TelefonoCliente)}</a>`);
+    }
+    if (parts.length) { _pc.innerHTML = parts.join(''); _pc.style.display = ''; }
+    else _pc.style.display = 'none';
+  }
+
+  var lw = document.querySelector('.lifecycle-wrap');
+  if (lw) lw.innerHTML = renderLifecycle(c.Estatus);
+  // Fecha de primera sesión en header — find() para contratos multi-propiedad donde [0] puede no tener fecha
+  const _sesionProp   = data.propiedades && data.propiedades.find(p => p.FechaSesion);
+  const primeraSesion = _sesionProp && _sesionProp.FechaSesion;
+  const panelSesionEl = document.getElementById('panel-sesion');
+  if (panelSesionEl) {
+    if (primeraSesion) {
+      panelSesionEl.innerHTML = '<i class="ti ti-calendar" style="font-size:11px"></i> ' + fmxnFecha(primeraSesion);
+      panelSesionEl.style.display = '';
+    } else {
+      panelSesionEl.style.display = 'none';
+    }
+  }
+
+  // KPI cards + payment progress bar
+  const _precioTotal  = parseFloat(c.PrecioTotal)   || 0;
+  const _totalAbonado = parseFloat(data.totalAbonado) || 0;
+  const _saldo        = parseFloat(c.SaldoPendiente)  || 0;
+  const _pct          = _precioTotal > 0 ? Math.min(100, Math.round(_totalAbonado / _precioTotal * 100)) : 0;
+  const _pk = document.getElementById('panel-kpis');
+  if (_pk) _pk.innerHTML = `
+    <div class="panel-kpi-row">
+      <div class="panel-kpi-card">
+        <div class="panel-kpi-label">Total</div>
+        <div class="panel-kpi-val">${fmxn(_precioTotal)}</div>
+        <div class="panel-kpi-sub">Precio contratado</div>
+      </div>
+      <div class="panel-kpi-card">
+        <div class="panel-kpi-label">Pagado</div>
+        <div class="panel-kpi-val green">${fmxn(_totalAbonado)}</div>
+        <div class="panel-kpi-sub">${_pct}% del total</div>
+      </div>
+      <div class="panel-kpi-card">
+        <div class="panel-kpi-label">Saldo</div>
+        <div class="panel-kpi-val${_saldo > 0 ? ' amber' : ' green'}">${fmxn(_saldo)}</div>
+        <div class="panel-kpi-sub">${_saldo > 0 ? 'Pendiente' : 'Liquidado'}</div>
+      </div>
+    </div>
+    <div class="panel-pay-progress">
+      <div class="panel-pay-labels">
+        <span class="panel-pay-label">Progreso de pago</span>
+        <span class="panel-pay-label strong">${_pct}% — ${fmxn(_totalAbonado)} de ${fmxn(_precioTotal)}</span>
+      </div>
+      <div class="panel-pay-bar-bg"><div class="panel-pay-bar-fill" style="width:${_pct}%"></div></div>
+    </div>`;
+
+  // Sticky action bar
+  const _waTelPortal = normalizarTelWA(c.TelefonoCliente);
+  const _nombre1wa   = (c.NombreCliente || '').split(' ')[0];
+  const _waTexto = (() => {
+    const st = c.Estatus || '';
+    if (st === 'Pendiente firma') return 'Hola ' + _nombre1wa + ', aquí está tu link para revisar y firmar tu contrato: ' + urlPortal;
+    if (st === 'Firmado')         return 'Hola ' + _nombre1wa + ', te recuerdo que tienes pendiente el anticipo de ' + fmxn(parseFloat(c.Anticipo) || 0) + '. Puedes realizar el pago aquí: ' + urlPortal;
+    return 'Hola ' + _nombre1wa + ', te comparto el link de tu portal: ' + urlPortal;
+  })();
+  const _waUrl = 'https://wa.me/' + _waTelPortal + '?text=' + encodeURIComponent(_waTexto);
+  const _pab = document.getElementById('panel-action-bar');
+  if (_pab) _pab.innerHTML = `
+    <div class="panel-action-bar">
+      <button class="panel-action-btn primary" onclick="const el=document.getElementById('abono-monto'); if(el){el.closest('details')&&(el.closest('details').open=true);el.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>el.focus(),300)}">
+        <i class="ti ti-cash"></i> Registrar abono
+      </button>
+      <a class="panel-action-btn wa" href="${esc(_waUrl)}" target="_blank" rel="noopener">
+        <i class="ti ti-brand-whatsapp"></i> WhatsApp
+      </a>
+      <a class="panel-action-btn" href="${esc(urlPortal)}" target="_blank" rel="noopener">
+        <i class="ti ti-world"></i> Portal
+      </a>
+      <button class="panel-action-btn" onclick="abrirModalUpsell()">
+        <i class="ti ti-plus"></i> Extra
+      </button>
+    </div>`;
 
   // ── PANE GENERAL ──
   const addHtml = adicionales.length
@@ -1807,20 +3096,25 @@ function renderPanel(data) {
       }).join('') + '</span>'
     : '<span style="font-size:12px;color:var(--ink-3)">Sin servicios adicionales</span>';
 
-  const propHtml = data.propiedades.length
-    ? data.propiedades.map((p, i) => {
-        const titulo = data.propiedades.length > 1 ? `Propiedad ${i + 1}` : 'Propiedad';
+  const esExpress = !!(c.EntregaExpress);
+  const _props   = data.propiedades || [];
+  const propHtml = _props.length
+    ? _props.map((p, i) => {
+        const titulo = _props.length > 1 ? `Propiedad ${i + 1}` : 'Propiedad';
         const tipotxt = p.Tipo ? ` · ${p.Tipo}` : '';
         const fechatxt = p.FechaSesion ? fmxnFechaLarga(p.FechaSesion) + (p.HoraSesion ? ' · ' + p.HoraSesion : '') : '';
         const numProp  = p.NumPropiedad || (i + 1);
         const fechaISO = p.FechaSesion ? new Date(p.FechaSesion).toISOString().substring(0, 10) : '';
         const horaVal  = p.HoraSesion  || '';
+        const entregaISO = calcFechaEntrega(p.FechaSesion, esExpress);
         return `<div class="prop-card" id="prop-card-${numProp}">
           <div class="prop-card-titulo">${esc(titulo)}${esc(tipotxt)}</div>
           ${p.Paquete     ? `<div class="prop-dato"><span class="lbl">Paquete </span>${esc(p.Paquete)}</div>` : ''}
           ${fechatxt      ? `<div class="prop-dato"><span class="lbl">Fecha </span>${esc(fechatxt)}</div>` : ''}
+          ${entregaISO    ? `<div class="prop-dato"><span class="lbl">Entrega est. </span><span id="fecha-entrega-${numProp}" style="color:var(--ink-2)">${esc(fmxnFecha(entregaISO))}</span></div>` : ''}
           ${p.Direccion   ? `<div class="prop-dato"><span class="lbl">Dirección </span>${esc(p.Direccion)}</div>` : ''}
           ${p.LinkMaps    ? `<div class="prop-dato"><a href="${safeHref(p.LinkMaps)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px">Ver en Maps</a></div>` : ''}
+          <div class="prop-dato"><span class="lbl">Formato video </span><span id="fmt-label-${numProp}">${esc(p.FormatoVideo === 'horizontal_recorte_vertical' ? 'Horizontal + recorte' : p.FormatoVideo === 'doble_nativo' ? 'Doble formato' : 'Vertical')}</span>${p.OcultarFormatoVideo ? ' <span style="font-size:10px;background:var(--ink-3);color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle">oculto en portal</span>' : ''}</div>
           <div class="prop-dato"><span class="lbl">Características </span><span id="sobre-prop-${numProp}">${esc(p.SobreLaPropiedad || '—')}</span></div>
           ${p.DatosEspecificos && p.DatosEspecificos.comentarios ? `<div class="prop-dato" style="background:var(--gold-dim);border-radius:6px;padding:6px 8px;margin-top:4px"><span class="lbl" style="color:var(--gold-dark,#9a7a2f)">Comentarios del cliente </span><span style="font-size:12px;line-height:1.5;white-space:pre-wrap">${esc(p.DatosEspecificos.comentarios)}</span></div>` : ''}
           <div class="prop-card-acciones" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
@@ -1832,6 +3126,9 @@ function renderPanel(data) {
             </button>
             <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleNotaInterna(${numProp})">
               <i class="ti ti-note"></i> Nota interna
+            </button>
+            <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleFormato(${numProp})">
+              <i class="ti ti-video"></i> Formato
             </button>
           </div>
           <div id="form-caract-${numProp}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
@@ -1865,6 +3162,25 @@ function renderPanel(data) {
             <div style="display:flex;gap:6px">
               <button class="btn-primario gold btn-sm" onclick="confirmarReagendar(${numProp})">Confirmar</button>
               <button class="btn-secundario btn-sm" onclick="toggleReagendar(${numProp})">Cancelar</button>
+            </div>
+          </div>
+          <div id="form-formato-${numProp}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <div class="campo" style="margin:0 0 10px">
+              <label style="font-size:11px">Formato de video</label>
+              <select id="formato-sel-${numProp}" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:7px 8px;background:var(--page);color:var(--ink-1)">
+                <option value="vertical_nativo"${(p.FormatoVideo||'vertical_nativo')==='vertical_nativo'?' selected':''}>Vertical (9:16 nativo) — Reels, TikTok, Shorts</option>
+                <option value="horizontal_recorte_vertical"${p.FormatoVideo==='horizontal_recorte_vertical'?' selected':''}>Horizontal (16:9) + recorte vertical — YouTube, sitio web</option>
+                <option value="doble_nativo"${p.FormatoVideo==='doble_nativo'?' selected':''}>Doble formato — dos pasadas en campo (+$1,500)</option>
+              </select>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);cursor:pointer;margin-bottom:10px">
+              <input type="checkbox" id="ocultar-fmt-${numProp}" ${p.OcultarFormatoVideo ? 'checked' : ''} style="accent-color:var(--gold);width:14px;height:14px">
+              Ocultar selector en el portal (cliente no elige)
+            </label>
+            <div class="form-msg" id="msg-formato-${numProp}" style="margin-top:4px"></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn-primario gold btn-sm" onclick="guardarFormato(${numProp})">Guardar</button>
+              <button class="btn-secundario btn-sm" onclick="toggleFormato(${numProp})">Cancelar</button>
             </div>
           </div>
         </div>`;
@@ -1904,14 +3220,37 @@ function renderPanel(data) {
     : '<p style="font-size:12px;color:var(--ink-3);padding:6px 0">Sin abonos registrados.</p>';
 
   document.getElementById('pane-general').innerHTML = `
-    <div class="info-fila"><span class="etiq">Cliente</span><span class="val">${esc(c.NombreCliente)}</span></div>
-    <div class="info-fila"><span class="etiq">Correo</span><span class="val"><a href="mailto:${esc(c.CorreoCliente)}" style="color:var(--gold);text-decoration:none">${esc(c.CorreoCliente)}</a></span></div>
-    <div class="info-fila"><span class="etiq">Teléfono</span><span class="val">${esc(c.TelefonoCliente) || '—'}</span></div>
-    <div class="info-fila"><span class="etiq">Tipo</span><span class="val">${c.TipoContrato === 'estandar' ? 'Estándar' : 'Particular'}</span></div>
-    ${c.PaqueteBase ? `<div class="info-fila"><span class="etiq">Paquete</span><span class="val">${esc(c.PaqueteBase)}</span></div>` : ''}
-    <div class="info-fila"><span class="etiq">Adicionales</span><span class="val">${addHtml}</span></div>
-    <div class="sec-label">Propiedades</div>
-    ${propHtml}
+
+    <!-- ── Acordeón: Datos del cliente (cerrado) ── -->
+    <details class="panel-acord">
+      <summary>Datos del cliente</summary>
+      <div class="panel-acord-body">
+        <div class="info-fila"><span class="etiq">Nombre</span><span class="val">${esc(c.NombreCliente)}</span></div>
+        <div class="info-fila"><span class="etiq">Correo</span><span class="val"><a href="mailto:${esc(c.CorreoCliente)}" style="color:var(--gold);text-decoration:none">${esc(c.CorreoCliente)}</a></span></div>
+        <div class="info-fila"><span class="etiq">Teléfono</span><span class="val">${esc(c.TelefonoCliente) || '—'}</span></div>
+        <div class="info-fila"><span class="etiq">Tipo</span><span class="val">${c.TipoContrato === 'estandar' ? 'Estándar' : 'Particular'}</span></div>
+        <div class="info-fila"><span class="etiq">Origen</span><span class="val">${c.Origen === 'whatsapp' ? '<span style="background:#25D366;color:#fff;font-size:10px;font-weight:700;padding:1px 8px;border-radius:20px">WhatsApp</span>' : '<span style="background:var(--page);border:1px solid var(--border);font-size:10px;font-weight:600;padding:1px 8px;border-radius:20px;color:var(--ink-2)">Admin</span>'}</span></div>
+        ${c.PaqueteBase ? `<div class="info-fila"><span class="etiq">Paquete</span><span class="val">${esc(c.PaqueteBase)}</span></div>` : ''}
+        <div class="info-fila"><span class="etiq">Adicionales</span><span class="val">${addHtml}</span></div>
+      </div>
+    </details>
+
+    <!-- ── Acordeón: Propiedades (abierto) ── -->
+    <details class="panel-acord" open>
+      <summary>Propiedades</summary>
+      <div class="panel-acord-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="toggle-express" ${esExpress ? 'checked' : ''} onchange="guardarExpress(this.checked)">
+            <span>Entrega express <span style="font-size:11px;color:var(--ink-3)">(1 día natural)</span></span>
+          </label>
+          <span id="msg-express" style="font-size:11px;color:var(--ink-3)"></span>
+        </div>
+        ${propHtml}
+      </div>
+    </details>
+
+    <!-- ── Portal y acciones (siempre visible) ── -->
     <div class="link-portal-box">
       <div class="link-portal-label">Link del portal (cliente)</div>
       <div class="link-portal-url">${esc(urlPortal)}</div>
@@ -1930,111 +3269,130 @@ function renderPanel(data) {
         </button>
       </div>
     </div>
-    <div style="margin-top:12px">
-      <div class="link-portal-label" style="margin-bottom:6px">Herramientas de producción</div>
+    <div style="margin-top:10px;margin-bottom:4px">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
            href="${'https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token)}" target="_blank" rel="noopener">
           <i class="ti ti-checkbox"></i> Checklist de rodaje
         </a>
         <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
-           href="${'https://wa.me/?' + new URLSearchParams({ text: 'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + c.Token }).toString()}" target="_blank" rel="noopener">
+           href="${'https://wa.me/?' + new URLSearchParams({ text: 'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener">
           <i class="ti ti-brand-whatsapp"></i> Compartir
         </a>
       </div>
     </div>
-    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
-      <p class="sec-label" style="margin-bottom:6px">Pagos</p>
-      <div class="pago-resumen">
-        <div class="pago-fila"><span>Total del contrato</span><span>${fmxn(precioTotal)}</span></div>
-        <div class="pago-fila"><span>Total abonado</span><span style="color:var(--success)">${fmxn(totalAbonado)}</span></div>
-        <div class="pago-fila total"><span>Saldo pendiente</span><span style="color:${saldo > 0 ? 'var(--warn)' : 'var(--success)'}">${fmxn(saldo)}</span></div>
-      </div>
-      <div class="pago-barra-track"><div class="pago-barra-fill" style="width:${pct}%"></div></div>
 
-      <div class="sec-label">Historial de abonos</div>
-      <div id="historial-abonos">${abonosHtml}</div>
-
-      <div class="sec-label">Registrar abono</div>
-      <div class="fila-2">
-        <div class="campo campo-sm"><label>Monto</label><input type="number" id="abono-monto" placeholder="0"></div>
-        <div class="campo campo-sm">
-          <label>Método</label>
-          <select id="abono-metodo">
-            <option value="Transferencia">Transferencia</option>
-            <option value="Efectivo">Efectivo</option>
-            <option value="Clip">Clip</option>
-            <option value="OXXO">OXXO / 7-Eleven</option>
-          </select>
+    <!-- ── Acordeón: Pagos (abierto) ── -->
+    <details class="panel-acord" open>
+      <summary>Pagos</summary>
+      <div class="panel-acord-body">
+        <div class="pago-resumen">
+          <div class="pago-fila"><span>Total del contrato</span><span>${fmxn(precioTotal)}</span></div>
+          <div class="pago-fila"><span>Total abonado</span><span style="color:var(--success)">${fmxn(totalAbonado)}</span></div>
+          <div class="pago-fila total"><span>Saldo pendiente</span><span style="color:${saldo > 0 ? 'var(--warn)' : 'var(--success)'}">${fmxn(saldo)}</span></div>
         </div>
-      </div>
-      <div class="campo campo-sm"><label>Notas (opcional)</label><input type="text" id="abono-notas" maxlength="500" placeholder="Referencia, aclaración..."></div>
-      <button class="btn-primario gold" style="width:100%" id="btn-abono" onclick="registrarAbono()">
-        <i class="ti ti-check"></i> Registrar abono
-      </button>
-      <div class="form-msg" id="msg-abono"></div>
+        <div class="pago-barra-track"><div class="pago-barra-fill" style="width:${pct}%"></div></div>
 
-      <div class="sec-label" style="margin-top:22px">Cambiar estatus</div>
-      <div class="estatus-fila">
-        <select id="panel-estatus">
-          ${['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado'].map(s =>
-            `<option value="${s}" ${c.Estatus === s ? 'selected' : ''}>${s === 'En produccion' ? 'En producción' : esc(s)}</option>`
-          ).join('')}
-        </select>
-        <button class="btn-secundario btn-sm" onclick="cambiarEstatus()">Guardar</button>
+        <div class="sec-label">Historial de abonos</div>
+        <div id="historial-abonos">${abonosHtml}</div>
+
+        <div class="sec-label">Registrar abono</div>
+        <div class="fila-2">
+          <div class="campo campo-sm"><label>Monto</label><input type="number" id="abono-monto" placeholder="0"></div>
+          <div class="campo campo-sm">
+            <label>Método</label>
+            <select id="abono-metodo">
+              <option value="Transferencia">Transferencia</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Clip">Clip</option>
+              <option value="OXXO">OXXO / 7-Eleven</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo campo-sm"><label>Notas (opcional)</label><input type="text" id="abono-notas" maxlength="500" placeholder="Referencia, aclaración..."></div>
+        <button class="btn-primario gold" style="width:100%" id="btn-abono" onclick="registrarAbono()">
+          <i class="ti ti-check"></i> Registrar abono
+        </button>
+        <div class="form-msg" id="msg-abono"></div>
+
+        <div class="sec-label" style="margin-top:22px">Cambiar estatus</div>
+        <div class="estatus-fila">
+          <select id="panel-estatus">
+            ${['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado','Completado'].map(s =>
+              `<option value="${s}" ${c.Estatus === s ? 'selected' : ''}>${s === 'En produccion' ? 'En producción' : esc(s)}</option>`
+            ).join('')}
+          </select>
+          <button class="btn-secundario btn-sm" onclick="cambiarEstatus()">Guardar</button>
+        </div>
+        <div class="form-msg" id="msg-estatus"></div>
       </div>
-      <div class="form-msg" id="msg-estatus"></div>
-    </div>
+    </details>
+
     ${['Anticipo recibido','Firmado','En produccion'].includes(c.Estatus) ? `
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <p class="sec-label" style="margin-bottom:6px">Producción</p>
-      <button class="btn-primario gold" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" id="btn-sesion-completada" onclick="marcarSesionCompletada()">
-        <i class="ti ti-camera-check"></i> Sesión completada — iniciar edición
-      </button>
-      <div class="form-msg" id="msg-sesion-completada"></div>
-    </div>` : ''}
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <p class="sec-label" style="margin-bottom:6px">Notas internas</p>
-      <textarea id="notas-internas-txt" rows="3" maxlength="5000" placeholder="Notas visibles solo para ti..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1);box-sizing:border-box">${esc(c.NotasInternas || '')}</textarea>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="btn-primario gold btn-sm" onclick="guardarNotasInternas()">Guardar notas</button>
+    <!-- ── Sesión completada (visible solo si aplica) ── -->
+    <details class="panel-acord" open>
+      <summary>Marcar sesión</summary>
+      <div class="panel-acord-body">
+        <button class="btn-primario gold" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" id="btn-sesion-completada" onclick="marcarSesionCompletada()">
+          <i class="ti ti-camera-check"></i> Sesión completada — iniciar edición
+        </button>
+        <div class="form-msg" id="msg-sesion-completada"></div>
       </div>
-      <div class="form-msg" id="msg-notas-internas"></div>
-    </div>
+    </details>` : ''}
+
+    <!-- ── Acordeón: Notas internas (cerrado) ── -->
+    <details class="panel-acord">
+      <summary>Notas internas</summary>
+      <div class="panel-acord-body">
+        <textarea id="notas-internas-txt" rows="3" maxlength="5000" placeholder="Notas visibles solo para ti..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1);box-sizing:border-box">${esc(c.NotasInternas || '')}</textarea>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="btn-primario gold btn-sm" onclick="guardarNotasInternas()">Guardar notas</button>
+        </div>
+        <div class="form-msg" id="msg-notas-internas"></div>
+      </div>
+    </details>
+
+    <!-- ── Acordeón: Archivos del cliente (cerrado) ── -->
     ${(() => {
-      const propsConCarpeta = data.propiedades.filter(p => p.CarpetaControlId);
+      const propsConCarpeta = _props.filter(p => p.CarpetaControlId);
       const tieneCarpeta    = propsConCarpeta.length > 0;
-      const selectorHtml    = data.propiedades.length > 1
+      const selectorHtml    = _props.length > 1
         ? '<select id="admin-file-prop" style="font-size:12px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;background:var(--page);color:var(--ink-1);margin-bottom:8px;width:100%">' +
-          data.propiedades.map(p => `<option value="${p.NumPropiedad}"${p.CarpetaControlId ? '' : ' disabled'}>${esc('Propiedad ' + p.NumPropiedad + (p.Paquete ? ' — ' + p.Paquete : '') + (p.CarpetaControlId ? '' : ' (sin carpeta)'))}</option>`).join('') +
+          _props.map(p => `<option value="${p.NumPropiedad}"${p.CarpetaControlId ? '' : ' disabled'}>${esc('Propiedad ' + p.NumPropiedad + (p.Paquete ? ' — ' + p.Paquete : '') + (p.CarpetaControlId ? '' : ' (sin carpeta)'))}</option>`).join('') +
           '</select>'
         : '';
-      return `<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-        <p class="sec-label" style="margin-bottom:6px">Archivos del cliente</p>
-        <p style="font-size:12px;color:var(--ink-3);margin-bottom:10px;line-height:1.5">Sube documentos o imágenes que el cliente mande por WhatsApp. Se guardan en la carpeta del proyecto en Drive.</p>
-        ${tieneCarpeta ? `
-          ${selectorHtml}
-          <input type="file" id="admin-file-input" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:block;font-size:12px;margin-bottom:8px;width:100%;box-sizing:border-box">
-          <button class="btn-primario gold btn-sm" id="btn-subir-archivos" onclick="subirArchivosAdmin()" style="width:100%;justify-content:center">
-            <i class="ti ti-upload"></i> Subir a Drive
-          </button>
-        ` : `<p style="font-size:12px;color:var(--warn);padding:8px 10px;background:var(--warn-bg,#fef9e7);border-radius:6px;border:1px solid var(--warn-border,#f0c040)">La carpeta del proyecto se crea al confirmar la reservación.</p>`}
-        <div id="lista-archivos-admin" style="margin-top:10px"></div>
-        <div class="form-msg" id="msg-archivos-admin" style="margin-top:6px"></div>
-      </div>`;
+      return `<details class="panel-acord">
+        <summary>Archivos del cliente</summary>
+        <div class="panel-acord-body">
+          <p style="font-size:12px;color:var(--ink-3);margin-bottom:10px;line-height:1.5">Sube documentos o imágenes que el cliente mande por WhatsApp. Se guardan en la carpeta del proyecto en Drive.</p>
+          ${tieneCarpeta ? `
+            ${selectorHtml}
+            <input type="file" id="admin-file-input" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:block;font-size:12px;margin-bottom:8px;width:100%;box-sizing:border-box">
+            <button class="btn-primario gold btn-sm" id="btn-subir-archivos" onclick="subirArchivosAdmin()" style="width:100%;justify-content:center">
+              <i class="ti ti-upload"></i> Subir a Drive
+            </button>
+          ` : `<p style="font-size:12px;color:var(--warn);padding:8px 10px;background:var(--warn-bg,#fef9e7);border-radius:6px;border:1px solid var(--warn-border,#f0c040)">La carpeta del proyecto se crea al confirmar la reservación.</p>`}
+          <div id="lista-archivos-admin" style="margin-top:10px"></div>
+          <div class="form-msg" id="msg-archivos-admin" style="margin-top:6px"></div>
+        </div>
+      </details>`;
     })()}
-    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
-      <p class="sec-label" style="margin-bottom:10px">Zona de riesgo</p>
-      <div style="display:flex;gap:8px">
-        <button class="btn-secundario btn-sm" style="flex:1;color:var(--warn);border-color:var(--warn)" onclick="archivarContrato()">
-          <i class="ti ti-archive"></i> Archivar
-        </button>
-        <button class="btn-secundario btn-sm" style="flex:1;color:var(--error, #e74c3c);border-color:var(--error, #e74c3c)" onclick="eliminarContrato()">
-          <i class="ti ti-trash"></i> Eliminar
-        </button>
+
+    <!-- ── Acordeón: Zona de riesgo (cerrado) ── -->
+    <details class="panel-acord">
+      <summary style="color:var(--danger)">Zona de riesgo</summary>
+      <div class="panel-acord-body">
+        <div style="display:flex;gap:8px">
+          <button class="btn-secundario btn-sm" style="flex:1;color:var(--warn);border-color:var(--warn)" onclick="archivarContrato()">
+            <i class="ti ti-archive"></i> Archivar
+          </button>
+          <button class="btn-secundario btn-sm" style="flex:1;color:var(--error, #e74c3c);border-color:var(--error, #e74c3c)" onclick="eliminarContrato()">
+            <i class="ti ti-trash"></i> Eliminar
+          </button>
+        </div>
+        <div class="form-msg" id="msg-borrar"></div>
       </div>
-      <div class="form-msg" id="msg-borrar"></div>
-    </div>`;
+    </details>`;
 
   // ── PANE PRODUCCIÓN ──
   const prodFila = (hecho, etiqueta, fechaVal) => `
@@ -2247,7 +3605,7 @@ function abrirModalUpsell() {
     if (typeof item === 'string') yaTiene.add(item);
     else if (item && item.clave) yaTiene.add(item.clave);
   });
-  const esAd = v => v === true || String(v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'') === 'si';
+  const esAd = v => v === true || v === 1 || String(v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'') === 'si';
   const esActivo = v => v === true || (v !== false && String(v || '').trim().toLowerCase() !== 'no');
   const disponibles = (paquetes || []).filter(p => esAd(p.EsAdicional) && esActivo(p.Activo) && !yaTiene.has(p.Clave));
   if (!disponibles.length) {
@@ -2411,7 +3769,7 @@ async function guardarEntrega() {
   try {
     const data = await apiPost({ action: 'guardarEntrega', token: t, entregaDriveLink: driveLink, entregaLinksExtra: linksExtra });
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    setMsg('msg-entrega', 'Entrega guardada. Se envió correo al cliente.', 'ok');
+    setMsg('msg-entrega', 'Entrega guardada.', 'ok');
     cargarContratos();
     if (t && t === tokenActivo) {
       try {
@@ -2495,7 +3853,7 @@ async function marcarSesionCompletada() {
   try {
     const data = await apiPost({ action: 'marcarSesionCompletada', token: t });
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    setMsg('msg-sesion-completada', 'Sesión marcada. Se envió correo al cliente.', 'ok');
+    setMsg('msg-sesion-completada', 'Sesión marcada como completada.', 'ok');
     cargarContratos();
     if (t && t === tokenActivo) {
       try { await abrirPanel(t); panelRecargado = true; } catch(_) {}
@@ -2859,6 +4217,18 @@ function fmxnFechaLarga(val) {
   const d = new Date(str);
   if (isNaN(d)) return String(val);
   return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function calcFechaEntrega(fechaISO, express) {
+  if (!fechaISO) return null;
+  var parts = String(fechaISO).substring(0, 10).split('-');
+  if (parts.length !== 3) return null;
+  var y = parseInt(parts[0], 10), m = parseInt(parts[1], 10) - 1, d = parseInt(parts[2], 10);
+  var fecha = new Date(y, m, d + (express ? 1 : 5));
+  var yy = fecha.getFullYear();
+  var mm = String(fecha.getMonth() + 1).padStart(2, '0');
+  var dd = String(fecha.getDate()).padStart(2, '0');
+  return yy + '-' + mm + '-' + dd;
 }
 
 function esc(str) {
@@ -3245,7 +4615,7 @@ function renderListaPaquetes() {
     '<th>Clave</th><th>Nombre</th><th>Tipo</th><th>Precio</th><th>Entregables</th><th>Add-on</th><th>Activo</th><th></th>' +
     '</tr></thead><tbody>';
   todosPaquetesAdmin.forEach(function(p) {
-    var inactivo = p.Activo === false || p.Activo === 'false' || p.Activo === 'No' ? true : false;
+    var inactivo = !p.Activo || p.Activo === 'false' || p.Activo === 'No';
     html += '<tr class="' + (inactivo ? 'paq-inactivo' : '') + '">' +
       '<td style="font-family:monospace;font-size:12px">' + esc(p.Clave || '') + '</td>' +
       '<td style="font-weight:600">' + esc(p.Nombre || '') + '</td>' +
@@ -3488,7 +4858,8 @@ async function confirmarReagendar(numProp) {
     });
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
     setMsg('msg-reagendar-' + numProp, 'Reagendado. Correo enviado al cliente.', 'ok');
-    setTimeout(function() { abrirPanel(tokenActivo); }, 1200);
+    const tok = tokenActivo;
+    setTimeout(function() { if (tok === tokenActivo) abrirPanel(tok); }, 1200);
   } catch (e) {
     setMsg('msg-reagendar-' + numProp, 'Error: ' + e.message, 'error');
   }
@@ -3557,6 +4928,84 @@ window.addEventListener('pageshow', function(e) {
     cargarContratos();
   }
 });
+
+/* ── DESKTOP REDESIGN v2: helpers ── */
+function hashColor(str) {
+  const colors = ['#F59E0B','#3B82F6','#EC4899','#8B5CF6','#10B981','#F97316'];
+  let h = 0;
+  for (let c of str) h = (h * 31 + c.charCodeAt(0)) & 0xFFFF;
+  return colors[h % colors.length];
+}
+
+function actualizarStatsRibbon(contratos) {
+  if (window.innerWidth < 1024) return;
+  const hoy = new Date().toISOString().slice(0,10);
+  const ahora = new Date();
+  const mesActual = ahora.toISOString().slice(0,7);
+  const mesPasado = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString().slice(0,7);
+  const el = function(id){ return document.getElementById(id); };
+
+  if (el('statSesionesHoy'))     el('statSesionesHoy').textContent  = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); }).length;
+  if (el('statPendientesFirma')) el('statPendientesFirma').textContent = contratos.filter(function(c){ var e = (c.Estatus||'').toLowerCase(); return e.includes('pendiente'); }).length;
+  if (el('statEnProduccion'))    el('statEnProduccion').textContent = contratos.filter(function(c){ var e = (c.Estatus||'').toLowerCase(); return e.includes('produccion')||e.includes('producción'); }).length;
+
+  // cobrado este mes (filtrado por fecha de creación del mes actual)
+  function cobradoEnMes(mes) {
+    return contratos
+      .filter(function(c){ return (c.FechaCreacion||'').startsWith(mes) && (c.Estatus === 'Completado' || c.Estatus === 'Liquidado' || c.Estatus === 'Entregado'); })
+      .reduce(function(s,c){ return s + (Number(c.PrecioTotal||0) - Number(c.SaldoPendiente||0)); }, 0);
+  }
+  var cobradoActual = cobradoEnMes(mesActual);
+  var cobradoAnterior = cobradoEnMes(mesPasado);
+  if (el('statCobradoMes')) el('statCobradoMes').textContent = '$' + cobradoActual.toLocaleString('es-MX');
+
+  // delta vs mes anterior
+  var deltaEl = el('statDeltaCobrado');
+  if (deltaEl && cobradoAnterior > 0) {
+    var pct = Math.round((cobradoActual - cobradoAnterior) / cobradoAnterior * 100);
+    deltaEl.textContent = (pct >= 0 ? '↑ ' : '↓ ') + Math.abs(pct) + '%';
+    deltaEl.className = 'stat-delta' + (pct < 0 ? ' neg' : '');
+    deltaEl.style.display = '';
+  } else if (deltaEl) {
+    deltaEl.style.display = 'none';
+  }
+}
+
+function renderHoyStrip(contratos) {
+  if (window.innerWidth < 1024) return;
+  var strip = document.getElementById('hoyStrip');
+  var cards = document.getElementById('hoyCards');
+  var dateEl = document.getElementById('hoyDate');
+  if (!strip || !cards) return;
+  var hoy = new Date().toISOString().slice(0,10);
+  var sesiones = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); });
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
+  if (!sesiones.length) { strip.style.display='none'; return; }
+  strip.style.display='flex';
+  cards.innerHTML = sesiones.map(function(c){
+    var color = ESTATUS_COLOR[c.Estatus]||'#9CA3AF';
+    return '<div class="session-card" onclick="abrirPanel(\''+(c.Token||'')+'\')">'+
+      '<div class="session-card-accent" style="background:'+color+'"></div>'+
+      '<div class="session-card-body">'+
+        '<div class="session-card-hora">'+(c.HoraSesion||'')+'</div>'+
+        '<div class="session-card-nombre">'+(c.NombreCliente||'')+'</div>'+
+        '<div class="session-card-meta">'+(c.PaqueteBase||'')+'</div>'+
+        '<div class="session-card-status"><span class="session-card-dot" style="background:'+color+'"></span>'+(c.Estatus||'')+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function renderLifecycle(estatus) {
+  var stages = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Completado'];
+  var labels  = ['Pendiente','Firmado','Anticipo','Produccion','Entregado','Completado'];
+  var idx = stages.indexOf(estatus);
+  if (idx < 0) idx = -1;
+  return '<div class="lifecycle">'+stages.map(function(s,i){
+    var cls = i<idx?'done':i===idx?'current':'';
+    return '<div class="lc-step '+cls+'"><div class="lc-dot">'+(i<idx?'<span class="lc-dot-check">&#10003;</span>':'')+'</div><div class="lc-label">'+labels[i]+'</div></div>';
+  }).join('')+'</div>';
+}
 </script>
 </body>
 </html>
