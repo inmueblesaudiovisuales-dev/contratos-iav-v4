@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 29 — Acceso y caseta detallado en portal)
+> Última actualización: 2026-06-02 (Ronda 30 — Rediseño UI bloque acceso/caseta en portal)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -287,7 +287,51 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 ---
 
+## Próximo trabajo sugerido
+
+### Portal de producción para el equipo (R31 — pendiente)
+
+Reemplazar el PDF que se genera desde Drive por una página web dinámica accesible con token. Objetivo: que el fotógrafo/camarógrafo llegue el día de la sesión y tenga toda la información sin depender de un PDF.
+
+**URL propuesta:** `equipo.html?token=<token_equipo>` — token de solo lectura, diferente al del cliente.
+
+**Contenido mínimo:**
+- Dirección + enlace a Google Maps
+- Datos de acceso/caseta (del bloque ya capturado en portal)
+- Archivos subidos (QR, invitación, fachada)
+- Vínculo directo a `checklist.html?token=<token>`
+- Estado de producción: botón para marcar "Fotos listas" / "Video listo" que actualice D1
+
+**Meta futura (no implementar aún):**
+- Opción desde `admin.html` para crear evento de Calendar para llamadas con clientes (separado del evento de sesión)
+
+---
+
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 30 — Rediseño UI bloque acceso/caseta en portal (2026-06-02)
+
+> Sin migración D1. Solo cambios en `frontend/portal.html`.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R30-01 | `frontend/portal.html` CSS | `.acceso-btn` (Sí/No, Yo/Otro contacto): `flex:none; min-width:110px` — dejan de estirarse al 100% en desktop. |
+| R30-02 | `frontend/portal.html` CSS | `.acceso-detalle`: borde izquierdo dorado, fondo blanco limpio, `margin-top:14px` — mejor separación del campo superior y jerarquía visual clara. |
+| R30-03 | `frontend/portal.html` CSS | `.acceso-sep`: nuevo separador horizontal entre grupos de campos (tipo → contacto/método → caseta → punto de encuentro → restricciones). |
+| R30-04 | `frontend/portal.html` JS+HTML | "Tipo de inmueble": reemplaza `<select>` por chips, consistente con el resto del formulario. Se mueve al inicio del bloque para contextualizar los campos que siguen. |
+| R30-05 | `frontend/portal.html` JS | "¿Dónde nos vemos?" (quitado "o cómo entramos"): chips contextuales por tipo. Casa/privada y condominio horizontal no muestran "afuera del departamento". Departamento agrega "Nos vemos afuera del departamento". Oficina/torre agrega "Nos vemos en recepción" y "Nos vemos en la entrada de la oficina". Al cambiar tipo, si el punto seleccionado no aplica al nuevo tipo se limpia. |
+| R30-06 | `frontend/portal.html` JS | Casa/privada: la sección "¿Dónde nos vemos?" se oculta completamente — no aplica. |
+| R30-07 | `frontend/portal.html` JS | `restaurarAccesoDesdePayload`: corregida referencia al `<select>` eliminado. Ahora llama a `seleccionarTipoEdificio` para restaurar chips de tipo, re-renderizar chips de punto y mostrar/ocultar sección correctamente. |
+| R30-08 | `frontend/portal.html` JS | Compat hacia atrás: `puntoEncuentro: 'directo_departamento'` guardado en registros anteriores se mapea a `'afuera_departamento'` al cargar. |
+| R30-09 | `MASTER_V4.md` + `PROMPT_CONTINUIDAD.md` | Documenta regla: trabajar siempre en `main`, sin ramas salvo instrucción explícita de Bruno. |
+
+**Estado del guardado en R30:**
+- `requiere_acceso` → columna D1 en `propiedades` ✓
+- Todos los campos de acceso → `datos_especificos.acceso` como JSON ✓
+- QR/invitación subida → columna `fachada_url` en `propiedades` ✓
+- Los campos de tipo de inmueble ya no dependen de un `<select>` — se leen directo de `accesoTipoEdificio[n]` en JS ✓
+
+---
 
 ### Ronda 29 — Acceso y caseta detallado en portal (2026-06-02)
 
