@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 18 — Revisiones de video + preparación para automatización)  
+> Última actualización: 2026-06-02 (Ronda 19 — Rediseño desktop admin v2)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -280,6 +280,39 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 19 — Rediseño desktop admin v2 (2026-06-02)
+
+**Feature: Layout desktop completo con sidebar, stats ribbon, hoy strip y lifecycle pipeline**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R19-01 | `frontend/admin.html` CSS | `@media (min-width: 1024px)` reescrito completo. Variables: `--sidebar-w:224px`, `--panel-w:488px`, `--gold`, `--gold-light`, `--gold-text`, `--ink-1/2/3/4`, `--page:#EFEDE8`, `--sidebar-bg:#0D0D10`. Scrollbar estilizado. |
+| R19-02 | `frontend/admin.html` CSS | Sidebar: `.bottom-nav` se convierte en sidebar fija izquierda (224px, fondo `#0D0D10`). Logo con ícono dorado `bnav-logo-icon` gradiente. Botón "Nuevo contrato" full-width dorado. Ítems de navegación con indicador izquierdo dorado en activo. Footer con avatar y botón logout. |
+| R19-03 | `frontend/admin.html` CSS | Stats ribbon: 4 cards horizontales (`stats-ribbon`) con íconos coloreados (gold, blue, purple, green). Valores grandes (18px), labels pequeñas. Borde derecho entre cards. |
+| R19-04 | `frontend/admin.html` CSS | Hoy strip: sección horizontal con header "Hoy" + fecha, divisor vertical, y `session-card`s scrolleables. Cada card con accent izquierdo del color de estatus, hora, nombre, meta, y badge de estatus con dot. |
+| R19-05 | `frontend/admin.html` CSS | Tabla: `#tabla-contratos-card` con header sticky, `--row-color` como borde izquierdo de 3px por estatus. Hover agranda borde a 4px. Fila activa fondo `#FBF9F3`. Columna avatar con círculo de color generado por iniciales. |
+| R19-06 | `frontend/admin.html` CSS | Panel lateral: `position:fixed; right:0; top:0; bottom:0; width:488px`. Transición `transform: translateX` 300ms cubic-bezier. Sin overlay. `.main.panel-open` → `body.panel-abierto .contenido { margin-right: var(--panel-w) }`. |
+| R19-07 | `frontend/admin.html` CSS | Lifecycle pipeline: 6 pasos horizontales con dots y líneas conectoras. Done = dorado con check. Current = naranja con sombra. Labels debajo. |
+| R19-08 | `frontend/admin.html` HTML | Sidebar: `bnav-logo-icon` (IAV), `bnav-logo-marca`, `bnav-logo-sub`. Botón `bnav-fab` con label "Nuevo". Footer con avatar y logout. |
+| R19-09 | `frontend/admin.html` HTML | `stats-ribbon` con 4 `stat-card`s: sesiones hoy, pendientes firma, en producción, cobrado este mes. IDs para JS: `statSesionesHoy`, `statPendientesFirma`, `statEnProduccion`, `statCobradoMes`. |
+| R19-10 | `frontend/admin.html` HTML | `hoy-strip` con `hoy-header`, `hoy-divider`, `hoy-cards`. Oculto por defecto, JS lo muestra si hay sesiones hoy. |
+| R19-11 | `frontend/admin.html` HTML | `lifecycle-wrap` en `panel-header` después de `panel-nombre`. JS lo llena con `renderLifecycle()`. |
+| R19-12 | `frontend/admin.html` HTML | Columna avatar en `thead`: `<th class="th-avatar">`. Oculto en mobile con `.th-avatar { display:none }`. |
+| R19-13 | `frontend/admin.html` JS | `hashColor(str)`: genera color desde iniciales usando hash multiplicativo módulo 6 colores predefinidos. |
+| R19-14 | `frontend/admin.html` JS | `actualizarStatsRibbon(contratos)`: llena los 4 stat cards con datos reales. Sesiones hoy por `FechaSesion`, pendientes por `Estatus.includes('pendiente')`, producción por `Estatus.includes('produccion')`, cobrado suma `PrecioTotal - SaldoPendiente` de completados/liquidados. Solo ejecuta en ≥1024px. |
+| R19-15 | `frontend/admin.html` JS | `renderHoyStrip(contratos)`: filtra contratos con `FechaSesion` hoy, renderiza `session-card`s con color de estatus, hora, nombre, paquete y badge. Solo ejecuta en ≥1024px. |
+| R19-16 | `frontend/admin.html` JS | `renderLifecycle(estatus)`: genera HTML del pipeline de 6 etapas. Calcula índice del estatus actual. Pasos anteriores = `done` con check dorado. Paso actual = `current` con dot naranja. |
+| R19-17 | `frontend/admin.html` JS | `renderTabla()` modificado: agrega `td-avatar-desktop` con iniciales y color via `hashColor()`. Usa `--row-color` (antes `--row-status-color`). Llama `actualizarStatsRibbon(todosContratos)` y `renderHoyStrip(todosContratos)` al final. |
+| R19-18 | `frontend/admin.html` JS | `renderPanel()` modificado: después de setear `panel-badge`, busca `.lifecycle-wrap` y le asigna `renderLifecycle(c.Estatus)`. |
+| R19-19 | `frontend/admin.html` JS | `panel-abierto` ya existía en `abrirPanel()` y `cerrarPanel()`. Sin cambios necesarios. |
+| R19-20 | `frontend/admin.html` JS | Colspans actualizados de 6→7 y 7→8 para acomodar nueva columna avatar. |
+| R19-21 | `frontend/admin.html` CSS | `.th-avatar` y `.td-avatar-desktop` ocultos en mobile (`display:none`) para no romper vista de cards. |
+
+**Diseño de referencia:** `mockup-desktop.html` (raíz del repo).  
+**Branch:** `claude/determined-hamilton-TMJ0G` → mergeado a `main`.
+
+---
 
 ### Ronda 18 — Revisiones de video + preparación para automatización (2026-06-02)
 
