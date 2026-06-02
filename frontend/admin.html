@@ -410,7 +410,6 @@
     .panel-header {
       display: flex; align-items: flex-start; justify-content: space-between;
       padding: 18px 20px 14px;
-      position: sticky; top: 0; background: var(--card); z-index: 1;
       border-bottom: 1px solid var(--border);
     }
     .panel-header-info { flex: 1; min-width: 0; padding-right: 10px; }
@@ -427,7 +426,6 @@
     .panel-tabs {
       display: flex; border-bottom: 1px solid var(--border);
       padding: 0 20px; background: var(--card);
-      position: sticky; top: 80px; z-index: 1;
     }
     .panel-tab-btn {
       flex: 1; padding: 10px 0;
@@ -496,13 +494,8 @@
     .crm-folio { font-family: 'Courier New', monospace; color: var(--ink-2); font-size: 11px; }
 
     /* ── Alertas accionables ────────────────────────── */
-    .stats-linea {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 9px 16px; margin-bottom: 12px;
-    }
-    .alerta-item { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-    .stats-sep { color: var(--border2); font-size: 16px; }
+    #stats-bar { display: none !important; }
+    .stats-linea { display: none !important; }
 
     /* ── Lifecycle pipeline (global — mobile + desktop) ── */
     .lifecycle { display: flex; align-items: flex-start; margin: 14px 0 0; gap: 0; overflow: hidden; }
@@ -1044,16 +1037,6 @@
 
       body.panel-abierto .contenido { margin-right: var(--panel-w); }
 
-      /* ── TOPBAR (inline) ── */
-      #stats-bar {
-        padding: 0 24px;
-        height: 52px;
-        display: flex; align-items: center; gap: 14px;
-        background: var(--card);
-        border-bottom: 1px solid var(--border);
-        margin: 0 -24px;
-      }
-      #stats-bar .contratos-tabs { display: none !important; }
 
       /* ── STATS RIBBON ── */
       #statsRibbon { display: grid; }
