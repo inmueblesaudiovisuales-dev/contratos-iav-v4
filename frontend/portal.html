@@ -144,10 +144,10 @@
     .fmt-badge-over { top: -11px; left: 50%; transform: translateX(-50%); }
     .formato-btn { flex-direction: column; align-items: center; text-align: center; padding: 18px 10px 16px; display: flex; gap: 0; }
     .fmt-mockup-zone { width: auto; height: 64px; align-items: flex-end; justify-content: center; gap: 7px; flex-shrink: 0; }
-    .fmt-text { flex: 1; display: flex; flex-direction: column; align-items: center; width: 100%; }
-    .fmt-titulo { margin: 10px 0 4px; font-size: 12px; }
+    .fmt-text { display: grid; grid-template-rows: auto 32px 20px auto; width: 100%; align-items: start; }
+    .fmt-titulo { margin: 10px 0 4px; font-size: 12px; align-self: end; }
     .fmt-desc { font-size: 10px; }
-    .fmt-precio { margin-top: auto; padding-top: 6px; }
+    .fmt-precio { margin-top: 4px; padding-top: 0; align-self: start; }
   }
   /* Acceso/caseta */
   .acceso-grid { display: flex; gap: 10px; }
