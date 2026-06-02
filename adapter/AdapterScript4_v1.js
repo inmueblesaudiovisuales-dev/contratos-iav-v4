@@ -34,6 +34,7 @@ function doPost(e) {
       subirArchivo: subirArchivo,
       subirArchivoAdmin: subirArchivoAdmin,
       notificarResena: notificarResena,
+      notificarRevision: notificarRevision,
       enviarRecordatorioPago: enviarRecordatorioPago,
       notificarUpsell: notificarUpsell,
       obtenerLogoCliente: obtenerLogoCliente,
@@ -618,6 +619,36 @@ function notificarResena(body) {
     CONFIG.EMAIL_BRUNO,
     'Nueva reseña — ' + (body.calificacion || '?') + '/5 estrellas',
     'Calificación: ' + (body.calificacion || '?') + '/5\n\n' + (body.resenaTexto || ''),
+    { htmlBody: html }
+  );
+}
+
+function notificarRevision(body) {
+  var filas = '';
+  var revisiones = body.revisiones || [];
+  revisiones.forEach(function(r, i) {
+    var minuto = (r.minuto_segundo || '—').trim();
+    var desc   = (r.descripcion_ajuste || '').trim();
+    if (!desc) return;
+    filas += '<tr style="border-bottom:1px solid #E5E3DE">' +
+      '<td style="padding:10px 12px;font-size:13px;color:#9B9B9F;white-space:nowrap;vertical-align:top">' + minuto + '</td>' +
+      '<td style="padding:10px 12px;font-size:13px;color:#1C1C1E;line-height:1.5;vertical-align:top">' + desc + '</td></tr>';
+  });
+  var tabla = revisiones.length
+    ? '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E3DE;border-radius:8px;border-collapse:collapse;overflow:hidden;margin-bottom:20px">' +
+      '<thead><tr style="background:#F9F7F4"><th align="left" style="padding:10px 12px;font-size:12px;color:#9B9B9F;font-weight:600">TIMECODE</th>' +
+      '<th align="left" style="padding:10px 12px;font-size:12px;color:#9B9B9F;font-weight:600">NOTA DE AJUSTE</th></tr></thead>' +
+      '<tbody>' + filas + '</tbody></table>'
+    : '<p style="color:#9B9B9F;font-size:13px">Sin notas enviadas.</p>';
+
+  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 4px"><strong>' + (body.nombreCliente || 'Cliente') + '</strong> envió notas de revisión</p>' +
+    '<p style="color:#9B9B9F;font-size:12px;margin:0 0 20px">Folio: ' + (body.folio || '—') + '</p>' +
+    tabla;
+  var html = htmlCorreo_('Revisión de video', cuerpo, '', '');
+  GmailApp.sendEmail(
+    CONFIG.EMAIL_BRUNO,
+    'Revisión de video — ' + (body.nombreCliente || '') + ' (' + (body.folio || '') + ')',
+    revisiones.map(function(r) { return (r.minuto_segundo || '—') + ': ' + (r.descripcion_ajuste || ''); }).join('\n'),
     { htmlBody: html }
   );
 }
