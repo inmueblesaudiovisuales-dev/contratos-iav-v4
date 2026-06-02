@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 32 — Prospectos: agendar llamadas + Calendar)
+> Última actualización: 2026-06-02 (Ronda 33 — Bottom nav rediseño: 4 items iguales)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -167,6 +167,7 @@ Los archivos de `frontend/` se suben automáticamente como assets estáticos ví
 | `paquetes` | Catálogo. PK: `clave` (ej. `RES-COMBO`). |
 | `checklist` | Un checklist por contrato. PK: `contrato_token`. |
 | `revisiones_video` | Notas de revisión de video por contrato. FK: `contrato_id` → `contratos.token`. Columnas: `id`, `contrato_id`, `minuto_segundo`, `descripcion_ajuste`, `fecha`. Agregada en R18. |
+| `prospectos` | Llamadas agendadas con prospectos. PK: `id` (UUID). Columnas: `nombre`, `telefono`, `interes`, `fecha_llamada`, `hora_llamada`, `notas`, `estatus` (pendiente/contactado/convertido/descartado), `fecha_creacion`. Agregada en R32. **Tabla creada manualmente por Bruno el 2026-06-02** (DROP + CREATE desde wrangler CLI — la primera migración había creado la tabla sin columnas). |
 
 ### Nota importante — D1 no soporta foreign keys
 `PRAGMA foreign_keys` es ignorado en D1. Las cascadas de eliminación están implementadas manualmente en código con `db.batch()` en orden correcto: checklist → propiedades → abonos → tokens → contratos.
@@ -270,6 +271,7 @@ El Worker llama al adapter con `POST` y un JSON `{ action: '...', ...datos }`. L
 | `subirArchivo` | Sube archivo a carpeta de propiedad (desde portal) |
 | `subirArchivoAdmin` | Sube archivo a carpeta (desde admin) |
 | `syncBackup` | Sobreescribe tabs en Sheets con datos de D1 |
+| `agendarLlamadaProspecto` | Crea evento de 30 min en Calendar con nombre, teléfono, interés y notas del prospecto. Agregado en R32. |
 | `obtenerLogoCliente` | Busca logo precargado del cliente en Drive |
 | `notificarRevision` | Correo HTML a Bruno con tabla de timecodes y notas de revisión del cliente (R18) |
 
@@ -326,6 +328,18 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 33 — Bottom nav rediseño: 4 items iguales (2026-06-02)
+
+> Sin migración D1. Solo cambios en `frontend/admin.html`.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R33-01 | `frontend/admin.html` | Bottom nav mobile reemplazado: 4 items iguales (Contratos, Nuevo, Prospectos, Ajustes). Eliminado FAB circular flotante. Todos los items tienen el mismo estilo flat con ícono + label. |
+| R33-02 | `frontend/admin.html` | Estilos `.bnav-fab` eliminados. "Nuevo" en desktop se estiliza como botón dorado full-width dentro del sidebar, coherente con el diseño anterior pero sin CSS separado. |
+| R33-03 | `MASTER_V4.md` | Documenta R33. |
+
+---
 
 ### Ronda 32 — Prospectos: agendar llamadas + Calendar (2026-06-02)
 
