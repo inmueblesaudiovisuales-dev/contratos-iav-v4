@@ -248,11 +248,14 @@ export async function handlePortal(request, env, ctx, action) {
       for (const p of propsCliente) {
         await run(db,
            `UPDATE propiedades SET direccion=?, link_maps=?, orientacion=?, sobre_la_propiedad=?,
-            referencias=?, fachada_url=?, perimetro_url=?, datos_especificos=?, logo_url=?
+            referencias=?, fachada_url=?, perimetro_url=?, datos_especificos=?, logo_url=?,
+            formato_video=?, requiere_acceso=?
             WHERE contrato_token=? AND num_propiedad=?`,
            [p.direccion || '', limpiarLinkMaps(p.linkMaps || ''), p.orientacion || '', p.sobreLaPropiedad || '',
            p.referencias || '', p.fachadaUrl || '', p.perimetroUrl || '',
-           JSON.stringify(p.datosEspecificos || {}), p.logoUrl || '', token, p.numPropiedad]
+           JSON.stringify(p.datosEspecificos || {}), p.logoUrl || '',
+           p.formatoVideo || 'vertical_nativo', p.requiereAcceso || 0,
+           token, p.numPropiedad]
         );
       }
     }
