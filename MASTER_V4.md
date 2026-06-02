@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 26 — Picker de formato + control en formulario de creación)  
+> Última actualización: 2026-06-02 (Ronda 27 — Prompt de continuidad simplificado para Codex)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -280,6 +280,14 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 27 — Prompt de continuidad simplificado para Codex (2026-06-02)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R27-01 | `PROMPT_CONTINUIDAD.md` | Reescrito como guía corta y directa para trabajar en este repo sin depender de la computadora de Bruno. |
+| R27-02 | `PROMPT_CONTINUIDAD.md` | Se eliminaron rutas absolutas obsoletas y se dejó el flujo mínimo: leer `MASTER_V4.md`, editar, verificar, documentar ronda, commit y push a `main`. |
+| R27-03 | `PROMPT_CONTINUIDAD.md` | Se agregó un resumen de reglas simples para mantener el proyecto consistente: no emojis, CSS mobile-first, respetar DB/flujo y no tocar el adapter salvo que haga falta. |
 
 ### Ronda 26 — Picker de formato + control en formulario de creación (2026-06-02)
 
