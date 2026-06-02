@@ -1,121 +1,210 @@
-# Auditoría de bugs — Feature Prospectos (R32)
-
-## Contexto del proyecto
-
-Sistema de contratos IAV v4 sobre Cloudflare Workers + D1 (SQLite).
-Repo GitHub: `https://github.com/inmueblesaudiovisuales-dev/contratos-iav-v4` (privado)
-Rama de producción: `main`
-Deploy automático: push a `main` → GitHub Actions → `wrangler deploy`
+# Auditoría bugs — Feature Prospectos (R32)
+## Para DeepSeek — leer TODO antes de tocar cualquier archivo
 
 ---
 
-## Archivos relevantes de la feature
+## Stack
 
+- **Worker:** Cloudflare Workers (JavaScript ESM)
+- **DB:** Cloudflare D1 (SQLite remoto)
+- **Frontend:** `frontend/admin.html` (archivo único, ~5400 líneas)
+- **Repo:** `https://github.com/inmueblesaudiovisuales-dev/contratos-iav-v4`
+- **Rama producción:** `main` — push a main → GitHub Actions → wrangler deploy automático
+- **NO correr `wrangler deploy` manualmente**
+
+---
+
+## Síntomas en producción
+
+1. `GET /api/listarProspectos` → **500 Internal Server Error**
+2. `POST /api/crearProspecto` → **500 Internal Server Error**
+3. Al cambiar estatus desde el dropdown → **"Acción no encontrada"** (este puede estar ya corregido)
+
+---
+
+## Archivos de la feature — contenido actual en main
+
+### `worker/src/routes/prospectos.js`
+```js
+import { query, run, uuid, now } from '../db.js';
+import { requireAdmin, ok, err } from '../auth.js';
+import { callAdapter } from '../google.js';
+
+export async function handleProspectos(request, env, ctx, action) {
+  const auth = requireAdmin(request, env);
+  if (auth) return auth;
+
+  const db = env.DB;
+
+  if (action === 'crearProspecto') {
+    const body = await request.json();
+    const { nombre, telefono, interes, fechaLlamada, horaLlamada, notas } = body;
+    if (!nombre || !telefono || !fechaLlamada || !horaLlamada)
+      return err('nombre, telefono, fechaLlamada y horaLlamada son requeridos');
+
+    const id = uuid();
+    await run(db,
+      `INSERT INTO prospectos (id, nombre, telefono, interes, fecha_llamada, hora_llamada, notas, estatus, fecha_creacion)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', ?)`,
+      [id, nombre, telefono, interes || '', fechaLlamada, horaLlamada, notas || '', now()]
+    );
+    callAdapter(ctx, env, 'agendarLlamadaProspecto', {
+      id, nombre, telefono, interes: interes || '', fechaLlamada, horaLlamada, notas: notas || ''
+    });
+    return ok({ ok: true, id });
+  }
+
+  if (action === 'listarProspectos') {
+    const { results } = await query(db,
+      `SELECT * FROM prospectos ORDER BY fecha_llamada DESC, hora_llamada DESC LIMIT 100`
+    );
+    return ok({ prospectos: results });
+  }
+
+  if (action === 'actualizarEstatusProspecto') {
+    const body = await request.json();
+    const { id, estatus } = body;
+    const ESTATUSES = ['pendiente', 'contactado', 'convertido', 'descartado'];
+    if (!id || !ESTATUSES.includes(estatus)) return err('id y estatus válido requeridos');
+    await run(db, `UPDATE prospectos SET estatus=? WHERE id=?`, [estatus, id]);
+    return ok({ ok: true });
+  }
+
+  return err('Acción no encontrada', 404);
+}
 ```
-worker/src/routes/prospectos.js   ← ruta del worker (nueva)
-worker/src/index.js               ← routing central
-worker/src/google.js              ← callAdapter helper
-worker/src/auth.js                ← requireAdmin, ok, err
-worker/src/db.js                  ← query, run, uuid, now
-frontend/admin.html               ← UI (todo en un solo archivo, ~5400 líneas)
+
+### `worker/src/index.js` — partes relevantes
+```js
+import { handleProspectos } from './routes/prospectos.js';
+// ...
+const RUTAS_PROSPECTOS = ['crearProspecto','listarProspectos','actualizarEstatusProspecto'];
+// ...
+} else if (RUTAS_PROSPECTOS.includes(action)) {
+  response = await handleProspectos(request, env, ctx, action);
+}
+```
+
+### `worker/src/google.js` — callAdapter
+```js
+export function callAdapter(ctx, env, action, payload) {
+  if (!env.APPS_SCRIPT_URL || env.APPS_SCRIPT_URL.includes('REEMPLAZAR')) return;
+  const promise = fetch(env.APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...payload })
+  }).catch(e => console.error('Google adapter error:', action, e.message));
+  ctx.waitUntil(promise);
+}
+```
+
+### `worker/src/db.js`
+```js
+export async function query(db, sql, params = []) {
+  const stmt = db.prepare(sql);
+  return params.length ? stmt.bind(...params).all() : stmt.all();
+}
+export async function run(db, sql, params = []) {
+  const stmt = db.prepare(sql);
+  return params.length ? stmt.bind(...params).run() : stmt.run();
+}
+export function uuid() { return crypto.randomUUID(); }
+export function now() { return new Date().toISOString(); }
+```
+
+### `worker/src/auth.js`
+```js
+export function requireAdmin(request, env) {
+  const key = request.headers.get('X-Admin-Key') ||
+    new URL(request.url).searchParams.get('adminKey');
+  if (key !== env.ADMIN_KEY) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  return null;
+}
+export function ok(data) {
+  return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+}
+export function err(message, status = 400) {
+  return new Response(JSON.stringify({ error: message }), {
+    status, headers: { 'Content-Type': 'application/json' }
+  });
+}
 ```
 
 ---
 
-## Bugs confirmados en producción
+## Hipótesis principal — tabla no existe en D1 remota
 
-### BUG 1 — 500 en `listarProspectos` y `crearProspecto`
+El 500 en `listarProspectos` es casi seguramente porque la tabla `prospectos` no existe en la base de datos D1 remota de producción. El worker lanza excepción no capturada al intentar `SELECT * FROM prospectos` y Cloudflare devuelve 500.
 
-**Síntoma:** `GET /api/listarProspectos` devuelve 500. El worker tira error en runtime.
-
-**Sospecha principal:** En `prospectos.js` línea 26:
-```js
-ctx.waitUntil(callAdapter(ctx, env, 'agendarLlamadaProspecto', { ... }));
-```
-`callAdapter` (en `google.js`) ya llama `ctx.waitUntil(promise)` internamente y devuelve `undefined`.
-Entonces en `prospectos.js` se hace `ctx.waitUntil(undefined)` — esto puede tirar excepción en el runtime de Cloudflare Workers.
-
-**Fix esperado:** Llamar `callAdapter` directamente sin envolverlo en `ctx.waitUntil`:
-```js
-callAdapter(ctx, env, 'agendarLlamadaProspecto', { ... });
-```
-
-**Verificar también:** Que la tabla `prospectos` exista en D1 remota. La migración fue:
-```sql
-CREATE TABLE IF NOT EXISTS prospectos (
-  id TEXT PRIMARY KEY,
-  nombre TEXT NOT NULL,
-  telefono TEXT NOT NULL,
-  interes TEXT DEFAULT '',
-  fecha_llamada TEXT NOT NULL,
-  hora_llamada TEXT NOT NULL,
-  notas TEXT DEFAULT '',
-  estatus TEXT DEFAULT 'pendiente',
-  fecha_creacion TEXT NOT NULL
-)
-```
-Si la tabla no existe, el SELECT también tiraría 500. Confirmar con:
+**Verificar desde terminal de Bruno (Mac con wrangler instalado):**
 ```bash
 wrangler d1 execute contratos-iav-v4 --remote --command="SELECT name FROM sqlite_master WHERE type='table' AND name='prospectos'"
 ```
 
-### BUG 2 — "Acción no encontrada" al agendar
-
-**Síntoma:** Al hacer click en "Agendar llamada" en el frontend, el worker responde `{ error: 'Acción no encontrada' }`.
-
-**Causa probable:** `apiPost` en `admin.html` construye el body y la URL de forma diferente a lo que espera el worker. Buscar la función `apiPost` en `admin.html` (~línea 2666) y verificar que mande la acción como parte del body JSON y no como query param, y que el campo se llame exactamente `action`.
-
-El worker en `index.js` extrae la acción así:
-```js
-const action = path.replace('/api/', '');
-```
-Es decir, la acción va en el PATH (`/api/crearProspecto`), no en el body.
-
-**Verificar:** Que `apiPost` llame `/api/crearProspecto` (acción en la URL) y no `/api/undefined` o `/api/` vacío.
-
-Buscar en `admin.html` la función `crearProspecto()` y ver cómo llama a `apiPost`. El patrón correcto que usan otras features es:
-```js
-apiPost('crearContrato', { campo1: val1, ... })
-// que resulta en: POST /api/crearContrato con body JSON
-```
-
-Si `crearProspecto()` llama `apiPost({ action: 'crearProspecto', ... })` en lugar de `apiPost('crearProspecto', { ... })`, eso causaría que la URL sea `/api/[object Object]` o `/api/undefined`.
-
----
-
-## Cómo auditar
-
-1. Leer `worker/src/routes/prospectos.js` completo
-2. Leer `worker/src/google.js` — ver firma exacta de `callAdapter`
-3. Leer `worker/src/index.js` — verificar routing de RUTAS_PROSPECTOS
-4. En `frontend/admin.html` buscar:
-   - función `apiPost` (cómo construye la URL y el body)
-   - función `crearProspecto()` (cómo llama a apiPost)
-   - función `cargarProspectos()` (cómo llama a apiGet)
-5. Confirmar que la tabla existe en D1 con el comando wrangler de arriba
-
----
-
-## Cómo aplicar fixes
-
-1. Editar los archivos directamente en el repo
-2. `git add <archivos>`
-3. `git commit -m "R32 fix — descripción"`
-4. `git push origin main`
-5. GitHub Actions despliega automáticamente en ~1 minuto
-
-**No correr `wrangler deploy` manualmente. El push a main es suficiente.**
-
-Si la tabla no existe en D1, correr manualmente desde terminal:
+Si el resultado está vacío → la tabla no existe → correr:
 ```bash
 wrangler d1 execute contratos-iav-v4 --remote --command="CREATE TABLE IF NOT EXISTS prospectos (id TEXT PRIMARY KEY, nombre TEXT NOT NULL, telefono TEXT NOT NULL, interes TEXT DEFAULT '', fecha_llamada TEXT NOT NULL, hora_llamada TEXT NOT NULL, notas TEXT DEFAULT '', estatus TEXT DEFAULT 'pendiente', fecha_creacion TEXT NOT NULL)"
 ```
+
+**Este comando lo tiene que correr Bruno desde su Mac. No hay forma de hacerlo desde el worker ni desde GitHub Actions.**
+
+---
+
+## Si la tabla SÍ existe y el 500 persiste
+
+Agregar manejo de errores explícito en `listarProspectos` y `crearProspecto` para que el worker devuelva el mensaje de error real en lugar de 500:
+
+```js
+if (action === 'listarProspectos') {
+  try {
+    const { results } = await query(db,
+      `SELECT * FROM prospectos ORDER BY fecha_llamada DESC, hora_llamada DESC LIMIT 100`
+    );
+    return ok({ prospectos: results });
+  } catch (e) {
+    return err('DB error: ' + e.message, 500);
+  }
+}
+```
+
+Así en lugar de 500 opaco, el frontend mostrará el mensaje real del error de D1.
+
+---
+
+## Frontend — `frontend/admin.html`
+
+Las llamadas a la API en el JS del frontend están correctas en el código actual de main:
+
+```js
+// correcto — apiPost espera { action, ...datos }
+apiPost({ action:'crearProspecto', nombre, telefono, interes, fechaLlamada, horaLlamada, notas })
+apiPost({ action:'actualizarEstatusProspecto', id, estatus })
+apiGet({ action: 'listarProspectos' })
+```
+
+**No tocar el frontend** a menos que se encuentre un bug específico.
+
+---
+
+## Cómo aplicar fixes al worker
+
+1. Editar `worker/src/routes/prospectos.js` en el repo
+2. `git add worker/src/routes/prospectos.js`
+3. `git commit -m "R32 fix — descripción"`
+4. `git push origin main`
+5. GitHub Actions despliega en ~1 minuto
+
+**La migración D1 NO se puede hacer desde el repo — requiere que Bruno la corra desde su Mac con wrangler.**
 
 ---
 
 ## Lo que NO tocar
 
-- No modificar el flujo de contratos existente
+- Ningún otro archivo fuera de `worker/src/routes/prospectos.js`
 - No cambiar el schema de otras tablas
-- No tocar `adapter/AdapterScript4_v1.js` — el adapter ya tiene `agendarLlamadaProspecto` correctamente implementado
-- No cambiar el diseño del frontend — solo corregir la lógica JS de `crearProspecto()` y `cargarProspectos()`
+- No modificar el frontend
+- No tocar `adapter/AdapterScript4_v1.js`
