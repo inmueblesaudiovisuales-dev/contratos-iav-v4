@@ -170,6 +170,7 @@
   .acceso-chip:hover { border-color: var(--gold); }
   .acceso-chip.activo { border-color: var(--gold); background: var(--gold-dim); color: var(--charcoal); }
   .acceso-sep { border: none; border-top: 1px solid var(--border); margin: 20px 0 4px; }
+  .acceso-punto-section.oculto { display: none; }
   .acceso-fields { display: grid; grid-template-columns: 1fr; gap: 0; }
   .acceso-fields > .acceso-sep { grid-column: 1 / -1; }
   .acceso-edificio { display: none; }
@@ -702,12 +703,15 @@ function renderAccesoDetalle(n, acceso) {
   html += '<div class="field full"><label>Indicaciones para guardia o caseta</label><textarea id="inp-acceso-caseta-' + n + '" placeholder="Ej. El equipo ya queda en lista; decir que viene a foto/video. Si no los ubican, llamar al contacto autorizado." style="min-height:88px">' + esc(acceso.instruccionesCaseta || '') + '</textarea></div>';
   html += '<div class="field full">' + renderUploadField('fachada', n - 1, 'QR, invitación o referencia de acceso', 'Si tienes QR, invitación digital, código o imagen de referencia para caseta, puedes subirla aquí. También puedes enviarla por WhatsApp después.') + '</div>';
 
-  /* Punto de encuentro */
-  html += '<hr class="acceso-sep">';
+  /* Punto de encuentro — oculto para casa/privada */
+  var ocultoPunto = tipoActual === '' ? ' oculto' : '';
+  html += '<div class="full acceso-punto-section' + ocultoPunto + '" id="acceso-punto-section-' + n + '">';
+  html += '<hr class="acceso-sep" style="margin-top:0">';
   html += '<div class="field full"><label>¿Dónde nos vemos?</label><div class="acceso-chip-grid" id="acceso-puntos-grid-' + n + '">';
   html += renderPuntosChips(n, tipoActual, puntoEncuentro);
   html += '</div></div>';
   html += '<div class="field acceso-contacto-otro full" id="acceso-punto-otro-' + n + '"><label>Detalle del punto de encuentro</label><input type="text" id="inp-acceso-punto-detalle-' + n + '" placeholder="Ej. acceso de proveedores, caseta 2, lobby de torre B" value="' + esc(acceso.puntoEncuentroDetalle || '') + '"></div>';
+  html += '</div>';
 
   /* Datos de edificio (condicional) */
   html += '<div class="acceso-edificio" id="acceso-edificio-' + n + '">';
@@ -1377,6 +1381,8 @@ function seleccionarTipoEdificio(n, valor) {
   }
   actualizarBloqueEdificio(n);
   actualizarPuntoEncuentro(n);
+  var seccion = document.getElementById('acceso-punto-section-' + n);
+  if (seccion) seccion.classList.toggle('oculto', accesoTipoEdificio[n] === '');
 }
 
 function seleccionarContactoAcceso(n, valor) {
@@ -1471,7 +1477,6 @@ function restaurarAccesoDesdePayload(n, acceso, forzarVisible) {
     ['inp-acceso-registro-' + n, acceso.nombreRegistro],
     ['inp-acceso-contacto-' + n, acceso.contactoAcceso],
     ['inp-acceso-caseta-' + n, acceso.instruccionesCaseta],
-    ['inp-acceso-tipo-edificio-' + n, acceso.tipoEdificio],
     ['inp-acceso-punto-detalle-' + n, acceso.puntoEncuentroDetalle],
     ['inp-acceso-torre-' + n, acceso.torre],
     ['inp-acceso-piso-' + n, acceso.piso],
@@ -1484,8 +1489,8 @@ function restaurarAccesoDesdePayload(n, acceso, forzarVisible) {
     if (el) el.value = pair[1] || '';
   });
   seleccionarContactoAcceso(n, accesoContactoTipo[n]);
-  pintarPuntoEncuentro(n);
-  actualizarBloqueEdificio(n);
+  /* Restaura tipo: actualiza chips, re-renderiza puntos y visibilidad de sección */
+  seleccionarTipoEdificio(n, accesoTipoEdificio[n]);
 }
 
 /* ── SIGNATURE CANVAS ───────────────────────────────────────────────────────── */
