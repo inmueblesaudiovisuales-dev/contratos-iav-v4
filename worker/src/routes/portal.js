@@ -1,7 +1,6 @@
 import { queryOne, query, run, parseFecha, now } from '../db.js';
 import { ok, err } from '../auth.js';
 import { callAdapter, callAdapterSync } from '../google.js';
-import { generarFolio } from '../folios.js';
 
 function limpiarLinkMaps(url) {
   if (!url) return url;
@@ -27,16 +26,6 @@ export async function handlePortal(request, env, ctx, action) {
       if (tk.expira && new Date(tk.expira) < new Date()) return err('Token expirado', 403);
       contratoFinal = await queryOne(db, 'SELECT * FROM contratos WHERE token = ?', [tk.contrato_id]);
       if (!contratoFinal) return err('Contrato no encontrado', 404);
-    }
-
-    if (contratoFinal.estatus === 'Pendiente firma') {
-      const tkPortal = await queryOne(db,
-        "SELECT * FROM tokens WHERE contrato_id = ? AND tipo = 'contrato' AND usado = 0 ORDER BY rowid DESC LIMIT 1",
-        [contratoFinal.token]
-      );
-      if (tkPortal?.expira && new Date(tkPortal.expira) < new Date()) {
-        return err('El enlace ha expirado. Solicita un nuevo enlace a Bruno.', 403);
-      }
     }
 
     const { results: propiedades } = await query(db,
@@ -197,6 +186,14 @@ export async function handlePortal(request, env, ctx, action) {
     if (!contrato) return err('Contrato no encontrado', 404);
     if (contrato.estatus !== 'Pendiente firma') return err('El contrato ya fue firmado');
 
+    const tkPortal = await queryOne(db,
+      "SELECT * FROM tokens WHERE contrato_id = ? AND tipo = 'contrato' AND usado = 0 ORDER BY rowid DESC LIMIT 1",
+      [contrato.token]
+    );
+    if (tkPortal?.expira && new Date(tkPortal.expira) < new Date()) {
+      return err('El enlace de firma ha expirado. Solicita un nuevo enlace a Bruno.', 403);
+    }
+
     const adicionalesExistentes = JSON.parse(contrato.adicionales_json || '[]');
     const acordados = adicionalesExistentes.filter(i => typeof i === 'object');
 
@@ -204,8 +201,16 @@ export async function handlePortal(request, env, ctx, action) {
     let precioTotal = contrato.precio_total;
     const adicionalesAceptados = [];
 
-    if (adicionalesSeleccionados?.length) {
-      for (const item of adicionalesSeleccionados) {
+    const clavesSeen = new Set();
+    const adicionalesDedup = (adicionalesSeleccionados || []).filter(item => {
+      const clave = typeof item === 'string' ? item : item.clave;
+      if (!clave || clavesSeen.has(clave)) return false;
+      clavesSeen.add(clave);
+      return true;
+    });
+
+    if (adicionalesDedup.length) {
+      for (const item of adicionalesDedup) {
         const clave = typeof item === 'string' ? item : item.clave;
         if (!clave) continue;
         if (typeof item === 'object' && item.precio && item.ofrecido) {

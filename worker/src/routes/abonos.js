@@ -15,6 +15,14 @@ export async function handleAbonos(request, env, ctx, action) {
     const contrato = await queryOne(db, 'SELECT * FROM contratos WHERE token = ?', [token]);
     if (!contrato) return err('Contrato no encontrado', 404);
 
+    if (contrato.estatus === 'Pendiente firma') {
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'El contrato aún no ha sido firmado. No se puede registrar un abono.',
+        codigoError: 'REQUIERE_FIRMA'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // Validar monto excesivo (a menos que se confirme explícitamente)
     const exceso = monto - contrato.saldo_pendiente;
     if (!body.permitirExceso && exceso > 0.5) {
@@ -42,7 +50,7 @@ export async function handleAbonos(request, env, ctx, action) {
     const nuevoSaldo = Math.max(0, contrato.saldo_pendiente - monto);
     const ESTATUSES_AVANZADOS = ['En produccion', 'Entregado'];
     const nuevoEstatus = nuevoSaldo === 0
-      ? (contrato.estatus === 'Entregado' ? 'Completado' : 'Liquidado')
+      ? (['Entregado','Completado'].includes(contrato.estatus) ? 'Completado' : 'Liquidado')
       : (contrato.estatus === 'Completado' ? 'Entregado'
         : ESTATUSES_AVANZADOS.includes(contrato.estatus) ? contrato.estatus
         : 'Anticipo recibido');
