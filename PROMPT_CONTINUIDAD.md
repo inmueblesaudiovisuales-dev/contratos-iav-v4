@@ -12,6 +12,7 @@
 
 ## Cómo trabajar aquí
 
+0. Antes de explorar, revisar o cambiar algo, preguntar en qué vamos a trabajar si el objetivo no está claramente definido.
 1. Leer primero [MASTER_V4.md](./MASTER_V4.md).
 2. Revisar el estado actual de `main` y los archivos involucrados.
 3. Hacer cambios pequeños y coherentes con las rondas previas.

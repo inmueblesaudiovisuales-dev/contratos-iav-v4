@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 27 — Prompt de continuidad simplificado para Codex)  
+> Última actualización: 2026-06-02 (Ronda 28 — Rediseño desktop del picker de formato en portal)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -281,6 +281,20 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
 
+### Ronda 28 — Rediseño desktop del picker de formato en portal (2026-06-02)
+
+> Sin cambios de D1, Worker ni adapter. Solo frontend en `portal.html`.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R28-01 | `frontend/portal.html` CSS | Picker desktop corregido para evitar textos encimados: más aire interno inicial, contenido en columna flexible y precio separado del copy. |
+| R28-02 | `frontend/portal.html` CSS | Cards desktop compactadas después de revisión visual: menor altura mínima, menor padding y menor zona de mockup, manteniendo mobile intacto. |
+| R28-03 | `frontend/portal.html` CSS+HTML | Se alinearon las líneas equivalentes "Grabado en vertical" y "Grabado en horizontal" con una clase específica para desktop. |
+| R28-04 | `frontend/portal.html` HTML+CSS | Copy simplificado: se quitaron los títulos "Solo redes sociales", "Web o YouTube" y "Los dos formatos"; los canales quedan como primera línea y "Grabado en..." pasa a ser la decisión principal. La tercera opción ahora dice explícitamente "Grabado en ambos formatos". |
+| R28-05 | `frontend/portal.html` CSS+HTML | Rediseño final aprobado: cards desktop con retícula fija de 5 filas (gráfico, canales, grabación, nota, precio), textos equivalentes alineados entre cards, notas sin punto inicial y placeholders invisibles de precio en las dos primeras opciones para conservar alineación. |
+
+---
+
 ### Ronda 27 — Prompt de continuidad simplificado para Codex (2026-06-02)
 
 | ID | Archivo | Cambio |
@@ -288,6 +302,7 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 | R27-01 | `PROMPT_CONTINUIDAD.md` | Reescrito como guía corta y directa para trabajar en este repo sin depender de la computadora de Bruno. |
 | R27-02 | `PROMPT_CONTINUIDAD.md` | Se eliminaron rutas absolutas obsoletas y se dejó el flujo mínimo: leer `MASTER_V4.md`, editar, verificar, documentar ronda, commit y push a `main`. |
 | R27-03 | `PROMPT_CONTINUIDAD.md` | Se agregó un resumen de reglas simples para mantener el proyecto consistente: no emojis, CSS mobile-first, respetar DB/flujo y no tocar el adapter salvo que haga falta. |
+| R27-04 | `PROMPT_CONTINUIDAD.md` | Regla agregada: si el objetivo no está claramente definido, Codex debe preguntar en qué se va a trabajar antes de explorar, revisar o cambiar archivos. |
 
 ### Ronda 26 — Picker de formato + control en formulario de creación (2026-06-02)
 
