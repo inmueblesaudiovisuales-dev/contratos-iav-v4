@@ -1864,6 +1864,9 @@
         <button id="atab-clientes" class="ajustes-tab" onclick="setAjustesTab('clientes')">
           <i class="ti ti-users"></i> Clientes
         </button>
+        <button id="atab-prospectos" class="ajustes-tab" onclick="setAjustesTab('prospectos')">
+          <i class="ti ti-phone-call"></i> Prospectos
+        </button>
       </div>
 
       <!-- Pane: Métricas -->
@@ -1899,6 +1902,40 @@
           <button class="btn-secundario btn-sm" onclick="cargarCRM()"><i class="ti ti-refresh"></i> Actualizar</button>
         </div>
         <div class="crm-grid" id="crm-grid">
+          <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
+        </div>
+      </div>
+
+      <!-- Pane: Prospectos (mobile) -->
+      <div id="apane-prospectos" class="ajustes-pane">
+        <div class="barra" style="margin-bottom:16px">
+          <p style="font-size:13px;color:var(--ink-3);flex:1">Agenda llamadas con clientes potenciales.</p>
+          <button class="btn-secundario btn-sm" onclick="cargarProspectos()"><i class="ti ti-refresh"></i></button>
+        </div>
+        <div class="card" style="margin-bottom:18px;padding:18px 16px">
+          <div style="font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.05em">Agendar llamada</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="campo"><label>Nombre *</label><input type="text" id="prosp-nombre-m" placeholder="Nombre del prospecto"></div>
+            <div class="campo"><label>Teléfono *</label><input type="tel" id="prosp-telefono-m" placeholder="81..."></div>
+            <div class="campo"><label>Fecha *</label><input type="date" id="prosp-fecha-m"></div>
+            <div class="campo"><label>Hora *</label><input type="time" id="prosp-hora-m" value="10:00"></div>
+            <div class="campo">
+              <label>¿Qué le interesa?</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="prosp-interes-btns-m">
+                <button class="par-tipo-btn" data-val="foto" onclick="seleccionarInteresProspM(this)">Fotografía</button>
+                <button class="par-tipo-btn" data-val="video" onclick="seleccionarInteresProspM(this)">Video + Drone</button>
+                <button class="par-tipo-btn" data-val="360" onclick="seleccionarInteresProspM(this)">Recorrido 360°</button>
+                <button class="par-tipo-btn" data-val="combo" onclick="seleccionarInteresProspM(this)">Paquete completo</button>
+              </div>
+            </div>
+            <div class="campo"><label>Notas</label><textarea id="prosp-notas-m" rows="3" placeholder="Lo que platicaron por WhatsApp, zona, tipo de propiedad..." style="resize:vertical"></textarea></div>
+          </div>
+          <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+            <button class="btn-primario gold" onclick="crearProspectoM()"><i class="ti ti-calendar-plus"></i> Agendar</button>
+            <span id="prosp-msg-m" style="font-size:13px"></span>
+          </div>
+        </div>
+        <div id="lista-prospectos-m">
           <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
         </div>
       </div>
@@ -2340,6 +2377,7 @@ function setAjustesTab(pane) {
   if (pane === 'metricas') cargarMetricas();
   if (pane === 'paquetes') cargarPaquetesAdmin();
   if (pane === 'clientes') cargarCRM();
+  if (pane === 'prospectos') cargarProspectosM();
 }
 
 
@@ -5264,7 +5302,112 @@ function cargarProspectos() {
 
 function cambiarEstatusProspecto(id, estatus) {
   apiPost('actualizarEstatusProspecto', { id: id, estatus: estatus })
-    .then(function(r) { if (r.ok) cargarProspectos(); });
+    .then(function(r) { if (r.ok) { cargarProspectos(); cargarProspectosM(); } });
+}
+
+// Versión mobile (pane dentro de Ajustes)
+var _interesProspectoM = '';
+
+function seleccionarInteresProspM(btn) {
+  document.querySelectorAll('#prosp-interes-btns-m .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
+  btn.classList.add('activo-par');
+  _interesProspectoM = btn.dataset.val;
+}
+
+function crearProspectoM() {
+  var nombre   = (document.getElementById('prosp-nombre-m').value || '').trim();
+  var telefono = (document.getElementById('prosp-telefono-m').value || '').trim();
+  var fecha    = document.getElementById('prosp-fecha-m').value;
+  var hora     = document.getElementById('prosp-hora-m').value;
+  var notas    = (document.getElementById('prosp-notas-m').value || '').trim();
+  var msg      = document.getElementById('prosp-msg-m');
+
+  if (!nombre || !telefono || !fecha || !hora) {
+    msg.style.color = '#c0392b';
+    msg.textContent = 'Nombre, teléfono, fecha y hora son requeridos.';
+    return;
+  }
+
+  msg.style.color = 'var(--ink-3)';
+  msg.textContent = 'Agendando...';
+
+  apiPost('crearProspecto', { nombre: nombre, telefono: telefono, interes: _interesProspectoM,
+    fechaLlamada: fecha, horaLlamada: hora, notas: notas })
+    .then(function(r) {
+      if (r.ok) {
+        msg.style.color = '#27ae60';
+        msg.textContent = 'Llamada agendada.';
+        document.getElementById('prosp-nombre-m').value = '';
+        document.getElementById('prosp-telefono-m').value = '';
+        document.getElementById('prosp-fecha-m').value = '';
+        document.getElementById('prosp-hora-m').value = '10:00';
+        document.getElementById('prosp-notas-m').value = '';
+        document.querySelectorAll('#prosp-interes-btns-m .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
+        _interesProspectoM = '';
+        cargarProspectosM();
+      } else {
+        msg.style.color = '#c0392b';
+        msg.textContent = r.error || 'Error al agendar.';
+      }
+    })
+    .catch(function() {
+      msg.style.color = '#c0392b';
+      msg.textContent = 'Error de conexión.';
+    });
+}
+
+function cargarProspectosM() {
+  var el = document.getElementById('lista-prospectos-m');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>';
+
+  apiGet('listarProspectos')
+    .then(function(r) {
+      var items = r.prospectos || [];
+      if (!items.length) {
+        el.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">No hay prospectos registrados.</p>';
+        return;
+      }
+      var interesLabels = { foto: 'Fotografía', video: 'Video + Drone', '360': 'Recorrido 360°', combo: 'Paquete completo' };
+      var estatusColors = { pendiente: '#e67e22', contactado: '#2980b9', convertido: '#27ae60', descartado: '#95a5a6' };
+      var estatusLabels = { pendiente: 'Pendiente', contactado: 'Contactado', convertido: 'Convertido', descartado: 'Descartado' };
+      var html = '<div style="display:flex;flex-direction:column;gap:8px">';
+      items.forEach(function(p) {
+        var color = estatusColors[p.estatus] || '#aaa';
+        var label = estatusLabels[p.estatus] || p.estatus;
+        var interesStr = interesLabels[p.interes] || p.interes || '—';
+        var fechaStr = p.fecha_llamada ? p.fecha_llamada.substring(0,10) : '—';
+        html += '<div class="card" style="padding:14px 16px;display:flex;align-items:flex-start;gap:14px">';
+        html += '<div style="flex:1;min-width:0">';
+        html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">';
+        html += '<span style="font-weight:600;font-size:14px;color:var(--ink-1)">'+esc(p.nombre)+'</span>';
+        html += '<span style="font-size:12px;color:var(--ink-3)">'+esc(p.telefono)+'</span>';
+        html += '<span style="font-size:11px;font-weight:600;color:'+color+';background:'+color+'18;border-radius:20px;padding:2px 8px">'+label+'</span>';
+        html += '</div>';
+        html += '<div style="font-size:12px;color:var(--ink-3);display:flex;gap:12px;flex-wrap:wrap">';
+        html += '<span><i class="ti ti-calendar"></i> '+fechaStr+' '+esc(p.hora_llamada||'')+'</span>';
+        if (p.interes) html += '<span><i class="ti ti-star"></i> '+interesStr+'</span>';
+        html += '</div>';
+        if (p.notas) html += '<div style="font-size:12px;color:var(--ink-2);margin-top:5px;white-space:pre-wrap">'+esc(p.notas)+'</div>';
+        html += '</div>';
+        html += '<select onchange="cambiarEstatusProspectoM(\''+p.id+'\', this.value)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--ink-1);cursor:pointer">';
+        ['pendiente','contactado','convertido','descartado'].forEach(function(s){
+          html += '<option value="'+s+'"'+(p.estatus===s?' selected':'')+'>'+estatusLabels[s]+'</option>';
+        });
+        html += '</select>';
+        html += '</div>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    })
+    .catch(function() {
+      el.innerHTML = '<p style="color:#c0392b;font-size:13px">Error al cargar prospectos.</p>';
+    });
+}
+
+function cambiarEstatusProspectoM(id, estatus) {
+  apiPost('actualizarEstatusProspecto', { id: id, estatus: estatus })
+    .then(function(r) { if (r.ok) cargarProspectosM(); });
 }
 </script>
 </body>
