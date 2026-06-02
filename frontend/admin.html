@@ -626,6 +626,8 @@
       /* Tabla → cards en mobile */
       .tabla-card table, .tabla-card thead { display: block; }
       .tabla-card thead { display: none; }
+      .th-avatar { display: none !important; }
+      .td-avatar-desktop { display: none !important; }
       .tabla-card tbody { display: flex; flex-direction: column; gap: 0; }
       .tabla-card tr {
         display: flex; flex-wrap: wrap; align-items: center;
@@ -732,134 +734,420 @@
        DESKTOP LAYOUT — min-width: 1024px
        ════════════════════════════════════════════════ */
     @media (min-width: 1024px) {
+      :root {
+        --sidebar-w: 224px;
+        --panel-w: 488px;
+        --gold-light: rgba(201,168,76,0.14);
+        --gold-text: #92720E;
+        --ink-1: #111827;
+        --ink-2: #4B5563;
+        --ink-3: #9CA3AF;
+        --ink-4: #D1D5DB;
+        --page: #EFEDE8;
+        --card: #FFFFFF;
+        --border: #E5E3DD;
+        --sidebar-bg: #0D0D10;
+        --sidebar-border: rgba(255,255,255,0.07);
+      }
 
-      /* ── Sidebar izquierda ── */
+      html, body { height: 100vh; overflow: hidden; background: var(--page); }
+      #pantalla-admin { height: 100vh; overflow: hidden; }
+
+      /* ── SIDEBAR ── */
       .bottom-nav {
         display: flex !important;
         flex-direction: column;
         position: fixed;
-        left: 0; top: 0; right: auto; bottom: 0;
-        width: 220px; height: 100dvh;
-        background: var(--onyx);
+        left: 0; top: 0; bottom: 0;
+        width: var(--sidebar-w);
+        height: 100dvh;
+        background: var(--sidebar-bg);
         border-top: none;
-        border-right: 1px solid rgba(255,255,255,0.07);
+        border-right: 1px solid var(--sidebar-border);
         padding: 0;
         z-index: 100;
       }
       .bnav-logo {
         display: flex !important;
-        padding: 22px 20px 18px;
-        border-bottom: 1px solid rgba(255,255,255,0.07);
+        align-items: center; gap: 10px;
+        padding: 20px 18px 16px;
+        border-bottom: 1px solid var(--sidebar-border);
         flex-shrink: 0;
       }
+      .bnav-logo-icon {
+        width: 30px; height: 30px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #C9A84C 0%, #8B6914 100%);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        font-size: 13px; font-weight: 800; color: #fff;
+        letter-spacing: -0.5px;
+      }
       .bnav-logo-marca {
-        font-size: 10px; font-weight: 800;
-        letter-spacing: 0.14em; text-transform: uppercase;
-        color: var(--gold); line-height: 1.4;
+        font-size: 11.5px; font-weight: 700;
+        color: rgba(255,255,255,0.9);
+        line-height: 1.3;
+        letter-spacing: 0.01em;
+        text-transform: none;
       }
       .bnav-logo-sub {
-        font-size: 10px; color: rgba(255,255,255,0.3);
-        font-weight: 500; margin-top: 3px;
+        font-size: 10px;
+        color: rgba(255,255,255,0.2);
+        margin-top: 1px;
       }
       .bnav-inner {
         flex-direction: column;
         flex: 1;
         overflow-y: auto;
-        padding: 10px 0;
+        padding: 6px 0;
         align-items: stretch;
-        gap: 2px;
+        gap: 0;
       }
       .bnav-btn {
         flex-direction: row;
         align-items: center;
         justify-content: flex-start;
         gap: 10px;
-        padding: 10px 20px;
-        font-size: 12px; font-weight: 600;
-        letter-spacing: 0.02em;
+        padding: 8px 16px;
+        font-size: 12.5px; font-weight: 500;
+        letter-spacing: 0.01em;
         text-transform: none;
-        color: rgba(255,255,255,0.45);
+        color: rgba(255,255,255,0.4);
         text-align: left;
         border-radius: 0;
-        transition: color 120ms, background 120ms;
+        position: relative;
       }
-      .bnav-btn:hover { color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.05); }
-      .bnav-btn.activo { color: var(--gold); background: rgba(201,168,76,0.1); }
-      .bnav-btn i { font-size: 17px; flex-shrink: 0; }
-      /* FAB → botón rectangular */
+      .bnav-btn:hover { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.04); }
+      .bnav-btn.activo {
+        color: rgba(255,255,255,0.95);
+        background: rgba(255,255,255,0.07);
+      }
+      .bnav-btn.activo::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 8px; bottom: 8px;
+        width: 3px;
+        background: var(--gold);
+        border-radius: 0 2px 2px 0;
+      }
+      .bnav-btn i { font-size: 16px; flex-shrink: 0; }
+
+      /* FAB → full-width button */
       .bnav-fab {
-        width: calc(100% - 24px) !important;
-        height: 36px !important;
+        width: calc(100% - 28px) !important;
+        height: auto !important;
         border-radius: var(--r) !important;
-        margin: 6px 12px !important;
+        margin: 12px 14px 4px !important;
         border: none !important;
-        font-size: 12px !important;
+        font-size: 12.5px !important;
         font-weight: 700 !important;
-        letter-spacing: 0.04em;
         justify-content: center !important;
-        gap: 6px !important;
-        padding: 0 !important;
+        gap: 8px !important;
+        padding: 9px 14px !important;
         flex: none;
+        background: var(--gold) !important;
+        color: var(--onyx) !important;
       }
       .bnav-fab i { font-size: 15px !important; color: var(--onyx) !important; }
-      .bnav-fab-label { display: inline !important; font-size: 12px; font-weight: 700; color: var(--onyx); }
-      /* Logout al fondo */
+      .bnav-fab-label { display: inline !important; font-size: 12.5px; font-weight: 700; color: var(--onyx); }
+
       .bnav-logout {
         display: flex !important;
-        padding: 12px 20px;
-        border-top: 1px solid rgba(255,255,255,0.07);
+        padding: 12px 14px;
+        border-top: 1px solid var(--sidebar-border);
+        align-items: center; gap: 10px;
         flex-shrink: 0;
       }
       .bnav-logout-btn {
-        background: none; border: none;
+        background: none; border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
         color: rgba(255,255,255,0.3); font-size: 12px;
         font-weight: 600; cursor: pointer; font-family: inherit;
-        display: flex; align-items: center; gap: 8px;
-        padding: 4px 0; transition: color 120ms; width: 100%;
+        display: flex; align-items: center; justify-content: center;
+        width: 26px; height: 26px;
+        padding: 0;
       }
-      .bnav-logout-btn:hover { color: rgba(255,255,255,0.65); }
-      .bnav-logout-btn i { font-size: 16px; }
+      .bnav-logout-btn i { font-size: 12px; }
+      .bnav-logout-btn:hover { color: rgba(255,255,255,0.65); border-color: rgba(255,255,255,0.2); }
 
-      /* ── Ocultar topbar (reemplazado por sidebar) ── */
+      /* ── Hide mobile topbar ── */
       .topbar { display: none !important; }
-      /* ── Ocultar tab "Contratos" redundante ── */
       .tabs { display: none !important; }
 
-      /* ── Área de contenido principal ── */
+      /* ── MAIN CONTENT ── */
       .contenido {
-        margin-left: 220px;
+        margin-left: var(--sidebar-w);
         max-width: none;
-        padding: 28px 32px 32px;
-        min-height: 100vh;
-        transition: margin-right 280ms cubic-bezier(0.16,1,0.3,1);
+        padding: 0 24px 0 !important;
+        min-height: 0;
+        height: 100vh;
+        overflow-y: auto;
+        transition: margin-right 300ms cubic-bezier(0.16,1,0.3,1);
+        background: var(--page);
       }
-      body.panel-abierto .contenido { margin-right: 480px; }
+      .contenido::-webkit-scrollbar { width: 5px; }
+      .contenido::-webkit-scrollbar-track { background: transparent; }
+      .contenido::-webkit-scrollbar-thumb { background: var(--ink-4); border-radius: 99px; }
 
-      /* ── Panel lateral — más ancho, sin overlay ── */
-      .panel-lateral { width: 480px; top: 0; }
-      .panel-lateral.visible { box-shadow: -6px 0 28px rgba(28,28,30,0.1) !important; }
+      body.panel-abierto .contenido { margin-right: var(--panel-w); }
+
+      /* ── TOPBAR (inline) ── */
+      #stats-bar {
+        padding: 0 24px;
+        height: 52px;
+        display: flex; align-items: center; gap: 14px;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        margin: 0 -24px;
+      }
+      #stats-bar .contratos-tabs { display: none !important; }
+
+      /* ── STATS RIBBON ── */
+      .stats-ribbon {
+        display: flex; gap: 0;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        margin: 0 -24px;
+        flex-shrink: 0;
+      }
+      .stat-card {
+        flex: 1;
+        padding: 10px 20px;
+        border-right: 1px solid var(--border);
+        display: flex; align-items: center; gap: 12px;
+      }
+      .stat-card:last-child { border-right: none; }
+      .stat-icon {
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; flex-shrink: 0;
+      }
+      .stat-icon.gold { background: var(--gold-light); }
+      .stat-icon.blue { background: rgba(59,130,246,0.1); }
+      .stat-icon.purple { background: rgba(139,92,246,0.1); }
+      .stat-icon.green { background: rgba(16,185,129,0.1); }
+      .stat-value {
+        font-size: 18px; font-weight: 700;
+        color: var(--ink-1);
+        line-height: 1.1;
+        font-variant-numeric: tabular-nums;
+      }
+      .stat-label {
+        font-size: 10.5px; font-weight: 500;
+        color: var(--ink-3);
+        margin-top: 1px;
+        white-space: nowrap;
+      }
+
+      /* ── TOOLBAR ── */
+      .barra {
+        padding: 10px 24px;
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        margin: 0 -24px;
+        display: flex; flex-direction: row; align-items: center; gap: 12px;
+        flex-shrink: 0;
+      }
+      .barra-fila-principal { flex: 1; gap: 8px; }
+      .barra-filtros { display: none !important; }
+
+      /* ── HOY STRIP ── */
+      .hoy-strip {
+        padding: 10px 24px;
+        background: var(--page);
+        border-bottom: 1px solid var(--border);
+        display: flex; align-items: stretch; gap: 10px;
+        margin: 0 -24px;
+        flex-shrink: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .hoy-strip::-webkit-scrollbar { display: none; }
+      .hoy-header {
+        display: flex; flex-direction: column; justify-content: center;
+        margin-right: 4px; flex-shrink: 0;
+      }
+      .hoy-title {
+        font-size: 11px; font-weight: 800;
+        letter-spacing: 0.09em; text-transform: uppercase;
+        color: var(--ink-2);
+      }
+      .hoy-date { font-size: 10px; color: var(--ink-3); margin-top: 1px; }
+      .hoy-divider { width: 1px; background: var(--border); flex-shrink: 0; }
+
+      .session-card {
+        display: flex; align-items: stretch;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        flex-shrink: 0;
+        cursor: pointer;
+        overflow: hidden;
+        width: 220px;
+      }
+      .session-card:hover { border-color: var(--ink-4); }
+      .session-card.active-card { border-color: var(--gold); }
+      .session-card-accent { width: 4px; flex-shrink: 0; }
+      .session-card-body { padding: 9px 12px; flex: 1; min-width: 0; }
+      .session-card-hora { font-size: 12px; font-weight: 800; }
+      .session-card-nombre {
+        font-size: 12px; font-weight: 600;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        margin-top: 1px;
+      }
+      .session-card-meta { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+      .session-card-status {
+        display: inline-flex; align-items: center; gap: 4px;
+        margin-top: 5px;
+        font-size: 10.5px; font-weight: 600;
+        color: var(--ink-2);
+      }
+      .session-card-dot { width: 5px; height: 5px; border-radius: 50%; }
+
+      /* ── TABLE ── */
+      #tabla-contratos-card {
+        margin: 0 -24px;
+        border: none; border-radius: 0;
+        flex: 1; overflow-y: auto;
+      }
+      #tabla-contratos-card table { width: 100%; border-collapse: collapse; }
+      #tabla-contratos-card thead tr {
+        border-bottom: 1px solid var(--border);
+        background: var(--card);
+        position: sticky; top: 0; z-index: 2;
+      }
+      #tabla-contratos-card th {
+        padding: 9px 16px;
+        text-align: left;
+        font-size: 10px; font-weight: 700;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--ink-3);
+        white-space: nowrap;
+        background: var(--card);
+      }
+      #tabla-contratos-card td {
+        padding: 12px 16px; vertical-align: middle;
+        border-bottom: 1px solid var(--border);
+      }
+      #tabla-contratos-card tbody tr {
+        background: var(--card);
+        cursor: pointer;
+        border-left: 3px solid var(--row-color, transparent);
+        border-bottom: 1px solid var(--border);
+      }
+      #tabla-contratos-card tbody tr:hover { background: #FAFAF8; }
+      #tabla-contratos-card tbody tr:hover { border-left-width: 4px; }
+      #tabla-contratos-card tbody tr.activo { background: #FBF9F3; }
+      #tabla-contratos-card tbody tr.activo { border-left-width: 4px; }
+
+      .td-folio {
+        font-size: 11px; font-weight: 600;
+        color: var(--ink-3); font-variant-numeric: tabular-nums;
+        letter-spacing: 0.04em;
+        font-family: 'Courier New', monospace;
+      }
+      .td-nombre { font-weight: 600; font-size: 13px; }
+      .td-sub { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+
+      .td-avatar {
+        width: 32px; height: 32px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 700; color: #fff;
+        flex-shrink: 0;
+      }
+
+      /* Hide mobile elements */
+      #radar-sesiones, #sesiones-lista { display: none !important; }
+      #btn-filtros-toggle, #filtro-fecha-desde, #filtro-fecha-hasta,
+      .filtro-fecha-label, .btn-seleccion, #btn-export-csv,
+      #btn-refresh-tabla, #btn-seccion, #btn-seleccion { display: none !important; }
+      .barra .btn-primario.gold { display: none !important; }
+      .barra .btn-secundario.btn-sm { display: none !important; }
+
+      /* ── PANEL ── */
+      .panel-lateral {
+        position: fixed;
+        right: 0; top: 0; bottom: 0;
+        width: var(--panel-w);
+        background: var(--card);
+        border-left: 1px solid var(--border);
+        display: flex; flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 300ms cubic-bezier(0.16,1,0.3,1);
+        z-index: 50;
+      }
+      .panel-lateral.visible {
+        transform: translateX(0);
+        box-shadow: -12px 0 40px rgba(0,0,0,0.07);
+      }
+      .panel-handle { display: none !important; }
       #overlay.visible { display: none !important; }
 
-      /* ── Strip de sesiones — tarjetas en desktop ── */
-      .radar-strip { margin-bottom: 20px; gap: 12px; }
-      .radar-pil {
-        padding: 12px 16px; border-radius: 10px;
-        font-size: 13px; min-width: 140px;
-        flex-direction: column; align-items: flex-start; gap: 3px;
+      .panel-header {
+        padding: 20px 20px 0;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        position: static;
       }
+      .panel-header-info { flex: 1; min-width: 0; padding-right: 10px; }
+      .panel-folio { font-size: 11px; }
+      .panel-nombre { font-size: 20px; font-weight: 800; line-height: 1.2; letter-spacing: -0.3px; }
+      .panel-tabs { position: static; top: auto; }
+      .panel-tab-btn.activo { color: var(--ink-1); border-bottom-color: var(--ink-1); }
+      .panel-tab-pane { padding: 18px 20px; }
 
-      /* ── Filas de tabla — densidad + color de estatus ── */
-      .tabla-card td { padding: 10px 16px; }
-      .tabla-card tbody tr {
-        border-left: 3px solid var(--row-status-color, transparent);
+      /* ── LIFECYCLE PIPELINE ── */
+      .lifecycle {
+        display: flex; align-items: center;
+        margin: 14px 0 0;
+        gap: 0;
+        overflow: hidden;
       }
-      .tabla-card tbody tr:hover { border-left-color: var(--row-status-color, var(--gold-border)); }
-      .tabla-card tbody tr.activo { border-left-color: var(--row-status-color, var(--gold)) !important; }
+      .lc-step {
+        flex: 1;
+        display: flex; flex-direction: column; align-items: center;
+        position: relative;
+        padding-bottom: 10px;
+      }
+      .lc-step::before {
+        content: '';
+        position: absolute;
+        top: 7px; left: calc(-50% + 8px); right: calc(50% + 8px);
+        height: 2px;
+        background: var(--border);
+      }
+      .lc-step:first-child::before { display: none; }
+      .lc-step.done::before { background: var(--gold); }
+      .lc-dot {
+        width: 16px; height: 16px; border-radius: 50%;
+        border: 2px solid var(--border);
+        background: var(--card);
+        z-index: 1;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .lc-step.done .lc-dot {
+        border-color: var(--gold);
+        background: var(--gold);
+      }
+      .lc-step.current .lc-dot {
+        border-color: #F59E0B;
+        background: #F59E0B;
+        box-shadow: 0 0 0 3px rgba(245,158,11,0.2);
+      }
+      .lc-dot-check { font-size: 8px; color: #fff; font-weight: 800; }
+      .lc-label {
+        font-size: 9px; font-weight: 600;
+        color: var(--ink-3);
+        margin-top: 5px;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .lc-step.done .lc-label { color: var(--gold-text); }
+      .lc-step.current .lc-label { color: #92580A; font-weight: 700; }
 
-      /* ── Refinamientos ── */
-      .contratos-tabs { margin-bottom: 16px; }
-      .stats-linea { margin-bottom: 16px; }
-      .barra { margin-bottom: 16px; }
+      /* Override mobile panel tabs */
+      .panel-tab-btn { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
     }
   </style>
 </head>
@@ -904,6 +1192,7 @@
   <!-- Nav — bottom en mobile, sidebar izquierda en desktop -->
   <nav class="bottom-nav">
     <div class="bnav-logo" style="display:none">
+      <div class="bnav-logo-icon">IAV</div>
       <div>
         <div class="bnav-logo-marca">Inmuebles<br>Audiovisuales</div>
         <div class="bnav-logo-sub">Contratos v4</div>
@@ -936,6 +1225,14 @@
 
       <!-- Stats — línea compacta (JS la llena) -->
       <div id="stats-bar"></div>
+
+      <!-- Stats ribbon desktop -->
+      <div class="stats-ribbon" id="statsRibbon">
+        <div class="stat-card"><div class="stat-icon gold">📅</div><div class="stat-data"><div class="stat-value" id="statSesionesHoy">—</div><div class="stat-label">Sesiones hoy</div></div></div>
+        <div class="stat-card"><div class="stat-icon blue">✍️</div><div class="stat-data"><div class="stat-value" id="statPendientesFirma">—</div><div class="stat-label">Pendientes firma</div></div></div>
+        <div class="stat-card"><div class="stat-icon purple">🎬</div><div class="stat-data"><div class="stat-value" id="statEnProduccion">—</div><div class="stat-label">En produccion</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">💵</div><div class="stat-data"><div class="stat-value" id="statCobradoMes">—</div><div class="stat-label">Cobrado este mes</div></div></div>
+      </div>
 
       <!-- Tabs de navegación con contadores -->
       <div class="contratos-tabs">
@@ -997,6 +1294,13 @@
         </div>
       </div>
 
+      <!-- Hoy strip desktop -->
+      <div class="hoy-strip" id="hoyStrip" style="display:none">
+        <div class="hoy-header"><div class="hoy-title">Hoy</div><div class="hoy-date" id="hoyDate"></div></div>
+        <div class="hoy-divider"></div>
+        <div class="hoy-cards" id="hoyCards" style="display:flex;gap:10px"></div>
+      </div>
+
       <!-- Tabla de contratos -->
       <div class="tabla-card" id="tabla-contratos-card">
         <table>
@@ -1004,6 +1308,7 @@
             <tr>
               <th id="th-check" style="display:none;width:36px"></th>
               <th>Folio</th>
+              <th class="th-avatar" style="width:52px"></th>
               <th>Cliente</th>
               <th>Estatus</th>
               <th>Sesión</th>
@@ -1012,7 +1317,7 @@
             </tr>
           </thead>
           <tbody id="tabla-body">
-            <tr><td colspan="6" class="tabla-vacio">Cargando...</td></tr>
+            <tr><td colspan="7" class="tabla-vacio">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1248,6 +1553,7 @@
     <div class="panel-header-info">
       <div class="panel-folio" id="panel-folio">—</div>
       <div class="panel-nombre" id="panel-nombre">—</div>
+      <div class="lifecycle-wrap"></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px">
         <div id="panel-badge"></div>
         <div id="panel-sesion" class="panel-sesion" style="display:none"></div>
@@ -1851,7 +2157,7 @@ async function cargarContratos(tokenInicial) {
     if (tok) abrirPanel(tok);
   } catch (e) {
     document.getElementById('tabla-body').innerHTML =
-      `<tr><td colspan="${modoSeleccion ? 7 : 6}" style="color:var(--danger);padding:24px;text-align:center">Error: ${esc(e.message)}</td></tr>`;
+      `<tr><td colspan="${modoSeleccion ? 8 : 7}" style="color:var(--danger);padding:24px;text-align:center">Error: ${esc(e.message)}</td></tr>`;
     _cargandoContratos = false;
     return;
   }
@@ -1990,7 +2296,7 @@ const ESTATUS_COLOR = {
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="${modoSeleccion ? 7 : 6}" class="tabla-vacio">Sin contratos que mostrar.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${modoSeleccion ? 8 : 7}" class="tabla-vacio">Sin contratos que mostrar.</td></tr>`;
     return;
   }
   const ahora  = Date.now();
@@ -2022,10 +2328,14 @@ function renderTabla(lista) {
     const sesCell = fs
       ? `<td class="td-fecha" style="${sesColorStyle}">${fmxnFecha(fs)}</td>`
       : `<td class="td-fecha" style="color:var(--ink-4)">—</td>`;
-    const statusColor = ESTATUS_COLOR[c.Estatus] ? `--row-status-color:${ESTATUS_COLOR[c.Estatus]}` : '';
+    const statusColor = ESTATUS_COLOR[c.Estatus] ? `--row-color:${ESTATUS_COLOR[c.Estatus]}` : '';
+    const iniciales = (c.NombreCliente||'?').split(' ').slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase();
+    const avatarColor = hashColor(iniciales);
+    const avatarCell = `<td class="td-avatar-desktop" style="padding-left:20px"><div class="td-avatar" style="background:${avatarColor}">${iniciales}</div></td>`;
     return `<tr class="${[activo, sesClass].filter(Boolean).join(' ')}" ${rowClick} style="${statusColor}">
       ${checkCell}
       <td class="td-folio">${esc(c.Folio) || '—'}</td>
+      ${avatarCell}
       <td>
         <div class="td-nombre">
           ${c.EntregaExpress ? `<span style="background:#ef4444;color:#fff;font-size:9px;font-weight:800;letter-spacing:.8px;padding:1px 6px;border-radius:3px;margin-right:5px;vertical-align:middle">EXPRESS</span>` : ''}${esc(c.NombreCliente)}
@@ -2047,6 +2357,8 @@ function renderTabla(lista) {
       </td>
     </tr>`;
   }).join('');
+  actualizarStatsRibbon(todosContratos);
+  renderHoyStrip(todosContratos);
 }
 
 function renderSesiones(lista) {
@@ -2157,6 +2469,8 @@ function renderPanel(data) {
   document.getElementById('panel-folio').textContent  = c.Folio || 'Sin folio';
   document.getElementById('panel-nombre').textContent = c.NombreCliente;
   document.getElementById('panel-badge').innerHTML    = badgeEstatus(c.Estatus);
+  var lw = document.querySelector('.lifecycle-wrap');
+  if (lw) lw.innerHTML = renderLifecycle(c.Estatus);
   // Fecha de primera sesión en header — find() para contratos multi-propiedad donde [0] puede no tener fecha
   const _sesionProp   = data.propiedades && data.propiedades.find(p => p.FechaSesion);
   const primeraSesion = _sesionProp && _sesionProp.FechaSesion;
@@ -3999,6 +4313,62 @@ window.addEventListener('pageshow', function(e) {
     cargarContratos();
   }
 });
+
+/* ── DESKTOP REDESIGN v2: helpers ── */
+function hashColor(str) {
+  const colors = ['#F59E0B','#3B82F6','#EC4899','#8B5CF6','#10B981','#F97316'];
+  let h = 0;
+  for (let c of str) h = (h * 31 + c.charCodeAt(0)) & 0xFFFF;
+  return colors[h % colors.length];
+}
+
+function actualizarStatsRibbon(contratos) {
+  if (window.innerWidth < 1024) return;
+  const hoy = new Date().toISOString().slice(0,10);
+  const mes = new Date().toISOString().slice(0,7);
+  const el = function(id){ return document.getElementById(id); };
+  if (el('statSesionesHoy'))     el('statSesionesHoy').textContent  = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); }).length;
+  if (el('statPendientesFirma')) el('statPendientesFirma').textContent = contratos.filter(function(c){ var e = (c.Estatus||'').toLowerCase(); return e.includes('pendiente'); }).length;
+  if (el('statEnProduccion'))    el('statEnProduccion').textContent = contratos.filter(function(c){ var e = (c.Estatus||'').toLowerCase(); return e.includes('produccion')||e.includes('producción'); }).length;
+  var cobrado = contratos.filter(function(c){ return c.Estatus === 'Completado' || c.Estatus === 'Liquidado'; }).reduce(function(s,c){ return s + (Number(c.PrecioTotal||0) - Number(c.SaldoPendiente||0)); }, 0);
+  if (el('statCobradoMes'))      el('statCobradoMes').textContent = '$' + cobrado.toLocaleString('es-MX');
+}
+
+function renderHoyStrip(contratos) {
+  if (window.innerWidth < 1024) return;
+  var strip = document.getElementById('hoyStrip');
+  var cards = document.getElementById('hoyCards');
+  var dateEl = document.getElementById('hoyDate');
+  if (!strip || !cards) return;
+  var hoy = new Date().toISOString().slice(0,10);
+  var sesiones = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); });
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
+  if (!sesiones.length) { strip.style.display='none'; return; }
+  strip.style.display='flex';
+  cards.innerHTML = sesiones.map(function(c){
+    var color = ESTATUS_COLOR[c.Estatus]||'#9CA3AF';
+    return '<div class="session-card" onclick="abrirPanel(\''+(c.Token||'')+'\')">'+
+      '<div class="session-card-accent" style="background:'+color+'"></div>'+
+      '<div class="session-card-body">'+
+        '<div class="session-card-hora">'+(c.HoraSesion||'')+'</div>'+
+        '<div class="session-card-nombre">'+(c.NombreCliente||'')+'</div>'+
+        '<div class="session-card-meta">'+(c.PaqueteBase||'')+'</div>'+
+        '<div class="session-card-status"><span class="session-card-dot" style="background:'+color+'"></span>'+(c.Estatus||'')+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function renderLifecycle(estatus) {
+  var stages = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Completado'];
+  var labels  = ['Pendiente','Firmado','Anticipo','Produccion','Entregado','Completado'];
+  var idx = stages.indexOf(estatus);
+  if (idx < 0) idx = -1;
+  return '<div class="lifecycle">'+stages.map(function(s,i){
+    var cls = i<idx?'done':i===idx?'current':'';
+    return '<div class="lc-step '+cls+'"><div class="lc-dot">'+(i<idx?'<span class="lc-dot-check">&#10003;</span>':'')+'</div><div class="lc-label">'+labels[i]+'</div></div>';
+  }).join('')+'</div>';
+}
 </script>
 </body>
 </html>
