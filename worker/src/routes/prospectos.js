@@ -3,6 +3,7 @@ import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter } from '../google.js';
 
 export async function handleProspectos(request, env, ctx, action) {
+  try {
   const auth = requireAdmin(request, env);
   if (auth) return auth;
 
@@ -52,4 +53,7 @@ export async function handleProspectos(request, env, ctx, action) {
   }
 
   return err('Acción no encontrada', 404);
+  } catch (e) {
+    return err('Error interno: ' + e.message, 500);
+  }
 }
