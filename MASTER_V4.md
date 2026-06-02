@@ -126,6 +126,8 @@ Los archivos de `frontend/` se suben automáticamente como assets estáticos ví
 
 **El adapter de Apps Script sí requiere acción manual de Bruno**: pegar el contenido de `adapter/AdapterScript4_v1.js` en script.google.com y desplegar nueva versión. Claude entrega el archivo listo.
 
+**Regla de trazabilidad del adapter (agregada 2026-06-02 12:00:09 CST):** cada vez que se modifique `adapter/AdapterScript4_v1.js`, documentar en este `MASTER_V4.md` la fecha y hora local del cambio, qué función/flujo se tocó y si requiere despliegue manual en Apps Script.
+
 ---
 
 ## Base de datos D1
