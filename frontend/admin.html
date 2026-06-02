@@ -1826,11 +1826,14 @@
           <div style="padding:18px 20px">
             <div class="campo">
               <label>Nombre del prospecto *</label>
-              <input type="text" id="prosp-nombre" placeholder="Ej. María González">
+              <input type="text" id="prosp-nombre" placeholder="Ej. Juan Pérez">
             </div>
             <div class="campo">
               <label>Teléfono *</label>
-              <input type="tel" id="prosp-telefono" placeholder="81 1234 5678">
+              <div style="position:relative">
+                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:15px;pointer-events:none">📱</span>
+                <input type="tel" id="prosp-telefono" placeholder="81 1234 5678" style="padding-left:36px">
+              </div>
             </div>
             <div class="fila-2">
               <div class="campo">
@@ -1935,7 +1938,7 @@
           </div>
           <div style="padding:16px">
             <div class="campo"><label>Nombre *</label><input type="text" id="prosp-nombre-m" placeholder="Nombre del prospecto"></div>
-            <div class="campo"><label>Teléfono *</label><input type="tel" id="prosp-telefono-m" placeholder="81 1234 5678"></div>
+            <div class="campo"><label>Teléfono *</label><div style="position:relative"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:15px;pointer-events:none">📱</span><input type="tel" id="prosp-telefono-m" placeholder="81 1234 5678" style="padding-left:36px"></div></div>
             <div class="fila-2">
               <div class="campo"><label>Fecha *</label><input type="date" id="prosp-fecha-m"></div>
               <div class="campo"><label>Hora *</label><input type="time" id="prosp-hora-m" value="10:00"></div>
