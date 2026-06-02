@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 20 — Sidebar completo + stats delta)  
+> Última actualización: 2026-06-02 (Ronda 24 — Stats KPI cards rediseñadas)  
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -280,6 +280,84 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 24 — Stats KPI cards rediseñadas (2026-06-02)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R24-01 | `frontend/admin.html` CSS | `.stats-ribbon` cambia de flex horizontal full-bleed a CSS grid 4 columnas con `gap:10px` y `padding:14px 24px` sobre `var(--page)`. Las cards ya no se separan con bordes; flotan sobre el fondo cálido. |
+| R24-02 | `frontend/admin.html` CSS | `.stat-card` rediseñada: `background:var(--card)`, `border-radius:10px`, borde sutil `var(--border)`, `flex-direction:column`. Hover con `box-shadow` y `border-color` más oscuro. |
+| R24-03 | `frontend/admin.html` CSS | Nueva clase `.stat-head` (`display:flex; justify-content:space-between`) para la fila label + ícono. Ícono movido a esquina superior derecha, reducido a 28px. |
+| R24-04 | `frontend/admin.html` CSS | `.stat-label` ahora 10px uppercase con `letter-spacing:0.07em` (antes 10.5px sin transformación). `.stat-value` sube a 22px/800/letter-spacing:-0.5px (antes 18px/700). |
+| R24-05 | `frontend/admin.html` CSS | `.stat-delta` rediseñada: `margin-top:5px; display:flex; align-items:center; gap:3px` (antes `margin-left:auto` — empujado a la derecha). |
+| R24-06 | `frontend/admin.html` HTML | HTML de las 4 cards reestructurado con `.stat-head` wrapping label + ícono. Íconos actualizados: `ti-camera` (sesiones), `ti-signature` (pendientes firma), `ti-video` (producción), `ti-trending-up` (cobrado). |
+
+---
+
+### Ronda 23 — Sidebar nav items premium (2026-06-02)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R23-01 | `frontend/admin.html` CSS | `.bnav-btn` en desktop: `border-radius:6px`, `margin:1px 8px`, `width:calc(100% - 16px)` — nav items como pastillas redondeadas en lugar de barras full-bleed. |
+| R23-02 | `frontend/admin.html` CSS | `.bnav-btn.activo`: `font-weight:600` (antes 500 igual que inactivos), `background:rgba(255,255,255,0.09)` (antes 0.07). |
+| R23-03 | `frontend/admin.html` CSS | `.bnav-btn.activo::before` ajustada: `left:-8px` para anclar la barra dorada al borde del sidebar, no al borde del item redondeado. |
+| R23-04 | `frontend/admin.html` CSS | `.bnav-item-icon`: `background:rgba(255,255,255,0.09)` (antes 0.06) — icon box visible sobre fondo oscuro. |
+| R23-05 | `frontend/admin.html` CSS | `.bnav-fab` en desktop: `justify-content:flex-start` (antes `center`), hover `filter:brightness(1.08)` con transición, `border-radius:6px`. |
+| R23-06 | `frontend/admin.html` CSS | Nueva clase `.bnav-fab-icon` (18px, dark square `rgba(0,0,0,0.15)`, border-radius 4px) — envuelve el ícono `+` dentro del FAB. |
+| R23-07 | `frontend/admin.html` CSS | `.bnav-section-label`: `display:none` global (mobile), `display:block` en `@media (min-width:1024px)`. Spacing top aumentado de 10px a 16px. |
+| R23-08 | `frontend/admin.html` HTML | FAB actualizado: `<span class="bnav-fab-icon"><i class="ti ti-plus"></i></span>` + `<span class="bnav-fab-label">`. |
+
+---
+
+### Ronda 22 — Tabla premium + toolbar chips + panel upgrade (2026-06-02)
+
+**Fase A — Tabla premium**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R22-A1 | `frontend/admin.html` CSS | Clases de avatar por gradiente: `.av-a` (ámbar) `.av-b` (azul) `.av-c` (rosa) `.av-d` (morado) `.av-e` (verde) `.av-f` (naranja) — asignadas determinísticamente por `charCode % 6`. |
+| R22-A2 | `frontend/admin.html` CSS | `.td-status-wrap` / `.td-status-dot` / `.td-status-label` / `.td-status-age` — columna estatus reemplazada: punto de color + label + días transcurridos. |
+| R22-A3 | `frontend/admin.html` CSS | `.td-saldo-wrap` / `.td-saldo-val` (rojo/ámbar/verde) / `.saldo-bar-wrap` / `.saldo-bar-fill` — columna saldo con valor coloreado + barra de progreso 2px. |
+| R22-A4 | `frontend/admin.html` JS | `renderTabla()` actualizado: avatar usa `avClasses[charCode % 6]` en lugar de `hashColor()`. Status cell con dot + label + age. Saldo cell con porcentaje pagado y color condicional. |
+
+**Fase B — Toolbar chips**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R22-B1 | `frontend/admin.html` CSS | `.filter-chips` / `.filter-chip` / `.filter-chip.on` / `.chip-dot` — chips de filtro por estatus que reemplazan el `<select>` en desktop. |
+| R22-B2 | `frontend/admin.html` CSS | `.search-wrap` con `.search-icon` (lupa) y `.search-shortcut` (⌘K decorativo). `.toolbar-sep` separador vertical. |
+| R22-B3 | `frontend/admin.html` CSS | `#filtro-estatus` y `#btn-filtros-toggle` ocultos en desktop (`display:none !important`). |
+| R22-B4 | `frontend/admin.html` HTML | Toolbar reestructurado: search input con ícono incrustado + chips de 5 estados (Pendiente/Firmado/Anticipo/Producción/Entregado) con punto de color. |
+| R22-B5 | `frontend/admin.html` JS | Nueva función `toggleChip(btn)` y `getChipEstatus()`. `filtrarContratos()` actualizado para usar chips como filtro primario en desktop. |
+
+**Fase C — Panel upgrade**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R22-C1 | `frontend/admin.html` CSS | `.panel-status-pill` con fondo tenue del color del estatus y punto interno `.psp-dot`. |
+| R22-C2 | `frontend/admin.html` CSS | `.panel-contact` — fila de contacto (email + teléfono como links) bajo el nombre. |
+| R22-C3 | `frontend/admin.html` CSS | `.panel-kpi-row` / `.panel-kpi-card` / `.panel-kpi-label` / `.panel-kpi-val` — 3 KPI cards (Total/Pagado/Saldo). |
+| R22-C4 | `frontend/admin.html` CSS | `.panel-pay-progress` / `.panel-pay-bar-bg` / `.panel-pay-bar-fill` — barra de progreso gradiente verde bajo las KPIs. |
+| R22-C5 | `frontend/admin.html` CSS | `.panel-action-bar` / `.panel-action-btn` — barra de acciones sticky en la base del panel (Registrar abono / WhatsApp / Portal / Extra). |
+| R22-C6 | `frontend/admin.html` CSS | Desktop: panel con `overflow:hidden`, panes activos `display:flex; flex-direction:column`, scroll en el pane (`flex:1; overflow-y:auto; min-height:0`), action bar `position:static`. |
+| R22-C7 | `frontend/admin.html` HTML | Panel reestructurado: `#panel-status-pill`, `#panel-contact`, `#panel-kpis`, `#panel-action-bar` como IDs nuevos. `#panel-badge` eliminado. |
+| R22-C8 | `frontend/admin.html` JS | `renderPanel()` actualizado: genera pill con color tenue, links de contacto, 3 KPI cards con barra de progreso, action bar con 4 botones. |
+
+---
+
+### Ronda 21 — Fixes visuales desktop post-R19/R20 (2026-06-02)
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R21-01 | `frontend/admin.html` CSS | Tabla de contratos: `border-collapse:separate; border-spacing:0` + `border-radius:10px` en el wrapper. Filas con `border-bottom` sutil en lugar de `border` completo. |
+| R21-02 | `frontend/admin.html` CSS | `.td-avatar` (columna avatar en desktop): 32px, border-radius 50%, gradient dorado por defecto. Solo visible en `≥1024px` vía `.td-avatar-desktop`. |
+| R21-03 | `frontend/admin.html` CSS | Left border accent en filas: `border-left: 3px solid var(--row-color)` usando custom property `--row-color` seteada por JS en cada `<tr>` según estatus. |
+| R21-04 | `frontend/admin.html` CSS | Panel lateral desktop: `width:var(--panel-w)`, `position:fixed`, `right:0; top:0; bottom:0`, `transform:translateX(100%)` → `translateX(0)` al abrir. |
+| R21-05 | `frontend/admin.html` CSS | `#stats-bar` estilizado como topbar: `height:52px`, `background:var(--card)`, `border-bottom:1px solid var(--border)`. |
+| R21-06 | `frontend/admin.html` JS | `renderTabla()` agrega columna avatar (`td-avatar-desktop`) y setea `--row-color` en cada `<tr>` usando `ESTATUS_COLOR` map. |
+| R21-07 | `frontend/admin.html` JS | `abrirPanel()` actualiza `body.panel-abierto` para que `.contenido` tenga `margin-right:var(--panel-w)` y el contenido no quede tapado. |
+
+---
 
 ### Ronda 20 — Sidebar completo + stats delta (2026-06-02)
 
