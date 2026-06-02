@@ -126,6 +126,7 @@
   .fmt-desc { font-size: 11px; color: var(--concrete); line-height: 1.55; }
   .fmt-canal { color: #B0ADA6; font-weight: 700; }
   .fmt-grabado { color: var(--charcoal); font-weight: 800; }
+  .fmt-nota { color: var(--concrete); }
   .fmt-precio { font-size: 12px; font-weight: 700; color: var(--gold); margin-top: 4px; }
   /* Mockups */
   .fmt-phone { width: 24px; height: 42px; border: 2.5px solid var(--border-strong); border-radius: 5px; background: var(--white); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: border-color 0.18s; }
@@ -144,14 +145,17 @@
     .formato-grid { display: grid; grid-template-columns: repeat(3,1fr); flex-direction: unset; align-items: stretch; gap: 12px; }
     .fmt-wrap { display: flex; }
     .fmt-badge-over { top: -11px; left: 50%; transform: translateX(-50%); }
-    .formato-btn { flex-direction: column; align-items: center; text-align: center; padding: 26px 18px 18px; display: flex; gap: 12px; min-height: 204px; }
-    .fmt-mockup-zone { width: auto; height: 54px; align-items: flex-end; justify-content: center; gap: 7px; flex-shrink: 0; }
-    .fmt-text { display: flex; flex: 1; flex-direction: column; width: 100%; align-items: center; justify-content: flex-start; gap: 6px; }
+    .formato-btn { grid-template-rows: 52px 52px 42px 46px 22px; align-items: center; text-align: center; padding: 22px 18px 18px; display: grid; gap: 0; min-height: 196px; }
+    .fmt-mockup-zone { width: auto; height: 52px; align-items: center; justify-content: center; gap: 7px; flex-shrink: 0; }
+    .fmt-text { display: contents; }
     .fmt-titulo { display: none; }
     .fmt-desc { font-size: 11px; line-height: 1.45; max-width: 190px; }
+    .fmt-canal, .fmt-grabado, .fmt-nota, .fmt-precio { align-self: center; justify-self: center; margin-top: 0 !important; }
     .fmt-canal { font-size: 12px; line-height: 1.35; }
-    .fmt-grabado { margin-top: auto !important; font-size: 12px; line-height: 1.35; }
-    .fmt-precio { margin-top: auto; padding-top: 2px; font-size: 14px; align-self: center; }
+    .fmt-grabado { font-size: 12px; line-height: 1.35; }
+    .fmt-nota { font-size: 11px; line-height: 1.45; }
+    .fmt-precio { padding-top: 0; font-size: 14px; }
+    .fmt-precio.placeholder { visibility: hidden; }
   }
   /* Acceso/caseta */
   .acceso-grid { display: flex; gap: 10px; }
@@ -834,9 +838,9 @@ function renderEtapa1() {
             '<div class="fmt-text">' +
               '<div class="fmt-desc fmt-canal">Instagram · TikTok · Reels · Shorts</div>' +
               '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en vertical</div>' +
-              '<div class="fmt-desc" style="margin-top:3px">· No incluye versión horizontal</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">No incluye versión horizontal</div>' +
+              '<div class="fmt-precio placeholder">$0</div>' +
             '</div>' +
-            '<div></div>' +
           '</div>' +
         '</div>';
 
@@ -847,9 +851,9 @@ function renderEtapa1() {
             '<div class="fmt-text">' +
               '<div class="fmt-desc fmt-canal">YouTube · Sitio web</div>' +
               '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en horizontal</div>' +
-              '<div class="fmt-desc" style="margin-top:3px">· En redes se verá con franjas negras</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">En redes se verá con franjas negras</div>' +
+              '<div class="fmt-precio placeholder">$0</div>' +
             '</div>' +
-            '<div></div>' +
           '</div>' +
         '</div>';
 
@@ -860,10 +864,9 @@ function renderEtapa1() {
             '<div class="fmt-text">' +
               '<div class="fmt-desc fmt-canal">Redes + web · Calidad nativa en ambos</div>' +
               '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en ambos formatos</div>' +
-              '<div class="fmt-desc" style="margin-top:3px">· Se graba dos veces en la misma visita</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">Se graba dos veces en la misma visita</div>' +
               '<div class="fmt-precio">+$1,500</div>' +
             '</div>' +
-            '<div></div>' +
           '</div>' +
         '</div>';
 
