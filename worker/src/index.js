@@ -5,6 +5,7 @@ import { handlePaquetes } from './routes/paquetes.js';
 import { handleStats } from './routes/stats.js';
 import { handleChecklist } from './routes/checklist.js';
 import { handleArchivos } from './routes/archivos.js';
+import { handleRevision } from './routes/revision.js';
 import { syncToSheets } from './cron.js';
 import { err } from './auth.js';
 
@@ -28,6 +29,7 @@ const RUTAS_ABONOS = ['registrarAbono','listarAbonos'];
 const RUTAS_PAQUETES = ['listarPaquetes','listarPaquetesTodos','crearPaquete','editarPaquete','togglePaquete'];
 const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];
 const RUTAS_ARCHIVOS = ['subirArchivo','subirArchivoAdmin'];
+const RUTAS_REVISION = ['obtenerRevision','guardarRevision'];
 
 export default {
   async fetch(request, env, ctx) {
@@ -65,6 +67,8 @@ export default {
       response = await handleChecklist(request, env, ctx, action);
     } else if (RUTAS_ARCHIVOS.includes(action)) {
       response = await handleArchivos(request, env, ctx, action);
+    } else if (RUTAS_REVISION.includes(action)) {
+      response = await handleRevision(request, env, ctx, action);
     } else {
       response = err('Acción no encontrada', 404);
     }

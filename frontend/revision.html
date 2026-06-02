@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Revisión de material · Inmuebles Audiovisuales</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold       : #C9A84C;
+    --gold-dim   : rgba(201,168,76,0.12);
+    --charcoal   : #1C1C1E;
+    --concrete   : #9B9B9F;
+    --surface    : #F9F7F4;
+    --white      : #FAFAFA;
+    --bg-chip    : #F1F0ED;
+    --border     : rgba(28,28,30,0.10);
+    --border-strong: rgba(28,28,30,0.20);
+    --error      : #E05252;
+    --success    : #2D7A4F;
+    --success-bg : #E8F5EE;
+    --warn-bg    : #FFFBEB;
+    --warn-border: rgba(217,119,6,0.25);
+    --warn       : #B45309;
+  }
+  body { font-family: 'Montserrat', sans-serif; background: var(--surface); color: var(--charcoal); -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  header { background: var(--charcoal); padding: 16px 24px; display: flex; align-items: center; justify-content: center; }
+  header img { height: 34px; width: auto; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 24px 16px 64px; }
+  .card { background: var(--white); border: 1.5px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 16px; }
+  .section-title { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); margin-bottom: 14px; }
+  .page-greeting { font-size: 21px; font-weight: 800; color: var(--charcoal); margin-bottom: 4px; letter-spacing: -0.3px; }
+  .page-greeting span { color: var(--gold); }
+  .page-sub { font-size: 13px; color: var(--concrete); margin-bottom: 22px; line-height: 1.6; }
+
+  /* Aviso */
+  .aviso { background: var(--warn-bg); border: 1.5px solid var(--warn-border); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-start; }
+  .aviso-icon { flex-shrink: 0; margin-top: 1px; }
+  .aviso-titulo { font-size: 12px; font-weight: 700; color: var(--warn); margin-bottom: 3px; }
+  .aviso-desc { font-size: 11px; color: var(--charcoal); line-height: 1.55; }
+
+  /* Botón video */
+  .btn-video { display: flex; align-items: center; gap: 12px; background: var(--charcoal); border: none; border-radius: 10px; padding: 16px 20px; width: 100%; text-decoration: none; color: #fff; cursor: pointer; transition: background 0.15s; margin-bottom: 10px; }
+  .btn-video:hover { background: #2d2d30; }
+  .btn-video-texto { font-size: 13px; font-weight: 700; flex: 1; text-align: left; }
+  .btn-video-sub { font-size: 11px; opacity: 0.65; font-weight: 400; }
+
+  /* Filas de revisión */
+  .revision-lista { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+  .revision-fila { display: flex; gap: 8px; align-items: flex-start; }
+  .inp-minuto { width: 90px; flex-shrink: 0; padding: 10px 10px; border: 1.5px solid var(--border-strong); border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 600; color: var(--charcoal); background: var(--bg-chip); outline: none; transition: border-color 0.15s; text-align: center; -webkit-appearance: none; }
+  .inp-minuto:focus { border-color: var(--gold); background: var(--white); }
+  .inp-desc { flex: 1; padding: 10px 12px; border: 1.5px solid var(--border-strong); border-radius: 8px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 500; color: var(--charcoal); background: var(--bg-chip); outline: none; transition: border-color 0.15s; resize: vertical; min-height: 44px; line-height: 1.5; -webkit-appearance: none; }
+  .inp-desc:focus { border-color: var(--gold); background: var(--white); }
+  .btn-quitar { background: none; border: 1px solid var(--border-strong); border-radius: 6px; width: 32px; height: 32px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--concrete); transition: all 0.15s; margin-top: 6px; }
+  .btn-quitar:hover { border-color: var(--error); color: var(--error); }
+
+  .col-headers { display: flex; gap: 8px; margin-bottom: 6px; padding-right: 40px; }
+  .col-hdr { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--concrete); }
+  .col-hdr-min { width: 90px; flex-shrink: 0; }
+  .col-hdr-desc { flex: 1; }
+
+  /* Existentes (solo lectura) */
+  .revision-existente { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; }
+  .rev-min { font-size: 11px; font-weight: 700; color: var(--gold); width: 70px; flex-shrink: 0; font-family: 'Courier New', monospace; }
+  .rev-desc { font-size: 12px; color: var(--charcoal); line-height: 1.5; flex: 1; }
+
+  /* Botones */
+  .btn-agregar { display: flex; align-items: center; gap: 6px; background: none; border: 1.5px dashed var(--border-strong); border-radius: 8px; padding: 10px 16px; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 700; color: var(--concrete); cursor: pointer; transition: all 0.15s; width: 100%; justify-content: center; margin-bottom: 4px; }
+  .btn-agregar:hover { border-color: var(--gold); color: var(--gold); }
+  .btn-primary { display: block; width: 100%; background: var(--gold); color: var(--charcoal); border: none; border-radius: 8px; padding: 16px; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; transition: background 0.15s; margin-top: 6px; }
+  .btn-primary:hover { background: #b8962e; }
+  .btn-primary:disabled { background: var(--border-strong); color: var(--concrete); cursor: not-allowed; }
+  .error-inline { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 11px 14px; font-size: 12px; color: var(--error); margin-top: 12px; display: none; }
+  .exito-inline { background: var(--success-bg); border: 1px solid rgba(45,122,79,0.25); border-radius: 8px; padding: 11px 14px; font-size: 12px; color: var(--success); font-weight: 600; margin-top: 12px; display: none; }
+
+  /* States */
+  .progreso-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 240px; gap: 16px; }
+  .progreso-barra { width: min(240px, 60vw); height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progreso-relleno { height: 100%; background: var(--gold); border-radius: 2px; width: 0; animation: progreso 2s ease-out forwards; }
+  @keyframes progreso { 0% { width: 0 } 60% { width: 70% } 100% { width: 85% } }
+  .error-page { background: var(--white); border-radius: 12px; padding: 40px 24px; text-align: center; max-width: 400px; margin: 32px auto; }
+  .error-page-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .error-page-msg { font-size: 13px; color: var(--concrete); line-height: 1.6; }
+  footer { text-align: center; padding: 24px; font-size: 11px; color: var(--concrete); }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="https://inmueblesaudiovisuales.com/logo-invertido.svg" alt="Inmuebles Audiovisuales">
+</header>
+
+<div id="state-loading">
+  <div class="wrap">
+    <div class="progreso-wrap">
+      <div class="progreso-barra"><div class="progreso-relleno"></div></div>
+      <span style="font-size:12px;color:var(--concrete)">Cargando...</span>
+    </div>
+  </div>
+</div>
+
+<div id="state-error" style="display:none">
+  <div class="wrap">
+    <div class="error-page">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--concrete)" stroke-width="1.5" stroke-linecap="round" style="display:block;margin:0 auto 16px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div class="error-page-title">No se pudo cargar</div>
+      <div class="error-page-msg" id="error-msg">El enlace puede ser inválido o haber expirado.</div>
+    </div>
+  </div>
+</div>
+
+<div id="main-content" style="display:none"></div>
+
+<footer>© 2026 Inmuebles Audiovisuales · Monterrey, NL</footer>
+
+<script>
+var API   = 'https://contratos.inmueblesaudiovisuales.com/api';
+var token = new URLSearchParams(location.search).get('token') || '';
+var enviando = false;
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function mostrarError(msg) {
+  document.getElementById('state-loading').style.display = 'none';
+  document.getElementById('state-error').style.display   = 'block';
+  document.getElementById('error-msg').textContent = msg || 'El enlace puede ser inválido.';
+}
+
+function apiGet(action, params) {
+  var url = API + '/' + action + '?token=' + encodeURIComponent(token);
+  if (params) Object.keys(params).forEach(function(k) { url += '&' + k + '=' + encodeURIComponent(params[k]); });
+  return fetch(url).then(function(r) { return r.json(); });
+}
+
+function apiPost(action, body) {
+  return fetch(API + '/' + action, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function(r) { return r.json(); });
+}
+
+/* ── INIT ── */
+if (!token) {
+  mostrarError('No se encontró el token en el enlace.');
+} else {
+  apiGet('obtenerRevision').then(function(data) {
+    if (!data.ok) { mostrarError(data.error || 'Token no válido.'); return; }
+    render(data);
+  }).catch(function() { mostrarError('Error de conexión. Verifica tu internet.'); });
+}
+
+/* ── RENDER ── */
+function render(data) {
+  document.getElementById('state-loading').style.display = 'none';
+  document.getElementById('main-content').style.display  = 'block';
+
+  var nombre1 = (data.nombreCliente || '').split(' ')[0] || 'cliente';
+  var html = '<div class="wrap">';
+  html += '<p class="page-greeting">Revisión de <span>material.</span></p>';
+  html += '<p class="page-sub">Mira tu video y déjanos tus notas de ajuste. Nuestro equipo las recibirá y aplicará los cambios.</p>';
+
+  // Aviso de resolución
+  html += '<div class="aviso"><div class="aviso-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>';
+  html += '<div><div class="aviso-titulo">Sobre la calidad del video</div>';
+  html += '<div class="aviso-desc">El video en la nube tiene resolución reducida para una carga más rápida. Para evaluar la calidad real, descárgalo a tu dispositivo antes de aprobar.</div></div></div>';
+
+  // Botón de video
+  if (data.videoUrl) {
+    html += '<a href="' + esc(data.videoUrl) + '" target="_blank" rel="noopener" class="btn-video">';
+    html += '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+    html += '<div><div class="btn-video-texto">Ver material en Google Drive</div><div class="btn-video-sub">Se abre en una pestaña nueva</div></div>';
+    html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+    html += '</a>';
+  } else {
+    html += '<div style="background:var(--bg-chip);border:1.5px solid var(--border);border-radius:10px;padding:16px;text-align:center;font-size:13px;color:var(--concrete);margin-bottom:16px">El link de video aún no está disponible. Cuando esté listo te lo compartiremos.</div>';
+  }
+
+  if (data.linksExtra) {
+    var extras = data.linksExtra.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    extras.forEach(function(link) {
+      html += '<a href="' + esc(link) + '" target="_blank" rel="noopener" class="btn-video" style="background:var(--bg-chip);color:var(--charcoal);border:1.5px solid var(--border-strong)">';
+      html += '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+      html += '<div class="btn-video-texto" style="color:var(--charcoal)">Material adicional</div>';
+      html += '</a>';
+    });
+  }
+
+  // Revisiones existentes
+  if (data.revisiones && data.revisiones.length > 0) {
+    html += '<div class="card"><p class="section-title">Notas enviadas anteriormente</p>';
+    data.revisiones.forEach(function(r) {
+      html += '<div class="revision-existente">';
+      html += '<div class="rev-min">' + esc(r.minuto_segundo || '—') + '</div>';
+      html += '<div class="rev-desc">' + esc(r.descripcion_ajuste) + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Formulario de notas nuevas
+  html += '<div class="card"><p class="section-title">Agregar notas de revisión</p>';
+  html += '<p style="font-size:12px;color:var(--concrete);margin-bottom:16px;line-height:1.6">Indica el minuto:segundo exacto y describe el ajuste que necesitas. Puedes agregar tantas notas como necesites.</p>';
+  html += '<div class="col-headers"><span class="col-hdr col-hdr-min">Min:Seg</span><span class="col-hdr col-hdr-desc">Descripción del ajuste</span></div>';
+  html += '<div class="revision-lista" id="revision-lista"></div>';
+  html += '<button class="btn-agregar" id="btn-agregar" onclick="agregarFila()">+ Agregar nota</button>';
+  html += '<button class="btn-primary" id="btn-enviar" onclick="enviarRevision()">ENVIAR NOTAS DE REVISIÓN</button>';
+  html += '<div class="error-inline" id="error-form"></div>';
+  html += '<div class="exito-inline" id="exito-form">Notas enviadas correctamente. Nuestro equipo las recibirá pronto.</div>';
+  html += '</div>';
+
+  html += '</div>'; // end wrap
+  document.getElementById('main-content').innerHTML = html;
+
+  agregarFila();
+  agregarFila();
+}
+
+/* ── FILAS ── */
+var filaCount = 0;
+
+function agregarFila() {
+  var id = ++filaCount;
+  var lista = document.getElementById('revision-lista');
+  var div = document.createElement('div');
+  div.className = 'revision-fila';
+  div.id = 'fila-' + id;
+  div.innerHTML =
+    '<input type="text" class="inp-minuto" id="min-' + id + '" placeholder="0:00" maxlength="7">' +
+    '<textarea class="inp-desc" id="desc-' + id + '" placeholder="Describe el ajuste necesario..." rows="2"></textarea>' +
+    '<button class="btn-quitar" onclick="quitarFila(' + id + ')" title="Eliminar">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    '</button>';
+  lista.appendChild(div);
+
+  // Formato automático minuto:segundo
+  var minEl = document.getElementById('min-' + id);
+  minEl.addEventListener('input', function() {
+    var v = this.value.replace(/[^0-9:]/g, '');
+    this.value = v;
+  });
+}
+
+function quitarFila(id) {
+  var el = document.getElementById('fila-' + id);
+  if (el) el.remove();
+}
+
+/* ── ENVIAR ── */
+function enviarRevision() {
+  if (enviando) return;
+  var errEl  = document.getElementById('error-form');
+  var exitoEl = document.getElementById('exito-form');
+  errEl.style.display   = 'none';
+  exitoEl.style.display = 'none';
+
+  var filas = document.querySelectorAll('.revision-fila');
+  var revisiones = [];
+  filas.forEach(function(f) {
+    var idStr = f.id.replace('fila-', '');
+    var min  = (document.getElementById('min-'  + idStr) || {value:''}).value.trim();
+    var desc = (document.getElementById('desc-' + idStr) || {value:''}).value.trim();
+    if (desc) revisiones.push({ minuto_segundo: min, descripcion_ajuste: desc });
+  });
+
+  if (!revisiones.length) {
+    errEl.textContent   = 'Agrega al menos una nota antes de enviar.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  enviando = true;
+  var btn = document.getElementById('btn-enviar');
+  if (btn) btn.disabled = true;
+
+  apiPost('guardarRevision', { token: token, revisiones: revisiones })
+    .then(function(data) {
+      enviando = false;
+      if (btn) btn.disabled = false;
+      if (!data.ok) {
+        errEl.textContent   = data.error || 'Error al enviar. Intenta de nuevo.';
+        errEl.style.display = 'block';
+        return;
+      }
+      exitoEl.style.display = 'block';
+      document.getElementById('revision-lista').innerHTML = '';
+      filaCount = 0;
+      agregarFila();
+      exitoEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    })
+    .catch(function() {
+      enviando = false;
+      if (btn) btn.disabled = false;
+      errEl.textContent   = 'Error de conexión. Verifica tu internet e intenta de nuevo.';
+      errEl.style.display = 'block';
+    });
+}
+</script>
+</body>
+</html>
