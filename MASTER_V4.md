@@ -1057,7 +1057,7 @@ ALTER TABLE contratos ADD COLUMN origen TEXT DEFAULT 'admin'
 
 | Capa | Versión | Estado |
 |------|---------|--------|
-| Worker + Frontend | R35 | En rama `claude/loving-cerf-fyy7y` — listo para merge a `main` y despliegue por GitHub Actions. |
+| Worker + Frontend | R35 | Mergeado a `main` en `d6b3545`; el push a `main` dispara despliegue por GitHub Actions. |
 | D1 Schema | R35 | `schema.sql` completo actualizado. D1 producción ya contiene columnas previas; aplicar `worker/migrations/r35-clientes-trabajos.sql` si faltan tablas CRM. |
 | Adapter Apps Script | R35 | No hubo cambios de adapter en R35. Sigue pendiente desplegar manualmente cambios documentados de rondas previas si no se han pegado en script.google.com. |
 
@@ -1102,7 +1102,7 @@ Features descartadas explícitamente. No incluirlas en ningún plan ni sugerirla
 - [x] Adapter desplegado (2026-05-30).
 - [x] Migraciones D1 de R17 y R18 ejecutadas manualmente (2026-06-02).
 - [ ] **Adapter Apps Script:** desplegar nueva versión de `AdapterScript4_v1.js` en script.google.com si aún no se pegó — incluye `notificarRevision` (R18), cambios Calendar de acceso/caseta (R29/R34) y todos los cambios de Rondas 4–17.
-- [ ] **Merge a main:** la rama `claude/loving-cerf-fyy7y` contiene R35 auditado. Hacer merge para que GitHub Actions despliegue a Cloudflare.
+- [x] **Merge a main:** R35 mergeado a `main` en `d6b3545` (2026-06-02 22:41 CST). GitHub Actions debe desplegar a Cloudflare tras el push.
 - [ ] **D1 R35:** confirmar/aplicar `worker/migrations/r35-clientes-trabajos.sql` si producción no tiene `clientes`, `trabajos`, `actividades` e índices CRM.
 - [ ] `procesarPDFsPendientes` en Apps Script requiere trigger automático — verificar que esté configurado en script.google.com para correr cada minuto.
 - [ ] Cuando el correo del cliente está vacío al crear el contrato, no llega ningún correo en la firma. El cliente debe llenarlo en el portal antes de firmar.
