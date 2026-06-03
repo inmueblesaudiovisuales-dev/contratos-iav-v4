@@ -1674,13 +1674,15 @@
   <!-- KPI cards + pay progress (populated by renderPanel) -->
   <div id="panel-kpis"></div>
   <div class="panel-tabs">
-    <button class="panel-tab-btn activo" onclick="mostrarPanelTab('general', this)">Info</button>
-    <button class="panel-tab-btn" onclick="mostrarPanelTab('produccion', this)">Pagos</button>
-    <button class="panel-tab-btn" onclick="mostrarPanelTab('entrega', this)">Acciones</button>
+    <button class="panel-tab-btn activo" onclick="mostrarPanelTab('info', this)">Info</button>
+    <button class="panel-tab-btn" onclick="mostrarPanelTab('pagos', this)">Pagos</button>
+    <button class="panel-tab-btn" onclick="mostrarPanelTab('prod', this)">Producción</button>
+    <button class="panel-tab-btn" onclick="mostrarPanelTab('llamada', this)">Llamada</button>
   </div>
-  <div id="pane-general" class="panel-tab-pane activo"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-  <div id="pane-produccion" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-  <div id="pane-entrega" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+  <div id="pane-info"    class="panel-tab-pane activo"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+  <div id="pane-pagos"   class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+  <div id="pane-prod"    class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+  <div id="pane-llamada" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
   <!-- Sticky action bar (populated by renderPanel) -->
   <div id="panel-action-bar"></div>
 </div>
@@ -2667,7 +2669,7 @@ async function abrirPanel(token) {
   if (_pk) _pk.innerHTML = '';
   const _pab = document.getElementById('panel-action-bar');
   if (_pab) _pab.innerHTML = '';
-  ['general','produccion','entrega'].forEach(id =>
+  ['info','pagos','prod','llamada'].forEach(id =>
     document.getElementById('pane-' + id).innerHTML =
       '<p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:4px 0">Cargando...</p>'
   );
@@ -2675,7 +2677,10 @@ async function abrirPanel(token) {
   document.getElementById('overlay').classList.add('visible');
   document.body.classList.add('panel-open');
   document.querySelectorAll('.panel-tab-btn').forEach((b,i) => b.classList.toggle('activo', i===0));
-  document.querySelectorAll('.panel-tab-pane').forEach((p,i) => p.classList.toggle('activo', i===0));
+  ['info','pagos','prod','llamada'].forEach((id,i) => {
+    var el = document.getElementById('pane-'+id);
+    if (el) el.classList.toggle('activo', i===0);
+  });
 
   try {
     const data = await apiGet({ action: 'obtenerContrato', token });
@@ -2684,7 +2689,7 @@ async function abrirPanel(token) {
     renderPanel(data);
   } catch (e) {
     if (tokenActivo !== token) return;
-    document.getElementById('pane-general').innerHTML =
+    document.getElementById('pane-info').innerHTML =
       `<p style="color:var(--danger);font-size:13px">Error: ${esc(e.message)}</p>`;
   }
 }
@@ -2841,7 +2846,7 @@ function renderPanel(data) {
   const _pab = document.getElementById('panel-action-bar');
   if (_pab) _pab.innerHTML = `
     <div class="panel-action-bar" style="flex-direction:row;gap:8px">
-      <button class="panel-action-btn primary" style="flex:1;justify-content:center" onclick="mostrarPanelTab('produccion',document.querySelectorAll('.panel-tab-btn')[1])">
+      <button class="panel-action-btn primary" style="flex:1;justify-content:center" onclick="mostrarPanelTab('pagos',document.querySelectorAll('.panel-tab-btn')[1])">
         <i class="ti ti-cash"></i> Registrar abono
       </button>
       <a class="panel-action-btn wa" style="flex:1;justify-content:center;text-align:center" href="${esc(_waUrl)}" target="_blank" rel="noopener">
@@ -2870,109 +2875,16 @@ function renderPanel(data) {
     : '<span style="font-size:12px;color:var(--ink-3)">Sin servicios adicionales</span>';
 
   const esExpress = !!(c.EntregaExpress);
-  const _props   = data.propiedades || [];
-  const propHtml = _props.length
-    ? _props.map((p, i) => {
-        const titulo = _props.length > 1 ? `Propiedad ${i + 1}` : 'Propiedad';
-        const tipotxt = p.Tipo ? ` · ${p.Tipo}` : '';
-        const fechatxt = p.FechaSesion ? fmxnFechaLarga(p.FechaSesion) + (p.HoraSesion ? ' · ' + p.HoraSesion : '') : '';
-        const numProp  = p.NumPropiedad || (i + 1);
-        const fechaISO = p.FechaSesion ? new Date(p.FechaSesion).toISOString().substring(0, 10) : '';
-        const horaVal  = p.HoraSesion  || '';
-        const entregaISO = calcFechaEntrega(p.FechaSesion, esExpress);
-        return `<div class="prop-card" id="prop-card-${numProp}">
-          <div class="prop-card-titulo">${esc(titulo)}${esc(tipotxt)}</div>
-          ${p.Paquete     ? `<div class="prop-dato"><span class="lbl">Paquete </span>${esc(p.Paquete)}</div>` : ''}
-          ${fechatxt      ? `<div class="prop-dato"><span class="lbl">Fecha </span>${esc(fechatxt)}</div>` : ''}
-          ${entregaISO    ? `<div class="prop-dato"><span class="lbl">Entrega est. </span><span id="fecha-entrega-${numProp}" style="color:var(--ink-2)">${esc(fmxnFecha(entregaISO))}</span></div>` : ''}
-          ${p.Direccion   ? `<div class="prop-dato"><span class="lbl">Dirección </span>${esc(p.Direccion)}</div>` : ''}
-          ${p.LinkMaps    ? `<div class="prop-dato"><a href="${safeHref(p.LinkMaps)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px">Ver en Maps</a></div>` : ''}
-          <div class="prop-dato"><span class="lbl">Formato video </span><span id="fmt-label-${numProp}">${esc(p.FormatoVideo === 'horizontal_recorte_vertical' ? 'Horizontal + recorte' : p.FormatoVideo === 'doble_nativo' ? 'Doble formato' : 'Vertical')}</span>${p.OcultarFormatoVideo ? ' <span style="font-size:10px;background:var(--ink-3);color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle">oculto en portal</span>' : ''}</div>
-          <div class="prop-dato"><span class="lbl">Características </span><span id="sobre-prop-${numProp}">${esc(p.SobreLaPropiedad || '—')}</span></div>
-          ${renderAccesoCaseta(p)}
-          ${p.DatosEspecificos && p.DatosEspecificos.comentarios ? `<div class="prop-dato" style="background:var(--gold-dim);border-radius:6px;padding:6px 8px;margin-top:4px"><span class="lbl" style="color:var(--gold-dark,#9a7a2f)">Comentarios del cliente </span><span style="font-size:12px;line-height:1.5;white-space:pre-wrap">${esc(p.DatosEspecificos.comentarios)}</span></div>` : ''}
-          <div class="prop-card-acciones" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleReagendar(${numProp})">
-              <i class="ti ti-calendar-event"></i> Reagendar
-            </button>
-            <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleCaracteristicas(${numProp})">
-              <i class="ti ti-pencil"></i> Características
-            </button>
-            <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleNotaInterna(${numProp})">
-              <i class="ti ti-note"></i> Nota interna
-            </button>
-            <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleFormato(${numProp})">
-              <i class="ti ti-video"></i> Formato
-            </button>
-          </div>
-          <div id="form-caract-${numProp}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <textarea id="caract-texto-${numProp}" rows="4" placeholder="Características de la propiedad..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1);box-sizing:border-box">${esc(p.SobreLaPropiedad || '')}</textarea>
-            <div class="form-msg" id="msg-caract-${numProp}" style="margin-top:4px"></div>
-            <div style="display:flex;gap:6px;margin-top:6px">
-              <button class="btn-primario gold btn-sm" onclick="guardarCaracteristicas(${numProp})">Guardar</button>
-              <button class="btn-secundario btn-sm" onclick="toggleCaracteristicas(${numProp})">Cancelar</button>
-            </div>
-          </div>
-          <div id="form-nota-${numProp}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <textarea id="nota-texto-${numProp}" rows="3" placeholder="Nota interna (solo visible para ti)..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1);box-sizing:border-box">${esc(p.NotaInterna || '')}</textarea>
-            <div class="form-msg" id="msg-nota-${numProp}" style="margin-top:4px"></div>
-            <div style="display:flex;gap:6px;margin-top:6px">
-              <button class="btn-primario gold btn-sm" onclick="guardarNotaInterna(${numProp})">Guardar</button>
-              <button class="btn-secundario btn-sm" onclick="toggleNotaInterna(${numProp})">Cancelar</button>
-            </div>
-          </div>
-          <div id="form-reagendar-${numProp}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-              <div class="campo" style="margin:0">
-                <label style="font-size:11px">Nueva fecha</label>
-                <input type="date" id="reagendar-fecha-${numProp}" value="${esc(fechaISO)}">
-              </div>
-              <div class="campo" style="margin:0">
-                <label style="font-size:11px">Hora</label>
-                <input type="time" id="reagendar-hora-${numProp}" value="${esc(horaVal)}">
-              </div>
-            </div>
-            <div class="form-msg" id="msg-reagendar-${numProp}"></div>
-            <div style="display:flex;gap:6px">
-              <button class="btn-primario gold btn-sm" onclick="confirmarReagendar(${numProp})">Confirmar</button>
-              <button class="btn-secundario btn-sm" onclick="toggleReagendar(${numProp})">Cancelar</button>
-            </div>
-          </div>
-          <div id="form-formato-${numProp}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <div class="campo" style="margin:0 0 10px">
-              <label style="font-size:11px">Formato de video</label>
-              <select id="formato-sel-${numProp}" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:7px 8px;background:var(--page);color:var(--ink-1)">
-                <option value="vertical_nativo"${(p.FormatoVideo||'vertical_nativo')==='vertical_nativo'?' selected':''}>Vertical (9:16 nativo) — Reels, TikTok, Shorts</option>
-                <option value="horizontal_recorte_vertical"${p.FormatoVideo==='horizontal_recorte_vertical'?' selected':''}>Horizontal (16:9) + recorte vertical — YouTube, sitio web</option>
-                <option value="doble_nativo"${p.FormatoVideo==='doble_nativo'?' selected':''}>Doble formato — dos pasadas en campo (+$1,500)</option>
-              </select>
-            </div>
-            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);cursor:pointer;margin-bottom:10px">
-              <input type="checkbox" id="ocultar-fmt-${numProp}" ${p.OcultarFormatoVideo ? 'checked' : ''} style="accent-color:var(--gold);width:14px;height:14px">
-              Ocultar selector en el portal (cliente no elige)
-            </label>
-            <div class="form-msg" id="msg-formato-${numProp}" style="margin-top:4px"></div>
-            <div style="display:flex;gap:6px">
-              <button class="btn-primario gold btn-sm" onclick="guardarFormato(${numProp})">Guardar</button>
-              <button class="btn-secundario btn-sm" onclick="toggleFormato(${numProp})">Cancelar</button>
-            </div>
-          </div>
-        </div>`;
-      }).join('')
-    : '<p style="font-size:12px;color:var(--ink-3)">Sin propiedades configuradas aún.</p>';
+  const _props    = data.propiedades || [];
 
   const waTelPortal = normalizarTelWA(c.TelefonoCliente);
   const nombre1wa   = (c.NombreCliente || '').split(' ')[0];
   const waTexto = (() => {
     const st = c.Estatus || '';
-    if (st === 'Pendiente firma')
-      return 'Hola ' + nombre1wa + ', aquí está tu link para revisar y firmar tu contrato: ' + urlPortal;
-    if (st === 'Firmado')
-      return 'Hola ' + nombre1wa + ', te recuerdo que tienes pendiente el anticipo de ' + fmxn(parseFloat(c.Anticipo) || 0) + '. Puedes realizar el pago aquí: ' + urlPortal;
-    if (st === 'Anticipo recibido' || st === 'En produccion')
-      return 'Hola ' + nombre1wa + ', estamos trabajando en la edición de tu material. Cualquier duda con gusto te ayudo.';
-    if (st === 'Entregado' || st === 'Liquidado')
-      return 'Hola ' + nombre1wa + ', tu material ya está listo para descargar. Aquí encuentras tu link: ' + urlPortal;
+    if (st === 'Pendiente firma') return 'Hola ' + nombre1wa + ', aquí está tu link para revisar y firmar tu contrato: ' + urlPortal;
+    if (st === 'Firmado') return 'Hola ' + nombre1wa + ', te recuerdo que tienes pendiente el anticipo de ' + fmxn(parseFloat(c.Anticipo) || 0) + '. Puedes realizar el pago aquí: ' + urlPortal;
+    if (st === 'Anticipo recibido' || st === 'En produccion') return 'Hola ' + nombre1wa + ', estamos trabajando en la edición de tu material. Cualquier duda con gusto te ayudo.';
+    if (st === 'Entregado' || st === 'Liquidado') return 'Hola ' + nombre1wa + ', tu material ya está listo para descargar. Aquí encuentras tu link: ' + urlPortal;
     return 'Hola ' + nombre1wa + ', te comparto el link de tu portal: ' + urlPortal;
   })();
   const waUrl = 'https://wa.me/' + waTelPortal + '?text=' + encodeURIComponent(waTexto);
@@ -2993,114 +2905,172 @@ function renderPanel(data) {
         </div>`).join('')
     : '<p style="font-size:12px;color:var(--ink-3);padding:6px 0">Sin abonos registrados.</p>';
 
-  document.getElementById('pane-general').innerHTML = `
+  // ── Prop info (read-only) y prop actions (editable) ──
+  const propInfoHtml = _props.length ? _props.map((p, i) => {
+    const titulo    = _props.length > 1 ? `Propiedad ${i + 1}` : 'Propiedad';
+    const tipotxt   = p.Tipo ? ` · ${p.Tipo}` : '';
+    const fechatxt  = p.FechaSesion ? fmxnFechaLarga(p.FechaSesion) + (p.HoraSesion ? ' · ' + p.HoraSesion : '') : '';
+    const numProp   = p.NumPropiedad || (i + 1);
+    const entregaISO = calcFechaEntrega(p.FechaSesion, esExpress);
+    return `<div class="prop-card">
+      <div class="prop-card-titulo">${esc(titulo)}${esc(tipotxt)}</div>
+      ${p.Paquete   ? `<div class="prop-dato"><span class="lbl">Paquete</span>${esc(p.Paquete)}</div>` : ''}
+      ${fechatxt    ? `<div class="prop-dato"><span class="lbl">Fecha</span>${esc(fechatxt)}</div>` : ''}
+      ${entregaISO  ? `<div class="prop-dato"><span class="lbl">Entrega</span>${esc(fmxnFecha(entregaISO))}</div>` : ''}
+      ${p.Direccion ? `<div class="prop-dato"><span class="lbl">Dirección</span>${esc(p.Direccion)}</div>` : ''}
+      ${p.LinkMaps  ? `<div class="prop-dato"><a href="${safeHref(p.LinkMaps)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px;font-weight:600">Ver en Maps</a></div>` : ''}
+      ${p.SobreLaPropiedad ? `<div class="prop-dato"><span class="lbl">Características</span><span id="sobre-prop-${numProp}" style="white-space:pre-wrap">${esc(p.SobreLaPropiedad)}</span></div>` : ''}
+      ${renderAccesoCaseta(p)}
+      ${p.DatosEspecificos && p.DatosEspecificos.comentarios ? `<div style="background:var(--gold-dim);border-radius:6px;padding:6px 8px;margin-top:6px;font-size:12px;line-height:1.5"><span style="font-size:10px;font-weight:700;color:var(--gold-dark)">Comentarios del cliente </span><span style="white-space:pre-wrap">${esc(p.DatosEspecificos.comentarios)}</span></div>` : ''}
+    </div>`;
+  }).join('') : '<p style="font-size:12px;color:var(--ink-3)">Sin propiedades configuradas.</p>';
 
-    <!-- ── Acordeón: Datos del cliente (cerrado) ── -->
-    <details class="panel-acord">
+  const propActionsHtml = _props.length ? _props.map((p, i) => {
+    const titulo   = _props.length > 1 ? `Propiedad ${i + 1}` : 'Propiedad';
+    const tipotxt  = p.Tipo ? ` · ${p.Tipo}` : '';
+    const numProp  = p.NumPropiedad || (i + 1);
+    const fechaISO = p.FechaSesion ? new Date(p.FechaSesion).toISOString().substring(0, 10) : '';
+    const horaVal  = p.HoraSesion || '';
+    return `<div class="prop-card">
+      <div class="prop-card-titulo">${esc(titulo)}${esc(tipotxt)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleReagendar(${numProp})"><i class="ti ti-calendar-event"></i> Reagendar</button>
+        <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleCaracteristicas(${numProp})"><i class="ti ti-pencil"></i> Características</button>
+        <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleNotaInterna(${numProp})"><i class="ti ti-note"></i> Nota interna</button>
+        <button class="btn-secundario btn-sm" style="flex:1" onclick="toggleFormato(${numProp})"><i class="ti ti-video"></i> Formato</button>
+      </div>
+      <div id="form-reagendar-${numProp}" style="display:none;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div class="campo" style="margin:0"><label style="font-size:11px">Nueva fecha</label><input type="date" id="reagendar-fecha-${numProp}" value="${esc(fechaISO)}"></div>
+          <div class="campo" style="margin:0"><label style="font-size:11px">Hora</label><input type="time" id="reagendar-hora-${numProp}" value="${esc(horaVal)}"></div>
+        </div>
+        <div class="form-msg" id="msg-reagendar-${numProp}"></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-primario gold btn-sm" onclick="confirmarReagendar(${numProp})">Confirmar</button>
+          <button class="btn-secundario btn-sm" onclick="toggleReagendar(${numProp})">Cancelar</button>
+        </div>
+      </div>
+      <div id="form-caract-${numProp}" style="display:none;padding-top:8px;border-top:1px solid var(--border)">
+        <textarea id="caract-texto-${numProp}" rows="3" placeholder="Características..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1)">${esc(p.SobreLaPropiedad || '')}</textarea>
+        <div class="form-msg" id="msg-caract-${numProp}"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="btn-primario gold btn-sm" onclick="guardarCaracteristicas(${numProp})">Guardar</button>
+          <button class="btn-secundario btn-sm" onclick="toggleCaracteristicas(${numProp})">Cancelar</button>
+        </div>
+      </div>
+      <div id="form-nota-${numProp}" style="display:none;padding-top:8px;border-top:1px solid var(--border)">
+        <textarea id="nota-texto-${numProp}" rows="3" placeholder="Nota interna..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1)">${esc(p.NotaInterna || '')}</textarea>
+        <div class="form-msg" id="msg-nota-${numProp}"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="btn-primario gold btn-sm" onclick="guardarNotaInterna(${numProp})">Guardar</button>
+          <button class="btn-secundario btn-sm" onclick="toggleNotaInterna(${numProp})">Cancelar</button>
+        </div>
+      </div>
+      <div id="form-formato-${numProp}" style="display:none;padding-top:8px;border-top:1px solid var(--border)">
+        <div class="campo" style="margin:0 0 8px">
+          <label style="font-size:11px">Formato de video</label>
+          <select id="formato-sel-${numProp}" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:7px 8px;background:var(--page);color:var(--ink-1)">
+            <option value="vertical_nativo"${(p.FormatoVideo||'vertical_nativo')==='vertical_nativo'?' selected':''}>Vertical (9:16) — Reels, TikTok</option>
+            <option value="horizontal_recorte_vertical"${p.FormatoVideo==='horizontal_recorte_vertical'?' selected':''}>Horizontal + recorte vertical</option>
+            <option value="doble_nativo"${p.FormatoVideo==='doble_nativo'?' selected':''}>Doble formato (+$1,500)</option>
+          </select>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:8px">
+          <input type="checkbox" id="ocultar-fmt-${numProp}" ${p.OcultarFormatoVideo ? 'checked' : ''} style="accent-color:var(--gold);width:14px;height:14px">
+          Ocultar selector en el portal
+        </label>
+        <div class="form-msg" id="msg-formato-${numProp}"></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-primario gold btn-sm" onclick="guardarFormato(${numProp})">Guardar</button>
+          <button class="btn-secundario btn-sm" onclick="toggleFormato(${numProp})">Cancelar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') : '';
+
+  // ── PANE INFO ──
+  document.getElementById('pane-info').innerHTML = `
+    <details class="panel-acord" open>
       <summary>Datos del cliente</summary>
       <div class="panel-acord-body">
         <div class="info-fila"><span class="etiq">Nombre</span><span class="val">${esc(c.NombreCliente)}</span></div>
         <div class="info-fila"><span class="etiq">Correo</span><span class="val"><a href="mailto:${esc(c.CorreoCliente)}" style="color:var(--gold);text-decoration:none">${esc(c.CorreoCliente)}</a></span></div>
         <div class="info-fila"><span class="etiq">Teléfono</span><span class="val">${esc(c.TelefonoCliente) || '—'}</span></div>
-        <div class="info-fila"><span class="etiq">Tipo</span><span class="val">${c.TipoContrato === 'estandar' ? 'Estándar' : 'Particular'}</span></div>
-        <div class="info-fila"><span class="etiq">Origen</span><span class="val">${c.Origen === 'whatsapp' ? '<span style="background:#25D366;color:#fff;font-size:10px;font-weight:700;padding:1px 8px;border-radius:20px">WhatsApp</span>' : '<span style="background:var(--page);border:1px solid var(--border);font-size:10px;font-weight:600;padding:1px 8px;border-radius:20px;color:var(--ink-2)">Admin</span>'}</span></div>
         ${c.PaqueteBase ? `<div class="info-fila"><span class="etiq">Paquete</span><span class="val">${esc(c.PaqueteBase)}</span></div>` : ''}
-        <div class="info-fila"><span class="etiq">Adicionales</span><span class="val">${addHtml}</span></div>
+        ${adicionales.length ? `<div class="info-fila"><span class="etiq">Adicionales</span><span class="val">${addHtml}</span></div>` : ''}
+        <div class="info-fila"><span class="etiq">Origen</span><span class="val">${c.Origen === 'whatsapp' ? '<span style="background:#25D366;color:#fff;font-size:10px;font-weight:700;padding:1px 8px;border-radius:20px">WhatsApp</span>' : '<span style="background:var(--page);border:1px solid var(--border);font-size:10px;font-weight:600;padding:1px 8px;border-radius:20px;color:var(--ink-2)">Admin</span>'}</span></div>
       </div>
     </details>
-
-    <!-- ── Acordeón: Propiedades (abierto) ── -->
     <details class="panel-acord" open>
       <summary>Propiedades</summary>
-      <div class="panel-acord-body">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
-            <input type="checkbox" id="toggle-express" ${esExpress ? 'checked' : ''} onchange="guardarExpress(this.checked)">
-            <span>Entrega express <span style="font-size:11px;color:var(--ink-3)">(1 día natural)</span></span>
-          </label>
-          <span id="msg-express" style="font-size:11px;color:var(--ink-3)"></span>
-        </div>
-        ${propHtml}
-      </div>
-    </details>
+      <div class="panel-acord-body">${propInfoHtml}</div>
+    </details>`;
 
-    <!-- ── Portal y acciones (siempre visible) ── -->
-    <div class="link-portal-box">
-      <div class="link-portal-label">Link del portal (cliente)</div>
-      <div class="link-portal-url">${esc(urlPortal)}</div>
-      <div class="link-portal-btns">
-        <button class="btn-copiar" data-url="${esc(urlPortal)}" onclick="copiarDesdeBtn(this)">
-          <i class="ti ti-copy"></i> Copiar
-        </button>
-        <a class="btn-wa" href="${esc(waUrl)}" target="_blank" rel="noopener">
-          <i class="ti ti-brand-whatsapp"></i> WhatsApp
-        </a>
-        <button class="btn-secundario btn-sm" onclick="enviarRecordatorio()" title="Recordatorio de anticipo al cliente">
-          <i class="ti ti-bell"></i> Recordatorio
-        </button>
-        <button class="btn-secundario btn-sm" onclick="abrirModalUpsell()" title="Añadir servicio extra o subir precio">
-          <i class="ti ti-plus"></i> Servicio extra
-        </button>
+  // ── PANE PAGOS ──
+  document.getElementById('pane-pagos').innerHTML = `
+    <div class="panel-kpi-row" style="margin-bottom:12px">
+      <div class="panel-kpi-card"><div class="panel-kpi-label">Total</div><div class="panel-kpi-val">${fmxn(precioTotal)}</div><div class="panel-kpi-sub">Contratado</div></div>
+      <div class="panel-kpi-card"><div class="panel-kpi-label">Pagado</div><div class="panel-kpi-val green">${fmxn(totalAbonado)}</div><div class="panel-kpi-sub">${pct}% del total</div></div>
+      <div class="panel-kpi-card"><div class="panel-kpi-label">Saldo</div><div class="panel-kpi-val${saldo > 0 ? ' amber' : ' green'}">${fmxn(saldo)}</div><div class="panel-kpi-sub">${saldo > 0 ? 'Pendiente' : 'Liquidado'}</div></div>
+    </div>
+    <div class="pago-barra-track" style="margin-bottom:16px"><div class="pago-barra-fill" style="width:${pct}%"></div></div>
+    <p class="sec-label">Historial de abonos</p>
+    <div id="historial-abonos">${abonosHtml}</div>
+    <p class="sec-label">Registrar abono</p>
+    <div class="fila-2">
+      <div class="campo campo-sm"><label>Monto</label><input type="number" id="abono-monto" placeholder="0"></div>
+      <div class="campo campo-sm"><label>Método</label>
+        <select id="abono-metodo">
+          <option value="Transferencia">Transferencia</option>
+          <option value="Efectivo">Efectivo</option>
+          <option value="Clip">Clip</option>
+          <option value="OXXO">OXXO / 7-Eleven</option>
+        </select>
       </div>
     </div>
-    <div style="margin-top:10px;margin-bottom:4px">
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
-           href="${'https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token)}" target="_blank" rel="noopener">
-          <i class="ti ti-checkbox"></i> Checklist de rodaje
-        </a>
-        <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
-           href="${'https://wa.me/?' + new URLSearchParams({ text: 'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener">
-          <i class="ti ti-brand-whatsapp"></i> Compartir
-        </a>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-        <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
-           href="${EQUIPO_BASE + '?token=' + esc(c.Token)}" target="_blank" rel="noopener">
-          <i class="ti ti-camera"></i> Portal de equipo
-        </a>
-        <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none"
-           href="${'https://wa.me/?' + new URLSearchParams({ text: 'Portal de sesion: ' + EQUIPO_BASE + '?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener">
-          <i class="ti ti-brand-whatsapp"></i> Compartir
-        </a>
-      </div>
-    </div>
+    <div class="campo campo-sm"><label>Notas (opcional)</label><input type="text" id="abono-notas" maxlength="500" placeholder="Referencia, aclaración..."></div>
+    <button class="btn-primario gold" style="width:100%" id="btn-abono" onclick="registrarAbono()">
+      <i class="ti ti-check"></i> Registrar abono
+    </button>
+    <div class="form-msg" id="msg-abono"></div>`;
 
-    <!-- ── Acordeón: Pagos (abierto) ── -->
+  // ── PANE PRODUCCIÓN ──
+  const prodFila = (hecho, etiqueta, fechaVal) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <i class="ti ${hecho ? 'ti-circle-check' : 'ti-circle'}" style="font-size:20px;color:${hecho ? 'var(--success)' : 'var(--ink-4)'}"></i>
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--ink-1);font-weight:${hecho ? '600' : '400'}">${esc(etiqueta)}</div>
+        ${hecho && fechaVal ? `<div style="font-size:11px;color:var(--ink-3)">${fmxnFecha(fechaVal)}</div>` : ''}
+      </div>
+    </div>`;
+
+  const estadoAnticipo  = totalAbonado > 0 || ['Anticipo recibido','En produccion','Entregado','Liquidado'].includes(c.Estatus);
+  const estadoLiquidado = c.Estatus === 'Liquidado';
+  const prodFotoHecho      = !!(c.FotografiaLista && String(c.FotografiaLista).trim());
+  const prodVideoHecho     = !!(c.VideoListo && String(c.VideoListo).trim());
+  const prodRecorridoHecho = !!(c.RecorridoListo && String(c.RecorridoListo).trim());
+  const tieneRecorridoVal  = c.TieneRecorrido !== 0;
+  const drivePrefill  = c.EntregaDriveLink || data.carpetaEntregablesUrl || '';
+  const driveSugerido = !c.EntregaDriveLink && !!data.carpetaEntregablesUrl;
+  let extraPrefill = c.EntregaLinksExtra || '';
+  if (c.RecorridoURL && extraPrefill.indexOf(c.RecorridoURL) === -1)
+    extraPrefill = 'Recorrido virtual|' + c.RecorridoURL + (extraPrefill ? '\n' + extraPrefill : '');
+  const entregaRevocada = !!(c.EntregaRevocada && String(c.EntregaRevocada).trim());
+
+  const propsConCarpeta = _props.filter(p => p.CarpetaControlId);
+  const tieneCarpeta    = propsConCarpeta.length > 0;
+  const selectorHtml    = _props.length > 1
+    ? '<select id="admin-file-prop" style="font-size:12px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;background:var(--page);color:var(--ink-1);margin-bottom:8px;width:100%">' +
+      _props.map(p => `<option value="${p.NumPropiedad}"${p.CarpetaControlId ? '' : ' disabled'}>${esc('Prop ' + p.NumPropiedad + (p.Paquete ? ' — ' + p.Paquete : '') + (p.CarpetaControlId ? '' : ' (sin carpeta)'))}</option>`).join('') +
+      '</select>'
+    : '';
+
+  document.getElementById('pane-prod').innerHTML = `
+    <!-- Estado del contrato -->
     <details class="panel-acord" open>
-      <summary>Pagos</summary>
+      <summary>Estado del contrato</summary>
       <div class="panel-acord-body">
-        <div class="pago-resumen">
-          <div class="pago-fila"><span>Total del contrato</span><span>${fmxn(precioTotal)}</span></div>
-          <div class="pago-fila"><span>Total abonado</span><span style="color:var(--success)">${fmxn(totalAbonado)}</span></div>
-          <div class="pago-fila total"><span>Saldo pendiente</span><span style="color:${saldo > 0 ? 'var(--warn)' : 'var(--success)'}">${fmxn(saldo)}</span></div>
-        </div>
-        <div class="pago-barra-track"><div class="pago-barra-fill" style="width:${pct}%"></div></div>
-
-        <div class="sec-label">Historial de abonos</div>
-        <div id="historial-abonos">${abonosHtml}</div>
-
-        <div class="sec-label">Registrar abono</div>
-        <div class="fila-2">
-          <div class="campo campo-sm"><label>Monto</label><input type="number" id="abono-monto" placeholder="0"></div>
-          <div class="campo campo-sm">
-            <label>Método</label>
-            <select id="abono-metodo">
-              <option value="Transferencia">Transferencia</option>
-              <option value="Efectivo">Efectivo</option>
-              <option value="Clip">Clip</option>
-              <option value="OXXO">OXXO / 7-Eleven</option>
-            </select>
-          </div>
-        </div>
-        <div class="campo campo-sm"><label>Notas (opcional)</label><input type="text" id="abono-notas" maxlength="500" placeholder="Referencia, aclaración..."></div>
-        <button class="btn-primario gold" style="width:100%" id="btn-abono" onclick="registrarAbono()">
-          <i class="ti ti-check"></i> Registrar abono
-        </button>
-        <div class="form-msg" id="msg-abono"></div>
-
-        <div class="sec-label" style="margin-top:22px">Cambiar estatus</div>
-        <div class="estatus-fila">
+        <div class="estatus-fila" style="margin-bottom:8px">
           <select id="panel-estatus">
             ${['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado','Completado'].map(s =>
               `<option value="${s}" ${c.Estatus === s ? 'selected' : ''}>${s === 'En produccion' ? 'En producción' : esc(s)}</option>`
@@ -3109,26 +3079,131 @@ function renderPanel(data) {
           <button class="btn-secundario btn-sm" onclick="cambiarEstatus()">Guardar</button>
         </div>
         <div class="form-msg" id="msg-estatus"></div>
+        ${prodFila(true, 'Contrato enviado', c.FechaCreacion)}
+        ${prodFila(!!c.FechaFirma, 'Contrato firmado', c.FechaFirma)}
+        ${prodFila(estadoAnticipo, 'Anticipo abonado', c.FechaUltimoAbono)}
+        ${prodFila(estadoLiquidado, 'Liquidado', c.FechaEntrega)}
       </div>
     </details>
 
-    ${['Anticipo recibido','Firmado','En produccion'].includes(c.Estatus) ? `
-    <!-- ── Sesión completada (visible solo si aplica) ── -->
-    <details class="panel-acord" open>
-      <summary>Marcar sesión</summary>
+    <!-- Producción del material -->
+    <details class="panel-acord">
+      <summary>Producción del material</summary>
       <div class="panel-acord-body">
-        <button class="btn-primario gold" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px" id="btn-sesion-completada" onclick="marcarSesionCompletada()">
+        ${['Anticipo recibido','Firmado','En produccion'].includes(c.Estatus) ? `
+        <button class="btn-primario gold" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px" id="btn-sesion-completada" onclick="marcarSesionCompletada()">
           <i class="ti ti-camera-check"></i> Sesión completada — iniciar edición
         </button>
-        <div class="form-msg" id="msg-sesion-completada"></div>
+        <div class="form-msg" id="msg-sesion-completada" style="margin-bottom:8px"></div>` : ''}
+        <label style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="prod-foto" ${prodFotoHecho ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
+          <span>Fotografía lista${prodFotoHecho && c.FotografiaLista ? ` <span style="font-size:11px;color:var(--ink-3)">· ${fmxnFecha(c.FotografiaLista)}</span>` : ''}</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="prod-video" ${prodVideoHecho ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
+          <span>Video listo${prodVideoHecho && c.VideoListo ? ` <span style="font-size:11px;color:var(--ink-3)">· ${fmxnFecha(c.VideoListo)}</span>` : ''}</span>
+        </label>
+        <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:12px;color:var(--ink-2);margin-bottom:8px">
+            <input type="checkbox" id="prod-tiene-recorrido" ${tieneRecorridoVal ? 'checked' : ''} onchange="toggleRecorridoAdmin(this.checked)" style="width:16px;height:16px;accent-color:var(--gold);flex-shrink:0">
+            Incluye recorrido 360
+          </label>
+          <div id="prod-recorrido-wrap" style="${tieneRecorridoVal ? '' : 'opacity:0.4;pointer-events:none'}">
+            <label style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:13px">
+              <input type="checkbox" id="prod-recorrido" ${prodRecorridoHecho ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
+              <span>Recorrido virtual listo${prodRecorridoHecho && c.RecorridoListo ? ` <span style="font-size:11px;color:var(--ink-3)">· ${fmxnFecha(c.RecorridoListo)}</span>` : ''}</span>
+            </label>
+            <div class="campo" style="margin-top:4px"><label>Liga del recorrido virtual</label>
+              <input type="url" id="prod-recorrido-url" value="${esc(c.RecorridoURL || '')}" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+        <button class="btn-primario gold" style="width:100%;margin-top:12px" id="btn-produccion" onclick="guardarProduccion()">
+          <i class="ti ti-check"></i> Guardar producción
+        </button>
+        <div class="form-msg" id="msg-produccion"></div>
       </div>
-    </details>` : ''}
+    </details>
 
-    <!-- ── Acordeón: Notas internas (cerrado) ── -->
+    <!-- Entrega del material -->
+    <details class="panel-acord">
+      <summary>Enviar material al cliente</summary>
+      <div class="panel-acord-body">
+        ${entregaRevocada ? `<div style="background:rgba(231,76,60,.12);border:1px solid var(--error);border-radius:6px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--error)"><i class="ti ti-eye-off"></i> Acceso revocado</div>` : ''}
+        <div class="campo"><label>Link de Google Drive</label>
+          <input type="url" id="entrega-drive" value="${esc(drivePrefill)}" placeholder="https://drive.google.com/drive/folders/...">
+          ${driveSugerido ? '<p class="form-hint">Sugerido desde carpeta Entregables del proyecto.</p>' : ''}
+        </div>
+        <div class="campo"><label>Links adicionales (uno por línea)</label>
+          <textarea id="entrega-links-extra" rows="3" placeholder="Recorrido virtual|https://matterport.com/...">${esc(extraPrefill)}</textarea>
+          <p class="form-hint">Formato: Etiqueta|URL</p>
+        </div>
+        <button class="btn-primario gold" style="width:100%" id="btn-entrega" onclick="guardarEntrega()">
+          <i class="ti ti-send"></i> Enviar al cliente
+        </button>
+        <div class="form-msg" id="msg-entrega"></div>
+        ${c.FechaEntrega ? `<p style="font-size:12px;color:var(--ink-3);margin-top:10px">Entregado el ${fmxnFecha(c.FechaEntrega)}</p>` : ''}
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          ${entregaRevocada
+            ? `<button class="btn-primario gold" style="width:100%" onclick="revocarEntrega(false)"><i class="ti ti-eye"></i> Reactivar acceso</button>`
+            : `<button class="btn-secundario btn-sm" style="width:100%;color:var(--error);border-color:var(--error)" onclick="revocarEntrega(true)"><i class="ti ti-eye-off"></i> Revocar acceso</button>`}
+          <div class="form-msg" id="msg-revocar"></div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Links y portales -->
+    <details class="panel-acord">
+      <summary>Links y portales</summary>
+      <div class="panel-acord-body">
+        <div class="link-portal-box">
+          <div class="link-portal-label">Portal del cliente</div>
+          <div class="link-portal-url">${esc(urlPortal)}</div>
+          <div class="link-portal-btns">
+            <button class="btn-copiar" data-url="${esc(urlPortal)}" onclick="copiarDesdeBtn(this)"><i class="ti ti-copy"></i> Copiar</button>
+            <a class="btn-wa" href="${esc(waUrl)}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+            <button class="btn-secundario btn-sm" onclick="enviarRecordatorio()"><i class="ti ti-bell"></i> Recordatorio</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+          <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${'https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-checkbox"></i> Checklist</a>
+          <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${'https://wa.me/?' + new URLSearchParams({ text: 'Checklist: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> Compartir</a>
+          <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${EQUIPO_BASE + '?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-camera"></i> Equipo</a>
+          <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${'https://wa.me/?' + new URLSearchParams({ text: 'Portal de sesion: ' + EQUIPO_BASE + '?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> Compartir</a>
+        </div>
+      </div>
+    </details>
+
+    <!-- Acciones por propiedad -->
+    ${_props.length ? `<details class="panel-acord"><summary>Acciones por propiedad</summary><div class="panel-acord-body">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+          <input type="checkbox" id="toggle-express" ${esExpress ? 'checked' : ''} onchange="guardarExpress(this.checked)">
+          <span>Entrega express <span style="font-size:11px;color:var(--ink-3)">(1 día natural)</span></span>
+        </label>
+        <span id="msg-express" style="font-size:11px;color:var(--ink-3)"></span>
+      </div>
+      ${propActionsHtml}
+    </div></details>` : ''}
+
+    <!-- Archivos del cliente -->
+    <details class="panel-acord">
+      <summary>Archivos del cliente</summary>
+      <div class="panel-acord-body">
+        <p style="font-size:12px;color:var(--ink-3);margin-bottom:10px;line-height:1.5">Sube documentos o imágenes del cliente a Drive.</p>
+        ${tieneCarpeta ? `${selectorHtml}<input type="file" id="admin-file-input" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:block;font-size:12px;margin-bottom:8px;width:100%">
+        <button class="btn-primario gold btn-sm" id="btn-subir-archivos" onclick="subirArchivosAdmin()" style="width:100%;justify-content:center"><i class="ti ti-upload"></i> Subir a Drive</button>`
+        : `<p style="font-size:12px;color:var(--warn);padding:8px 10px;background:var(--warn-bg);border-radius:6px;border:1px solid var(--warn-border)">La carpeta se crea al confirmar la reservación.</p>`}
+        <div id="lista-archivos-admin" style="margin-top:10px"></div>
+        <div class="form-msg" id="msg-archivos-admin" style="margin-top:6px"></div>
+      </div>
+    </details>
+
+    <!-- Notas internas -->
     <details class="panel-acord">
       <summary>Notas internas</summary>
       <div class="panel-acord-body">
-        <textarea id="notas-internas-txt" rows="3" maxlength="5000" placeholder="Notas visibles solo para ti..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1);box-sizing:border-box">${esc(c.NotasInternas || '')}</textarea>
+        <textarea id="notas-internas-txt" rows="3" maxlength="5000" placeholder="Notas visibles solo para ti..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1)">${esc(c.NotasInternas || '')}</textarea>
         <div style="display:flex;gap:6px;margin-top:6px">
           <button class="btn-primario gold btn-sm" onclick="guardarNotasInternas()">Guardar notas</button>
         </div>
@@ -3136,172 +3211,39 @@ function renderPanel(data) {
       </div>
     </details>
 
-    <!-- ── Acordeón: Archivos del cliente (cerrado) ── -->
-    ${(() => {
-      const propsConCarpeta = _props.filter(p => p.CarpetaControlId);
-      const tieneCarpeta    = propsConCarpeta.length > 0;
-      const selectorHtml    = _props.length > 1
-        ? '<select id="admin-file-prop" style="font-size:12px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;background:var(--page);color:var(--ink-1);margin-bottom:8px;width:100%">' +
-          _props.map(p => `<option value="${p.NumPropiedad}"${p.CarpetaControlId ? '' : ' disabled'}>${esc('Propiedad ' + p.NumPropiedad + (p.Paquete ? ' — ' + p.Paquete : '') + (p.CarpetaControlId ? '' : ' (sin carpeta)'))}</option>`).join('') +
-          '</select>'
-        : '';
-      return `<details class="panel-acord">
-        <summary>Archivos del cliente</summary>
-        <div class="panel-acord-body">
-          <p style="font-size:12px;color:var(--ink-3);margin-bottom:10px;line-height:1.5">Sube documentos o imágenes que el cliente mande por WhatsApp. Se guardan en la carpeta del proyecto en Drive.</p>
-          ${tieneCarpeta ? `
-            ${selectorHtml}
-            <input type="file" id="admin-file-input" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:block;font-size:12px;margin-bottom:8px;width:100%;box-sizing:border-box">
-            <button class="btn-primario gold btn-sm" id="btn-subir-archivos" onclick="subirArchivosAdmin()" style="width:100%;justify-content:center">
-              <i class="ti ti-upload"></i> Subir a Drive
-            </button>
-          ` : `<p style="font-size:12px;color:var(--warn);padding:8px 10px;background:var(--warn-bg,#fef9e7);border-radius:6px;border:1px solid var(--warn-border,#f0c040)">La carpeta del proyecto se crea al confirmar la reservación.</p>`}
-          <div id="lista-archivos-admin" style="margin-top:10px"></div>
-          <div class="form-msg" id="msg-archivos-admin" style="margin-top:6px"></div>
-        </div>
-      </details>`;
-    })()}
-
-    <!-- ── Acordeón: Zona de riesgo (cerrado) ── -->
+    <!-- Servicio extra + Zona de riesgo -->
     <details class="panel-acord">
       <summary style="color:var(--danger)">Zona de riesgo</summary>
       <div class="panel-acord-body">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button class="btn-secundario btn-sm" style="flex:1" onclick="abrirModalUpsell()"><i class="ti ti-plus"></i> Servicio extra</button>
+        </div>
         <div style="display:flex;gap:8px">
-          <button class="btn-secundario btn-sm" style="flex:1;color:var(--warn);border-color:var(--warn)" onclick="archivarContrato()">
-            <i class="ti ti-archive"></i> Archivar
-          </button>
-          <button class="btn-secundario btn-sm" style="flex:1;color:var(--error, #e74c3c);border-color:var(--error, #e74c3c)" onclick="eliminarContrato()">
-            <i class="ti ti-trash"></i> Eliminar
-          </button>
+          <button class="btn-secundario btn-sm" style="flex:1;color:var(--warn);border-color:var(--warn)" onclick="archivarContrato()"><i class="ti ti-archive"></i> Archivar</button>
+          <button class="btn-secundario btn-sm" style="flex:1;color:var(--error);border-color:var(--error)" onclick="eliminarContrato()"><i class="ti ti-trash"></i> Eliminar</button>
         </div>
         <div class="form-msg" id="msg-borrar"></div>
       </div>
     </details>`;
 
-  // ── PANE PRODUCCIÓN ──
-  const prodFila = (hecho, etiqueta, fechaVal) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
-      <i class="ti ${hecho ? 'ti-circle-check' : 'ti-circle'}" style="font-size:20px;color:${hecho ? 'var(--success)' : 'var(--ink-3)'}"></i>
-      <div style="flex:1">
-        <div style="font-size:13px;color:var(--ink-1);font-weight:${hecho ? '600' : '400'}">${esc(etiqueta)}</div>
-        ${hecho && fechaVal ? `<div style="font-size:11px;color:var(--ink-3)">${fmxnFecha(fechaVal)}</div>` : ''}
-      </div>
-    </div>`;
-
-  const estadoAnticipo  = (parseFloat(data.totalAbonado) || 0) > 0
-    || ['Anticipo recibido','En produccion','Entregado','Liquidado'].includes(c.Estatus);
-  const estadoLiquidado = c.Estatus === 'Liquidado';
-  const prodFotoHecho      = !!(c.FotografiaLista && String(c.FotografiaLista).trim());
-  const prodVideoHecho     = !!(c.VideoListo && String(c.VideoListo).trim());
-  const prodRecorridoHecho = !!(c.RecorridoListo && String(c.RecorridoListo).trim());
-  const tieneRecorridoVal  = c.TieneRecorrido === 0 ? false : true;
-
-  document.getElementById('pane-produccion').innerHTML = `
-    <p class="sec-label" style="margin-bottom:2px">Estado del contrato</p>
-    <p style="font-size:12px;color:var(--ink-3);margin-bottom:8px">Se actualiza solo conforme avanza el contrato.</p>
-    ${prodFila(true, 'Contrato enviado', c.FechaCreacion)}
-    ${prodFila(!!c.FechaFirma, 'Contrato firmado', c.FechaFirma)}
-    ${prodFila(estadoAnticipo, 'Anticipo abonado', c.FechaUltimoAbono)}
-    ${prodFila(estadoLiquidado, 'Liquidado', c.FechaEntrega)}
-
-    <p class="sec-label" style="margin-top:22px;margin-bottom:2px">Producción del material</p>
-    <p style="font-size:12px;color:var(--ink-3);margin-bottom:8px">Marca cada entregable conforme lo terminen.</p>
-    <label style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:13px;color:var(--ink-1)">
-      <input type="checkbox" id="prod-foto" ${prodFotoHecho ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
-      <span>Fotografía lista${prodFotoHecho && c.FotografiaLista ? ` <span style="font-size:11px;color:var(--ink-3)">· ${fmxnFecha(c.FotografiaLista)}</span>` : ''}</span>
-    </label>
-    <label style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:13px;color:var(--ink-1)">
-      <input type="checkbox" id="prod-video" ${prodVideoHecho ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
-      <span>Video listo${prodVideoHecho && c.VideoListo ? ` <span style="font-size:11px;color:var(--ink-3)">· ${fmxnFecha(c.VideoListo)}</span>` : ''}</span>
-    </label>
-    <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:10px">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:12px;color:var(--ink-2);margin-bottom:8px">
-        <input type="checkbox" id="prod-tiene-recorrido" ${tieneRecorridoVal ? 'checked' : ''} onchange="toggleRecorridoAdmin(this.checked)" style="width:16px;height:16px;accent-color:var(--gold);flex-shrink:0">
-        Incluye recorrido 360 en este contrato
-      </label>
-      <div id="prod-recorrido-wrap" style="${tieneRecorridoVal ? '' : 'opacity:0.4;pointer-events:none'}">
-        <label style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer;font-size:13px;color:var(--ink-1)">
-          <input type="checkbox" id="prod-recorrido" ${prodRecorridoHecho ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--gold);flex-shrink:0">
-          <span>Recorrido virtual listo${prodRecorridoHecho && c.RecorridoListo ? ` <span style="font-size:11px;color:var(--ink-3)">· ${fmxnFecha(c.RecorridoListo)}</span>` : ''}</span>
-        </label>
-        <div class="campo" style="margin-top:4px"><label>Liga del recorrido virtual</label>
-          <input type="url" id="prod-recorrido-url" value="${esc(c.RecorridoURL || '')}" placeholder="https://...">
-          <p class="form-hint">Se agrega sola a la pestaña Entrega como link adicional.</p>
-        </div>
-      </div>
+  // ── PANE LLAMADA ──
+  document.getElementById('pane-llamada').innerHTML = `
+    <p style="font-size:13px;color:var(--ink-2);margin-bottom:16px;line-height:1.6">Agenda una llamada de seguimiento con el cliente.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="campo" style="margin:0"><label>Fecha</label><input type="date" id="contrato-llamada-fecha"></div>
+      <div class="campo" style="margin:0"><label>Hora</label><input type="time" id="contrato-llamada-hora" value="10:00"></div>
     </div>
-    <button class="btn-primario gold" style="width:100%;margin-top:12px" id="btn-produccion" onclick="guardarProduccion()">
-      <i class="ti ti-check"></i> Guardar producción
+    <div class="campo"><label>Notas</label>
+      <textarea id="contrato-llamada-notas" rows="3" placeholder="Tema de la llamada, pendientes..."></textarea>
+    </div>
+    <button class="btn-primario gold" style="width:100%" onclick="agendarLlamadaDesdeContrato()">
+      <i class="ti ti-phone-plus"></i> Agendar llamada
     </button>
-    <div class="form-msg" id="msg-produccion"></div>`;
+    <span id="contrato-llamada-msg" style="font-size:12px;display:block;margin-top:8px"></span>`;
 
-  // ── PANE ENTREGA ──
-  const drivePrefill  = c.EntregaDriveLink || data.carpetaEntregablesUrl || '';
-  const driveSugerido = !c.EntregaDriveLink && !!data.carpetaEntregablesUrl;
-  let extraPrefill = c.EntregaLinksExtra || '';
-  if (c.RecorridoURL && extraPrefill.indexOf(c.RecorridoURL) === -1) {
-    extraPrefill = 'Recorrido virtual|' + c.RecorridoURL + (extraPrefill ? '\n' + extraPrefill : '');
-  }
-  const entregaRevocada = !!(c.EntregaRevocada && String(c.EntregaRevocada).trim());
-
-  document.getElementById('pane-entrega').innerHTML = `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <a class="panel-action-btn" style="flex:1;min-width:120px;justify-content:center;text-decoration:none" href="${esc(urlPortal)}" target="_blank" rel="noopener"><i class="ti ti-world"></i> Portal</a>
-      <a class="panel-action-btn" style="flex:1;min-width:120px;justify-content:center;text-decoration:none" href="${esc(EQUIPO_BASE + '?token=' + tok)}" target="_blank" rel="noopener"><i class="ti ti-camera"></i> Equipo</a>
-      <button class="panel-action-btn" style="flex:1;min-width:120px;justify-content:center" onclick="abrirModalUpsell()"><i class="ti ti-plus"></i> Extra</button>
-    </div>
-    <details style="margin-bottom:16px;border:1px solid var(--border);border-radius:var(--r);padding:10px 14px">
-      <summary style="list-style:none;cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3)">Agendar llamada de seguimiento</summary>
-      <div style="margin-top:10px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input type="date" id="contrato-llamada-fecha" style="font-size:13px">
-          <input type="time" id="contrato-llamada-hora" value="10:00" style="font-size:13px">
-        </div>
-        <textarea id="contrato-llamada-notas" rows="2" placeholder="Notas de la llamada…" style="width:100%;font-size:13px;margin-bottom:8px;resize:vertical"></textarea>
-        <button class="btn-secundario btn-sm" style="width:100%;justify-content:center" onclick="agendarLlamadaDesdeContrato()"><i class="ti ti-phone-plus"></i> Agendar llamada</button>
-        <span id="contrato-llamada-msg" style="font-size:12px;display:block;margin-top:6px"></span>
-      </div>
-    </details>
-    ${entregaRevocada ? `
-    <div style="background:rgba(231,76,60,.12);border:1px solid var(--error,#e74c3c);border-radius:8px;padding:12px;margin-bottom:16px">
-      <div style="font-size:13px;color:var(--error,#e74c3c);font-weight:600;margin-bottom:2px"><i class="ti ti-eye-off"></i> Acceso revocado</div>
-      <div style="font-size:12px;color:var(--ink-2)">El cliente no puede ver los enlaces de descarga en su portal.</div>
-    </div>` : ''}
-    <p style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:18px">
-      Ingresa el link de Drive con el material terminado. Se enviará un correo al cliente con el link de su portal.
-    </p>
-    <div class="campo"><label>Link de Google Drive</label>
-      <input type="url" id="entrega-drive" value="${esc(drivePrefill)}" placeholder="https://drive.google.com/drive/folders/...">
-      ${driveSugerido ? '<p class="form-hint">Sugerido: carpeta "Entregables" del proyecto. Cámbialo si el material está en otro lado.</p>' : ''}
-    </div>
-    <div class="campo"><label>Links adicionales (uno por línea)</label>
-      <textarea id="entrega-links-extra" rows="3" placeholder="Recorrido virtual|https://matterport.com/...&#10;Video YouTube|https://youtu.be/...">${esc(extraPrefill)}</textarea>
-      <p class="form-hint">Formato opcional: Etiqueta|URL. Sin etiqueta muestra "Link adicional".</p>
-    </div>
-    <button class="btn-primario gold" style="width:100%" id="btn-entrega" onclick="guardarEntrega()">
-      <i class="ti ti-send"></i> Enviar al cliente
-    </button>
-    <div class="form-msg" id="msg-entrega"></div>
-    ${c.FechaEntrega ? `<p style="font-size:12px;color:var(--ink-3);margin-top:12px">Entregado el ${fmxnFecha(c.FechaEntrega)}</p>` : ''}
-    <div class="link-portal-box" style="margin-top:18px">
-      <div class="link-portal-label">Link del portal (entrega al cliente)</div>
-      <div class="link-portal-url">${esc(urlPortal)}</div>
-      <div class="link-portal-btns">
-        <button class="btn-copiar" data-url="${esc(urlPortal)}" onclick="copiarDesdeBtn(this)">
-          <i class="ti ti-copy"></i> Copiar
-        </button>
-        <a class="btn-wa" href="${esc(waUrl)}" target="_blank" rel="noopener">
-          <i class="ti ti-brand-whatsapp"></i> WhatsApp
-        </a>
-      </div>
-    </div>
-    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <p class="sec-label" style="margin-bottom:6px">Acceso del cliente</p>
-      ${entregaRevocada
-        ? `<button class="btn-primario gold" style="width:100%" onclick="revocarEntrega(false)"><i class="ti ti-eye"></i> Reactivar acceso</button>`
-        : `<button class="btn-secundario btn-sm" style="width:100%;color:var(--error,#e74c3c);border-color:var(--error,#e74c3c)" onclick="revocarEntrega(true)"><i class="ti ti-eye-off"></i> Revocar acceso al material</button>`}
-      <div class="form-msg" id="msg-revocar"></div>
-    </div>`;
+  // Limpiar panel-kpis (ya están en pane-pagos)
+  const _pkEl = document.getElementById('panel-kpis');
+  if (_pkEl) _pkEl.innerHTML = '';
 }
 
 // ── REGISTRAR ABONO ──────────────────────────────────────────────────────────
@@ -3554,7 +3496,7 @@ async function cambiarEstatus() {
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
     if (t && t === tokenActivo) {
       await abrirPanel(t);
-      mostrarPanelTab('general', document.querySelectorAll('.panel-tab-btn')[0]);
+      mostrarPanelTab('prod', document.querySelectorAll('.panel-tab-btn')[2]);
       setMsg('msg-estatus', 'Estatus actualizado.', 'ok');
     }
     cargarContratos();
@@ -3584,7 +3526,7 @@ async function guardarEntrega() {
     if (t && t === tokenActivo) {
       try {
         await abrirPanel(t);
-        mostrarPanelTab('entrega', document.querySelectorAll('.panel-tab-btn')[2]);
+        mostrarPanelTab('prod', document.querySelectorAll('.panel-tab-btn')[2]);
       } catch(_) { /* panel reload failed, entrega ya fue guardada */ }
     }
   } catch (e) {
@@ -3623,7 +3565,7 @@ async function guardarProduccion() {
     if (t && t === tokenActivo) {
       try {
         await abrirPanel(t);
-        mostrarPanelTab('produccion', document.querySelectorAll('.panel-tab-btn')[1]);
+        mostrarPanelTab('prod', document.querySelectorAll('.panel-tab-btn')[2]);
       } catch(_) { /* panel reload failed, producción ya fue guardada */ }
     }
   } catch (e) {
@@ -3650,7 +3592,7 @@ async function revocarEntrega(revocar) {
     if (t && t === tokenActivo) {
       try {
         await abrirPanel(t);
-        mostrarPanelTab('entrega', document.querySelectorAll('.panel-tab-btn')[2]);
+        mostrarPanelTab('prod', document.querySelectorAll('.panel-tab-btn')[2]);
       } catch(_) { /* panel reload failed, el cambio ya fue guardado */ }
     }
   } catch (e) {
