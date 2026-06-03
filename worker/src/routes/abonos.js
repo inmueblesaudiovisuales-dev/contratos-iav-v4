@@ -48,16 +48,41 @@ export async function handleAbonos(request, env, ctx, action) {
     );
 
     const nuevoSaldo = Math.max(0, contrato.saldo_pendiente - monto);
-    const ESTATUSES_AVANZADOS = ['En produccion', 'Entregado'];
-    const nuevoEstatus = nuevoSaldo === 0
-      ? (['Entregado','Completado'].includes(contrato.estatus) ? 'Completado' : 'Liquidado')
-      : (contrato.estatus === 'Completado' ? 'Entregado'
-        : ESTATUSES_AVANZADOS.includes(contrato.estatus) ? contrato.estatus
-        : 'Anticipo recibido');
+    const ESTATUSES_AVANZADOS = ['En produccion', 'Entregado', 'Completado'];
+    let nuevoEstatus;
+    if (nuevoSaldo === 0) {
+      nuevoEstatus = 'Completado';
+    } else if (ESTATUSES_AVANZADOS.includes(contrato.estatus)) {
+      nuevoEstatus = contrato.estatus; // don't regress
+    } else {
+      nuevoEstatus = 'Reservado'; // first or partial payment
+    }
+    const seActivaReservado = nuevoEstatus === 'Reservado' && contrato.estatus !== 'Reservado';
     await run(db,
       'UPDATE contratos SET saldo_pendiente = ?, estatus = ?, fecha_ultimo_abono = ? WHERE token = ?',
       [nuevoSaldo, nuevoEstatus, now(), token]
     );
+
+    // Sync status to trabajos
+    const trabajoAbono = await queryOne(db,
+      'SELECT id, cliente_id FROM trabajos WHERE token=?', [token]);
+    if (trabajoAbono) {
+      await run(db,
+        `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE id=?`,
+        [nuevoEstatus, now(), trabajoAbono.id]
+      );
+      if (seActivaReservado) {
+        const clienteAbono = await queryOne(db,
+          'SELECT nombre, telefono FROM clientes WHERE id=?', [trabajoAbono.cliente_id]);
+        callAdapter(ctx, env, 'crearEventoReservado', {
+          trabajoId: trabajoAbono.id,
+          token,
+          nombreCliente: contrato.nombre_cliente,
+          telefono: clienteAbono?.telefono || '',
+          equipoUrl: `https://contratos.inmueblesaudiovisuales.com/equipo.html?token=${token}`
+        });
+      }
+    }
 
     // Correo de confirmación primero (async)
     callAdapter(ctx, env, 'enviarCorreoAbono', {
@@ -73,23 +98,6 @@ export async function handleAbonos(request, env, ctx, action) {
       esPrimerAbono,
       linkPortal: `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`
     });
-
-    if (esPrimerAbono) {
-      const { results: propiedades } = await query(db,
-        'SELECT * FROM propiedades WHERE contrato_token = ? ORDER BY num_propiedad', [token]
-      );
-      const yaTieneCarpeta = propiedades.some(p => p.carpeta_control_id);
-      if (!yaTieneCarpeta) {
-        const { results: paquetesDb } = await query(db, 'SELECT clave, nombre FROM paquetes');
-        const pkMap = Object.fromEntries(paquetesDb.map(p => [p.clave, p.nombre]));
-        callAdapter(ctx, env, 'primerAbono', {
-          token,
-          contrato: { ...contrato, paquete_base: pkMap[contrato.paquete_base] || contrato.paquete_base },
-          propiedades: propiedades.map(p => ({ ...p, paquete: pkMap[p.paquete] || p.paquete })),
-          folio: contrato.folio
-        });
-      }
-    }
 
     const totalAbonado = abonosPrevios.reduce((s, a) => s + (a.monto || 0), 0) + monto;
     return ok({ ok: true, nuevoSaldo, estatus: nuevoEstatus, totalAbonado });
