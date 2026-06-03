@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 22:50:23 CST (Ronda 35 — CRM Clientes/Trabajos/Actividades + adapter/documentación final)
+> Última actualización: 2026-06-03 12:04:07 CST (Ronda 46 — Bitacora de Produccion en checklist.html)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -334,6 +334,21 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 46 — Bitacora de Produccion en checklist.html (2026-06-03 12:04 CST)
+
+**Cambio:** `checklist.html` se rediseña como Bitacora de Produccion para registrar capturas en campo y dejar una secuencia util para edicion.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R46-01 | `frontend/checklist-logic.js` | Nuevo modulo de logica pura para formato v2, migracion legacy, servicios activos, espacios en lote, registro de capturas, undo, pendientes y filtros de bitacora. |
+| R46-02 | `frontend/checklist-logic.test.js` | Pruebas con `node:test` para migracion, parsing de espacios/subespacios, orden independiente Video/Drone, servicios desactivados y undo. |
+| R46-03 | `frontend/checklist.html` | Rediseño completo a Bitacora de Produccion: modos Foto/360/Video/Drone, servicios activables manualmente, espacios/subespacios, Drone separado, bitacora cronologica, cierre de pendientes, acciones secundarias y autosave. |
+| R46-04 | `docs/superpowers/specs/2026-06-03-bitacora-produccion-design.md` | Spec de producto/UX aprobada para la nueva Bitacora de Produccion. |
+| R46-05 | `docs/superpowers/plans/2026-06-03-bitacora-produccion.md` | Plan de implementacion usado para ejecutar R46. |
+| R46-06 | `MASTER_V4.md` | Documenta R46. No requiere cambios al adapter ni a D1 fuera del JSON existente. |
+
+---
 
 ### Ronda 37 — Rediseno completo admin: Clean SaaS (2026-06-03 00:32 CST)
 
