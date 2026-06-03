@@ -1733,12 +1733,25 @@ function limpiarFiltrosFecha() {
   filtrarContratos();
 }
 
-// ── Bottom nav mobile ──
+// ── Side menu mobile ──
+function abrirSideMenu() {
+  var menu = document.getElementById('side-menu');
+  var overlay = document.getElementById('side-menu-overlay');
+  if (menu) menu.classList.add('open');
+  if (overlay) overlay.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarSideMenu() {
+  var menu = document.getElementById('side-menu');
+  var overlay = document.getElementById('side-menu-overlay');
+  if (menu) menu.classList.remove('open');
+  if (overlay) overlay.classList.remove('visible');
+  document.body.style.overflow = '';
+}
+
 function mostrarTabMobile(id, btn) {
-  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('activo'));
-  btn.classList.add('activo');
-  const topBtn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
-  mostrarTab(id, topBtn || btn);
+  mostrarTab(id, btn);
 }
 
 function normalizarTelWA(tel) {
@@ -1800,23 +1813,31 @@ document.getElementById('input-pw').addEventListener('keydown', e => { if (e.key
 
 function mostrarTab(id, btn) {
   document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
-  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('activo'));
-  // Gear button de topbar refleja estado activo de ajustes
-  const btnGear = document.getElementById('btn-topbar-ajustes');
-  if (btnGear) btnGear.classList.toggle('activo', id === 'ajustes');
-  document.getElementById('sec-' + id).classList.add('activa');
+  // Deactivate sidebar items
+  document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('activo'));
+  // Deactivate side menu items
+  document.querySelectorAll('.sm-nav-item').forEach(b => b.classList.remove('activo'));
+  // Activate the target section
+  var sec = document.getElementById('sec-' + id);
+  if (sec) sec.classList.add('activa');
+  // Mark caller active (sidebar or side menu item)
   if (btn) btn.classList.add('activo');
-  const bnavBtn = document.querySelector(`.bnav-btn[data-tab="${id}"]`);
-  if (bnavBtn) bnavBtn.classList.add('activo');
-  const tabBtn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
-  if (tabBtn) tabBtn.classList.add('activo');
+  // Sync the opposite nav element
+  var sidebarBtn = document.querySelector('#sidebar .sidebar-item[data-tab="' + id + '"]');
+  if (sidebarBtn) sidebarBtn.classList.add('activo');
+  var smBtn = document.querySelector('#side-menu .sm-nav-item[data-tab="' + id + '"]');
+  if (smBtn) smBtn.classList.add('activo');
+  // Update mobile topbar title
+  var titles = { contratos: 'Contratos', clientes: 'Clientes', ajustes: 'Ajustes', nuevo: 'Nuevo contrato' };
+  var titleEl = document.getElementById('topbar-section-title');
+  if (titleEl && titles[id]) titleEl.textContent = titles[id];
+  // Trigger data loads
   if (id === 'contratos') cargarContratos();
   if (id === 'clientes') cargarClientes();
   if (id === 'ajustes') {
-    const paneActivo = document.querySelector('.ajustes-pane.activo-apane');
-    if (paneActivo?.id === 'apane-clientes') cargarCRM();
-    else if (paneActivo?.id === 'apane-paquetes') cargarPaquetesAdmin();
+    var paneActivo = document.querySelector('.ajustes-pane.activo-apane');
+    if (paneActivo && paneActivo.id === 'apane-clientes') cargarCRM();
+    else if (paneActivo && paneActivo.id === 'apane-paquetes') cargarPaquetesAdmin();
     else cargarMetricas();
   }
   if (id === 'nuevo') cargarClientesParaAutocomplete();
@@ -1873,15 +1894,21 @@ function cerrarDrawerNuevo() {
 }
 
 function actualizarNavBadges(contratos) {
-  if (window.innerWidth < 1024) return;
-  var abiertos = contratos.filter(function(c){
-    var e = c.Estatus||'';
+  var abiertos = contratos.filter(function(c) {
+    var e = c.Estatus || '';
     return e !== 'Completado' && e !== 'Liquidado';
   }).length;
-  var bdgContratos = document.getElementById('bnav-badge-contratos');
-  if (bdgContratos) {
-    if (abiertos > 0) { bdgContratos.textContent = abiertos; bdgContratos.style.display = ''; }
-    else bdgContratos.style.display = 'none';
+  // Sidebar badge
+  var bdgSidebar = document.getElementById('bnav-badge-contratos');
+  if (bdgSidebar) {
+    bdgSidebar.textContent = abiertos;
+    bdgSidebar.style.display = abiertos > 0 ? '' : 'none';
+  }
+  // Side menu badge
+  var bdgSm = document.getElementById('sm-badge-contratos');
+  if (bdgSm) {
+    bdgSm.textContent = abiertos;
+    bdgSm.style.display = abiertos > 0 ? '' : 'none';
   }
 }
 
