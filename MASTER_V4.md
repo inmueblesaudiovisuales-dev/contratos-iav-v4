@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-03 12:05:53 CST (Ronda 48 — Bitacora de Produccion en checklist.html)
+> Última actualización: 2026-06-03 13:19:59 CST (Ronda 53 — Bitacora de Produccion 2.0)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -334,6 +334,21 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 53 — Bitacora de Produccion 2.0 (2026-06-03 13:19 CST)
+
+**Cambio:** Segunda iteracion profunda de `checklist.html` enfocada en UX de campo: plantillas primero, amenidades como zona propia, accion primaria clara y repeticion intencional.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R53-01 | `docs/superpowers/specs/2026-06-03-bitacora-produccion-2-design.md` | Spec formal de Bitacora 2.0: problemas de R48, plantillas, amenidades, reglas de captura, cierre y vista Edicion. |
+| R53-02 | `docs/superpowers/plans/2026-06-03-bitacora-produccion-2.md` | Plan de implementacion R53. |
+| R53-03 | `frontend/checklist-logic.js` | Agrega plantillas reales (`casa`, `departamento`, `terreno`, `amenidades`, `exterior_drone`), zonas, espacios clave, resumen por zona, prevencion de duplicados en Foto/360 y repeticion explicita en Video/Drone con `intencion`. |
+| R53-04 | `frontend/checklist-logic.test.js` | Sube cobertura a 10 pruebas: plantillas, amenidades, zonas, duplicados accidentales, intenciones y pendientes clave. |
+| R53-05 | `frontend/checklist.html` | Rediseño UX 2.0: pantalla inicial de plantillas, modo activo con texto completo, botones grandes `Registrar/Gestionar`, chips pasivos, Cierre por prioridad y vista Edicion separada. |
+| R53-06 | `MASTER_V4.md` | Documenta R53. No requiere cambios al adapter ni a D1 fuera del JSON existente. |
+
+---
 
 ### Ronda 48 — Bitacora de Produccion en checklist.html (2026-06-03 12:05 CST)
 
