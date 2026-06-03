@@ -109,18 +109,6 @@ CREATE INDEX IF NOT EXISTS idx_abonos_token ON abonos(contrato_token);
 CREATE INDEX IF NOT EXISTS idx_propiedades_token ON propiedades(contrato_token);
 CREATE INDEX IF NOT EXISTS idx_tokens_contrato ON tokens(contrato_id);
 
-CREATE TABLE IF NOT EXISTS prospectos (
-  id TEXT PRIMARY KEY,
-  nombre TEXT NOT NULL,
-  telefono TEXT NOT NULL,
-  interes TEXT DEFAULT '',
-  fecha_llamada TEXT NOT NULL,
-  hora_llamada TEXT NOT NULL,
-  notas TEXT DEFAULT '',
-  estatus TEXT DEFAULT 'pendiente',
-  fecha_creacion TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS clientes (
   id TEXT PRIMARY KEY,
   nombre TEXT NOT NULL,
@@ -129,7 +117,8 @@ CREATE TABLE IF NOT EXISTS clientes (
   origen TEXT DEFAULT '',
   notas_perfil TEXT DEFAULT '',
   fecha_creacion TEXT NOT NULL,
-  fecha_ultima_actividad TEXT DEFAULT ''
+  fecha_ultima_actividad TEXT DEFAULT '',
+  inmobiliaria TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS trabajos (
@@ -143,6 +132,8 @@ CREATE TABLE IF NOT EXISTS trabajos (
   presupuesto_estimado REAL DEFAULT 0,
   notas TEXT DEFAULT '',
   contrato_token TEXT DEFAULT '',
+  token TEXT,
+  ubicacion TEXT DEFAULT '',
   fecha_creacion TEXT NOT NULL,
   fecha_ultima_actividad TEXT DEFAULT ''
 );
@@ -169,6 +160,7 @@ CREATE TABLE IF NOT EXISTS revisiones_video (
 CREATE INDEX IF NOT EXISTS idx_contratos_cliente ON contratos(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_trabajos_cliente ON trabajos(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_trabajos_estatus ON trabajos(estatus);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_trabajos_token ON trabajos(token);
 CREATE INDEX IF NOT EXISTS idx_actividades_cliente ON actividades(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_actividades_trabajo ON actividades(trabajo_id);
 CREATE INDEX IF NOT EXISTS idx_revisiones_video_contrato ON revisiones_video(contrato_id);
