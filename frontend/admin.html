@@ -2616,10 +2616,132 @@ function renderCardsTrabajos(lista) {
   }).join('');
 }
 
-function seleccionarTrabajo(id) {
-  // Panel rendering will be implemented in Task 13
-  var t = (window.todosTrabajos || []).find(function(x) { return x.id === id || x.token === id; });
-  console.log('seleccionarTrabajo:', id, t);
+async function seleccionarTrabajo(idOrObj) {
+  var t = typeof idOrObj === 'object' ? idOrObj
+    : (window.todosTrabajos || []).find(function(x) { return x.id === idOrObj || x.token === idOrObj; });
+  if (!t) return;
+
+  window._panelClienteId = t.cliente_id || '';
+  window._trabajoActivo = t;
+
+  // Highlight selected card
+  document.querySelectorAll('#contratos-cards .cont-card').forEach(c => c.classList.remove('activo'));
+  document.querySelectorAll('#contratos-tbody .cont-row').forEach(r => r.classList.remove('activo'));
+
+  // Abre el panel
+  document.getElementById('panel').classList.add('abierto');
+
+  if (t.token) {
+    try {
+      const data = await apiGet({ action: 'obtenerEquipo', token: t.token });
+      // Build a minimal contrato-compatible object from equipo data
+      const mockContrato = {
+        Token: t.token,
+        Folio: data.folio || t.folio || '—',
+        NombreCliente: data.nombreCliente || t.cliente_nombre || '—',
+        CorreoCliente: t.cliente_correo || (data.cliente && data.cliente.correo) || '',
+        TelefonoCliente: data.telefonoCliente || t.cliente_telefono || '',
+        Estatus: data.estatus || t.estatus || 'Nuevo',
+        PrecioTotal: 0, Anticipo: 0, SaldoPendiente: 0,
+        NotasInternas: '',
+        EntregaExpress: data.entregaExpress || 0,
+        PaqueteBase: data.paqueteBase || ''
+      };
+      const panelData = {
+        contrato: mockContrato,
+        propiedades: data.propiedades || [],
+        abonos: [],
+        totalAbonado: 0,
+        carpetaEntregablesUrl: null,
+        _equipoData: data
+      };
+      renderPanel(panelData);
+      // After renderPanel, inject cotización and actividades sections
+      renderCotizacionSection(data);
+      renderActividadesSection(data.actividades || [], t.id);
+    } catch(e) {
+      console.error('seleccionarTrabajo error:', e);
+    }
+  }
+}
+
+function renderCotizacionSection(data) {
+  var pane = document.getElementById('pane-info');
+  if (!pane) return;
+  var paqCot = data.paquetesCotizados || [];
+  var portLinks = data.portafolioLinks || [];
+  var secId = 'cotiz-section';
+  var existing = document.getElementById(secId);
+  if (existing) existing.remove();
+  var div = document.createElement('details');
+  div.className = 'panel-acord';
+  div.id = secId;
+  div.open = true;
+  var chips = paqCot.length
+    ? paqCot.map(function(p) { return '<span style="background:#F3F4F6;border-radius:4px;padding:2px 8px;font-size:12px;margin:2px;display:inline-block">' + esc(String(p)) + '</span>'; }).join('')
+    : '<span style="font-size:12px;color:var(--ink-3)">—</span>';
+  var links = portLinks.length
+    ? portLinks.map(function(l) { return '<a href="' + esc(l) + '" target="_blank" style="background:#DBEAFE;color:#1D4ED8;border-radius:4px;padding:2px 8px;font-size:12px;margin:2px;display:inline-block;text-decoration:none">' + esc(l.replace(/^https?:\/\//, '').substring(0, 40)) + '</a>'; }).join('')
+    : '<span style="font-size:12px;color:var(--ink-3)">—</span>';
+  div.innerHTML = '<summary>Cotización</summary><div class="panel-acord-body">' +
+    (data.ubicacion ? '<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--ink-3);margin-bottom:2px">UBICACIÓN</div><div style="font-size:13px">' + esc(data.ubicacion) + '</div></div>' : '') +
+    (data.notasCotizacion ? '<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--ink-3);margin-bottom:2px">NOTAS</div><div style="font-size:13px;white-space:pre-wrap">' + esc(data.notasCotizacion) + '</div></div>' : '') +
+    '<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">PAQUETES COTIZADOS</div>' + chips + '</div>' +
+    '<div><div style="font-size:10px;color:var(--ink-3);margin-bottom:4px">PORTAFOLIO ENVIADO</div>' + links + '</div>' +
+    '</div>';
+  pane.insertBefore(div, pane.firstChild);
+}
+
+function renderActividadesSection(actividades, trabajoId) {
+  var pane = document.getElementById('pane-llamada');
+  if (!pane) return;
+  var lista = (actividades || []).map(function(a) {
+    var esLlamada = a.tipo === 'llamada_agendada';
+    var color = esLlamada ? '#3B82F6' : '#6B7280';
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="width:22px;height:22px;border-radius:50%;background:' + color + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;color:white;font-size:10px"><i class="ti ' + (esLlamada ? 'ti-phone' : 'ti-note') + '"></i></div>' +
+      '<div style="flex:1"><div style="font-size:11px;color:var(--ink-3)">' + esc(a.fecha_actividad || '') + (a.hora ? ' ' + esc(a.hora) : '') + ' · ' + (esLlamada ? 'Llamada' : 'Nota') + '</div>' +
+      '<div style="font-size:13px;color:var(--ink-1)">' + esc(a.descripcion || '') + '</div></div>' +
+      '</div>';
+  }).join('') || '<p style="font-size:13px;color:var(--ink-3)">Sin actividades.</p>';
+
+  pane.innerHTML = '<p style="font-size:13px;color:var(--ink-2);margin-bottom:12px">Historial de llamadas y notas.</p>' +
+    '<div style="margin-bottom:16px">' + lista + '</div>' +
+    '<details><summary style="font-size:13px;cursor:pointer">Agendar llamada</summary>' +
+    '<div style="padding:10px 0"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
+    '<div class="campo" style="margin:0"><label>Fecha</label><input type="date" id="contrato-llamada-fecha"></div>' +
+    '<div class="campo" style="margin:0"><label>Hora</label><input type="time" id="contrato-llamada-hora" value="10:00"></div></div>' +
+    '<div class="campo" style="margin-bottom:8px"><label>Nota previa</label><textarea id="contrato-llamada-notas" rows="2" placeholder="¿Qué se va a hablar?" style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px"></textarea></div>' +
+    '<button class="btn-primario gold btn-sm" style="width:100%" onclick="agendarLlamadaDesdePanel(\'' + trabajoId + '\')"><i class="ti ti-calendar-plus"></i> Agendar</button>' +
+    '<div class="form-msg" id="msg-llamada-panel"></div></div></details>' +
+    '<details style="margin-top:8px"><summary style="font-size:13px;cursor:pointer">Agregar nota</summary>' +
+    '<div style="padding:10px 0"><textarea id="nota-libre-txt" rows="3" placeholder="Observación..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px"></textarea>' +
+    '<button class="btn-primario gold btn-sm" style="width:100%;margin-top:6px" onclick="agregarNotaDesdePanel(\'' + trabajoId + '\')"><i class="ti ti-note"></i> Guardar nota</button></div></details>';
+}
+
+async function agendarLlamadaDesdePanel(trabajoId) {
+  var fecha = document.getElementById('contrato-llamada-fecha').value;
+  var hora = document.getElementById('contrato-llamada-hora').value;
+  if (!fecha) { setMsg('msg-llamada-panel', 'La fecha es requerida.', 'error'); return; }
+  var clienteId = window._panelClienteId || '';
+  var notas = (document.getElementById('contrato-llamada-notas') || {}).value || '';
+  try {
+    var res = await apiPost({ action: 'agendarLlamada', clienteId, trabajoId, descripcion: notas, fechaActividad: fecha, hora });
+    if (!res.ok) { setMsg('msg-llamada-panel', res.error || 'Error', 'error'); return; }
+    setMsg('msg-llamada-panel', 'Llamada agendada.', 'ok');
+    if (window._trabajoActivo) seleccionarTrabajo(window._trabajoActivo);
+  } catch(e) { setMsg('msg-llamada-panel', 'Error al agendar.', 'error'); }
+}
+
+async function agregarNotaDesdePanel(trabajoId) {
+  var nota = (document.getElementById('nota-libre-txt') || {}).value || '';
+  if (!nota.trim()) return;
+  var clienteId = window._panelClienteId || '';
+  try {
+    var res = await apiPost({ action: 'agregarNota', clienteId, trabajoId, descripcion: nota });
+    if (!res.ok) { setMsg('msg-llamada-panel', res.error || 'Error', 'error'); return; }
+    if (window._trabajoActivo) seleccionarTrabajo(window._trabajoActivo);
+  } catch(e) { setMsg('msg-llamada-panel', 'Error.', 'error'); }
 }
 
 function renderAlertas() {
@@ -3266,26 +3388,9 @@ function renderPanel(data) {
       <div class="panel-pay-bar-bg"><div class="panel-pay-bar-fill" style="width:${_pct}%"></div></div>
     </div>`;
 
-  // Sticky action bar — solo 2 acciones primarias
-  const _waTelPortal = normalizarTelWA(c.TelefonoCliente);
-  const _nombre1wa   = (c.NombreCliente || '').split(' ')[0];
-  const _waTexto = (() => {
-    const st = c.Estatus || '';
-    if (st === 'Pendiente firma') return 'Hola ' + _nombre1wa + ', aquí está tu link para revisar y firmar tu contrato: ' + urlPortal;
-    if (st === 'Firmado')         return 'Hola ' + _nombre1wa + ', te recuerdo que tienes pendiente el anticipo de ' + fmxn(parseFloat(c.Anticipo) || 0) + '. Puedes realizar el pago aquí: ' + urlPortal;
-    return 'Hola ' + _nombre1wa + ', te comparto el link de tu portal: ' + urlPortal;
-  })();
-  const _waUrl = 'https://wa.me/' + _waTelPortal + '?text=' + encodeURIComponent(_waTexto);
+  // Sticky action bar — cleared for V5
   const _pab = document.getElementById('panel-action-bar');
-  if (_pab) _pab.innerHTML = `
-    <div class="panel-action-bar" style="flex-direction:row;gap:8px">
-      <button class="panel-action-btn primary" style="flex:1;justify-content:center" onclick="mostrarPanelTab('pagos',document.querySelectorAll('.panel-tab-btn')[1])">
-        <i class="ti ti-cash"></i> Registrar abono
-      </button>
-      <a class="panel-action-btn wa" style="flex:1;justify-content:center;text-align:center" href="${esc(_waUrl)}" target="_blank" rel="noopener">
-        <i class="ti ti-brand-whatsapp"></i> WhatsApp
-      </a>
-    </div>`;
+  if (_pab) _pab.innerHTML = '';
 
   // ── PANE GENERAL ──
   const addHtml = adicionales.length
@@ -3408,10 +3513,6 @@ function renderPanel(data) {
             <option value="doble_nativo"${p.FormatoVideo==='doble_nativo'?' selected':''}>Doble formato (+$1,500)</option>
           </select>
         </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:8px">
-          <input type="checkbox" id="ocultar-fmt-${numProp}" ${p.OcultarFormatoVideo ? 'checked' : ''} style="accent-color:var(--gold);width:14px;height:14px">
-          Ocultar selector en el portal
-        </label>
         <div class="form-msg" id="msg-formato-${numProp}"></div>
         <div style="display:flex;gap:6px">
           <button class="btn-primario gold btn-sm" onclick="guardarFormato(${numProp})">Guardar</button>
@@ -3600,9 +3701,7 @@ function renderPanel(data) {
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
           <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${'https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-checkbox"></i> Checklist</a>
-          <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${'https://wa.me/?' + new URLSearchParams({ text: 'Checklist: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> Compartir</a>
           <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${EQUIPO_BASE + '?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-camera"></i> Equipo</a>
-          <a class="btn-wa btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${'https://wa.me/?' + new URLSearchParams({ text: 'Portal de sesion: ' + EQUIPO_BASE + '?token=' + esc(c.Token) }).toString()}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> Compartir</a>
         </div>
       </div>
     </details>
@@ -3622,18 +3721,6 @@ function renderPanel(data) {
         : `<p style="font-size:12px;color:var(--warn);padding:8px 10px;background:var(--warn-bg);border-radius:6px;border:1px solid var(--warn-border)">La carpeta se crea al confirmar la reservación.</p>`}
         <div id="lista-archivos-admin" style="margin-top:10px"></div>
         <div class="form-msg" id="msg-archivos-admin" style="margin-top:6px"></div>
-      </div>
-    </details>
-
-    <!-- Notas internas -->
-    <details class="panel-acord">
-      <summary>Notas internas</summary>
-      <div class="panel-acord-body">
-        <textarea id="notas-internas-txt" rows="3" maxlength="5000" placeholder="Notas visibles solo para ti..." style="width:100%;font-size:12px;resize:vertical;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--page);color:var(--ink-1)">${esc(c.NotasInternas || '')}</textarea>
-        <div style="display:flex;gap:6px;margin-top:6px">
-          <button class="btn-primario gold btn-sm" onclick="guardarNotasInternas()">Guardar notas</button>
-        </div>
-        <div class="form-msg" id="msg-notas-internas"></div>
       </div>
     </details>
 
