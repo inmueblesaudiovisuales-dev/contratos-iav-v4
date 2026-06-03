@@ -600,14 +600,22 @@
 
     /* ── STATS BAR (mobile linea compacta) ────────────── */
     .stats-linea {
-      display: flex; gap: 12px; overflow-x: auto;
-      padding: 10px 0; margin-bottom: 10px; align-items: center;
+      display: flex; gap: 6px; overflow-x: auto; flex-wrap: nowrap;
+      padding: 10px 0 8px; margin-bottom: 8px; align-items: center;
       scrollbar-width: none;
     }
     .stats-linea::-webkit-scrollbar { display: none; }
     .stats-item { font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
     .stats-item strong { color: var(--ink-1); }
-    .stats-sep { color: var(--ink-4); }
+    .stats-sep { display: none; }
+    .alerta-item {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      background: var(--bg-page); border: 1px solid var(--border-2);
+      font-size: 12px; font-weight: 600; white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .alerta-item i { font-size: 13px; opacity: 0.85; }
 
     /* ── AUTOCOMPLETE ─────────────────────────────────── */
     .ac-dropdown {
@@ -2428,7 +2436,7 @@ function renderAlertas() {
   }
 
   bar.style.display = '';
-  bar.innerHTML = `<div class="stats-linea">${items.join('<span class="stats-sep" style="color:var(--border-2)">·</span>')}</div>`;
+  bar.innerHTML = `<div class="stats-linea">${items.join('')}</div>`;
   actualizarBadgesTabs();
 }
 
