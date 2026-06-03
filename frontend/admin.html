@@ -2498,15 +2498,17 @@ function skeletonRows() {
     </tr>`).join('');
 }
 
-const ESTATUS_COLOR = {
-  'Pendiente firma':   '#9CA3AF',
-  'Firmado':           '#3B82F6',
-  'Anticipo recibido': '#F59E0B',
-  'En produccion':     '#8B5CF6',
-  'Entregado':         '#14B8A6',
-  'Liquidado':         '#10B981',
-  'Completado':        '#10B981',
+const ESTATUS_MAP = {
+  'Pendiente firma':   { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151',  label:'Pendiente firma'   },
+  'Firmado':           { dot:'#3B82F6', bg:'#DBEAFE', color:'#1D4ED8',  label:'Firmado'            },
+  'Anticipo recibido': { dot:'#F59E0B', bg:'#FEF3C7', color:'#92400E',  label:'Anticipo recibido'  },
+  'En produccion':     { dot:'#8B5CF6', bg:'#F5F3FF', color:'#6D28D9',  label:'En producción'      },
+  'Entregado':         { dot:'#14B8A6', bg:'#E0F2FE', color:'#0369A1',  label:'Entregado'          },
+  'Liquidado':         { dot:'#10B981', bg:'#DCFCE7', color:'#065F46',  label:'Liquidado'          },
+  'Completado':        { dot:'#10B981', bg:'#FEF9ED', color:'#92400E',  label:'Completado'         },
 };
+// Alias backward-compat para renderPanel (usa ESTATUS_COLOR[x])
+const ESTATUS_COLOR = Object.fromEntries(Object.entries(ESTATUS_MAP).map(([k,v]) => [k, v.dot]));
 
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
@@ -2551,8 +2553,9 @@ function renderTabla(lista) {
     const avatarCell = `<td class="td-avatar-desktop" style="padding-left:20px"><div class="td-avatar ${avClass}">${iniciales}</div></td>`;
 
     // status dot + label + age
-    const dotColor = ESTATUS_COLOR[c.Estatus] || '#9CA3AF';
-    const estatusLabel = c.Estatus === 'En produccion' ? 'En producción' : (c.Estatus || '—');
+    const _em = ESTATUS_MAP[c.Estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: c.Estatus || '—' };
+    const dotColor = _em.dot;
+    const estatusLabel = _em.label;
     const ageText = dias > 0 ? `${dias} día${dias !== 1 ? 's' : ''}` : '';
     const statusCell = `<td>
       <div class="td-status-wrap">
@@ -2829,7 +2832,8 @@ function renderPanelCliente(data) {
   } else {
     var html2 = '<div style="display:flex;flex-direction:column;gap:8px">';
     contratos.forEach(function(ct) {
-      var bs = ESTATUS_BADGE_CLI[ct.estatus] || { bg:'#F3F4F6', color:'#374151' };
+      var _em2 = ESTATUS_MAP[ct.estatus] || { bg:'#F3F4F6', color:'#374151' };
+      var bs = { bg: _em2.bg, color: _em2.color };
       html2 += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">';
       html2 += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:monospace;min-width:48px">'+(ct.folio||'—')+'</span>';
       html2 += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+bs.bg+';color:'+bs.color+'">'+esc(ct.estatus)+'</span>';
@@ -5111,15 +5115,6 @@ function filtrarListaClientes() {
   renderListaClientes(_clientesDataCache);
 }
 
-var ESTATUS_BADGE_CLI = {
-  'Pendiente firma':  { bg:'#FEF9C3', color:'#92400E' },
-  'Firmado':          { bg:'#DBEAFE', color:'#1D4ED8' },
-  'Anticipo recibido':{ bg:'#DCFCE7', color:'#15803D' },
-  'En produccion':    { bg:'#F5F3FF', color:'#6D28D9' },
-  'Entregado':        { bg:'#E0F2FE', color:'#0369A1' },
-  'Liquidado':        { bg:'#DCFCE7', color:'#065F46' },
-  'Completado':       { bg:'#FEF9ED', color:'#92400E' },
-};
 
 function toggleContratosCliente(id, btn) {
   var panel = document.getElementById('cli-contratos-' + id);
@@ -5136,7 +5131,8 @@ function toggleContratosCliente(id, btn) {
     }
     var html = '<div style="display:flex;flex-direction:column;gap:6px">';
     r.contratos.forEach(function(c) {
-      var bs = ESTATUS_BADGE_CLI[c.estatus] || { bg:'#F3F4F6', color:'#374151' };
+      var _em3 = ESTATUS_MAP[c.estatus] || { bg:'#F3F4F6', color:'#374151' };
+      var bs = { bg: _em3.bg, color: _em3.color };
       html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">';
       html += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:monospace">'+(c.folio||'—')+'</span>';
       html += '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:'+bs.bg+';color:'+bs.color+'">'+esc(c.estatus)+'</span>';
