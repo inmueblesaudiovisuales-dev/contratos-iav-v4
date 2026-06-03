@@ -5293,7 +5293,7 @@ function clienteCorreoVal(c) { return c.Correo || c.CorreoCliente || c.correo ||
 function clienteOrigenVal(c) { return c.Origen || c.origen || ''; }
 function clienteTrabajosActivosVal(c) { return c.TrabajosActivos ?? c.trabajos_activos ?? 0; }
 function clienteNumContratosVal(c) { return c.NumContratos ?? c.num_contratos ?? 0; }
-function jsArg(v) { return "decodeURIComponent('" + encodeURIComponent(String(v || '')) + "')"; }
+function jsArg(v) { return JSON.stringify(String(v || '')); }
 
 // ── CARGAR CLIENTES (principal) ────────────────────────────────────────────────
 
@@ -5461,7 +5461,7 @@ function renderListaClientes(clientes) {
     html += '</div>';
     html += '<div style="display:flex;gap:6px;flex-shrink:0">';
     if (telefono && waNum) html += '<a href="https://wa.me/'+waNum+'" target="_blank" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(37,211,102,0.12);color:#128C7E;text-decoration:none" title="WhatsApp"><i class="ti ti-brand-whatsapp" style="font-size:15px"></i></a>';
-    html += '<button onclick="abrirModalTrabajo('+jsArg(id)+')" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:none;cursor:pointer;color:var(--ink-2)" title="Nuevo trabajo"><i class="ti ti-calendar-plus" style="font-size:15px"></i></button>';
+    if (id) html += '<button onclick="abrirModalTrabajo('+jsArg(id)+')" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:none;cursor:pointer;color:var(--ink-2)" title="Nuevo trabajo"><i class="ti ti-calendar-plus" style="font-size:15px"></i></button>';
     html += '</div>';
     html += '</div>';
   });
@@ -5559,7 +5559,8 @@ function buscarClienteParaTrabajo() {
   var dd = document.getElementById('trab-cliente-dropdown');
   if (!q || !dd) { if(dd) dd.style.display='none'; return; }
   var matches = _clientesCache.filter(function(c){
-    return clienteNombreVal(c).toLowerCase().includes(q) || clienteTelefonoVal(c).includes(q);
+    return clienteIdVal(c) &&
+      (clienteNombreVal(c).toLowerCase().includes(q) || clienteTelefonoVal(c).includes(q));
   }).slice(0,6);
   if (!matches.length) { dd.style.display='none'; return; }
   dd.innerHTML = matches.map(function(c){

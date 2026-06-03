@@ -508,20 +508,27 @@ export async function handleContratos(request, env, ctx, action) {
       'SELECT * FROM propiedades WHERE contrato_token=? AND num_propiedad=?', [token, numPropiedad]
     );
     if (!p) return err('Propiedad no encontrada', 404);
-    await run(db,
-      'UPDATE propiedades SET fecha_sesion=?, hora_sesion=? WHERE contrato_token=? AND num_propiedad=?',
-      [fecha, hora || p.hora_sesion, token, numPropiedad]
-    );
-    const folioAnterior = c.folio;
-    let folioNuevo = folioAnterior;
-    if (parseInt(numPropiedad) === 1) {
-      folioNuevo = await asignarFolio(db, fecha);
-      await run(db, 'UPDATE contratos SET folio=? WHERE token=?', [folioNuevo, token]);
-    }
-    const { results: paquetesRe } = await query(db, 'SELECT clave, nombre FROM paquetes');
-    const pkMapRe = Object.fromEntries(paquetesRe.map(r => [r.clave, r.nombre]));
-    callAdapter(ctx, env, 'reagendarPropiedad', {
-      token, numPropiedad, fecha, hora,
+	    const folioAnterior = c.folio;
+	    let folioNuevo = folioAnterior;
+	    if (parseInt(numPropiedad) === 1) {
+	      folioNuevo = await asignarFolio(db, fecha);
+	    }
+	    const horaFinal = hora || p.hora_sesion;
+	    const statements = [{
+	      sql: 'UPDATE propiedades SET fecha_sesion=?, hora_sesion=? WHERE contrato_token=? AND num_propiedad=?',
+	      params: [fecha, horaFinal, token, numPropiedad]
+	    }];
+	    if (parseInt(numPropiedad) === 1) {
+	      statements.push({
+	        sql: 'UPDATE contratos SET folio=? WHERE token=?',
+	        params: [folioNuevo, token]
+	      });
+	    }
+	    await batch(db, statements);
+	    const { results: paquetesRe } = await query(db, 'SELECT clave, nombre FROM paquetes');
+	    const pkMapRe = Object.fromEntries(paquetesRe.map(r => [r.clave, r.nombre]));
+	    callAdapter(ctx, env, 'reagendarPropiedad', {
+	      token, numPropiedad, fecha, hora: horaFinal,
       folioAnterior,
       folioNuevo,
       contrato: { ...c, folio: folioNuevo, paquete_base: pkMapRe[c.paquete_base] || c.paquete_base },

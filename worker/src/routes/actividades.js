@@ -26,21 +26,33 @@ export async function handleActividades(request, env, ctx, action) {
 	      if (contrato.cliente_id) {
 	        clienteId = contrato.cliente_id;
 	      } else {
-	        clienteId = uuid();
 	        nombre = nombre || contrato.nombre_cliente || '';
 	        telefono = telefono || contrato.telefono_cliente || '';
-	        clienteCreado = { id: clienteId, nombre, telefono };
-	        statements.push(
-	          {
-	            sql: `INSERT INTO clientes (id, nombre, telefono, correo, origen, notas_perfil, fecha_creacion, fecha_ultima_actividad)
-	                  VALUES (?, ?, ?, ?, 'contrato', '', ?, ?)`,
-	            params: [clienteId, nombre, telefono, contrato.correo_cliente || '', ts, ts]
-	          },
-	          {
+	        const clienteExistente = contrato.correo_cliente
+	          ? await queryOne(db, `SELECT id, nombre, telefono FROM clientes WHERE correo=?`, [contrato.correo_cliente])
+	          : null;
+	        if (clienteExistente) {
+	          clienteId = clienteExistente.id;
+	          clienteCreado = clienteExistente;
+	          statements.push({
 	            sql: `UPDATE contratos SET cliente_id=? WHERE token=?`,
 	            params: [clienteId, contratoToken]
-	          }
-	        );
+	          });
+	        } else {
+	          clienteId = uuid();
+	          clienteCreado = { id: clienteId, nombre, telefono };
+	          statements.push(
+	            {
+	              sql: `INSERT INTO clientes (id, nombre, telefono, correo, origen, notas_perfil, fecha_creacion, fecha_ultima_actividad)
+	                    VALUES (?, ?, ?, ?, 'contrato', '', ?, ?)`,
+	              params: [clienteId, nombre, telefono, contrato.correo_cliente || '', ts, ts]
+	            },
+	            {
+	              sql: `UPDATE contratos SET cliente_id=? WHERE token=?`,
+	              params: [clienteId, contratoToken]
+	            }
+	          );
+	        }
 	      }
 	    }
 	    if (!clienteId) return err('clienteId requerido');
