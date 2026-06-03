@@ -58,6 +58,9 @@
       --shadow-sm:    0 1px 4px rgba(0,0,0,0.06);
       --shadow-md:    0 4px 16px rgba(0,0,0,0.10);
       --shadow-lg:    0 8px 32px rgba(0,0,0,0.14);
+      --success-text:   #1E8449;
+      --express-bg:     #DC2626;
+      --express-color:  #FFFFFF;
     }
 
     /* ── LOGIN ────────────────────────────────────────── */
@@ -1318,9 +1321,9 @@
         <p class="form-desc">Configura el contrato para tu cliente. Agrega una o más propiedades.</p>
 
         <!-- Datos del cliente -->
-        <div id="banner-desde-trabajo" style="display:none;background:rgba(30,132,73,0.08);border:1.5px solid rgba(30,132,73,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#1E8449;align-items:center;justify-content:space-between">
+        <div id="banner-desde-trabajo" style="display:none;background:rgba(30,132,73,0.08);border:1.5px solid rgba(30,132,73,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:var(--success-text);align-items:center;justify-content:space-between">
           <span><i class="ti ti-circle-check" style="margin-right:6px"></i>Contrato para: <strong id="banner-trabajo-nombre"></strong></span>
-          <button onclick="limpiarOrigenTrabajoContrato()" style="background:none;border:none;color:#1E8449;cursor:pointer;font-size:16px;padding:0 4px">✕</button>
+          <button onclick="limpiarOrigenTrabajoContrato()" style="background:none;border:none;color:var(--success-text);cursor:pointer;font-size:16px;padding:0 4px">✕</button>
         </div>
         <div class="campo" id="campo-cliente-search-contrato">
           <label>Cliente existente <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label>
@@ -2589,7 +2592,7 @@ function renderTabla(lista) {
       ${avatarCell}
       <td>
         <div class="td-nombre">
-          ${c.EntregaExpress ? `<span style="background:#ef4444;color:#fff;font-size:9px;font-weight:800;letter-spacing:.8px;padding:1px 6px;border-radius:3px;margin-right:5px;vertical-align:middle">EXPRESS</span>` : ''}${esc(c.NombreCliente)}
+          ${c.EntregaExpress ? `<span style="background:var(--express-bg);color:var(--express-color);font-size:9px;font-weight:800;letter-spacing:.8px;padding:1px 6px;border-radius:3px;margin-right:5px;vertical-align:middle">EXPRESS</span>` : ''}${esc(c.NombreCliente)}
         </div>
         <div class="td-sub td-email">${esc(c.CorreoCliente)}</div>
         ${c.PaqueteBase ? `<div class="td-sub" style="color:var(--ink-2)">${esc(c.PaqueteBase)}</div>` : ''}
@@ -5208,7 +5211,7 @@ function guardarNuevoCliente() {
     if (!r.ok) { msg.style.color='var(--red,#c0392b)'; msg.textContent=r.error||'Error'; return; }
     var clienteId = r.id;
     if (!hacerCot) {
-      msg.style.color='#1E8449'; msg.textContent='¡Cliente creado!';
+      msg.style.color='var(--success-text)'; msg.textContent='¡Cliente creado!';
       setTimeout(function(){ cerrarModalCliente(); cargarClientes(); _clientesCache=[]; cargarClientesParaAutocomplete(); }, 800);
       return;
     }
@@ -5225,7 +5228,7 @@ function guardarNuevoCliente() {
     });
   }).then(function(r2){
     if (!r2) return;
-    if (r2.ok) { msg.style.color='#1E8449'; msg.textContent='¡Listo!'; }
+    if (r2.ok) { msg.style.color='var(--success-text)'; msg.textContent='¡Listo!'; }
     else { msg.style.color='var(--red,#c0392b)'; msg.textContent='Cliente creado, pero error en cotización: '+(r2.error||''); }
     setTimeout(function(){ cerrarModalCliente(); cargarClientes(); _clientesCache=[]; cargarClientesParaAutocomplete(); }, 900);
   });
@@ -5355,7 +5358,7 @@ function guardarNuevoTrabajo() {
     fechaLlamada: fechaLlamada,
     horaLlamada: document.getElementById('trab-hora-llamada').value||'10:00'
   }).then(function(r){
-    if (r.ok) { msg.style.color='#1E8449'; msg.textContent='¡Trabajo creado!'; setTimeout(function(){ cerrarModalTrabajo(); cargarClientes(); }, 800); }
+    if (r.ok) { msg.style.color='var(--success-text)'; msg.textContent='¡Trabajo creado!'; setTimeout(function(){ cerrarModalTrabajo(); cargarClientes(); }, 800); }
     else { msg.style.color='var(--red,#c0392b)'; msg.textContent=r.error||'Error'; }
   });
 }
@@ -5481,7 +5484,7 @@ function agendarLlamadaDesdeContrato() {
     descripcion: (notas&&notas.value||'').trim()
   }).then(function(r){
     if(r.ok){
-      if(msg){msg.style.color='#1E8449';msg.textContent='Llamada agendada en Calendar.';}
+      if(msg){msg.style.color='var(--success-text)';msg.textContent='Llamada agendada en Calendar.';}
       if(fecha) fecha.value='';
       if(notas) notas.value='';
       setTimeout(function(){ if(msg) msg.textContent=''; }, 3000);
