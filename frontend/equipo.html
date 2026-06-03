@@ -241,6 +241,25 @@
     /* FORM MSG */
     .form-msg-inline { font-size: 11px; color: var(--success); margin-top: 4px; min-height: 16px; }
     .form-msg-inline.error { color: #dc2626; }
+
+    .eq-block { padding: 20px; border-bottom: 1px solid #E5E7EB; }
+    .eq-block-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9CA3AF; margin-bottom: 12px; }
+    .eq-campo { margin-bottom: 10px; }
+    .eq-campo-label { font-size: 11px; color: #9CA3AF; margin-bottom: 2px; }
+    .eq-campo-valor { font-size: 14px; color: #111827; }
+    .eq-actividades { display: flex; flex-direction: column; gap: 10px; }
+    .eq-act-item { display: flex; gap: 10px; align-items: flex-start; }
+    .eq-act-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .eq-act-meta { font-size: 11px; color: #9CA3AF; margin-bottom: 2px; }
+    .eq-act-desc { font-size: 13px; color: #374151; }
+    .eq-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .eq-chip { background: #F3F4F6; color: #374151; border-radius: 4px; padding: 3px 10px; font-size: 12px; }
+    .eq-link-chip { background: #DBEAFE; color: #1D4ED8; border-radius: 4px; padding: 3px 10px; font-size: 12px; text-decoration: none; }
+    .eq-link-chip:hover { text-decoration: underline; }
+    .eq-btn-nota { background: white; border: 1px solid #D1D5DB; border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; margin-top: 8px; }
+    .eq-nota-form { margin-top: 10px; display: none; }
+    .eq-nota-textarea { width: 100%; border: 1px solid #D1D5DB; border-radius: 6px; padding: 8px; font-size: 13px; resize: vertical; box-sizing: border-box; }
+    .eq-nota-submit { margin-top: 6px; background: #111827; color: white; border: none; border-radius: 6px; padding: 6px 16px; font-size: 13px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -375,6 +394,80 @@ async function cargar() {
 }
 
 function renderApp(data) {
+  window.EQ_DATA = data;
+
+  // Build the new blocks HTML
+  var bloqueHtml = '';
+
+  // BLOCK 1: Cliente
+  var cli = data.cliente;
+  if (cli) {
+    bloqueHtml += '<div class="eq-block">' +
+      '<div class="eq-block-titulo">Cliente</div>' +
+      '<div class="eq-campo"><div class="eq-campo-label">Nombre</div><div class="eq-campo-valor">' + esc(cli.nombre || '—') + '</div></div>' +
+      '<div class="eq-campo"><div class="eq-campo-label">Teléfono</div><div class="eq-campo-valor">' + esc(cli.telefono || '—') + '</div></div>' +
+      (cli.correo ? '<div class="eq-campo"><div class="eq-campo-label">Correo</div><div class="eq-campo-valor">' + esc(cli.correo) + '</div></div>' : '') +
+      (cli.inmobiliaria ? '<div class="eq-campo"><div class="eq-campo-label">Inmobiliaria</div><div class="eq-campo-valor">' + esc(cli.inmobiliaria) + '</div></div>' : '') +
+      (cli.origen ? '<div class="eq-campo"><div class="eq-campo-label">Origen</div><div class="eq-campo-valor">' + esc(cli.origen) + '</div></div>' : '') +
+      '</div>';
+  }
+
+  // BLOCK 2: Cotización
+  var paqCot = data.paquetesCotizados || [];
+  var portLinks = data.portafolioLinks || [];
+  var hasCotiz = data.ubicacion || data.notasCotizacion || paqCot.length || portLinks.length;
+  bloqueHtml += '<div class="eq-block">' +
+    '<div class="eq-block-titulo">Cotización</div>' +
+    (data.ubicacion ? '<div class="eq-campo"><div class="eq-campo-label">Ubicación</div><div class="eq-campo-valor">' + esc(data.ubicacion) + '</div></div>' : '') +
+    (data.notasCotizacion ? '<div class="eq-campo"><div class="eq-campo-label">Notas</div><div class="eq-campo-valor" style="white-space:pre-wrap">' + esc(data.notasCotizacion) + '</div></div>' : '') +
+    (paqCot.length ? '<div class="eq-campo"><div class="eq-campo-label">Paquetes cotizados</div><div class="eq-chips">' + paqCot.map(function(p){return '<span class="eq-chip">'+esc(String(p))+'</span>';}).join('') + '</div></div>' : '') +
+    (portLinks.length ? '<div class="eq-campo"><div class="eq-campo-label">Portafolio enviado</div><div class="eq-chips">' + portLinks.map(function(l){return '<a class="eq-link-chip" href="'+esc(l)+'" target="_blank">'+esc(l.replace(/^https?:\/\//,'').substring(0,40))+'</a>';}).join('') + '</div></div>' : '') +
+    (!hasCotiz ? '<span style="font-size:13px;color:#9CA3AF">Sin información de cotización.</span>' : '') +
+    '</div>';
+
+  // BLOCK 3: Llamadas y notas
+  var actividades = data.actividades || [];
+  var actHtml = actividades.length ? actividades.map(function(a) {
+    var esLlamada = a.tipo === 'llamada_agendada';
+    var dotColor = esLlamada ? '#3B82F6' : '#6B7280';
+    return '<div class="eq-act-item">' +
+      '<div class="eq-act-dot" style="background:' + dotColor + ';color:white;font-size:10px">' +
+        '<i class="ti ' + (esLlamada ? 'ti-phone' : 'ti-note') + '"></i>' +
+      '</div>' +
+      '<div><div class="eq-act-meta">' + esc(a.fecha_actividad || '') + (a.hora ? ' ' + esc(a.hora) : '') + ' · ' + (esLlamada ? 'Llamada' : 'Nota') + '</div>' +
+      '<div class="eq-act-desc">' + esc(a.descripcion || '') + '</div></div>' +
+      '</div>';
+  }).join('') : '<span style="font-size:13px;color:#9CA3AF">Sin actividades.</span>';
+
+  bloqueHtml += '<div class="eq-block">' +
+    '<div class="eq-block-titulo">Llamadas y notas</div>' +
+    '<div class="eq-actividades" id="eq-actividades-list">' + actHtml + '</div>' +
+    '<button class="eq-btn-nota" onclick="toggleNotaForm()">+ Agregar nota</button>' +
+    '<div class="eq-nota-form" id="eq-nota-form">' +
+      '<textarea class="eq-nota-textarea" id="eq-nota-txt" placeholder="Observación durante la llamada..." rows="3"></textarea>' +
+      '<button class="eq-nota-submit" onclick="guardarNotaEquipo()">Guardar nota</button>' +
+    '</div>' +
+    '</div>';
+
+  // Insert the 3 new blocks before the existing content
+  var estadoEl = document.getElementById('estado');
+  if (estadoEl) {
+    var existing = document.getElementById('eq-bloques-nuevos');
+    if (existing) existing.remove();
+    var bloqueDiv = document.createElement('div');
+    bloqueDiv.id = 'eq-bloques-nuevos';
+    bloqueDiv.innerHTML = bloqueHtml;
+    estadoEl.parentNode.insertBefore(bloqueDiv, estadoEl);
+  }
+
+  if (!data.tieneContrato) {
+    estadoEl.innerHTML = '<div style="padding:20px;text-align:center;color:#9CA3AF;font-size:14px">' +
+      '<i class="ti ti-file-off" style="font-size:32px;display:block;margin-bottom:8px"></i>' +
+      'Sin contrato — la producción aparecerá cuando se genere el contrato.' +
+      '</div>';
+    return; // Skip rest of renderApp (propiedades, production section)
+  }
+
   document.getElementById('estado').style.display = 'none';
 
   document.getElementById('tb-folio').textContent = data.folio || '';
@@ -684,6 +777,37 @@ async function guardarRecorridoUrl() {
   } finally {
     btn.disabled = false;
   }
+}
+
+function toggleNotaForm() {
+  var f = document.getElementById('eq-nota-form');
+  if (!f) return;
+  f.style.display = f.style.display === 'none' || !f.style.display ? 'block' : 'none';
+  if (f.style.display === 'block') {
+    var txt = document.getElementById('eq-nota-txt');
+    if (txt) txt.focus();
+  }
+}
+
+async function guardarNotaEquipo() {
+  var nota = (document.getElementById('eq-nota-txt') || {}).value || '';
+  if (!nota.trim()) return;
+  var data = window.EQ_DATA || {};
+  var trabajoId = data.trabajoId || '';
+  var clienteId = (data.cliente && data.cliente.id) || '';
+  try {
+    var res = await fetch(API + '/agregarNota', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clienteId: clienteId, trabajoId: trabajoId, descripcion: nota })
+    });
+    var json = await res.json();
+    if (!json.ok) { alert('Error: ' + (json.error || 'desconocido')); return; }
+    document.getElementById('eq-nota-txt').value = '';
+    document.getElementById('eq-nota-form').style.display = 'none';
+    // Reload to show new nota
+    cargar();
+  } catch(e) { alert('Error de red.'); }
 }
 </script>
 </body>
