@@ -303,14 +303,12 @@ export async function handleContratos(request, env, ctx, action) {
 
     const ESTATUSES_AVANZADOS = ['En produccion', 'Entregado'];
     let estatusNuevo = c.estatus;
-    if (saldoNuevo === 0 && totalAbonado > 0) {
-      estatusNuevo = (c.estatus === 'Entregado' || c.estatus === 'Completado') ? 'Completado' : 'Liquidado';
-    } else if (saldoNuevo > 0 && c.estatus === 'Liquidado') {
-      estatusNuevo = 'Anticipo recibido';
+    if (saldoNuevo === 0) {
+      estatusNuevo = 'Completado';
     } else if (saldoNuevo > 0 && c.estatus === 'Completado') {
-      estatusNuevo = 'Entregado';
+      estatusNuevo = 'Reservado';
     }
-    if (ESTATUSES_AVANZADOS.includes(c.estatus) && estatusNuevo !== 'Liquidado' && estatusNuevo !== 'Completado') {
+    if (ESTATUSES_AVANZADOS.includes(c.estatus) && estatusNuevo !== 'Completado') {
       estatusNuevo = c.estatus;
     }
 
@@ -332,6 +330,10 @@ export async function handleContratos(request, env, ctx, action) {
       'UPDATE contratos SET precio_total=?, saldo_pendiente=?, anticipo=?, adicionales_json=?, notas_internas=?, estatus=?, entrega_express=? WHERE token=?',
       [precioFinal, saldoNuevo, nuevoAnticipo, JSON.stringify(adicionalesArr), nuevasNotas, estatusNuevo, expressActualizado, token]
     );
+    if (estatusNuevo) {
+      await run(db, `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE token=?`,
+        [estatusNuevo, new Date().toISOString(), token]);
+    }
 
     if (notificarCliente && c.correo_cliente) {
       const { results: paquetesUp } = await query(db, 'SELECT clave, nombre FROM paquetes');
@@ -353,7 +355,7 @@ export async function handleContratos(request, env, ctx, action) {
     const { token } = await request.json();
     const c = await queryOne(db, 'SELECT estatus FROM contratos WHERE token=?', [token]);
     if (!c) return err('Contrato no encontrado', 404);
-    if (!['Firmado','Anticipo recibido','En produccion'].includes(c.estatus)) {
+    if (!['Firmado','Reservado','En produccion'].includes(c.estatus)) {
       return err('Estatus no permite esta acción');
     }
     await run(db,
@@ -402,7 +404,7 @@ export async function handleContratos(request, env, ctx, action) {
     if (revocar) {
       const cr = await queryOne(db, 'SELECT estatus, saldo_pendiente FROM contratos WHERE token=?', [token]);
       if (!cr) return err('Contrato no encontrado', 404);
-      const estatusRevocado = (cr.saldo_pendiente <= 0) ? 'Liquidado' : 'En produccion';
+      const estatusRevocado = (cr.saldo_pendiente <= 0) ? 'Completado' : 'En produccion';
       await run(db,
         `UPDATE contratos SET entrega_revocada=?, estatus=? WHERE token=?`,
         [now(), estatusRevocado, token]
@@ -459,7 +461,7 @@ export async function handleContratos(request, env, ctx, action) {
     // D1 no respeta FOREIGN KEYS — cascada manual en orden correcto
     const ts = now();
     await batch(db, [
-      { sql: `UPDATE trabajos SET estatus='cotizado', contrato_token='', fecha_ultima_actividad=? WHERE contrato_token=?`, params: [ts, token] },
+      { sql: `UPDATE trabajos SET estatus='En cotizacion', contrato_token='', fecha_ultima_actividad=? WHERE contrato_token=?`, params: [ts, token] },
       { sql: 'DELETE FROM revisiones_video WHERE contrato_id=?', params: [token] },
       { sql: 'DELETE FROM checklist WHERE contrato_token=?', params: [token] },
       { sql: 'DELETE FROM propiedades WHERE contrato_token=?', params: [token] },
