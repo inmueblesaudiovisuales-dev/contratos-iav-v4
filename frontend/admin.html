@@ -1715,7 +1715,7 @@
         <p class="form-desc">Configura el contrato para tu cliente. Agrega una o más propiedades.</p>
 
         <!-- Datos del cliente -->
-        <div id="banner-desde-trabajo" style="display:none;background:rgba(30,132,73,0.08);border:1.5px solid rgba(30,132,73,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#1E8449;display:flex;align-items:center;justify-content:space-between">
+        <div id="banner-desde-trabajo" style="display:none;background:rgba(30,132,73,0.08);border:1.5px solid rgba(30,132,73,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#1E8449;align-items:center;justify-content:space-between">
           <span><i class="ti ti-circle-check" style="margin-right:6px"></i>Contrato para: <strong id="banner-trabajo-nombre"></strong></span>
           <button onclick="_trabajoOrigenId=null;_clienteOrigenId=null;document.getElementById('banner-desde-trabajo').style.display='none'" style="background:none;border:none;color:#1E8449;cursor:pointer;font-size:16px;padding:0 4px">✕</button>
         </div>
@@ -1725,7 +1725,7 @@
             <input type="text" id="contrato-cliente-search" placeholder="Buscar por nombre o teléfono…" oninput="buscarClienteParaContrato()" autocomplete="off">
             <div id="contrato-cliente-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--card);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);max-height:160px;overflow-y:auto"></div>
           </div>
-          <div id="contrato-cliente-seleccionado" style="display:none;margin-top:6px;font-size:12px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between">
+          <div id="contrato-cliente-seleccionado" style="display:none;margin-top:6px;font-size:12px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:6px;padding:6px 10px;align-items:center;justify-content:space-between">
             <span id="contrato-cliente-sel-nombre" style="color:var(--gold-text,#8a6a00);font-weight:600"></span>
             <button onclick="limpiarClienteContrato()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:12px">✕ quitar</button>
           </div>
@@ -4305,8 +4305,9 @@ function mostrarDropdownAC(inputEl, texto, esParticular) {
   if (q.length < 2) { cerrarDropdownAC(); return; }
 
   const resultados = _clientesCache.filter(cl =>
-    (cl.NombreCliente || '').toLowerCase().includes(q) ||
-    (cl.CorreoCliente  || '').toLowerCase().includes(q)
+    clienteNombreVal(cl).toLowerCase().includes(q) ||
+    clienteCorreoVal(cl).toLowerCase().includes(q) ||
+    clienteTelefonoVal(cl).includes(q)
   ).slice(0, 8);
 
   if (!resultados.length) { cerrarDropdownAC(); return; }
@@ -4315,10 +4316,13 @@ function mostrarDropdownAC(inputEl, texto, esParticular) {
     const logoBadge = cl.LogoUrl
       ? '<span class="ac-logo-badge">Logo guardado</span>'
       : '';
+    const nombre = clienteNombreVal(cl);
+    const correo = clienteCorreoVal(cl);
+    const telefono = clienteTelefonoVal(cl);
     return `<div class="ac-item" data-idx="${i}"
       onmousedown="event.preventDefault();seleccionarClienteAC(${i},${esParticular})">
-      <span class="ac-nombre">${esc(cl.NombreCliente)}</span>
-      <span class="ac-sub">${esc(cl.CorreoCliente)}${cl.TelefonoCliente ? ' · ' + esc(cl.TelefonoCliente) : ''}</span>
+      <span class="ac-nombre">${esc(nombre)}</span>
+      <span class="ac-sub">${esc(correo)}${telefono ? ' · ' + esc(telefono) : ''}</span>
       ${logoBadge}
     </div>`;
   }).join('');
@@ -4351,9 +4355,9 @@ function seleccionarClienteAC(idx, esParticular) {
   const elCorreo   = document.getElementById(pref + '-correo');
   const elTelefono = document.getElementById(pref + '-telefono');
 
-  if (elNombre)   elNombre.value   = cl.NombreCliente   || '';
-  if (elCorreo)   elCorreo.value   = cl.CorreoCliente   || '';
-  if (elTelefono) elTelefono.value = cl.TelefonoCliente || '';
+  if (elNombre)   elNombre.value   = clienteNombreVal(cl);
+  if (elCorreo)   elCorreo.value   = clienteCorreoVal(cl);
+  if (elTelefono) elTelefono.value = clienteTelefonoVal(cl);
 
   // Fix M1: suprimir reapertura del dropdown cuando el input event se dispare
   _acSeleccionRecien = true;
@@ -4425,20 +4429,20 @@ async function cargarCRM() {
       document.getElementById('crm-grid').innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Sin clientes registrados aún.</p>';
       return;
     }
-    document.getElementById('crm-grid').innerHTML = lista.map(cl => `
-      <div class="crm-card">
-        <div class="crm-nombre">${esc(cl.NombreCliente)}</div>
-        <div class="crm-correo">${esc(cl.CorreoCliente)}${cl.TelefonoCliente ? ' · ' + esc(cl.TelefonoCliente) : ''}</div>
-        <div class="crm-proyectos-hdr">${cl.NumContratos} contrato${cl.NumContratos !== 1 ? 's' : ''}</div>
-        <div class="crm-proyecto">
-          <span class="crm-folio">Total facturado</span>
-          ${fmxn(cl.TotalFacturado)}
-        </div>
-        <div class="crm-proyecto">
-          <span class="crm-folio">Último contrato</span>
-          ${fmxnFecha(cl.UltimoContrato)}
-        </div>
-      </div>`).join('');
+	    document.getElementById('crm-grid').innerHTML = lista.map(cl => `
+	      <div class="crm-card">
+	        <div class="crm-nombre">${esc(clienteNombreVal(cl))}</div>
+	        <div class="crm-correo">${esc(clienteCorreoVal(cl))}${clienteTelefonoVal(cl) ? ' · ' + esc(clienteTelefonoVal(cl)) : ''}</div>
+	        <div class="crm-proyectos-hdr">${clienteNumContratosVal(cl)} contrato${clienteNumContratosVal(cl) !== 1 ? 's' : ''}</div>
+	        <div class="crm-proyecto">
+	          <span class="crm-folio">Total facturado</span>
+	          ${fmxn(cl.TotalFacturado ?? cl.total_facturado)}
+	        </div>
+	        <div class="crm-proyecto">
+	          <span class="crm-folio">Último contrato</span>
+	          ${fmxnFecha(cl.UltimoContrato ?? cl.ultimo_contrato)}
+	        </div>
+	      </div>`).join('');
   } catch (e) {
     document.getElementById('crm-grid').innerHTML = `<p style="color:var(--danger);font-size:13px">Error: ${esc(e.message)}</p>`;
   }
@@ -5279,20 +5283,37 @@ var _trabajoOrigenId = null;
 var _clienteOrigenId = null;
 var _trabInteresActivo = '';
 var _clientesDataCache = [];
+var _trabajosDataCache = [];
 var _pipeline_estatus_filtro = 'todos';
+
+function clienteIdVal(c) { return c.Id || c.ClienteId || c.id || c.cliente_id || ''; }
+function clienteNombreVal(c) { return c.Nombre || c.NombreCliente || c.nombre || c.nombre_cliente || ''; }
+function clienteTelefonoVal(c) { return c.Telefono || c.TelefonoCliente || c.telefono || c.telefono_cliente || ''; }
+function clienteCorreoVal(c) { return c.Correo || c.CorreoCliente || c.correo || c.correo_cliente || ''; }
+function clienteOrigenVal(c) { return c.Origen || c.origen || ''; }
+function clienteTrabajosActivosVal(c) { return c.TrabajosActivos ?? c.trabajos_activos ?? 0; }
+function clienteNumContratosVal(c) { return c.NumContratos ?? c.num_contratos ?? 0; }
+function jsArg(v) { return "decodeURIComponent('" + encodeURIComponent(String(v || '')) + "')"; }
 
 // ── CARGAR CLIENTES (principal) ────────────────────────────────────────────────
 
 function cargarClientes() {
   Promise.all([
-    apiGet({ action: 'listarTrabajos' }),
+    apiGet({ action: 'listarTrabajos' }).catch(function(e){ return { ok:false, error:e.message, trabajos:[] }; }),
     apiGet({ action: 'listarClientes' })
   ]).then(function(res) {
-    var trabajos = res[0].trabajos || [];
+    var trabajosOk = res[0].ok !== false;
+    var trabajos = trabajosOk ? (res[0].trabajos || []) : [];
     var clientes = res[1].clientes || [];
     _clientesDataCache = clientes;
+    _trabajosDataCache = trabajos;
     actualizarBadgeClientes(trabajos);
-    renderPipeline(trabajos);
+    if (trabajosOk) {
+      renderPipeline(trabajos);
+    } else {
+      var elPipe = document.getElementById('pipeline-lista');
+      if (elPipe) elPipe.innerHTML = '<p style="color:#c0392b;font-size:13px">Error al cargar pipeline.</p>';
+    }
     renderListaClientes(clientes);
   }).catch(function() {
     var el = document.getElementById('pipeline-lista');
@@ -5306,7 +5327,7 @@ function filtrarPipeline(btn) {
   document.querySelectorAll('#pipeline-chips .filter-chip').forEach(function(b){ b.classList.remove('on'); });
   btn.classList.add('on');
   _pipeline_estatus_filtro = btn.dataset.estatus;
-  apiGet({ action: 'listarTrabajos' }).then(function(r){ renderPipeline(r.trabajos||[]); });
+  renderPipeline(_trabajosDataCache);
 }
 
 function renderPipeline(trabajos) {
@@ -5364,7 +5385,7 @@ function renderPipeline(trabajos) {
     html += '<button onclick="toggleDetalleTrabajo(\''+detalleId+'\')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-chevron-down" style="font-size:10px"></i> Detalles</button>';
     html += '<button onclick="abrirModalNotaTrabajo(\''+t.id+'\',\''+t.cliente_id+'\')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-note" style="font-size:10px"></i> Nota</button>';
     if (t.estatus !== 'convertido' && t.estatus !== 'descartado') {
-      html += '<button onclick="crearContratoDesdeWork(\''+t.id+'\',\''+esc(t.cliente_nombre||'')+'\',\''+esc(t.cliente_id||'')+'\',\''+esc(t.cliente_telefono||'')+'\',\''+esc(t.cliente_correo||'')+'\')" style="font-size:11px;background:var(--gold);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#1a1000;font-weight:600"><i class="ti ti-file-plus" style="font-size:10px"></i> Crear contrato</button>';
+      html += '<button onclick="crearContratoDesdeWork('+[t.id,t.cliente_nombre,t.cliente_id,t.cliente_telefono,t.cliente_correo].map(jsArg).join(',')+')" style="font-size:11px;background:var(--gold);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#1a1000;font-weight:600"><i class="ti ti-file-plus" style="font-size:10px"></i> Crear contrato</button>';
     }
     if (t.contrato_token) {
       html += '<a href="'+PORTAL_BASE+'?token='+esc(t.contrato_token)+'" target="_blank" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-3);text-decoration:none"><i class="ti ti-external-link" style="font-size:10px"></i> Portal</a>';
@@ -5406,8 +5427,8 @@ function renderListaClientes(clientes) {
   if (!el) return;
   var q = (document.getElementById('clientes-search')||{}).value || '';
   var items = q ? clientes.filter(function(c){
-    return (c.nombre||'').toLowerCase().includes(q.toLowerCase()) ||
-           (c.telefono||'').includes(q);
+    return clienteNombreVal(c).toLowerCase().includes(q.toLowerCase()) ||
+           clienteTelefonoVal(c).includes(q);
   }) : clientes;
 
   if (!items.length) {
@@ -5416,25 +5437,31 @@ function renderListaClientes(clientes) {
   }
   var html = '<div style="display:flex;flex-direction:column;gap:8px">';
   items.forEach(function(c) {
-    var ini = (c.nombre||'').charAt(0).toUpperCase();
-    var avCls = ['av-a','av-b','av-c','av-d','av-e','av-f'][(c.nombre||'').charCodeAt(0)%6];
-    var origenStr = ORIGEN_LABELS[c.origen] || '';
-    var waNum = normalizarTelWA(c.telefono||'');
+    var id = clienteIdVal(c);
+    var nombre = clienteNombreVal(c);
+    var telefono = clienteTelefonoVal(c);
+    var correo = clienteCorreoVal(c);
+    var trabajosActivos = clienteTrabajosActivosVal(c);
+    var numContratos = clienteNumContratosVal(c);
+    var ini = (nombre||'').charAt(0).toUpperCase();
+    var avCls = ['av-a','av-b','av-c','av-d','av-e','av-f'][(nombre||'').charCodeAt(0)%6];
+    var origenStr = ORIGEN_LABELS[clienteOrigenVal(c)] || '';
+    var waNum = normalizarTelWA(telefono||'');
     html += '<div style="background:var(--card);border-radius:10px;border:1.5px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px">';
     html += '<div class="td-avatar '+avCls+'" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">'+ini+'</div>';
     html += '<div style="flex:1;min-width:0">';
-    html += '<div style="font-size:14px;font-weight:700;color:var(--ink-1)">'+esc(c.nombre)+'</div>';
+    html += '<div style="font-size:14px;font-weight:700;color:var(--ink-1)">'+esc(nombre)+'</div>';
     html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:3px">';
-    if (c.telefono) html += '<a href="tel:'+esc(c.telefono)+'" style="font-size:12px;color:var(--ink-3);text-decoration:none">'+esc(c.telefono)+'</a>';
-    if (c.correo) html += '<span style="font-size:12px;color:var(--ink-3)">'+esc(c.correo)+'</span>';
+    if (telefono) html += '<a href="tel:'+esc(telefono)+'" style="font-size:12px;color:var(--ink-3);text-decoration:none">'+esc(telefono)+'</a>';
+    if (correo) html += '<span style="font-size:12px;color:var(--ink-3)">'+esc(correo)+'</span>';
     if (origenStr) html += '<span style="font-size:11px;background:var(--page);border:1px solid var(--border);border-radius:20px;padding:1px 8px;color:var(--ink-3)">'+esc(origenStr)+'</span>';
-    if (c.trabajos_activos > 0) html += '<span style="font-size:11px;font-weight:700;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00);border-radius:20px;padding:1px 8px">'+c.trabajos_activos+' en pipeline</span>';
-    if (c.num_contratos > 0) html += '<span style="font-size:11px;color:var(--ink-3)">'+c.num_contratos+' contrato'+(c.num_contratos!==1?'s':'')+'</span>';
+    if (trabajosActivos > 0) html += '<span style="font-size:11px;font-weight:700;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00);border-radius:20px;padding:1px 8px">'+trabajosActivos+' en pipeline</span>';
+    if (numContratos > 0) html += '<span style="font-size:11px;color:var(--ink-3)">'+numContratos+' contrato'+(numContratos!==1?'s':'')+'</span>';
     html += '</div>';
     html += '</div>';
     html += '<div style="display:flex;gap:6px;flex-shrink:0">';
-    if (c.telefono && waNum) html += '<a href="https://wa.me/'+waNum+'" target="_blank" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(37,211,102,0.12);color:#128C7E;text-decoration:none" title="WhatsApp"><i class="ti ti-brand-whatsapp" style="font-size:15px"></i></a>';
-    html += '<button onclick="abrirModalTrabajo(\''+t_id(c.id)+'\')" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:none;cursor:pointer;color:var(--ink-2)" title="Nuevo trabajo"><i class="ti ti-calendar-plus" style="font-size:15px"></i></button>';
+    if (telefono && waNum) html += '<a href="https://wa.me/'+waNum+'" target="_blank" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(37,211,102,0.12);color:#128C7E;text-decoration:none" title="WhatsApp"><i class="ti ti-brand-whatsapp" style="font-size:15px"></i></a>';
+    html += '<button onclick="abrirModalTrabajo('+jsArg(id)+')" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:none;cursor:pointer;color:var(--ink-2)" title="Nuevo trabajo"><i class="ti ti-calendar-plus" style="font-size:15px"></i></button>';
     html += '</div>';
     html += '</div>';
   });
@@ -5451,7 +5478,9 @@ function filtrarListaClientes() {
 // ── MODAL NUEVO CLIENTE ───────────────────────────────────────────────────────
 
 function abrirModalCliente() {
-  document.getElementById('modal-nuevo-cliente').style.display = 'flex';
+  var modal = document.getElementById('modal-nuevo-cliente');
+  if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+  if (modal) modal.style.display = 'flex';
 }
 
 function cerrarModalCliente() {
@@ -5487,13 +5516,15 @@ var _trabClienteIdSel = null;
 
 function abrirModalTrabajo(clienteIdPreseleccionado) {
   _trabClienteIdSel = clienteIdPreseleccionado || null;
+  var modal = document.getElementById('modal-nuevo-trabajo');
+  if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
   document.getElementById('trab-cliente-id').value = _trabClienteIdSel || '';
   var banner = document.getElementById('trab-cliente-banner');
   var campoBusqueda = document.getElementById('trab-cliente-search-campo');
   if (_trabClienteIdSel) {
-    var cli = _clientesDataCache.find(function(c){ return c.id === _trabClienteIdSel; });
+    var cli = _clientesDataCache.find(function(c){ return clienteIdVal(c) === _trabClienteIdSel; });
     if (cli) {
-      document.getElementById('trab-cliente-nombre-banner').textContent = cli.nombre;
+      document.getElementById('trab-cliente-nombre-banner').textContent = clienteNombreVal(cli);
       banner.style.display = '';
       if (campoBusqueda) campoBusqueda.style.display = 'none';
     }
@@ -5501,13 +5532,13 @@ function abrirModalTrabajo(clienteIdPreseleccionado) {
     banner.style.display = 'none';
     if (campoBusqueda) campoBusqueda.style.display = '';
   }
-  document.getElementById('modal-nuevo-trabajo').style.display = 'flex';
+  if (modal) modal.style.display = 'flex';
 }
 
 function cerrarModalTrabajo() {
   document.getElementById('modal-nuevo-trabajo').style.display = 'none';
   _trabClienteIdSel = null;
-  ['trab-cliente-search','trab-presupuesto','trab-prop-zona','trab-prop-tipo','trab-prop-desc','trab-fecha-llamada','trab-notas'].forEach(function(id){
+  ['trab-cliente-search','trab-presupuesto','trab-prop-zona','trab-prop-tipo','trab-prop-desc','trab-fecha-llamada','trab-hora-llamada','trab-notas'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value = id==='trab-hora-llamada'?'10:00':'';
   });
   document.getElementById('trab-cliente-id').value='';
@@ -5528,11 +5559,14 @@ function buscarClienteParaTrabajo() {
   var dd = document.getElementById('trab-cliente-dropdown');
   if (!q || !dd) { if(dd) dd.style.display='none'; return; }
   var matches = _clientesCache.filter(function(c){
-    return (c.nombre||'').toLowerCase().includes(q) || (c.telefono||'').includes(q);
+    return clienteNombreVal(c).toLowerCase().includes(q) || clienteTelefonoVal(c).includes(q);
   }).slice(0,6);
   if (!matches.length) { dd.style.display='none'; return; }
   dd.innerHTML = matches.map(function(c){
-    return '<div onclick="seleccionarClienteTrabajo(\''+esc(c.id)+'\',\''+esc(c.nombre)+'\')" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background=\'var(--page)\'" onmouseout="this.style.background=\'\'">'+esc(c.nombre)+' <span style="color:var(--ink-3);font-size:11px">'+esc(c.telefono||'')+'</span></div>';
+    var id = clienteIdVal(c);
+    var nombre = clienteNombreVal(c);
+    var telefono = clienteTelefonoVal(c);
+    return '<div onclick="seleccionarClienteTrabajo('+jsArg(id)+','+jsArg(nombre)+')" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background=\'var(--page)\'" onmouseout="this.style.background=\'\'">'+esc(nombre)+' <span style="color:var(--ink-3);font-size:11px">'+esc(telefono||'')+'</span></div>';
   }).join('');
   dd.style.display='';
 }
@@ -5613,11 +5647,15 @@ function buscarClienteParaContrato() {
   var dd = document.getElementById('contrato-cliente-dropdown');
   if (!q || !dd) { if(dd) dd.style.display='none'; return; }
   var matches = _clientesCache.filter(function(c){
-    return (c.nombre||'').toLowerCase().includes(q) || (c.telefono||'').includes(q);
+    return clienteNombreVal(c).toLowerCase().includes(q) || clienteTelefonoVal(c).includes(q);
   }).slice(0,6);
   if (!matches.length) { dd.style.display='none'; return; }
   dd.innerHTML = matches.map(function(c){
-    return '<div onclick="seleccionarClienteContrato(\''+esc(c.id)+'\',\''+esc(c.nombre)+'\',\''+esc(c.telefono||'')+'\',\''+esc(c.correo||'')+'\')" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background=\'var(--page)\'" onmouseout="this.style.background=\'\'">'+esc(c.nombre)+' <span style="color:var(--ink-3);font-size:11px">'+esc(c.telefono||'')+'</span></div>';
+    var id = clienteIdVal(c);
+    var nombre = clienteNombreVal(c);
+    var telefono = clienteTelefonoVal(c);
+    var correo = clienteCorreoVal(c);
+    return '<div onclick="seleccionarClienteContrato('+[id,nombre,telefono,correo].map(jsArg).join(',')+')" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background=\'var(--page)\'" onmouseout="this.style.background=\'\'">'+esc(nombre)+' <span style="color:var(--ink-3);font-size:11px">'+esc(telefono||'')+'</span></div>';
   }).join('');
   dd.style.display='';
 }

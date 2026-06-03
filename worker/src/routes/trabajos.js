@@ -1,4 +1,4 @@
-import { query, queryOne, run, uuid, now } from '../db.js';
+import { query, queryOne, run, batch, uuid, now } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter } from '../google.js';
 
@@ -97,41 +97,58 @@ export async function handleTrabajos(request, env, ctx, action) {
     return ok({ ok: true });
   }
 
-  if (action === 'actualizarEstatusTrabajo') {
-    const body = await request.json();
-    const { id, estatus } = body;
-    if (!id || !ESTATUSES_VALIDOS.includes(estatus)) return err('id y estatus válido requeridos');
-    const ts = now();
-    await run(db,
-      `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE id=?`, [estatus, ts, id]
-    );
-    await run(db,
-      `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=(SELECT cliente_id FROM trabajos WHERE id=?)`,
-      [ts, id]
-    );
-    return ok({ ok: true });
-  }
+	  if (action === 'actualizarEstatusTrabajo') {
+	    const body = await request.json();
+	    const { id, estatus } = body;
+	    if (!id || !ESTATUSES_VALIDOS.includes(estatus)) return err('id y estatus válido requeridos');
+	    const t = await queryOne(db, 'SELECT cliente_id FROM trabajos WHERE id=?', [id]);
+	    if (!t) return err('Trabajo no encontrado', 404);
+	    const ts = now();
+	    await run(db,
+	      `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE id=?`, [estatus, ts, id]
+	    );
+	    await run(db, `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`, [ts, t.cliente_id]);
+	    return ok({ ok: true });
+	  }
 
   if (action === 'convertirTrabajo') {
     const body = await request.json();
     const { id, contratoToken } = body;
     if (!id || !contratoToken) return err('id y contratoToken requeridos');
-    const t = await queryOne(db, 'SELECT cliente_id FROM trabajos WHERE id=?', [id]);
-    if (!t) return err('Trabajo no encontrado', 404);
-    const ts = now();
-    await run(db,
-      `UPDATE trabajos SET estatus='convertido', contrato_token=?, fecha_ultima_actividad=? WHERE id=?`,
-      [contratoToken, ts, id]
-    );
-    await run(db, `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`, [ts, t.cliente_id]);
-    const actId = uuid();
-    await run(db,
-      `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
-       VALUES (?, ?, ?, 'contrato_generado', ?, ?, '', ?)`,
-      [actId, t.cliente_id, id, 'Contrato generado: ' + contratoToken, ts.substring(0, 10), ts]
-    );
-    return ok({ ok: true });
-  }
+	    const t = await queryOne(db, 'SELECT cliente_id, estatus, contrato_token FROM trabajos WHERE id=?', [id]);
+	    if (!t) return err('Trabajo no encontrado', 404);
+	    if (t.estatus === 'convertido' && t.contrato_token === contratoToken) return ok({ ok: true });
+	    if (t.estatus === 'convertido' && t.contrato_token && t.contrato_token !== contratoToken) {
+	      return err('Trabajo ya convertido con otro contrato', 409);
+	    }
+	    const contrato = await queryOne(db, 'SELECT token, cliente_id FROM contratos WHERE token=?', [contratoToken]);
+	    if (!contrato) return err('Contrato no encontrado', 404);
+	    if (contrato.cliente_id && contrato.cliente_id !== t.cliente_id) {
+	      return err('El contrato pertenece a otro cliente', 409);
+	    }
+	    const ts = now();
+	    const actId = uuid();
+	    await batch(db, [
+	      {
+	        sql: `UPDATE contratos SET cliente_id=? WHERE token=?`,
+	        params: [t.cliente_id, contratoToken]
+	      },
+	      {
+	        sql: `UPDATE trabajos SET estatus='convertido', contrato_token=?, fecha_ultima_actividad=? WHERE id=?`,
+	        params: [contratoToken, ts, id]
+	      },
+	      {
+	        sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
+	        params: [ts, t.cliente_id]
+	      },
+	      {
+	        sql: `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
+	              VALUES (?, ?, ?, 'contrato_generado', ?, ?, '', ?)`,
+	        params: [actId, t.cliente_id, id, 'Contrato generado: ' + contratoToken, ts.substring(0, 10), ts]
+	      }
+	    ]);
+	    return ok({ ok: true });
+	  }
 
   return err('Acción no encontrada', 404);
 }

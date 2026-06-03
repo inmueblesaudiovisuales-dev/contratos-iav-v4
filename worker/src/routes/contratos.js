@@ -35,16 +35,45 @@ export async function handleContratos(request, env, ctx, action) {
     return ok({ ok: true, contratos: lista });
   }
 
-  if (action === 'listarClientes') {
-    const { results } = await query(db,
-      `SELECT c.*,
-              (SELECT COUNT(*) FROM trabajos t WHERE t.cliente_id = c.id
-               AND t.estatus IN ('nuevo','intentando','en_seguimiento','cotizado')) AS trabajos_activos,
-              (SELECT COUNT(*) FROM contratos ct WHERE ct.cliente_id = c.id) AS num_contratos
-       FROM clientes c
-       ORDER BY CASE WHEN c.fecha_ultima_actividad = '' OR c.fecha_ultima_actividad IS NULL
-                THEN c.fecha_creacion ELSE c.fecha_ultima_actividad END DESC`
-    );
+	  if (action === 'listarClientes') {
+	    const { results } = await query(db,
+	      `WITH clientes_base AS (
+	         SELECT id, nombre, telefono, correo, origen, notas_perfil, fecha_creacion, fecha_ultima_actividad
+	         FROM clientes
+	         UNION ALL
+	         SELECT '' AS id, ct.nombre_cliente AS nombre, MAX(ct.telefono_cliente) AS telefono,
+	                ct.correo_cliente AS correo, 'contrato' AS origen, '' AS notas_perfil,
+	                MIN(ct.fecha_creacion) AS fecha_creacion, MAX(ct.fecha_creacion) AS fecha_ultima_actividad
+	         FROM contratos ct
+	         WHERE ct.oculto = 0
+	           AND IFNULL(ct.cliente_id, '') = ''
+	           AND ct.correo_cliente != ''
+	           AND NOT EXISTS (SELECT 1 FROM clientes c2 WHERE c2.correo = ct.correo_cliente)
+	         GROUP BY ct.correo_cliente
+	       )
+	       SELECT c.*,
+	              c.id AS cliente_id,
+	              c.nombre AS nombre_cliente,
+	              c.telefono AS telefono_cliente,
+	              c.correo AS correo_cliente,
+	              (SELECT COUNT(*) FROM trabajos t WHERE t.cliente_id = c.id
+	               AND t.estatus IN ('nuevo','intentando','en_seguimiento','cotizado')) AS trabajos_activos,
+	              CASE WHEN c.id = ''
+	                THEN (SELECT COUNT(*) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
+	                ELSE (SELECT COUNT(*) FROM contratos ct WHERE ct.cliente_id = c.id)
+	              END AS num_contratos,
+	              CASE WHEN c.id = ''
+	                THEN (SELECT MAX(ct.fecha_creacion) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
+	                ELSE (SELECT MAX(ct.fecha_creacion) FROM contratos ct WHERE ct.cliente_id = c.id)
+	              END AS ultimo_contrato,
+	              CASE WHEN c.id = ''
+	                THEN (SELECT COALESCE(SUM(ct.precio_total), 0) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
+	                ELSE (SELECT COALESCE(SUM(ct.precio_total), 0) FROM contratos ct WHERE ct.cliente_id = c.id)
+	              END AS total_facturado
+	       FROM clientes_base c
+	       ORDER BY CASE WHEN c.fecha_ultima_actividad = '' OR c.fecha_ultima_actividad IS NULL
+	                THEN c.fecha_creacion ELSE c.fecha_ultima_actividad END DESC`
+	    );
     return ok({ ok: true, clientes: results });
   }
 
@@ -138,23 +167,42 @@ export async function handleContratos(request, env, ctx, action) {
     );
     const adicionalesJSON = JSON.stringify([...adicionalesOfrecidos, ...extrasObjs]);
 
-    // Siempre generar folio desde propiedad 1
-    const folio = prop1.fechaSesion ? await asignarFolio(db, prop1.fechaSesion) : null;
+	    let clienteIdFinal = clienteId || '';
+	    let trabajoOrigen = null;
+	    if (trabajoId) {
+	      trabajoOrigen = await queryOne(db, 'SELECT id, cliente_id, estatus, contrato_token FROM trabajos WHERE id=?', [trabajoId]);
+	      if (!trabajoOrigen) return err('Trabajo no encontrado', 404);
+	      if (trabajoOrigen.estatus === 'convertido' && trabajoOrigen.contrato_token) {
+	        return err('Trabajo ya convertido', 409);
+	      }
+	      if (clienteIdFinal && clienteIdFinal !== trabajoOrigen.cliente_id) {
+	        return err('El trabajo pertenece a otro cliente', 409);
+	      }
+	      clienteIdFinal = trabajoOrigen.cliente_id;
+	    }
+	    if (clienteIdFinal) {
+	      const clienteExiste = await queryOne(db, 'SELECT id FROM clientes WHERE id=?', [clienteIdFinal]);
+	      if (!clienteExiste) return err('Cliente no encontrado', 404);
+	    }
+
+	    // Siempre generar folio desde propiedad 1
+	    const folio = prop1.fechaSesion ? await asignarFolio(db, prop1.fechaSesion) : null;
 
     const portalToken = uuid();
     const portalExpira = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
     const creacionNow = now();
 
-    await batch(db, [
-      {
-        sql: `INSERT INTO contratos (token, folio, nombre_cliente, correo_cliente, telefono_cliente,
-              tipo_contrato, tipo_paquete, paquete_base, adicionales_json, precio_base, precio_total,
-              anticipo, saldo_pendiente, estatus, fecha_creacion, num_propiedades, notas_contrato)
-              VALUES (?, ?, ?, ?, ?, 'estandar', ?, ?, ?, ?, ?, ?, ?, 'Pendiente firma', ?, ?, ?)`,
-        params: [token, folio, nombreCliente, correoCliente || '', telefonoCliente || '',
-                 tipoPaqueteFinal, paqueteBaseFinal,
-                 adicionalesJSON, precioBase, totalNum, anticNum, saldoPendiente,
-                 creacionNow, propsData.length, notasContrato || '']
+	    const statements = [
+	      {
+	        sql: `INSERT INTO contratos (token, folio, nombre_cliente, correo_cliente, telefono_cliente, cliente_id,
+	              tipo_contrato, tipo_paquete, paquete_base, adicionales_json, precio_base, precio_total,
+	              anticipo, saldo_pendiente, estatus, fecha_creacion, num_propiedades, notas_contrato)
+	              VALUES (?, ?, ?, ?, ?, ?, 'estandar', ?, ?, ?, ?, ?, ?, ?, 'Pendiente firma', ?, ?, ?)`,
+	        params: [token, folio, nombreCliente, correoCliente || '', telefonoCliente || '',
+	                 clienteIdFinal,
+	                 tipoPaqueteFinal, paqueteBaseFinal,
+	                 adicionalesJSON, precioBase, totalNum, anticNum, saldoPendiente,
+	                 creacionNow, propsData.length, notasContrato || '']
       },
       ...propsData.map((p, i) => ({
         sql: `INSERT INTO propiedades (contrato_token, num_propiedad, tipo, paquete, entregables,
@@ -169,32 +217,37 @@ export async function handleContratos(request, env, ctx, action) {
                  p.perimetroUrl || '', p.logoUrl || '', JSON.stringify(p.datosEspecificos || {}),
                  p.formatoVideo || 'vertical_nativo', p.ocultarFormatoVideo ?? 1]
       })),
-      {
-        sql: 'INSERT INTO tokens (token, contrato_id, tipo, expira, usado) VALUES (?, ?, ?, ?, 0)',
-        params: [portalToken, token, 'contrato', portalExpira]
-      }
-    ]);
+	      {
+	        sql: 'INSERT INTO tokens (token, contrato_id, tipo, expira, usado) VALUES (?, ?, ?, ?, 0)',
+	        params: [portalToken, token, 'contrato', portalExpira]
+	      }
+	    ];
 
-    // Vincular con cliente y trabajo si vienen en el payload
-    if (clienteId) {
-      await run(db, `UPDATE contratos SET cliente_id=? WHERE token=?`, [clienteId, token]);
-    }
-    if (trabajoId) {
-      const tsConv = now();
-      await run(db,
-        `UPDATE trabajos SET estatus='convertido', contrato_token=?, fecha_ultima_actividad=? WHERE id=?`,
-        [token, tsConv, trabajoId]
-      );
-      const cliId = clienteId || (await queryOne(db, 'SELECT cliente_id FROM trabajos WHERE id=?', [trabajoId]))?.cliente_id;
-      if (cliId) {
-        await run(db, `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`, [tsConv, cliId]);
-        await run(db,
-          `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
-           VALUES (?, ?, ?, 'contrato_generado', ?, ?, '', ?)`,
-          [uuid(), cliId, trabajoId, 'Contrato generado: ' + token, tsConv.substring(0, 10), tsConv]
-        );
-      }
-    }
+	    if (trabajoOrigen) {
+	      const tsConv = now();
+	      statements.push(
+	        {
+	          sql: `UPDATE trabajos SET estatus='convertido', contrato_token=?, fecha_ultima_actividad=? WHERE id=?`,
+	          params: [token, tsConv, trabajoId]
+	        },
+	        {
+	          sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
+	          params: [tsConv, clienteIdFinal]
+	        },
+	        {
+	          sql: `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
+	                VALUES (?, ?, ?, 'contrato_generado', ?, ?, '', ?)`,
+	          params: [uuid(), clienteIdFinal, trabajoId, 'Contrato generado: ' + token, tsConv.substring(0, 10), tsConv]
+	        }
+	      );
+	    } else if (clienteIdFinal) {
+	      statements.push({
+	        sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
+	        params: [creacionNow, clienteIdFinal]
+	      });
+	    }
+
+	    await batch(db, statements);
 
     const linkPortal = `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`;
     return ok({ ok: true, token, folio, url: linkPortal, linkPortal });

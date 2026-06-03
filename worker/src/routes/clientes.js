@@ -19,18 +19,46 @@ export async function handleClientes(request, env, ctx, action) {
     return ok({ ok: true, id });
   }
 
-  if (action === 'listarClientes') {
-    const { results } = await query(db,
-      `SELECT c.*,
-              (SELECT COUNT(*) FROM trabajos t
-               WHERE t.cliente_id = c.id
-               AND t.estatus IN ('nuevo','intentando','en_seguimiento','cotizado')) AS trabajos_activos,
-              (SELECT COUNT(*) FROM contratos ct
-               WHERE ct.cliente_id = c.id) AS num_contratos
-       FROM clientes c
-       ORDER BY CASE WHEN c.fecha_ultima_actividad = '' OR c.fecha_ultima_actividad IS NULL
-                THEN c.fecha_creacion ELSE c.fecha_ultima_actividad END DESC`
-    );
+	  if (action === 'listarClientes') {
+	    const { results } = await query(db,
+	      `WITH clientes_base AS (
+	         SELECT id, nombre, telefono, correo, origen, notas_perfil, fecha_creacion, fecha_ultima_actividad
+	         FROM clientes
+	         UNION ALL
+	         SELECT '' AS id, ct.nombre_cliente AS nombre, MAX(ct.telefono_cliente) AS telefono,
+	                ct.correo_cliente AS correo, 'contrato' AS origen, '' AS notas_perfil,
+	                MIN(ct.fecha_creacion) AS fecha_creacion, MAX(ct.fecha_creacion) AS fecha_ultima_actividad
+	         FROM contratos ct
+	         WHERE ct.oculto = 0
+	           AND IFNULL(ct.cliente_id, '') = ''
+	           AND ct.correo_cliente != ''
+	           AND NOT EXISTS (SELECT 1 FROM clientes c2 WHERE c2.correo = ct.correo_cliente)
+	         GROUP BY ct.correo_cliente
+	       )
+	       SELECT c.*,
+	              c.id AS cliente_id,
+	              c.nombre AS nombre_cliente,
+	              c.telefono AS telefono_cliente,
+	              c.correo AS correo_cliente,
+	              (SELECT COUNT(*) FROM trabajos t
+	               WHERE t.cliente_id = c.id
+	               AND t.estatus IN ('nuevo','intentando','en_seguimiento','cotizado')) AS trabajos_activos,
+	              CASE WHEN c.id = ''
+	                THEN (SELECT COUNT(*) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
+	                ELSE (SELECT COUNT(*) FROM contratos ct WHERE ct.cliente_id = c.id)
+	              END AS num_contratos,
+	              CASE WHEN c.id = ''
+	                THEN (SELECT MAX(ct.fecha_creacion) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
+	                ELSE (SELECT MAX(ct.fecha_creacion) FROM contratos ct WHERE ct.cliente_id = c.id)
+	              END AS ultimo_contrato,
+	              CASE WHEN c.id = ''
+	                THEN (SELECT COALESCE(SUM(ct.precio_total), 0) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
+	                ELSE (SELECT COALESCE(SUM(ct.precio_total), 0) FROM contratos ct WHERE ct.cliente_id = c.id)
+	              END AS total_facturado
+	       FROM clientes_base c
+	       ORDER BY CASE WHEN c.fecha_ultima_actividad = '' OR c.fecha_ultima_actividad IS NULL
+	                THEN c.fecha_creacion ELSE c.fecha_ultima_actividad END DESC`
+	    );
     return ok({ ok: true, clientes: results });
   }
 

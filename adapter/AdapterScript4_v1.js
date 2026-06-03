@@ -868,10 +868,22 @@ function syncBackup(body) {
   syncHoja('Propiedades4', data.propiedades, [
     'contrato_token','num_propiedad','tipo','paquete','fecha_sesion','hora_sesion','direccion'
   ]);
-  syncHoja('Paquetes4', data.paquetes, [
-    'clave','tipo','nombre','precio','es_adicional','activo','orden'
-  ]);
-}
+	  syncHoja('Paquetes4', data.paquetes, [
+	    'clave','tipo','nombre','precio','es_adicional','activo','orden'
+	  ]);
+	  syncHoja('Clientes4', data.clientes, [
+	    'id','nombre','telefono','correo','origen','notas_perfil','fecha_creacion','fecha_ultima_actividad',
+	    'trabajos_activos','num_contratos','ultimo_contrato','total_facturado'
+	  ]);
+	  syncHoja('Trabajos4', data.trabajos, [
+	    'id','cliente_id','estatus','interes','paquetes_cotizados_json','portafolio_links_json',
+	    'propiedades_interes_json','presupuesto_estimado','notas','contrato_token',
+	    'fecha_creacion','fecha_ultima_actividad'
+	  ]);
+	  syncHoja('Actividades4', data.actividades, [
+	    'id','cliente_id','trabajo_id','tipo','descripcion','fecha_actividad','hora','fecha_creacion'
+	  ]);
+	}
 
 // ── INSTALAR TRIGGERS ─────────────────────────────────────────────────────
 
