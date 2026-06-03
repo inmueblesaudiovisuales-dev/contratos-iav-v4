@@ -914,71 +914,87 @@
 <div id="pantalla-admin">
     <!-- Dropdown de autocomplete — se posiciona por JS -->
     <div id="ac-dropdown" class="ac-dropdown" style="display:none"></div>
-  <div class="topbar">
-    <span class="topbar-marca">Inmuebles Audiovisuales</span>
-    <span class="topbar-sep">/</span>
-    <span class="topbar-titulo">Contratos v4</span>
-    <button class="btn-ajustes" id="btn-topbar-ajustes" onclick="mostrarTab('ajustes', null)" title="Ajustes">
-      <i class="ti ti-settings"></i><span class="btn-ajustes-label">Ajustes</span>
+  <!-- Mobile topbar (hidden on desktop) -->
+  <div class="mobile-topbar">
+    <button class="hamburger-btn" id="btn-hamburger" onclick="abrirSideMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
     </button>
-    <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    <span class="topbar-title" id="topbar-section-title">Contratos</span>
+    <button class="btn-nuevo-mobile" onclick="irANuevo()" aria-label="Nuevo contrato">
+      <i class="ti ti-plus"></i>
+    </button>
   </div>
 
   <!-- Nav — bottom en mobile, sidebar izquierda en desktop -->
-  <nav class="bottom-nav">
-    <div class="bnav-logo" style="display:none">
-      <div class="bnav-logo-icon">IAV</div>
+  <!-- Desktop sidebar (hidden on mobile) -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon"><span>IAV</span></div>
       <div>
-        <div class="bnav-logo-marca">Inmuebles<br>Audiovisuales</div>
-        <div class="bnav-logo-sub">Contratos v4</div>
+        <div class="sidebar-logo-name">Inmuebles<br>Audiovisuales</div>
       </div>
     </div>
-    <div class="bnav-inner">
-      <button class="bnav-btn activo" data-tab="contratos" onclick="mostrarTabMobile('contratos',this)">
-        <span class="bnav-item-icon"><i class="ti ti-file-text"></i></span>
-        <span class="bnav-item-label">Contratos</span>
-      </button>
-      <button class="bnav-btn" data-tab="nuevo" onclick="toggleMenuNuevo(event)">
-        <span class="bnav-item-icon"><i class="ti ti-plus"></i></span>
-        <span class="bnav-item-label">Nuevo</span>
-      </button>
-      <button class="bnav-btn" data-tab="clientes" onclick="mostrarTabMobile('clientes',this)">
-        <span class="bnav-item-icon"><i class="ti ti-users"></i></span>
-        <span class="bnav-item-label">Clientes</span>
-        <span class="bnav-badge" id="bnav-badge-clientes" style="display:none"></span>
-      </button>
-      <button class="bnav-btn" data-tab="ajustes" onclick="mostrarTabMobile('ajustes',this)">
-        <span class="bnav-item-icon"><i class="ti ti-settings"></i></span>
-        <span class="bnav-item-label">Ajustes</span>
-      </button>
-    </div>
-    <div class="bnav-logout" style="display:none">
-      <div class="bnav-user-avatar">IA</div>
-      <div class="bnav-user-info">
-        <div class="bnav-user-name">Admin IAV</div>
-        <div class="bnav-user-role">Administrador</div>
+    <div class="sidebar-section-label">Menu</div>
+    <button class="sidebar-item activo" data-tab="contratos" onclick="mostrarTab('contratos', this)">
+      <div class="sidebar-indicator"></div>
+      <i class="ti ti-file-text sidebar-icon"></i>
+      <span class="sidebar-label">Contratos</span>
+      <span class="sidebar-badge" id="bnav-badge-contratos" style="display:none"></span>
+    </button>
+    <button class="sidebar-item" data-tab="clientes" onclick="mostrarTab('clientes', this)">
+      <div class="sidebar-indicator"></div>
+      <i class="ti ti-users sidebar-icon"></i>
+      <span class="sidebar-label">Clientes</span>
+      <span class="sidebar-badge" id="bnav-badge-clientes" style="display:none"></span>
+    </button>
+    <div class="sidebar-footer">
+      <div class="sidebar-avatar"><span>IA</span></div>
+      <div>
+        <div class="sidebar-user-name">Admin IAV</div>
+        <div class="sidebar-user-role">Administrador</div>
       </div>
-      <button class="bnav-logout-btn" onclick="cerrarSesion()" title="Cerrar sesión"><i class="ti ti-logout"></i></button>
+      <button class="sidebar-gear" onclick="mostrarTab('ajustes', null)" title="Ajustes">
+        <i class="ti ti-settings"></i>
+      </button>
     </div>
-    <!-- Dropdown menú Nuevo -->
-    <div id="menu-nuevo" style="display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--card);border:1.5px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:500;min-width:200px;overflow:hidden">
-      <button onclick="cerrarMenuNuevo();irANuevo()" style="width:100%;text-align:left;padding:13px 18px;background:none;border:none;border-bottom:1px solid var(--border);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--ink-1)"><i class="ti ti-file-plus" style="font-size:16px;color:var(--gold)"></i> Nuevo contrato</button>
-      <button onclick="cerrarMenuNuevo();abrirModalCliente()" style="width:100%;text-align:left;padding:13px 18px;background:none;border:none;border-bottom:1px solid var(--border);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--ink-1)"><i class="ti ti-user-plus" style="font-size:16px;color:var(--gold)"></i> Nuevo cliente</button>
-      <button onclick="cerrarMenuNuevo();abrirModalTrabajo(null)" style="width:100%;text-align:left;padding:13px 18px;background:none;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--ink-1)"><i class="ti ti-calendar-plus" style="font-size:16px;color:var(--gold)"></i> Nuevo trabajo</button>
-    </div>
-    <div id="menu-nuevo-overlay" style="display:none;position:fixed;inset:0;z-index:499" onclick="cerrarMenuNuevo()"></div>
   </nav>
 
-  <!-- FAB nuevo contrato (solo desktop) -->
-  <button id="fab-nuevo-desktop" onclick="toggleMenuNuevo(event)"
-    style="display:none;position:fixed;bottom:28px;right:28px;z-index:300;
-    width:52px;height:52px;border-radius:50%;background:var(--gold);
-    border:none;color:#1a1000;font-size:24px;cursor:pointer;
-    box-shadow:0 4px 20px rgba(201,168,76,0.45);
-    align-items:center;justify-content:center;
-    transition:filter 150ms,transform 150ms;">
-    <i class="ti ti-plus"></i>
-  </button>
+  <!-- Mobile side menu -->
+  <div id="side-menu">
+    <div class="sm-brand">
+      <div class="sm-brand-name">Inmuebles Audiovisuales</div>
+      <div class="sm-brand-sub">Panel de administracion</div>
+    </div>
+    <button class="sm-nav-item activo" data-tab="contratos" onclick="cerrarSideMenu();mostrarTab('contratos',this)">
+      <div class="sm-indicator"></div>
+      <i class="ti ti-file-text sm-nav-icon"></i>
+      <span class="sm-nav-label">Contratos</span>
+      <span class="sm-nav-badge" id="sm-badge-contratos" style="display:none"></span>
+    </button>
+    <button class="sm-nav-item" data-tab="clientes" onclick="cerrarSideMenu();mostrarTab('clientes',this)">
+      <div class="sm-indicator"></div>
+      <i class="ti ti-users sm-nav-icon"></i>
+      <span class="sm-nav-label">Clientes</span>
+    </button>
+    <div class="sm-footer">
+      <button class="sm-footer-item" onclick="cerrarSideMenu();mostrarTab('ajustes',null)">
+        <i class="ti ti-settings sm-footer-icon"></i>
+        <span class="sm-footer-label">Ajustes</span>
+      </button>
+      <div class="sm-user">
+        <div class="sm-user-avatar"><span>IA</span></div>
+        <div>
+          <div class="sm-user-name">Admin IAV</div>
+          <div class="sm-user-role">Administrador</div>
+        </div>
+        <button class="sm-logout-btn" onclick="cerrarSesion()" title="Salir">
+          <i class="ti ti-logout"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div id="side-menu-overlay" onclick="cerrarSideMenu()"></div>
+
 
   <!-- Barra flotante de selección masiva — TEMPORAL para pruebas -->
   <div class="bulk-bar" id="bulk-bar">
@@ -987,10 +1003,8 @@
     <button style="background:none;border:none;color:#aaa;cursor:pointer;font-size:18px" onclick="salirModoSeleccion()"><i class="ti ti-x"></i></button>
   </div>
 
+  <div class="main-content">
   <div class="contenido">
-    <div class="tabs">
-      <button class="tab-btn activo" data-tab="contratos" onclick="mostrarTab('contratos', this)">Contratos</button>
-    </div>
 
     <!-- ── CONTRATOS ──────────────────────────────────── -->
     <div id="sec-contratos" class="seccion activa">
@@ -1390,6 +1404,7 @@
       </div>
 
     </div>
+  </div>
   </div>
 </div>
 
