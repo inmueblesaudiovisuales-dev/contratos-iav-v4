@@ -651,6 +651,15 @@
     .toolbar-menu-item.activo i { color: var(--gold); }
     .toolbar-menu-sep { border: none; border-top: 1px solid var(--border); margin: 3px 0; }
 
+    /* ── CAMPOS BLOQUEADOS (cliente seleccionado) ──────── */
+    .campo-locked input, .campo-locked textarea {
+      background: var(--page); color: var(--ink-2);
+      border-color: var(--border); cursor: default;
+    }
+    .campo-locked label::after {
+      content: ' \2713'; color: var(--success); font-size: 11px;
+    }
+
     /* ── AUTOCOMPLETE ─────────────────────────────────── */
     .ac-dropdown {
       position: absolute; z-index: 999;
@@ -5591,6 +5600,10 @@ function seleccionarClienteContrato(id, nombre, telefono, correo) {
   var selNom = document.getElementById('contrato-cliente-sel-nombre');
   if(sel) sel.style.display='flex';
   if(selNom) selNom.textContent = nombre;
+  ['est-nombre','est-correo','est-telefono'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.readOnly = true; el.closest('.campo') && el.closest('.campo').classList.add('campo-locked'); }
+  });
 }
 
 function limpiarClienteContrato() {
@@ -5600,6 +5613,10 @@ function limpiarClienteContrato() {
   var sel = document.getElementById('contrato-cliente-seleccionado'); if(sel) sel.style.display='none';
   var selNom = document.getElementById('contrato-cliente-sel-nombre'); if(selNom) selNom.textContent='';
   var dd = document.getElementById('contrato-cliente-dropdown'); if(dd) dd.style.display='none';
+  ['est-nombre','est-correo','est-telefono'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.readOnly = false; el.closest('.campo') && el.closest('.campo').classList.remove('campo-locked'); }
+  });
 }
 
 function limpiarOrigenTrabajoContrato() {
