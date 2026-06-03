@@ -1583,7 +1583,7 @@
       </div>
       <div class="campo">
         <label>Paquetes cotizados</label>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="trab-paquetes-checks">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px" id="trab-paquetes-checks">
           <span style="font-size:12px;color:var(--ink-3)">Cargando…</span>
         </div>
       </div>
@@ -5446,11 +5446,11 @@ function abrirModalTrabajo(clienteIdPreseleccionado) {
       if (!r.ok || !r.paquetes) return;
       var paqActivos = r.paquetes.filter(function(p) { return p.Activo !== 0; });
       paqCont.innerHTML = paqActivos.map(function(p) {
-        var precio = p.Precio ? ' $' + Number(p.Precio).toLocaleString('es-MX') : '';
-        return '<label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer">'
-          + '<input type="checkbox" value="'+esc(p.Clave||p.clave||'')+'">'
+        var precio = p.Precio ? ' <span style="font-size:10px;opacity:0.7">$'+Number(p.Precio).toLocaleString('es-MX')+'</span>' : '';
+        var clave = esc(p.Clave || p.clave || '');
+        return '<button type="button" class="par-tipo-btn trab-paq-chip" data-clave="'+clave+'" onclick="togglePaqChip(this)">'
           + esc(p.Nombre || p.nombre || p.Clave || p.clave || '') + precio
-          + '</label>';
+          + '</button>';
       }).join('');
       paqCont.dataset.loaded = '1';
     }).catch(function() {
@@ -5467,7 +5467,7 @@ function cerrarModalTrabajo() {
   });
   document.getElementById('trab-cliente-id').value='';
   document.querySelectorAll('#trab-interes-btns .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
-  document.querySelectorAll('#trab-paquetes-checks input').forEach(function(cb){ cb.checked=false; });
+  document.querySelectorAll('#trab-paquetes-checks .trab-paq-chip').forEach(function(b){ b.classList.remove('activo-par'); });
   _trabInteresActivo = '';
   var msg = document.getElementById('trab-msg'); if(msg) msg.textContent='';
 }
@@ -5476,6 +5476,10 @@ function seleccionarInteresTrab(btn) {
   document.querySelectorAll('#trab-interes-btns .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
   btn.classList.add('activo-par');
   _trabInteresActivo = btn.dataset.val;
+}
+
+function togglePaqChip(btn) {
+  btn.classList.toggle('activo-par');
 }
 
 function buscarClienteParaTrabajo() {
@@ -5511,7 +5515,7 @@ function guardarNuevoTrabajo() {
   if (!fechaLlamada) { document.getElementById('trab-msg').textContent='Fecha requerida'; return; }
   var msg = document.getElementById('trab-msg');
   msg.style.color='var(--ink-3)'; msg.textContent='Creando…';
-  var paquetes = Array.from(document.querySelectorAll('#trab-paquetes-checks input:checked')).map(function(cb){ return cb.value; });
+  var paquetes = Array.from(document.querySelectorAll('#trab-paquetes-checks .trab-paq-chip.activo-par')).map(function(btn){ return btn.dataset.clave; });
   var zona = (document.getElementById('trab-prop-zona').value||'').trim();
   var tipo = (document.getElementById('trab-prop-tipo').value||'').trim();
   var desc = (document.getElementById('trab-prop-desc').value||'').trim();
