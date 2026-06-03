@@ -335,6 +335,29 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
 
+### Ronda 37 — Rediseno completo admin: Clean SaaS (2026-06-03 00:32 CST)
+
+**Cambio: Rediseno visual y estructural completo de admin.html**
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R37-01 | `frontend/admin.html` CSS | CSS completo reescrito. Tokens: `--black`, `--page:#F9F9F7`, `--card:#FFFFFF`, `--gold:#C9A84C`, `--sidebar-w:200px`, `--panel-w:340px`. Mobile-first. |
+| R37-02 | `frontend/admin.html` CSS | Sidebar desktop: `#sidebar` fijo 200px, items con indicador dorado, footer con engranaje. |
+| R37-03 | `frontend/admin.html` CSS | Side menu mobile: `#side-menu` desliza desde izquierda, overlay oscuro, `#side-menu-overlay`. Sin bottom nav. |
+| R37-04 | `frontend/admin.html` CSS | Topbar mobile: `.mobile-topbar` con hamburger, titulo de seccion, boton `+` (32x32px, border-radius:8px). |
+| R37-05 | `frontend/admin.html` CSS | KPI cards: `.kpi-grid` 4 columnas en desktop. Oculto en mobile. IDs internos preservados. |
+| R37-06 | `frontend/admin.html` CSS | Panel lateral: mobile = bottom sheet (88dvh, translateY), desktop = panel fijo derecha (340px, translateX). |
+| R37-07 | `frontend/admin.html` HTML | Bottom nav eliminado. FAB eliminado. `#radar-sesiones` eliminado. `#hoyStrip` eliminado. `.tabs` (Contratos tab) eliminado. |
+| R37-08 | `frontend/admin.html` HTML | Nuevo `#sidebar` desktop y `#side-menu` + `#side-menu-overlay` mobile. `<div class="mobile-topbar">` reemplaza topbar oscuro. `.main-content` envuelve el contenido. |
+| R37-09 | `frontend/admin.html` HTML | `#statsRibbon` conserva IDs internos pero con markup de `.kpi-grid`. |
+| R37-10 | `frontend/admin.html` JS | `mostrarTab` reescrita: usa `.sidebar-item` y `.sm-nav-item`. Actualiza `#topbar-section-title`. |
+| R37-11 | `frontend/admin.html` JS | `abrirSideMenu` / `cerrarSideMenu` nuevas. `mostrarTabMobile` simplificada. |
+| R37-12 | `frontend/admin.html` JS | `actualizarNavBadges` actualizada: usa `#bnav-badge-contratos` (sidebar) y `#sm-badge-contratos` (side menu). |
+| R37-13 | `frontend/admin.html` JS | Eliminadas: `renderHoyStrip`, `renderRadar`, `toggleMenuNuevo`, `cerrarMenuNuevo`. |
+| R37-14 | `frontend/admin.html` JS | `body.panel-open` reemplaza `body.panel-abierto` para activar `margin-right` en desktop. |
+
+---
+
 ### Ronda 35 — CRM Clientes/Trabajos/Actividades + auditorías pre-merge (2026-06-02)
 
 > **Migración D1 requerida — ejecutar manualmente si la DB aún no tiene tablas CRM:**
