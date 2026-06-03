@@ -2911,9 +2911,10 @@ function renderPanel(data) {
   document.getElementById('panel-nombre').textContent = c.NombreCliente;
 
   // status pill
-  const _pillColor = ESTATUS_COLOR[c.Estatus] || '#9CA3AF';
-  const _pillBg    = _pillColor + '1A'; // ~10% opacity tint
-  const _pillLabel = c.Estatus === 'En produccion' ? 'En producción' : (c.Estatus || '—');
+  const _em0 = ESTATUS_MAP[c.Estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: c.Estatus || '—' };
+  const _pillColor = _em0.dot;
+  const _pillBg    = _em0.bg;
+  const _pillLabel = _em0.label;
   const _psp = document.getElementById('panel-status-pill');
   if (_psp) _psp.innerHTML = `<span class="panel-status-pill" style="background:${_pillBg};color:${_pillColor}"><span class="psp-dot" style="background:${_pillColor}"></span>${esc(_pillLabel)}</span>`;
 
