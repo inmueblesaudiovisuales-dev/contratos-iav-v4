@@ -124,6 +124,9 @@ export async function handleContratos(request, env, ctx, action) {
       e.clave ? { clave: e.clave, precio: e.precio } : { nombre: e.nombre, precio: e.precio }
     );
     const adicionalesJSON = JSON.stringify([...adicionalesOfrecidos, ...extrasObjs]);
+    const tieneExpress = [...adicionalesOfrecidos, ...extrasObjs].some(
+      a => a === 'ADD-EXPRESS' || (a && a.clave === 'ADD-EXPRESS')
+    );
 
 	    let clienteIdFinal = clienteId || '';
 	    let trabajoOrigen = null;
@@ -154,13 +157,13 @@ export async function handleContratos(request, env, ctx, action) {
 	      {
 	        sql: `INSERT INTO contratos (token, folio, nombre_cliente, correo_cliente, telefono_cliente, cliente_id,
 	              tipo_contrato, tipo_paquete, paquete_base, adicionales_json, precio_base, precio_total,
-	              anticipo, saldo_pendiente, estatus, fecha_creacion, num_propiedades, notas_contrato)
-	              VALUES (?, ?, ?, ?, ?, ?, 'estandar', ?, ?, ?, ?, ?, ?, ?, 'Pendiente firma', ?, ?, ?)`,
+	              anticipo, saldo_pendiente, estatus, fecha_creacion, num_propiedades, notas_contrato, entrega_express)
+	              VALUES (?, ?, ?, ?, ?, ?, 'estandar', ?, ?, ?, ?, ?, ?, ?, 'Pendiente firma', ?, ?, ?, ?)`,
 	        params: [token, folio, nombreCliente, correoCliente || '', telefonoCliente || '',
 	                 clienteIdFinal,
 	                 tipoPaqueteFinal, paqueteBaseFinal,
 	                 adicionalesJSON, precioBase, totalNum, anticNum, saldoPendiente,
-	                 creacionNow, propsData.length, notasContrato || '']
+	                 creacionNow, propsData.length, notasContrato || '', tieneExpress ? 1 : 0]
       },
       ...propsData.map((p, i) => ({
         sql: `INSERT INTO propiedades (contrato_token, num_propiedad, tipo, paquete, entregables,
@@ -316,9 +319,12 @@ export async function handleContratos(request, env, ctx, action) {
       ? (c.notas_internas ? c.notas_internas + '\n' : '') + '[' + stamp + '] ' + partes.join(' · ')
       : c.notas_internas;
 
+    const expressActualizado = adicionalesArr.some(
+      a => a === 'ADD-EXPRESS' || (a && a.clave === 'ADD-EXPRESS')
+    ) ? 1 : 0;
     await run(db,
-      'UPDATE contratos SET precio_total=?, saldo_pendiente=?, anticipo=?, adicionales_json=?, notas_internas=?, estatus=? WHERE token=?',
-      [precioFinal, saldoNuevo, nuevoAnticipo, JSON.stringify(adicionalesArr), nuevasNotas, estatusNuevo, token]
+      'UPDATE contratos SET precio_total=?, saldo_pendiente=?, anticipo=?, adicionales_json=?, notas_internas=?, estatus=?, entrega_express=? WHERE token=?',
+      [precioFinal, saldoNuevo, nuevoAnticipo, JSON.stringify(adicionalesArr), nuevasNotas, estatusNuevo, expressActualizado, token]
     );
 
     if (notificarCliente && c.correo_cliente) {

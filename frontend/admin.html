@@ -2071,28 +2071,6 @@ async function enviarRecordatorio() {
   }
 }
 
-async function guardarExpress(checked) {
-  const tok = tokenActivo;
-  if (!tok) return;
-  setMsg('msg-express', 'Guardando…', '');
-  try {
-    const r = await apiPost({ action: 'actualizarExpress', token: tok, express: checked });
-    if (tok !== tokenActivo) return;
-    if (!r.ok) throw new Error(r.error || 'Error');
-    const props = (window._contratoActivo && window._contratoActivo.propiedades) || [];
-    props.forEach(function(p) {
-      const el = document.getElementById('fecha-entrega-' + p.NumPropiedad);
-      if (el && p.FechaSesion) el.textContent = fmxnFecha(calcFechaEntrega(p.FechaSesion, checked));
-    });
-    setMsg('msg-express', 'Guardado', 'ok');
-    setTimeout(function() { setMsg('msg-express', '', ''); }, 2000);
-  } catch(e) {
-    if (tok !== tokenActivo) return;
-    const cb = document.getElementById('toggle-express');
-    if (cb) cb.checked = !checked;
-    setMsg('msg-express', 'Error: ' + e.message, 'error');
-  }
-}
 
 async function descargarCSV() {
   try {
@@ -2879,7 +2857,7 @@ function renderPanel(data) {
       }).join('') + '</span>'
     : '<span style="font-size:12px;color:var(--ink-3)">Sin servicios adicionales</span>';
 
-  const esExpress = !!(c.EntregaExpress);
+  const esExpress = adicionales.some(function(a) { return a === 'ADD-EXPRESS' || (a && a.clave === 'ADD-EXPRESS'); }) || !!(c.EntregaExpress);
   const _props    = data.propiedades || [];
 
   const waTelPortal = normalizarTelWA(c.TelefonoCliente);
@@ -3181,13 +3159,6 @@ function renderPanel(data) {
 
     <!-- Acciones por propiedad -->
     ${_props.length ? `<details class="panel-acord"><summary>Acciones por propiedad</summary><div class="panel-acord-body">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
-          <input type="checkbox" id="toggle-express" ${esExpress ? 'checked' : ''} onchange="guardarExpress(this.checked)">
-          <span>Entrega express <span style="font-size:11px;color:var(--ink-3)">(1 día natural)</span></span>
-        </label>
-        <span id="msg-express" style="font-size:11px;color:var(--ink-3)"></span>
-      </div>
       ${propActionsHtml}
     </div></details>` : ''}
 
