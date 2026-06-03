@@ -2649,7 +2649,7 @@ function renderContratosCards(lista) {
       +   '<span class="cont-card-folio">'+(esc(c.Folio)||'—')+'</span>'
       +   '<span class="cont-card-pill" style="background:'+_em.bg+';color:'+_em.color+'">'
       +     '<span class="cont-card-pill-dot" style="background:'+_em.dot+'"></span>'
-      +     _em.label
+      +     esc(_em.label)
       +   '</span>'
       + '</div>'
       + '<div class="cont-card-nombre">'+expressHtml+esc(c.NombreCliente)+'</div>'
@@ -2867,6 +2867,7 @@ function cerrarPanel() {
   document.getElementById('overlay').classList.remove('visible');
   document.body.classList.remove('panel-open');
   document.querySelectorAll('#tabla-body tr').forEach(tr => tr.classList.remove('activo'));
+  document.querySelectorAll('#contratos-cards .cont-card').forEach(function(c){ c.classList.remove('activo'); });
 }
 
 var clienteActivo = null;
