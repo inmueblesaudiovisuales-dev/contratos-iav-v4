@@ -600,11 +600,9 @@
 
     /* ── STATS BAR (mobile linea compacta) ────────────── */
     .stats-linea {
-      display: flex; gap: 6px; overflow-x: auto; flex-wrap: nowrap;
+      display: flex; gap: 6px; flex-wrap: wrap;
       padding: 10px 0 8px; margin-bottom: 8px; align-items: center;
-      scrollbar-width: none;
     }
-    .stats-linea::-webkit-scrollbar { display: none; }
     .stats-item { font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
     .stats-item strong { color: var(--ink-1); }
     .stats-sep { display: none; }
@@ -2399,17 +2397,10 @@ function renderAlertas() {
   const tzOff  = new Date().getTimezoneOffset() * 60000;
   const ahora  = Date.now();
   const hoy    = new Date(ahora - tzOff).toISOString().substring(0, 10);
-  const manana = new Date(ahora - tzOff + 86400000).toISOString().substring(0, 10);
-  const en7    = new Date(ahora - tzOff + 7 * 86400000).toISOString().substring(0, 10);
 
   const activos = todosContratos.filter(c => !['Completado', 'Cancelado'].includes(c.Estatus));
 
   const sesHoy    = activos.filter(c => c.FechaSesion && String(c.FechaSesion).substring(0, 10) === hoy).length;
-  const sesManana = activos.filter(c => c.FechaSesion && String(c.FechaSesion).substring(0, 10) === manana).length;
-  const sesSemana = activos.filter(c => {
-    const f = c.FechaSesion ? String(c.FechaSesion).substring(0, 10) : '';
-    return f > manana && f <= en7;
-  }).length;
   const pendFirma = activos.filter(c => c.Estatus === 'Pendiente firma').length;
   const expirando = activos.filter(c =>
     c.Estatus === 'Pendiente firma' &&
@@ -2423,9 +2414,7 @@ function renderAlertas() {
 
   const items = [];
   if (sesHoy)    items.push(`<span class="alerta-item" style="color:var(--gold)"><i class="ti ti-camera"></i>${sesHoy === 1 ? '1 sesión hoy' : sesHoy + ' sesiones hoy'}</span>`);
-  if (sesManana) items.push(`<span class="alerta-item" style="color:#B45309"><i class="ti ti-calendar-event"></i>${sesManana} sesión${sesManana > 1 ? 'es' : ''} mañana</span>`);
-  if (sesSemana) items.push(`<span class="alerta-item" style="color:#2563EB"><i class="ti ti-calendar"></i>${sesSemana} esta semana</span>`);
-  if (pendFirma) items.push(`<span class="alerta-item" style="color:var(--ink-1)"><i class="ti ti-signature"></i>${pendFirma} pendiente${pendFirma > 1 ? 's' : ''} de firma${expirando ? ` <span style="color:var(--warn);font-size:11px">(${expirando} por expirar)</span>` : ''}</span>`);
+  if (pendFirma) items.push(`<span class="alerta-item" style="color:var(--ink-1)"><i class="ti ti-signature"></i>${pendFirma} pendiente${pendFirma > 1 ? 's' : ''} de firma${expirando ? ` <span style="color:var(--warn)">(${expirando} por expirar)</span>` : ''}</span>`);
   if (cobros)    items.push(`<span class="alerta-item" style="color:var(--ink-2)"><i class="ti ti-cash"></i>${cobros} cobro${cobros > 1 ? 's' : ''} pendiente${cobros > 1 ? 's' : ''}</span>`);
 
   if (!items.length) {
