@@ -835,6 +835,40 @@
       margin-top: 4px; font-style: italic;
     }
 
+    /* ── Sección clientes: clases globales ── */
+    .sec-clientes-header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px; }
+    .sec-clientes-titulo { font-size:22px; font-weight:700; letter-spacing:-0.4px; color:var(--ink-1); }
+    .sec-clientes-sub    { font-size:13px; color:var(--ink-3); margin-top:3px; }
+    .sec-sublabel { font-size:12px; font-weight:700; color:var(--ink-3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; }
+    .clientes-grid { display:flex; flex-direction:column; gap:24px; }
+    .clientes-col-pipeline, .clientes-col-lista {}
+
+    /* ── Cliente cards ── */
+    .cli-card        { background:var(--card); border-radius:10px; border:1.5px solid var(--border); padding:12px 16px; display:flex; align-items:center; gap:12px; }
+    .cli-card-body   { flex:1; min-width:0; }
+    .cli-card-nombre { font-size:14px; font-weight:700; color:var(--ink-1); }
+    .cli-card-meta   { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:3px; }
+    .cli-card-tel    { font-size:12px; color:var(--ink-3); text-decoration:none; }
+    .cli-card-correo { font-size:12px; color:var(--ink-3); }
+    .cli-card-acciones { display:flex; gap:6px; flex-shrink:0; }
+    .cli-card-action-btn {
+      display:flex; align-items:center; justify-content:center;
+      width:32px; height:32px; border-radius:8px;
+      border:1.5px solid var(--border); background:none;
+      cursor:pointer; color:var(--ink-2); text-decoration:none;
+      font-size:15px;
+    }
+    .cli-card-action-btn:hover { background:var(--page); border-color:var(--ink-4); }
+    .cli-card-action-btn.wa { background:rgba(37,211,102,0.12); color:#128C7E; border-color:transparent; }
+
+    /* ── Pipeline tarjetas ── */
+    .trab-card            { background:var(--card); border-radius:10px; border:1.5px solid var(--border); overflow:hidden; }
+    .trab-card-inner      { padding:12px 16px; }
+    .trab-card-header     { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+    .trab-card-nombre     { font-size:13px; font-weight:700; color:var(--ink-1); }
+    .trab-card-fecha      { font-size:11px; color:var(--ink-3); margin-top:2px; }
+    .trab-card-acciones   { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+
     /* ════════════════════════════════════════════════
        DESKTOP LAYOUT — min-width: 1024px
        ════════════════════════════════════════════════ */
@@ -842,7 +876,7 @@
       #prosp-layout { grid-template-columns: 380px 1fr !important; }
       :root {
         --sidebar-w: 224px;
-        --panel-w: 488px;
+        --panel-w: 420px;
         --gold-light: rgba(201,168,76,0.14);
         --gold-text: #92720E;
         --ink-1: #111827;
@@ -957,21 +991,9 @@
       /* reset order — desktop no reordena */
       .bnav-btn { order: 0 !important; }
 
-      /* "Nuevo" en desktop → botón dorado full-width */
-      .bnav-btn[data-tab="nuevo"] {
-        width: calc(100% - 28px) !important;
-        margin: 10px 14px 6px !important;
-        padding: 9px 12px !important;
-        background: var(--gold) !important;
-        color: #1a1000 !important;
-        border-radius: 6px !important;
-        font-weight: 700 !important;
-        font-size: 12.5px !important;
-        flex: none;
-      }
-      .bnav-btn[data-tab="nuevo"]:hover { filter: brightness(1.08); background: var(--gold) !important; color: #1a1000 !important; }
-      .bnav-btn[data-tab="nuevo"] .bnav-item-icon { background: rgba(0,0,0,0.15) !important; color: #1a1000 !important; }
-      .bnav-btn[data-tab="nuevo"].activo::before { display: none; }
+      /* "Nuevo" en desktop → oculto (reemplazado por FAB) */
+      .bnav-btn[data-tab="nuevo"] { display: none !important; }
+      .bnav-inner { padding-top: 10px; }
 
       .bnav-logout {
         display: flex !important;
@@ -1311,7 +1333,18 @@
       .td-fecha-semana { color: #3B82F6 !important; font-weight: 600; }
 
       /* Hide mobile elements */
-      #radar-sesiones, #sesiones-lista { display: none !important; }
+      #sesiones-lista { display: none !important; }
+      #radar-sesiones {
+        display: flex;
+        padding: 6px 24px 6px;
+        margin: 0 -24px;
+        background: var(--page);
+        border-bottom: 1px solid var(--border);
+        gap: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      #radar-sesiones:empty { display: none !important; }
       #btn-filtros-toggle, #filtro-fecha-desde, #filtro-fecha-hasta,
       .filtro-fecha-label, .btn-seleccion, #btn-export-csv,
       #btn-refresh-tabla, #btn-seccion, #btn-seleccion { display: none !important; }
@@ -1465,6 +1498,37 @@
         display: flex; align-items: center; gap: 3px;
       }
       .stat-delta.neg { color: #EF4444; }
+
+      /* ── FAB nuevo ── */
+      #fab-nuevo-desktop { display: flex !important; }
+      #menu-nuevo { bottom: 88px !important; left: auto !important; right: 24px !important; transform: none !important; }
+
+      /* ── KPI cards compactas ── */
+      .panel-kpi-card { padding: 8px 10px; }
+      .panel-kpi-val { font-size: 15px; }
+      .panel-kpi-label { font-size: 9px; }
+
+      /* ── Secciones con padding superior ── */
+      #sec-clientes { padding-top: 24px; }
+      #sec-contratos { padding-top: 0; }
+      #sec-ajustes { padding-top: 24px; }
+
+      /* ── sec-contratos flex column ── */
+      #sec-contratos {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+      }
+
+      /* ── Clientes grid desktop ── */
+      .clientes-grid { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
+
+      /* ── Drawer nuevo ── */
+      #drawer-nuevo { display: flex !important; flex-direction: column; }
+
+      /* ── sec-nuevo oculto en desktop (reemplazado por drawer) ── */
+      #sec-nuevo { display: none !important; }
     }
   </style>
 </head>
@@ -1550,6 +1614,17 @@
     </div>
     <div id="menu-nuevo-overlay" style="display:none;position:fixed;inset:0;z-index:499" onclick="cerrarMenuNuevo()"></div>
   </nav>
+
+  <!-- FAB nuevo contrato (solo desktop) -->
+  <button id="fab-nuevo-desktop" onclick="toggleMenuNuevo(event)"
+    style="display:none;position:fixed;bottom:28px;right:28px;z-index:300;
+    width:52px;height:52px;border-radius:50%;background:var(--gold);
+    border:none;color:#1a1000;font-size:24px;cursor:pointer;
+    box-shadow:0 4px 20px rgba(201,168,76,0.45);
+    align-items:center;justify-content:center;
+    transition:filter 150ms,transform 150ms;">
+    <i class="ti ti-plus"></i>
+  </button>
 
   <!-- Barra flotante de selección masiva — TEMPORAL para pruebas -->
   <div class="bulk-bar" id="bulk-bar">
@@ -1779,42 +1854,40 @@
     <div id="sec-clientes" class="seccion">
 
   <!-- Header -->
-  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px">
+  <div class="sec-clientes-header">
     <div>
-      <div style="font-size:22px;font-weight:700;letter-spacing:-0.4px;color:var(--ink-1)">Clientes</div>
-      <div style="font-size:13px;color:var(--ink-3);margin-top:3px">Pipeline de ventas y seguimiento de clientes</div>
+      <div class="sec-clientes-titulo">Clientes</div>
+      <div class="sec-clientes-sub">Pipeline de ventas y seguimiento</div>
     </div>
     <button class="btn-secundario btn-sm" onclick="cargarClientes()" title="Actualizar"><i class="ti ti-refresh"></i></button>
   </div>
 
-  <!-- Pipeline activo -->
-  <div style="margin-bottom:24px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px">Pipeline activo</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap" id="pipeline-chips">
+  <div class="clientes-grid">
+    <!-- Pipeline activo -->
+    <div class="clientes-col-pipeline">
+      <div class="sec-sublabel">Pipeline activo</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="pipeline-chips">
         <button class="filter-chip on" data-estatus="todos" onclick="filtrarPipeline(this)">Todos</button>
         <button class="filter-chip" data-estatus="nuevo" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#7D3C98"></span>Nuevo</button>
         <button class="filter-chip" data-estatus="intentando" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#C97B22"></span>Intentando</button>
         <button class="filter-chip" data-estatus="en_seguimiento" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#2471A3"></span>Seguimiento</button>
         <button class="filter-chip" data-estatus="cotizado" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#1A5276"></span>Cotizado</button>
       </div>
+      <div id="pipeline-lista">
+        <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
+      </div>
     </div>
-    <div id="pipeline-lista">
-      <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
-    </div>
-  </div>
 
-  <!-- Todos los clientes -->
-  <div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px">Todos los clientes</div>
-    </div>
-    <div style="position:relative;margin-bottom:12px">
-      <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:14px;pointer-events:none"></i>
-      <input type="text" id="clientes-search" placeholder="Buscar por nombre o teléfono…" oninput="filtrarListaClientes()" style="padding-left:34px;font-size:13px;width:100%">
-    </div>
-    <div id="clientes-lista">
-      <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
+    <!-- Todos los clientes -->
+    <div class="clientes-col-lista">
+      <div class="sec-sublabel">Todos los clientes</div>
+      <div style="position:relative;margin-bottom:12px">
+        <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:14px;pointer-events:none"></i>
+        <input type="text" id="clientes-search" placeholder="Buscar por nombre o teléfono…" oninput="filtrarListaClientes()" style="padding-left:34px;font-size:13px;width:100%">
+      </div>
+      <div id="clientes-lista">
+        <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
+      </div>
     </div>
   </div>
 
@@ -2094,9 +2167,9 @@
   <!-- KPI cards + pay progress (populated by renderPanel) -->
   <div id="panel-kpis"></div>
   <div class="panel-tabs">
-    <button class="panel-tab-btn activo" onclick="mostrarPanelTab('general', this)">General</button>
-    <button class="panel-tab-btn" onclick="mostrarPanelTab('produccion', this)">Producción</button>
-    <button class="panel-tab-btn" onclick="mostrarPanelTab('entrega', this)">Entrega</button>
+    <button class="panel-tab-btn activo" onclick="mostrarPanelTab('general', this)">Info</button>
+    <button class="panel-tab-btn" onclick="mostrarPanelTab('produccion', this)">Pagos</button>
+    <button class="panel-tab-btn" onclick="mostrarPanelTab('entrega', this)">Acciones</button>
   </div>
   <div id="pane-general" class="panel-tab-pane activo"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
   <div id="pane-produccion" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
@@ -2105,6 +2178,16 @@
   <div id="panel-action-bar"></div>
 </div>
 <div id="overlay" onclick="cerrarPanel()"></div>
+
+<!-- Drawer nuevo contrato (desktop) -->
+<div id="drawer-nuevo" style="display:none;position:fixed;right:0;top:0;bottom:0;width:580px;background:var(--card);border-left:1px solid var(--border);z-index:400;overflow-y:auto;transform:translateX(100%);transition:transform 300ms cubic-bezier(0.16,1,0.3,1)">
+  <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:17px;font-weight:800;color:var(--ink-1)">Nuevo contrato</span>
+    <button onclick="cerrarDrawerNuevo()" style="background:var(--page);border:1px solid var(--border);border-radius:8px;width:34px;height:34px;cursor:pointer;color:var(--ink-3);display:flex;align-items:center;justify-content:center;font-size:18px"><i class="ti ti-x"></i></button>
+  </div>
+  <div id="drawer-nuevo-content" style="padding:20px 24px"></div>
+</div>
+<div id="drawer-nuevo-overlay" onclick="cerrarDrawerNuevo()" style="display:none;position:fixed;inset:0;background:rgba(28,28,30,0.25);z-index:399"></div>
 
 <!-- ═══ SCRIPT ═══════════════════════════════════════════════════════════════ -->
 <script>
@@ -2411,7 +2494,35 @@ function mostrarPanelTab(id, btn) {
 }
 
 function irANuevo() {
+  if (window.innerWidth >= 1024) {
+    abrirDrawerNuevo();
+    return;
+  }
   mostrarTab('nuevo', null);
+}
+
+function abrirDrawerNuevo() {
+  var drawer = document.getElementById('drawer-nuevo');
+  var overlay = document.getElementById('drawer-nuevo-overlay');
+  var content = document.getElementById('drawer-nuevo-content');
+  var formCard = document.querySelector('#sec-nuevo .form-card');
+  if (formCard && content && !content.contains(formCard)) {
+    content.appendChild(formCard);
+  }
+  if (drawer) { drawer.style.transform = 'translateX(0)'; }
+  if (overlay) { overlay.style.display = 'block'; }
+}
+
+function cerrarDrawerNuevo() {
+  var drawer = document.getElementById('drawer-nuevo');
+  var overlay = document.getElementById('drawer-nuevo-overlay');
+  var sec = document.getElementById('sec-nuevo');
+  var formCard = document.querySelector('#drawer-nuevo-content .form-card');
+  if (formCard && sec && !sec.contains(formCard)) {
+    sec.appendChild(formCard);
+  }
+  if (drawer) { drawer.style.transform = 'translateX(100%)'; }
+  if (overlay) { overlay.style.display = 'none'; }
 }
 
 function actualizarNavBadges(contratos) {
@@ -4281,6 +4392,7 @@ function limpiarFormCrear() {
 
   var logoHint = document.getElementById('ac-logo-hint-est');
   if (logoHint) logoHint.remove();
+  if (window.innerWidth >= 1024) cerrarDrawerNuevo();
 }
 
 // ── AUTOCOMPLETE CLIENTES ─────────────────────────────────────────────────────
@@ -5382,9 +5494,9 @@ function renderPipeline(trabajos) {
     try { props = JSON.parse(t.propiedades_interes_json||'[]'); } catch(e) {}
     var detalleId = 'trab-det-' + t.id;
 
-    html += '<div style="background:var(--card);border-radius:12px;border:1.5px solid var(--border);overflow:hidden">';
+    html += '<div class="trab-card">';
     html += '<div style="height:3px;background:'+color+'"></div>';
-    html += '<div style="padding:12px 16px">';
+    html += '<div class="trab-card-inner">';
     html += '<div style="display:flex;align-items:flex-start;gap:10px">';
     html += '<div class="td-avatar '+avCls+'" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">'+ini+'</div>';
     html += '<div style="flex:1;min-width:0">';
@@ -5470,21 +5582,21 @@ function renderListaClientes(clientes) {
     var avCls = ['av-a','av-b','av-c','av-d','av-e','av-f'][(nombre||'').charCodeAt(0)%6];
     var origenStr = ORIGEN_LABELS[clienteOrigenVal(c)] || '';
     var waNum = normalizarTelWA(telefono||'');
-    html += '<div style="background:var(--card);border-radius:10px;border:1.5px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px">';
-    html += '<div class="td-avatar '+avCls+'" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">'+ini+'</div>';
-    html += '<div style="flex:1;min-width:0">';
-    html += '<div style="font-size:14px;font-weight:700;color:var(--ink-1)">'+esc(nombre)+'</div>';
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:3px">';
-    if (telefono) html += '<a href="tel:'+esc(telefono)+'" style="font-size:12px;color:var(--ink-3);text-decoration:none">'+esc(telefono)+'</a>';
-    if (correo) html += '<span style="font-size:12px;color:var(--ink-3)">'+esc(correo)+'</span>';
-    if (origenStr) html += '<span style="font-size:11px;background:var(--page);border:1px solid var(--border);border-radius:20px;padding:1px 8px;color:var(--ink-3)">'+esc(origenStr)+'</span>';
-    if (trabajosActivos > 0) html += '<span style="font-size:11px;font-weight:700;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00);border-radius:20px;padding:1px 8px">'+trabajosActivos+' en pipeline</span>';
+    html += '<div class="cli-card">';
+    html += '<div class="td-avatar '+avCls+'" style="width:36px;height:36px;border-radius:9px;flex-shrink:0">'+ini+'</div>';
+    html += '<div class="cli-card-body">';
+    html += '<div class="cli-card-nombre">'+esc(nombre)+'</div>';
+    html += '<div class="cli-card-meta">';
+    if (telefono) html += '<a href="tel:'+esc(telefono)+'" class="cli-card-tel">'+esc(telefono)+'</a>';
+    if (correo) html += '<span class="cli-card-correo">'+esc(correo)+'</span>';
+    if (origenStr) html += '<span class="badge" style="font-size:11px;background:var(--page);border:1px solid var(--border);color:var(--ink-3)">'+esc(origenStr)+'</span>';
+    if (trabajosActivos > 0) html += '<span class="badge" style="background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00)">'+trabajosActivos+' en pipeline</span>';
     if (numContratos > 0) html += '<span style="font-size:11px;color:var(--ink-3)">'+numContratos+' contrato'+(numContratos!==1?'s':'')+'</span>';
     html += '</div>';
     html += '</div>';
-    html += '<div style="display:flex;gap:6px;flex-shrink:0">';
-    if (telefono && waNum) html += '<a href="https://wa.me/'+waNum+'" target="_blank" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(37,211,102,0.12);color:#128C7E;text-decoration:none" title="WhatsApp"><i class="ti ti-brand-whatsapp" style="font-size:15px"></i></a>';
-    if (id) html += '<button onclick="abrirModalTrabajo('+jsArg(id)+')" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:none;cursor:pointer;color:var(--ink-2)" title="Nuevo trabajo"><i class="ti ti-calendar-plus" style="font-size:15px"></i></button>';
+    html += '<div class="cli-card-acciones">';
+    if (telefono && waNum) html += '<a href="https://wa.me/'+waNum+'" target="_blank" class="cli-card-action-btn wa" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>';
+    if (id) html += '<button onclick="abrirModalTrabajo('+jsArg(id)+')" class="cli-card-action-btn" title="Nuevo trabajo"><i class="ti ti-calendar-plus"></i></button>';
     html += '</div>';
     html += '</div>';
   });
