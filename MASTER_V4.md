@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-02 (Ronda 34 — Mejoras portal equipo: post-produccion, cliente, entregables, Drive, Calendar simplificado)
+> Última actualización: 2026-06-02 22:41:16 CST (Ronda 35 — CRM Clientes/Trabajos/Actividades + auditorías pre-merge)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -82,7 +82,10 @@ Sistema de contratos de Inmuebles Audiovisuales reconstruido desde cero sobre Cl
             ├── checklist.js — obtenerChecklist, guardarChecklist
             ├── archivos.js  — subirArchivo, subirArchivoAdmin
             ├── revision.js  — obtenerRevision, guardarRevision (R18)
-            └── equipo.js    — obtenerEquipo, marcarListos (R31)
+            ├── equipo.js    — obtenerEquipo, marcarProduccion (R31/R34)
+            ├── clientes.js  — CRM clientes: crear/listar/obtener/actualizar (R35)
+            ├── trabajos.js  — pipeline comercial por cliente (R35)
+            └── actividades.js — llamadas/notas/actividad por cliente/trabajo (R35)
 ```
 
 ---
@@ -168,6 +171,9 @@ Los archivos de `frontend/` se suben automáticamente como assets estáticos ví
 | `checklist` | Un checklist por contrato. PK: `contrato_token`. |
 | `revisiones_video` | Notas de revisión de video por contrato. FK: `contrato_id` → `contratos.token`. Columnas: `id`, `contrato_id`, `minuto_segundo`, `descripcion_ajuste`, `fecha`. Agregada en R18. |
 | `prospectos` | Llamadas agendadas con prospectos. PK: `id` (UUID). Columnas: `nombre`, `telefono`, `interes`, `fecha_llamada`, `hora_llamada`, `notas`, `estatus` (pendiente/contactado/convertido/descartado), `fecha_creacion`. Agregada en R32. **Tabla creada manualmente por Bruno el 2026-06-02** (DROP + CREATE desde wrangler CLI — la primera migración había creado la tabla sin columnas). |
+| `clientes` | CRM de clientes. PK: `id` (UUID). Columnas: `nombre`, `telefono`, `correo`, `origen`, `notas_perfil`, `fecha_creacion`, `fecha_ultima_actividad`. Agregada en R35. |
+| `trabajos` | Pipeline comercial ligado a `clientes`. PK: `id` (UUID). Columnas: `cliente_id`, `estatus`, `interes`, JSON de paquetes/portafolio/propiedades, `presupuesto_estimado`, `notas`, `contrato_token`, fechas. Agregada en R35. |
+| `actividades` | Bitácora de llamadas/notas por cliente y trabajo. PK: `id` (UUID). Columnas: `cliente_id`, `trabajo_id`, `tipo`, `descripcion`, `fecha_actividad`, `hora`, `fecha_creacion`. Agregada en R35. |
 
 ### Nota importante — D1 no soporta foreign keys
 `PRAGMA foreign_keys` es ignorado en D1. Las cascadas de eliminación están implementadas manualmente en código con `db.batch()` en orden correcto: checklist → propiedades → abonos → tokens → contratos.
@@ -328,6 +334,44 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 35 — CRM Clientes/Trabajos/Actividades + auditorías pre-merge (2026-06-02)
+
+> **Migración D1 requerida — ejecutar manualmente si la DB aún no tiene tablas CRM:**
+> ```bash
+> cd worker
+> wrangler d1 execute contratos-iav-v4 --remote --file=migrations/r35-clientes-trabajos.sql
+> ```
+>
+> La D1 de producción ya tenía columnas previas (`entrega_express`, `formato_video`, `requiere_acceso`, `ocultar_formato_video`, `tiene_recorrido`, `cliente_id`). La migración R35 crea tablas/índices CRM y evita `ALTER TABLE ADD COLUMN` duplicados.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R35-01 | `worker/src/routes/clientes.js` | Nuevo handler CRM: `crearCliente`, `listarClientes`, `obtenerCliente`, `actualizarCliente`. `listarClientes` mantiene alias legacy (`cliente_id`, `nombre_cliente`, etc.) y suma contratos antiguos por correo cuando aún no tienen `cliente_id`. |
+| R35-02 | `worker/src/routes/trabajos.js` | Nuevo pipeline comercial: crear/listar/actualizar trabajos, cambiar estatus, convertir trabajo a contrato. Escrituras relacionadas usan `batch()` y `convertido` solo se permite con contrato asociado. |
+| R35-03 | `worker/src/routes/actividades.js` | Nuevo módulo de actividades: agendar llamada, agregar nota y listar actividad. Las llamadas se mandan al adapter en background con `ctx.waitUntil()`. |
+| R35-04 | `worker/src/index.js` | Registra rutas CRM (`RUTAS_CLIENTES`, `RUTAS_TRABAJOS`, `RUTAS_ACTIVIDADES`) y deja `listarClientes` únicamente bajo `clientes.js`. |
+| R35-05 | `worker/src/routes/contratos.js` | `crearContrato` acepta `clienteId`/`trabajoId`; valida pertenencia, rechaza anticipos negativos y limpia trabajos ligados cuando se elimina un contrato. |
+| R35-06 | `worker/src/routes/portal.js` | `firmaCliente` actualiza contrato y propiedades en un solo batch para evitar firmas parciales. |
+| R35-07 | `worker/src/routes/revision.js` | `guardarRevision` filtra notas vacías, inserta en batch y notifica al adapter solo lo realmente guardado. |
+| R35-08 | `worker/src/google.js` + `worker/src/cron.js` | `callAdapter` y `syncToSheets` detectan respuestas `{ error }` / `{ ok:false }` aunque Apps Script responda HTTP 200. |
+| R35-09 | `worker/schema.sql` + `worker/migrations/r35-clientes-trabajos.sql` | Schema completo actualizado con `clientes`, `trabajos`, `actividades` e índices. Migración R35 enfocada en tablas/índices para no chocar con columnas ya existentes. |
+| R35-10 | `frontend/admin.html` | `#sec-prospectos` pasa a experiencia Clientes: pipeline, lista de clientes, dropdown Nuevo, modales cliente/trabajo, búsqueda de cliente existente en contrato y agendar llamada desde contrato. |
+| R35-11 | `frontend/admin.html` | Fixes de auditoría: selección visual de cliente sincronizada con hidden `clienteId`, clientes legacy sin id no se seleccionan como existentes, limpieza de modales/form, `renderHoyStrip` con fecha local y escape HTML. |
+| R35-12 | `worker/src/cron.js` | Backup horario incluye `clientes`, `trabajos` y `actividades` en `syncBackup`. |
+| R35-13 | `MASTER_V4.md` | Documenta R35 y estado pre-merge a `main`. |
+
+**Commits clave R35 antes de merge:**
+
+| Commit | Descripción |
+|--------|-------------|
+| `992b199` | Backend R35 inicial: clientes, trabajos, actividades y contratos ligados a CRM. |
+| `1fb43a7` | Frontend R35: sección Clientes, pipeline trabajos, modales y búsqueda cliente-contrato. |
+| `47419ec` | Primera auditoría/fixes R35. |
+| `fc38af8` | Segunda auditoría/fixes de migración, legacy y seguridad frontend. |
+| `8f383e3` | Tercera auditoría/fixes: ruteo `listarClientes`, conteos legacy, batches, adapter errors, selección cliente y migración R35 segura. |
+
+---
 
 ### Ronda 34 — Mejoras portal equipo + Calendar simplificado (2026-06-02)
 
@@ -1013,9 +1057,9 @@ ALTER TABLE contratos ADD COLUMN origen TEXT DEFAULT 'admin'
 
 | Capa | Versión | Estado |
 |------|---------|--------|
-| Worker + Frontend | R18 | En rama `claude/determined-hamilton-TMJ0G` — pendiente merge a `main` |
-| D1 Schema | — | Migraciones R18 ejecutadas manualmente (ver Ronda 18). `entrega_express` de R17 también ejecutada. |
-| Adapter Apps Script | — | Pendiente deploy — incluye cambios de Rondas 4–11 + `notificarRevision` de R18 |
+| Worker + Frontend | R35 | En rama `claude/loving-cerf-fyy7y` — listo para merge a `main` y despliegue por GitHub Actions. |
+| D1 Schema | R35 | `schema.sql` completo actualizado. D1 producción ya contiene columnas previas; aplicar `worker/migrations/r35-clientes-trabajos.sql` si faltan tablas CRM. |
+| Adapter Apps Script | R35 | No hubo cambios de adapter en R35. Sigue pendiente desplegar manualmente cambios documentados de rondas previas si no se han pegado en script.google.com. |
 
 ---
 
@@ -1057,8 +1101,9 @@ Features descartadas explícitamente. No incluirlas en ningún plan ni sugerirla
 
 - [x] Adapter desplegado (2026-05-30).
 - [x] Migraciones D1 de R17 y R18 ejecutadas manualmente (2026-06-02).
-- [ ] **Adapter Apps Script:** desplegar nueva versión de `AdapterScript4_v1.js` en script.google.com — incluye `notificarRevision` (R18), cambios Calendar de acceso/caseta (R29) y todos los cambios de Rondas 4–17.
-- [ ] **Merge a main:** la rama `claude/determined-hamilton-TMJ0G` contiene todos los cambios de R18. Hacer merge/PR para que GitHub Actions despliegue a Cloudflare.
+- [ ] **Adapter Apps Script:** desplegar nueva versión de `AdapterScript4_v1.js` en script.google.com si aún no se pegó — incluye `notificarRevision` (R18), cambios Calendar de acceso/caseta (R29/R34) y todos los cambios de Rondas 4–17.
+- [ ] **Merge a main:** la rama `claude/loving-cerf-fyy7y` contiene R35 auditado. Hacer merge para que GitHub Actions despliegue a Cloudflare.
+- [ ] **D1 R35:** confirmar/aplicar `worker/migrations/r35-clientes-trabajos.sql` si producción no tiene `clientes`, `trabajos`, `actividades` e índices CRM.
 - [ ] `procesarPDFsPendientes` en Apps Script requiere trigger automático — verificar que esté configurado en script.google.com para correr cada minuto.
 - [ ] Cuando el correo del cliente está vacío al crear el contrato, no llega ningún correo en la firma. El cliente debe llenarlo en el portal antes de firmar.
 - [ ] El folio solo se genera para contratos estándar con fecha de sesión. Contratos particulares no tienen folio hasta configurar la propiedad.

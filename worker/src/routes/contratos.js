@@ -35,18 +35,6 @@ export async function handleContratos(request, env, ctx, action) {
     return ok({ ok: true, contratos: lista });
   }
 
-  if (action === 'listarClientes') {
-    const { results } = await query(db,
-      `SELECT nombre_cliente, correo_cliente,
-              MAX(telefono_cliente) as telefono_cliente,
-              COUNT(*) as num_contratos, MAX(fecha_creacion) as ultimo_contrato,
-              SUM(precio_total) as total_facturado
-       FROM contratos WHERE oculto = 0 AND correo_cliente != ''
-       GROUP BY correo_cliente ORDER BY ultimo_contrato DESC`
-    );
-    return ok({ ok: true, clientes: results });
-  }
-
   if (action === 'obtenerContrato') {
     const token = new URL(request.url).searchParams.get('token');
     if (!token) return err('Token requerido');
@@ -98,7 +86,7 @@ export async function handleContratos(request, env, ctx, action) {
     const { nombreCliente, correoCliente, telefonoCliente,
             tipoPaquete, paqueteBase, adicionales, extrasAcordados,
             precioTotal, anticipo, notasContrato, numPropiedades,
-            propiedades: propsData } = body;
+            propiedades: propsData, clienteId, trabajoId } = body;
 
     if (!nombreCliente) return err('Nombre del cliente requerido');
     if (!propsData || !propsData.length) return err('Al menos una propiedad es requerida');
@@ -106,10 +94,10 @@ export async function handleContratos(request, env, ctx, action) {
 
     const totalNum = parseFloat(precioTotal) || 0;
     if (totalNum <= 0) return err('El precio total debe ser mayor a $0');
-    const anticNum = Math.min(
-      anticipo !== undefined && anticipo !== '' ? parseFloat(anticipo) || 0 : 0,
-      totalNum
-    );
+    const anticipoProvisto = anticipo !== undefined && anticipo !== '';
+    const anticipoRaw = anticipoProvisto ? parseFloat(anticipo) : 0;
+    if (!Number.isFinite(anticipoRaw) || anticipoRaw < 0) return err('El anticipo no puede ser negativo');
+    const anticNum = Math.min(anticipoRaw, totalNum);
 
     // Validar propiedades
     const prop1 = propsData[0];
@@ -137,23 +125,42 @@ export async function handleContratos(request, env, ctx, action) {
     );
     const adicionalesJSON = JSON.stringify([...adicionalesOfrecidos, ...extrasObjs]);
 
-    // Siempre generar folio desde propiedad 1
-    const folio = prop1.fechaSesion ? await asignarFolio(db, prop1.fechaSesion) : null;
+	    let clienteIdFinal = clienteId || '';
+	    let trabajoOrigen = null;
+	    if (trabajoId) {
+	      trabajoOrigen = await queryOne(db, 'SELECT id, cliente_id, estatus, contrato_token FROM trabajos WHERE id=?', [trabajoId]);
+	      if (!trabajoOrigen) return err('Trabajo no encontrado', 404);
+	      if (trabajoOrigen.estatus === 'convertido' && trabajoOrigen.contrato_token) {
+	        return err('Trabajo ya convertido', 409);
+	      }
+	      if (clienteIdFinal && clienteIdFinal !== trabajoOrigen.cliente_id) {
+	        return err('El trabajo pertenece a otro cliente', 409);
+	      }
+	      clienteIdFinal = trabajoOrigen.cliente_id;
+	    }
+	    if (clienteIdFinal) {
+	      const clienteExiste = await queryOne(db, 'SELECT id FROM clientes WHERE id=?', [clienteIdFinal]);
+	      if (!clienteExiste) return err('Cliente no encontrado', 404);
+	    }
+
+	    // Siempre generar folio desde propiedad 1
+	    const folio = prop1.fechaSesion ? await asignarFolio(db, prop1.fechaSesion) : null;
 
     const portalToken = uuid();
     const portalExpira = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
     const creacionNow = now();
 
-    await batch(db, [
-      {
-        sql: `INSERT INTO contratos (token, folio, nombre_cliente, correo_cliente, telefono_cliente,
-              tipo_contrato, tipo_paquete, paquete_base, adicionales_json, precio_base, precio_total,
-              anticipo, saldo_pendiente, estatus, fecha_creacion, num_propiedades, notas_contrato)
-              VALUES (?, ?, ?, ?, ?, 'estandar', ?, ?, ?, ?, ?, ?, ?, 'Pendiente firma', ?, ?, ?)`,
-        params: [token, folio, nombreCliente, correoCliente || '', telefonoCliente || '',
-                 tipoPaqueteFinal, paqueteBaseFinal,
-                 adicionalesJSON, precioBase, totalNum, anticNum, saldoPendiente,
-                 creacionNow, propsData.length, notasContrato || '']
+	    const statements = [
+	      {
+	        sql: `INSERT INTO contratos (token, folio, nombre_cliente, correo_cliente, telefono_cliente, cliente_id,
+	              tipo_contrato, tipo_paquete, paquete_base, adicionales_json, precio_base, precio_total,
+	              anticipo, saldo_pendiente, estatus, fecha_creacion, num_propiedades, notas_contrato)
+	              VALUES (?, ?, ?, ?, ?, ?, 'estandar', ?, ?, ?, ?, ?, ?, ?, 'Pendiente firma', ?, ?, ?)`,
+	        params: [token, folio, nombreCliente, correoCliente || '', telefonoCliente || '',
+	                 clienteIdFinal,
+	                 tipoPaqueteFinal, paqueteBaseFinal,
+	                 adicionalesJSON, precioBase, totalNum, anticNum, saldoPendiente,
+	                 creacionNow, propsData.length, notasContrato || '']
       },
       ...propsData.map((p, i) => ({
         sql: `INSERT INTO propiedades (contrato_token, num_propiedad, tipo, paquete, entregables,
@@ -168,11 +175,37 @@ export async function handleContratos(request, env, ctx, action) {
                  p.perimetroUrl || '', p.logoUrl || '', JSON.stringify(p.datosEspecificos || {}),
                  p.formatoVideo || 'vertical_nativo', p.ocultarFormatoVideo ?? 1]
       })),
-      {
-        sql: 'INSERT INTO tokens (token, contrato_id, tipo, expira, usado) VALUES (?, ?, ?, ?, 0)',
-        params: [portalToken, token, 'contrato', portalExpira]
-      }
-    ]);
+	      {
+	        sql: 'INSERT INTO tokens (token, contrato_id, tipo, expira, usado) VALUES (?, ?, ?, ?, 0)',
+	        params: [portalToken, token, 'contrato', portalExpira]
+	      }
+	    ];
+
+	    if (trabajoOrigen) {
+	      const tsConv = now();
+	      statements.push(
+	        {
+	          sql: `UPDATE trabajos SET estatus='convertido', contrato_token=?, fecha_ultima_actividad=? WHERE id=?`,
+	          params: [token, tsConv, trabajoId]
+	        },
+	        {
+	          sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
+	          params: [tsConv, clienteIdFinal]
+	        },
+	        {
+	          sql: `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
+	                VALUES (?, ?, ?, 'contrato_generado', ?, ?, '', ?)`,
+	          params: [uuid(), clienteIdFinal, trabajoId, 'Contrato generado: ' + token, tsConv.substring(0, 10), tsConv]
+	        }
+	      );
+	    } else if (clienteIdFinal) {
+	      statements.push({
+	        sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
+	        params: [creacionNow, clienteIdFinal]
+	      });
+	    }
+
+	    await batch(db, statements);
 
     const linkPortal = `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`;
     return ok({ ok: true, token, folio, url: linkPortal, linkPortal });
@@ -412,7 +445,9 @@ export async function handleContratos(request, env, ctx, action) {
   if (action === 'eliminarContrato') {
     const { token } = await request.json();
     // D1 no respeta FOREIGN KEYS — cascada manual en orden correcto
+    const ts = now();
     await batch(db, [
+      { sql: `UPDATE trabajos SET estatus='cotizado', contrato_token='', fecha_ultima_actividad=? WHERE contrato_token=?`, params: [ts, token] },
       { sql: 'DELETE FROM revisiones_video WHERE contrato_id=?', params: [token] },
       { sql: 'DELETE FROM checklist WHERE contrato_token=?', params: [token] },
       { sql: 'DELETE FROM propiedades WHERE contrato_token=?', params: [token] },
@@ -433,20 +468,27 @@ export async function handleContratos(request, env, ctx, action) {
       'SELECT * FROM propiedades WHERE contrato_token=? AND num_propiedad=?', [token, numPropiedad]
     );
     if (!p) return err('Propiedad no encontrada', 404);
-    await run(db,
-      'UPDATE propiedades SET fecha_sesion=?, hora_sesion=? WHERE contrato_token=? AND num_propiedad=?',
-      [fecha, hora || p.hora_sesion, token, numPropiedad]
-    );
-    const folioAnterior = c.folio;
-    let folioNuevo = folioAnterior;
-    if (parseInt(numPropiedad) === 1) {
-      folioNuevo = await asignarFolio(db, fecha);
-      await run(db, 'UPDATE contratos SET folio=? WHERE token=?', [folioNuevo, token]);
-    }
-    const { results: paquetesRe } = await query(db, 'SELECT clave, nombre FROM paquetes');
-    const pkMapRe = Object.fromEntries(paquetesRe.map(r => [r.clave, r.nombre]));
-    callAdapter(ctx, env, 'reagendarPropiedad', {
-      token, numPropiedad, fecha, hora,
+	    const folioAnterior = c.folio;
+	    let folioNuevo = folioAnterior;
+	    if (parseInt(numPropiedad) === 1) {
+	      folioNuevo = await asignarFolio(db, fecha);
+	    }
+	    const horaFinal = hora || p.hora_sesion;
+	    const statements = [{
+	      sql: 'UPDATE propiedades SET fecha_sesion=?, hora_sesion=? WHERE contrato_token=? AND num_propiedad=?',
+	      params: [fecha, horaFinal, token, numPropiedad]
+	    }];
+	    if (parseInt(numPropiedad) === 1) {
+	      statements.push({
+	        sql: 'UPDATE contratos SET folio=? WHERE token=?',
+	        params: [folioNuevo, token]
+	      });
+	    }
+	    await batch(db, statements);
+	    const { results: paquetesRe } = await query(db, 'SELECT clave, nombre FROM paquetes');
+	    const pkMapRe = Object.fromEntries(paquetesRe.map(r => [r.clave, r.nombre]));
+	    callAdapter(ctx, env, 'reagendarPropiedad', {
+	      token, numPropiedad, fecha, hora: horaFinal,
       folioAnterior,
       folioNuevo,
       contrato: { ...c, folio: folioNuevo, paquete_base: pkMapRe[c.paquete_base] || c.paquete_base },

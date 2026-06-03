@@ -1520,14 +1520,14 @@
         <span class="bnav-item-icon"><i class="ti ti-file-text"></i></span>
         <span class="bnav-item-label">Contratos</span>
       </button>
-      <button class="bnav-btn" data-tab="nuevo" onclick="irANuevo()">
-        <span class="bnav-item-icon"><i class="ti ti-file-plus"></i></span>
+      <button class="bnav-btn" data-tab="nuevo" onclick="toggleMenuNuevo(event)">
+        <span class="bnav-item-icon"><i class="ti ti-plus"></i></span>
         <span class="bnav-item-label">Nuevo</span>
       </button>
-      <button class="bnav-btn" data-tab="prospectos" onclick="mostrarTabMobile('prospectos',this)">
-        <span class="bnav-item-icon"><i class="ti ti-phone-call"></i></span>
-        <span class="bnav-item-label">Prospectos</span>
-        <span class="bnav-badge subtle" id="bnav-badge-prospectos" style="display:none"></span>
+      <button class="bnav-btn" data-tab="clientes" onclick="mostrarTabMobile('clientes',this)">
+        <span class="bnav-item-icon"><i class="ti ti-users"></i></span>
+        <span class="bnav-item-label">Clientes</span>
+        <span class="bnav-badge" id="bnav-badge-clientes" style="display:none"></span>
       </button>
       <button class="bnav-btn" data-tab="ajustes" onclick="mostrarTabMobile('ajustes',this)">
         <span class="bnav-item-icon"><i class="ti ti-settings"></i></span>
@@ -1542,6 +1542,13 @@
       </div>
       <button class="bnav-logout-btn" onclick="cerrarSesion()" title="Cerrar sesión"><i class="ti ti-logout"></i></button>
     </div>
+    <!-- Dropdown menú Nuevo -->
+    <div id="menu-nuevo" style="display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--card);border:1.5px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:500;min-width:200px;overflow:hidden">
+      <button onclick="cerrarMenuNuevo();irANuevo()" style="width:100%;text-align:left;padding:13px 18px;background:none;border:none;border-bottom:1px solid var(--border);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--ink-1)"><i class="ti ti-file-plus" style="font-size:16px;color:var(--gold)"></i> Nuevo contrato</button>
+      <button onclick="cerrarMenuNuevo();abrirModalCliente()" style="width:100%;text-align:left;padding:13px 18px;background:none;border:none;border-bottom:1px solid var(--border);font-size:14px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--ink-1)"><i class="ti ti-user-plus" style="font-size:16px;color:var(--gold)"></i> Nuevo cliente</button>
+      <button onclick="cerrarMenuNuevo();abrirModalTrabajo(null)" style="width:100%;text-align:left;padding:13px 18px;background:none;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--ink-1)"><i class="ti ti-calendar-plus" style="font-size:16px;color:var(--gold)"></i> Nuevo trabajo</button>
+    </div>
+    <div id="menu-nuevo-overlay" style="display:none;position:fixed;inset:0;z-index:499" onclick="cerrarMenuNuevo()"></div>
   </nav>
 
   <!-- Barra flotante de selección masiva — TEMPORAL para pruebas -->
@@ -1708,6 +1715,21 @@
         <p class="form-desc">Configura el contrato para tu cliente. Agrega una o más propiedades.</p>
 
         <!-- Datos del cliente -->
+        <div id="banner-desde-trabajo" style="display:none;background:rgba(30,132,73,0.08);border:1.5px solid rgba(30,132,73,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#1E8449;align-items:center;justify-content:space-between">
+          <span><i class="ti ti-circle-check" style="margin-right:6px"></i>Contrato para: <strong id="banner-trabajo-nombre"></strong></span>
+          <button onclick="limpiarOrigenTrabajoContrato()" style="background:none;border:none;color:#1E8449;cursor:pointer;font-size:16px;padding:0 4px">✕</button>
+        </div>
+        <div class="campo" id="campo-cliente-search-contrato">
+          <label>Cliente existente <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label>
+          <div style="position:relative">
+            <input type="text" id="contrato-cliente-search" placeholder="Buscar por nombre o teléfono…" oninput="buscarClienteParaContrato()" autocomplete="off">
+            <div id="contrato-cliente-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--card);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);max-height:160px;overflow-y:auto"></div>
+          </div>
+          <div id="contrato-cliente-seleccionado" style="display:none;margin-top:6px;font-size:12px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:6px;padding:6px 10px;align-items:center;justify-content:space-between">
+            <span id="contrato-cliente-sel-nombre" style="color:var(--gold-text,#8a6a00);font-weight:600"></span>
+            <button onclick="limpiarClienteContrato()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:12px">✕ quitar</button>
+          </div>
+        </div>
         <div class="campo">
           <label>Nombre del cliente</label>
           <input type="text" id="est-nombre" placeholder="Nombre completo">
@@ -1753,82 +1775,142 @@
 
     <!-- ── MÉTRICAS ─────────────────────────────────── -->
     <!-- ── AJUSTES (incluye Métricas, Paquetes y Clientes) ──── -->
-    <!-- ── PROSPECTOS ──────────────────────────────────── -->
-    <div id="sec-prospectos" class="seccion">
+    <!-- ── CLIENTES ──────────────────────────────────── -->
+    <div id="sec-clientes" class="seccion">
 
-      <!-- Header -->
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px">
-        <div>
-          <div style="font-size:22px;font-weight:700;letter-spacing:-0.4px;color:var(--ink-1)">Prospectos</div>
-          <div style="font-size:13px;color:var(--ink-3);margin-top:3px">Agenda llamadas y da seguimiento a clientes potenciales</div>
-        </div>
-        <button class="btn-secundario btn-sm" onclick="cargarProspectos()" title="Actualizar"><i class="ti ti-refresh"></i></button>
-      </div>
+  <!-- Header -->
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px">
+    <div>
+      <div style="font-size:22px;font-weight:700;letter-spacing:-0.4px;color:var(--ink-1)">Clientes</div>
+      <div style="font-size:13px;color:var(--ink-3);margin-top:3px">Pipeline de ventas y seguimiento de clientes</div>
+    </div>
+    <button class="btn-secundario btn-sm" onclick="cargarClientes()" title="Actualizar"><i class="ti ti-refresh"></i></button>
+  </div>
 
-      <!-- Layout 2 columnas desktop: form izq, lista der -->
-      <div id="prosp-layout" style="display:grid;grid-template-columns:1fr;gap:20px;align-items:start">
-
-        <!-- Formulario -->
-        <div style="background:var(--card);border-radius:14px;border:1.5px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,0.05);overflow:hidden">
-          <div style="padding:16px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
-            <div style="width:32px;height:32px;border-radius:8px;background:rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <i class="ti ti-calendar-plus" style="font-size:16px;color:var(--gold)"></i>
-            </div>
-            <div>
-              <div style="font-size:13px;font-weight:700;color:var(--ink-1)">Agendar llamada</div>
-              <div style="font-size:11px;color:var(--ink-3)">Crea el evento automáticamente en Calendar</div>
-            </div>
-          </div>
-          <div style="padding:18px 20px">
-            <div class="campo">
-              <label>Nombre del prospecto *</label>
-              <input type="text" id="prosp-nombre" placeholder="Ej. Juan Pérez">
-            </div>
-            <div class="campo">
-              <label>Teléfono *</label>
-              <div style="position:relative">
-                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:15px;pointer-events:none">📱</span>
-                <input type="tel" id="prosp-telefono" placeholder="81 1234 5678" style="padding-left:36px">
-              </div>
-            </div>
-            <div class="fila-2">
-              <div class="campo">
-                <label>Fecha *</label>
-                <input type="date" id="prosp-fecha">
-              </div>
-              <div class="campo">
-                <label>Hora *</label>
-                <input type="time" id="prosp-hora" value="10:00">
-              </div>
-            </div>
-            <div class="campo">
-              <label>¿Qué le interesa?</label>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px" id="prosp-interes-btns">
-                <button class="par-tipo-btn" data-val="foto" onclick="seleccionarInteresProsp(this)"><i class="ti ti-camera" style="font-size:13px;margin-right:4px"></i>Fotografía</button>
-                <button class="par-tipo-btn" data-val="video" onclick="seleccionarInteresProsp(this)"><i class="ti ti-video" style="font-size:13px;margin-right:4px"></i>Video + Drone</button>
-                <button class="par-tipo-btn" data-val="360" onclick="seleccionarInteresProsp(this)"><i class="ti ti-360" style="font-size:13px;margin-right:4px"></i>Recorrido 360°</button>
-                <button class="par-tipo-btn" data-val="combo" onclick="seleccionarInteresProsp(this)"><i class="ti ti-layout-grid" style="font-size:13px;margin-right:4px"></i>Paquete completo</button>
-              </div>
-              <input type="text" id="prosp-interes-otro" placeholder="O escribe qué le interesa…" style="margin-top:8px;font-size:13px">
-            </div>
-            <div class="campo" style="margin-bottom:0">
-              <label>Notas</label>
-              <textarea id="prosp-notas" rows="3" placeholder="Zona, tipo de propiedad, lo que platicaron por WhatsApp…" style="resize:vertical;font-size:13px"></textarea>
-            </div>
-          </div>
-          <div style="padding:14px 20px 18px;display:flex;align-items:center;gap:12px">
-            <button class="btn-primario gold" style="flex:1;justify-content:center" onclick="crearProspecto()"><i class="ti ti-calendar-plus"></i> Agendar llamada</button>
-            <span id="prosp-msg" style="font-size:12px;line-height:1.3;max-width:120px"></span>
-          </div>
-        </div>
-
-        <!-- Lista -->
-        <div id="lista-prospectos">
-          <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
-        </div>
-
+  <!-- Pipeline activo -->
+  <div style="margin-bottom:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px">Pipeline activo</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="pipeline-chips">
+        <button class="filter-chip on" data-estatus="todos" onclick="filtrarPipeline(this)">Todos</button>
+        <button class="filter-chip" data-estatus="nuevo" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#7D3C98"></span>Nuevo</button>
+        <button class="filter-chip" data-estatus="intentando" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#C97B22"></span>Intentando</button>
+        <button class="filter-chip" data-estatus="en_seguimiento" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#2471A3"></span>Seguimiento</button>
+        <button class="filter-chip" data-estatus="cotizado" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#1A5276"></span>Cotizado</button>
       </div>
     </div>
+    <div id="pipeline-lista">
+      <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- Todos los clientes -->
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px">Todos los clientes</div>
+    </div>
+    <div style="position:relative;margin-bottom:12px">
+      <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:14px;pointer-events:none"></i>
+      <input type="text" id="clientes-search" placeholder="Buscar por nombre o teléfono…" oninput="filtrarListaClientes()" style="padding-left:34px;font-size:13px;width:100%">
+    </div>
+    <div id="clientes-lista">
+      <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- Modal: Nuevo cliente -->
+  <div id="modal-nuevo-cliente" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:900;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:700;color:var(--ink-1)">Nuevo cliente</div>
+        <button onclick="cerrarModalCliente()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)">✕</button>
+      </div>
+      <div class="campo"><label>Nombre *</label><input type="text" id="cli-nombre" placeholder="Nombre completo"></div>
+      <div class="campo"><label>Teléfono</label><input type="tel" id="cli-telefono" placeholder="81 1234 5678"></div>
+      <div class="campo"><label>Correo</label><input type="email" id="cli-correo" placeholder="correo@ejemplo.com"></div>
+      <div class="campo">
+        <label>¿Cómo nos encontró?</label>
+        <select id="cli-origen">
+          <option value="">Sin especificar</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="instagram">Instagram</option>
+          <option value="referido">Referido</option>
+          <option value="facebook">Facebook</option>
+          <option value="google">Google</option>
+          <option value="llamada">Llamada directa</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="campo" style="margin-bottom:0"><label>Notas del perfil</label><textarea id="cli-notas-perfil" rows="3" placeholder="Notas generales sobre este cliente…" style="resize:vertical;font-size:13px"></textarea></div>
+      <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+        <button class="btn-primario gold" style="flex:1;justify-content:center" onclick="guardarNuevoCliente()"><i class="ti ti-user-plus"></i> Crear cliente</button>
+        <span id="cli-msg" style="font-size:12px;line-height:1.3;max-width:120px"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nuevo trabajo -->
+  <div id="modal-nuevo-trabajo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:900;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:700;color:var(--ink-1)">Nuevo trabajo</div>
+        <button onclick="cerrarModalTrabajo()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)">✕</button>
+      </div>
+      <div id="trab-cliente-banner" style="display:none;background:rgba(201,168,76,0.1);border:1.5px solid rgba(201,168,76,0.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--gold-text,#8a6a00)">
+        Cliente: <strong id="trab-cliente-nombre-banner"></strong>
+      </div>
+      <div class="campo" id="trab-cliente-search-campo">
+        <label>Cliente</label>
+        <input type="text" id="trab-cliente-search" placeholder="Buscar cliente existente…" oninput="buscarClienteParaTrabajo()" autocomplete="off">
+        <div id="trab-cliente-dropdown" style="display:none;position:absolute;z-index:10;background:var(--card);border:1.5px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);max-height:160px;overflow-y:auto;width:100%"></div>
+      </div>
+      <input type="hidden" id="trab-cliente-id">
+      <div class="campo">
+        <label>¿Qué le interesa?</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px" id="trab-interes-btns">
+          <button class="par-tipo-btn" data-val="foto" onclick="seleccionarInteresTrab(this)"><i class="ti ti-camera" style="font-size:13px;margin-right:4px"></i>Fotografía</button>
+          <button class="par-tipo-btn" data-val="video" onclick="seleccionarInteresTrab(this)"><i class="ti ti-video" style="font-size:13px;margin-right:4px"></i>Video + Drone</button>
+          <button class="par-tipo-btn" data-val="360" onclick="seleccionarInteresTrab(this)"><i class="ti ti-360" style="font-size:13px;margin-right:4px"></i>Recorrido 360°</button>
+          <button class="par-tipo-btn" data-val="combo" onclick="seleccionarInteresTrab(this)"><i class="ti ti-layout-grid" style="font-size:13px;margin-right:4px"></i>Paquete completo</button>
+        </div>
+      </div>
+      <div class="campo">
+        <label>Paquetes cotizados</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="trab-paquetes-checks">
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="RES-COMBO"> Residencial $4,500</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="TER-COMBO"> Terreno $4,000</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="IND-FOTO"> Fotografía $3,000</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="IND-VIDEO"> Video+Drone $3,000</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="IND-360"> 360° $3,000</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="ADD-LANDING"> +Landing $1,200</label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" value="ADD-FOLLETO"> +Folleto $800</label>
+        </div>
+      </div>
+      <div class="campo">
+        <label>Presupuesto estimado del cliente</label>
+        <input type="number" id="trab-presupuesto" placeholder="0">
+      </div>
+      <div class="campo">
+        <label>Propiedad de interés <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="trab-prop-zona" placeholder="Zona / colonia" style="flex:1;font-size:13px">
+          <input type="text" id="trab-prop-tipo" placeholder="Tipo" style="width:120px;font-size:13px">
+        </div>
+        <textarea id="trab-prop-desc" rows="2" placeholder="Descripción adicional…" style="margin-top:6px;resize:vertical;font-size:13px"></textarea>
+      </div>
+      <div class="fila-2">
+        <div class="campo"><label>Fecha llamada *</label><input type="date" id="trab-fecha-llamada"></div>
+        <div class="campo"><label>Hora</label><input type="time" id="trab-hora-llamada" value="10:00"></div>
+      </div>
+      <div class="campo" style="margin-bottom:0"><label>Notas</label><textarea id="trab-notas" rows="3" placeholder="Lo que platicaron, zona de interés, urgencia…" style="resize:vertical;font-size:13px"></textarea></div>
+      <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+        <button class="btn-primario gold" style="flex:1;justify-content:center" onclick="guardarNuevoTrabajo()"><i class="ti ti-calendar-plus"></i> Crear trabajo</button>
+        <span id="trab-msg" style="font-size:12px;line-height:1.3;max-width:120px"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
 
     <div id="sec-ajustes" class="seccion">
       <div class="ajustes-tabs">
@@ -2300,7 +2382,7 @@ function mostrarTab(id, btn) {
   const tabBtn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
   if (tabBtn) tabBtn.classList.add('activo');
   if (id === 'contratos') cargarContratos();
-  if (id === 'prospectos') cargarProspectos();
+  if (id === 'clientes') cargarClientes();
   if (id === 'ajustes') {
     const paneActivo = document.querySelector('.ajustes-pane.activo-apane');
     if (paneActivo?.id === 'apane-clientes') cargarCRM();
@@ -2343,12 +2425,16 @@ function actualizarNavBadges(contratos) {
     if (abiertos > 0) { bdgContratos.textContent = abiertos; bdgContratos.style.display = ''; }
     else bdgContratos.style.display = 'none';
   }
-  // clientes únicos por correo (para badge sutil)
-  var correos = new Set(contratos.map(function(c){ return c.CorreoCliente||''; }).filter(Boolean));
-  var bdgClientes = document.getElementById('bnav-badge-clientes');
-  if (bdgClientes && correos.size > 0) {
-    bdgClientes.textContent = correos.size;
-    bdgClientes.style.display = '';
+}
+
+function actualizarBadgeClientes(trabajos) {
+  var activos = (trabajos||[]).filter(function(t){
+    return ['nuevo','intentando','en_seguimiento','cotizado'].includes(t.estatus);
+  }).length;
+  var bdg = document.getElementById('bnav-badge-clientes');
+  if (bdg) {
+    if (activos > 0) { bdg.textContent = activos; bdg.style.display = ''; }
+    else bdg.style.display = 'none';
   }
 }
 
@@ -3169,6 +3255,30 @@ function renderPanel(data) {
         <i class="ti ti-plus"></i> Extra
       </button>
     </div>`;
+
+  // Sección de agendar llamada de seguimiento
+  const _pabParent = _pab ? _pab.parentElement : null;
+  if (_pabParent) {
+    let _llamadaSection = document.getElementById('panel-llamada-section');
+    if (!_llamadaSection) {
+      _llamadaSection = document.createElement('div');
+      _llamadaSection.id = 'panel-llamada-section';
+      _llamadaSection.style.cssText = 'padding:16px 20px;border-top:1px solid var(--border)';
+      _pabParent.appendChild(_llamadaSection);
+    }
+    _llamadaSection.innerHTML = `
+      <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Agendar llamada de seguimiento</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <input type="date" id="contrato-llamada-fecha" style="font-size:13px">
+        <input type="time" id="contrato-llamada-hora" value="10:00" style="font-size:13px">
+      </div>
+      <textarea id="contrato-llamada-notas" rows="2" placeholder="Notas de la llamada…" style="width:100%;font-size:13px;margin-bottom:8px;resize:vertical;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:inherit;color:var(--ink-1);background:var(--card)"></textarea>
+      <button class="btn-secundario btn-sm" style="width:100%;justify-content:center" onclick="agendarLlamadaDesdeContrato()">
+        <i class="ti ti-phone-plus"></i> Agendar llamada
+      </button>
+      <span id="contrato-llamada-msg" style="font-size:12px;display:block;margin-top:6px"></span>
+    `;
+  }
 
   // ── PANE GENERAL ──
   const addHtml = adicionales.length
@@ -4088,6 +4198,9 @@ async function crearContrato() {
     });
   }
 
+  var clienteIdFinal = (document.getElementById('contrato-cliente-id-hidden')||{}).value || _clienteOrigenId || '';
+  var trabajoIdFinal = _trabajoOrigenId || '';
+
   var body = {
     action:          'crearContrato',
     nombreCliente:   nombre,
@@ -4101,6 +4214,8 @@ async function crearContrato() {
     anticipo:        anticipo,
     numPropiedades:  numProps,
     propiedades:     propiedades,
+    clienteId:       clienteIdFinal,
+    trabajoId:       trabajoIdFinal,
   };
 
   btn.disabled    = true;
@@ -4132,6 +4247,12 @@ async function crearContrato() {
     cargarContratos();
     _clientesCache = [];
     cargarClientesParaAutocomplete();
+    _trabajoOrigenId = null;
+    _clienteOrigenId = null;
+    var banner = document.getElementById('banner-desde-trabajo');
+    if (banner) banner.style.display='none';
+    var hiddenCli = document.getElementById('contrato-cliente-id-hidden');
+    if (hiddenCli) hiddenCli.value='';
   } catch (e) {
     setMsg(msgId, 'Error: ' + e.message, 'error');
   } finally {
@@ -4156,6 +4277,7 @@ function limpiarFormCrear() {
   renderTodasLasProps();
   actualizarPaquetesAdicionales();
   cerrarDropdownAC();
+  limpiarOrigenTrabajoContrato();
 
   var logoHint = document.getElementById('ac-logo-hint-est');
   if (logoHint) logoHint.remove();
@@ -4184,8 +4306,9 @@ function mostrarDropdownAC(inputEl, texto, esParticular) {
   if (q.length < 2) { cerrarDropdownAC(); return; }
 
   const resultados = _clientesCache.filter(cl =>
-    (cl.NombreCliente || '').toLowerCase().includes(q) ||
-    (cl.CorreoCliente  || '').toLowerCase().includes(q)
+    clienteNombreVal(cl).toLowerCase().includes(q) ||
+    clienteCorreoVal(cl).toLowerCase().includes(q) ||
+    clienteTelefonoVal(cl).includes(q)
   ).slice(0, 8);
 
   if (!resultados.length) { cerrarDropdownAC(); return; }
@@ -4194,10 +4317,13 @@ function mostrarDropdownAC(inputEl, texto, esParticular) {
     const logoBadge = cl.LogoUrl
       ? '<span class="ac-logo-badge">Logo guardado</span>'
       : '';
+    const nombre = clienteNombreVal(cl);
+    const correo = clienteCorreoVal(cl);
+    const telefono = clienteTelefonoVal(cl);
     return `<div class="ac-item" data-idx="${i}"
       onmousedown="event.preventDefault();seleccionarClienteAC(${i},${esParticular})">
-      <span class="ac-nombre">${esc(cl.NombreCliente)}</span>
-      <span class="ac-sub">${esc(cl.CorreoCliente)}${cl.TelefonoCliente ? ' · ' + esc(cl.TelefonoCliente) : ''}</span>
+      <span class="ac-nombre">${esc(nombre)}</span>
+      <span class="ac-sub">${esc(correo)}${telefono ? ' · ' + esc(telefono) : ''}</span>
       ${logoBadge}
     </div>`;
   }).join('');
@@ -4230,9 +4356,18 @@ function seleccionarClienteAC(idx, esParticular) {
   const elCorreo   = document.getElementById(pref + '-correo');
   const elTelefono = document.getElementById(pref + '-telefono');
 
-  if (elNombre)   elNombre.value   = cl.NombreCliente   || '';
-  if (elCorreo)   elCorreo.value   = cl.CorreoCliente   || '';
-  if (elTelefono) elTelefono.value = cl.TelefonoCliente || '';
+  if (elNombre)   elNombre.value   = clienteNombreVal(cl);
+  if (elCorreo)   elCorreo.value   = clienteCorreoVal(cl);
+  if (elTelefono) elTelefono.value = clienteTelefonoVal(cl);
+
+  if (!esParticular) {
+    const clienteId = clienteIdVal(cl);
+    if (clienteId) {
+      seleccionarClienteContrato(clienteId, clienteNombreVal(cl), clienteTelefonoVal(cl), clienteCorreoVal(cl));
+    } else {
+      limpiarClienteContrato();
+    }
+  }
 
   // Fix M1: suprimir reapertura del dropdown cuando el input event se dispare
   _acSeleccionRecien = true;
@@ -4304,20 +4439,20 @@ async function cargarCRM() {
       document.getElementById('crm-grid').innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Sin clientes registrados aún.</p>';
       return;
     }
-    document.getElementById('crm-grid').innerHTML = lista.map(cl => `
-      <div class="crm-card">
-        <div class="crm-nombre">${esc(cl.NombreCliente)}</div>
-        <div class="crm-correo">${esc(cl.CorreoCliente)}${cl.TelefonoCliente ? ' · ' + esc(cl.TelefonoCliente) : ''}</div>
-        <div class="crm-proyectos-hdr">${cl.NumContratos} contrato${cl.NumContratos !== 1 ? 's' : ''}</div>
-        <div class="crm-proyecto">
-          <span class="crm-folio">Total facturado</span>
-          ${fmxn(cl.TotalFacturado)}
-        </div>
-        <div class="crm-proyecto">
-          <span class="crm-folio">Último contrato</span>
-          ${fmxnFecha(cl.UltimoContrato)}
-        </div>
-      </div>`).join('');
+	    document.getElementById('crm-grid').innerHTML = lista.map(cl => `
+	      <div class="crm-card">
+	        <div class="crm-nombre">${esc(clienteNombreVal(cl))}</div>
+	        <div class="crm-correo">${esc(clienteCorreoVal(cl))}${clienteTelefonoVal(cl) ? ' · ' + esc(clienteTelefonoVal(cl)) : ''}</div>
+	        <div class="crm-proyectos-hdr">${clienteNumContratosVal(cl)} contrato${clienteNumContratosVal(cl) !== 1 ? 's' : ''}</div>
+	        <div class="crm-proyecto">
+	          <span class="crm-folio">Total facturado</span>
+	          ${fmxn(cl.TotalFacturado ?? cl.total_facturado)}
+	        </div>
+	        <div class="crm-proyecto">
+	          <span class="crm-folio">Último contrato</span>
+	          ${fmxnFecha(cl.UltimoContrato ?? cl.ultimo_contrato)}
+	        </div>
+	      </div>`).join('');
   } catch (e) {
     document.getElementById('crm-grid').innerHTML = `<p style="color:var(--danger);font-size:13px">Error: ${esc(e.message)}</p>`;
   }
@@ -4343,6 +4478,19 @@ function fmxnFechaLarga(val) {
   const d = new Date(str);
   if (isNaN(d)) return String(val);
   return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function fechaLocalISO(date) {
+  var d = date || new Date();
+  var yyyy = d.getFullYear();
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return yyyy + '-' + mm + '-' + dd;
+}
+
+function mesLocalISO(date) {
+  var d = date || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
 function calcFechaEntrega(fechaISO, express) {
@@ -5077,10 +5225,10 @@ function hashColor(str) {
 
 function actualizarStatsRibbon(contratos) {
   if (window.innerWidth < 1024) return;
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = fechaLocalISO();
   const ahora = new Date();
-  const mesActual = ahora.toISOString().slice(0,7);
-  const mesPasado = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString().slice(0,7);
+  const mesActual = mesLocalISO(ahora);
+  const mesPasado = mesLocalISO(new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1));
   const el = function(id){ return document.getElementById(id); };
 
   if (el('statSesionesHoy'))     el('statSesionesHoy').textContent  = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); }).length;
@@ -5115,20 +5263,20 @@ function renderHoyStrip(contratos) {
   var cards = document.getElementById('hoyCards');
   var dateEl = document.getElementById('hoyDate');
   if (!strip || !cards) return;
-  var hoy = new Date().toISOString().slice(0,10);
+  var hoy = fechaLocalISO();
   var sesiones = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); });
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
   if (!sesiones.length) { strip.style.display='none'; return; }
   strip.style.display='flex';
   cards.innerHTML = sesiones.map(function(c){
     var color = ESTATUS_COLOR[c.Estatus]||'#9CA3AF';
-    return '<div class="session-card" onclick="abrirPanel(\''+(c.Token||'')+'\')">'+
+    return '<div class="session-card" onclick="abrirPanel('+jsArg(c.Token||'')+')">'+
       '<div class="session-card-accent" style="background:'+color+'"></div>'+
       '<div class="session-card-body">'+
-        '<div class="session-card-hora">'+(c.HoraSesion||'')+'</div>'+
-        '<div class="session-card-nombre">'+(c.NombreCliente||'')+'</div>'+
-        '<div class="session-card-meta">'+(c.PaqueteBase||'')+'</div>'+
-        '<div class="session-card-status"><span class="session-card-dot" style="background:'+color+'"></span>'+(c.Estatus||'')+'</div>'+
+        '<div class="session-card-hora">'+esc(c.HoraSesion||'')+'</div>'+
+        '<div class="session-card-nombre">'+esc(c.NombreCliente||'')+'</div>'+
+        '<div class="session-card-meta">'+esc(c.PaqueteBase||'')+'</div>'+
+        '<div class="session-card-status"><span class="session-card-dot" style="background:'+color+'"></span>'+esc(c.Estatus||'')+'</div>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -5145,145 +5293,498 @@ function renderLifecycle(estatus) {
   }).join('')+'</div>';
 }
 
-// ── PROSPECTOS ────────────────────────────────────────────────────────────────
+// ── CLIENTES + TRABAJOS ────────────────────────────────────────────────────────
 
-var _interesProspecto = '';
+var TRAB_ESTATUS_COLORS = { nuevo:'#7D3C98', intentando:'#C97B22', en_seguimiento:'#2471A3', cotizado:'#1A5276', convertido:'#1E8449', descartado:'#909497' };
+var TRAB_ESTATUS_LABELS = { nuevo:'Nuevo', intentando:'Intentando contactar', en_seguimiento:'En seguimiento', cotizado:'Cotizado', convertido:'Convertido', descartado:'Descartado' };
+var TRAB_ESTATUS_ICONS  = { nuevo:'ti-user-plus', intentando:'ti-phone-off', en_seguimiento:'ti-messages', cotizado:'ti-file-invoice', convertido:'ti-circle-check', descartado:'ti-circle-x' };
+var ORIGEN_LABELS = { whatsapp:'WhatsApp', instagram:'Instagram', referido:'Referido', facebook:'Facebook', google:'Google', llamada:'Llamada directa', otro:'Otro' };
+var INTERES_LABELS = { foto:'Fotografía', video:'Video + Drone', '360':'Recorrido 360°', combo:'Paquete completo' };
+var CATALOGO_PKG_LABELS = { 'RES-COMBO':'Residencial $4,500','TER-COMBO':'Terreno $4,000','IND-FOTO':'Fotografía $3,000','IND-VIDEO':'Video+Drone $3,000','IND-360':'360° $3,000','ADD-COMOLLEGAR':'+Cómo llegar $1,000','ADD-LANDING':'+Landing $1,200','ADD-FOLLETO':'+Folleto $800','ADD-ASESOR':'+Asesor $500','ADD-EXPRESS':'+Express $1,000' };
 
-var PROSP_INTERES_LABELS = { foto: 'Fotografía', video: 'Video + Drone', '360': 'Recorrido 360°', combo: 'Paquete completo' };
-var PROSP_ESTATUS_COLORS = { pendiente: '#C97B22', contactado: '#2471A3', convertido: '#1E8449', descartado: '#909497' };
-var PROSP_ESTATUS_LABELS = { pendiente: 'Pendiente', contactado: 'Contactado', convertido: 'Convertido', descartado: 'Descartado' };
-var PROSP_ESTATUS_ICONS  = { pendiente: 'ti-clock', contactado: 'ti-phone-check', convertido: 'ti-circle-check', descartado: 'ti-circle-x' };
+var _trabajoOrigenId = null;
+var _clienteOrigenId = null;
+var _trabInteresActivo = '';
+var _clientesDataCache = [];
+var _trabajosDataCache = [];
+var _pipeline_estatus_filtro = 'todos';
 
-function seleccionarInteresProsp(btn) {
-  document.querySelectorAll('#prosp-interes-btns .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
-  btn.classList.add('activo-par');
-  _interesProspecto = btn.dataset.val;
-  document.getElementById('prosp-interes-otro').value = '';
-}
+function clienteIdVal(c) { return c.Id || c.ClienteId || c.id || c.cliente_id || ''; }
+function clienteNombreVal(c) { return c.Nombre || c.NombreCliente || c.nombre || c.nombre_cliente || ''; }
+function clienteTelefonoVal(c) { return c.Telefono || c.TelefonoCliente || c.telefono || c.telefono_cliente || ''; }
+function clienteCorreoVal(c) { return c.Correo || c.CorreoCliente || c.correo || c.correo_cliente || ''; }
+function clienteOrigenVal(c) { return c.Origen || c.origen || ''; }
+function clienteTrabajosActivosVal(c) { return c.TrabajosActivos ?? c.trabajos_activos ?? 0; }
+function clienteNumContratosVal(c) { return c.NumContratos ?? c.num_contratos ?? 0; }
+function jsArg(v) { return JSON.stringify(String(v || '')); }
 
-function _getInteres(chipVal, otroEl) {
-  var otro = (document.getElementById(otroEl).value || '').trim();
-  return otro || chipVal;
-}
+// ── CARGAR CLIENTES (principal) ────────────────────────────────────────────────
 
-function _limpiarFormProsp(prefix) {
-  ['nombre','telefono','fecha','hora','notas','interes-otro'].forEach(function(f){
-    var el = document.getElementById('prosp-'+f+(prefix?'-'+prefix:''));
-    if (el) el.value = f === 'hora' ? '10:00' : '';
+function cargarClientes() {
+  Promise.all([
+    apiGet({ action: 'listarTrabajos' }).catch(function(e){ return { ok:false, error:e.message, trabajos:[] }; }),
+    apiGet({ action: 'listarClientes' })
+  ]).then(function(res) {
+    var trabajosOk = res[0].ok !== false;
+    var trabajos = trabajosOk ? (res[0].trabajos || []) : [];
+    var clientes = res[1].clientes || [];
+    _clientesDataCache = clientes;
+    _trabajosDataCache = trabajos;
+    actualizarBadgeClientes(trabajos);
+    if (trabajosOk) {
+      renderPipeline(trabajos);
+    } else {
+      var elPipe = document.getElementById('pipeline-lista');
+      if (elPipe) elPipe.innerHTML = '<p style="color:#c0392b;font-size:13px">Error al cargar pipeline.</p>';
+    }
+    renderListaClientes(clientes);
+  }).catch(function() {
+    var el = document.getElementById('pipeline-lista');
+    if (el) el.innerHTML = '<p style="color:#c0392b;font-size:13px">Error al cargar.</p>';
   });
-  var btns = document.querySelectorAll('#prosp-interes-btns'+(prefix?'-'+prefix:'')+' .par-tipo-btn');
-  btns.forEach(function(b){ b.classList.remove('activo-par'); });
-  if (!prefix) _interesProspecto = ''; else _interesProspectoM = '';
 }
 
-function crearProspecto() {
-  var nombre   = (document.getElementById('prosp-nombre').value || '').trim();
-  var telefono = (document.getElementById('prosp-telefono').value || '').trim();
-  var fecha    = document.getElementById('prosp-fecha').value;
-  var hora     = document.getElementById('prosp-hora').value;
-  var notas    = (document.getElementById('prosp-notas').value || '').trim();
-  var interes  = _getInteres(_interesProspecto, 'prosp-interes-otro');
-  var msg      = document.getElementById('prosp-msg');
+// ── PIPELINE ───────────────────────────────────────────────────────────────────
 
-  if (!nombre || !telefono || !fecha || !hora) {
-    msg.style.color = 'var(--red,#c0392b)'; msg.textContent = 'Nombre, teléfono, fecha y hora son requeridos.'; return;
-  }
-  msg.style.color = 'var(--ink-3)'; msg.textContent = 'Agendando…';
-
-  apiPost({ action:'crearProspecto', nombre:nombre, telefono:telefono, interes:interes, fechaLlamada:fecha, horaLlamada:hora, notas:notas })
-    .then(function(r) {
-      if (r.ok) {
-        msg.style.color = '#1E8449'; msg.textContent = '¡Agendado! Evento creado en Calendar.';
-        _limpiarFormProsp('');
-        cargarProspectos();
-        setTimeout(function(){ msg.textContent=''; }, 4000);
-      } else { msg.style.color='var(--red,#c0392b)'; msg.textContent = r.error||'Error al agendar.'; }
-    })
-    .catch(function(){ msg.style.color='var(--red,#c0392b)'; msg.textContent='Error de conexión.'; });
+function filtrarPipeline(btn) {
+  document.querySelectorAll('#pipeline-chips .filter-chip').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  _pipeline_estatus_filtro = btn.dataset.estatus;
+  renderPipeline(_trabajosDataCache);
 }
 
-function _renderListaProspectos(items, elId, suffix) {
-  var el = document.getElementById(elId);
+function renderPipeline(trabajos) {
+  var el = document.getElementById('pipeline-lista');
   if (!el) return;
-  if (!items.length) {
-    el.innerHTML = '<div style="text-align:center;padding:48px 20px"><div style="font-size:36px;margin-bottom:12px">📞</div><div style="font-size:14px;font-weight:600;color:var(--ink-2);margin-bottom:4px">Sin prospectos aún</div><div style="font-size:13px;color:var(--ink-3)">Cuando agendes una llamada aparecerá aquí</div></div>';
+  var activos = trabajos.filter(function(t){
+    return ['nuevo','intentando','en_seguimiento','cotizado'].includes(t.estatus);
+  });
+  var filtrados = _pipeline_estatus_filtro === 'todos' ? activos
+    : activos.filter(function(t){ return t.estatus === _pipeline_estatus_filtro; });
+
+  if (!filtrados.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px 20px;color:var(--ink-3);font-size:13px">Sin trabajos activos en pipeline</div>';
     return;
   }
   var html = '<div style="display:flex;flex-direction:column;gap:10px">';
-  items.forEach(function(p) {
-    var color  = PROSP_ESTATUS_COLORS[p.estatus] || '#aaa';
-    var label  = PROSP_ESTATUS_LABELS[p.estatus] || p.estatus;
-    var icon   = PROSP_ESTATUS_ICONS[p.estatus]  || 'ti-circle';
-    var intStr = PROSP_INTERES_LABELS[p.interes]  || p.interes || '';
-    var fecha  = p.fecha_llamada ? fmxnFecha(p.fecha_llamada) : '—';
-    var hora   = p.hora_llamada  || '';
-    var ini    = (p.nombre||'').charAt(0).toUpperCase();
-    var avCls  = ['av-a','av-b','av-c','av-d','av-e','av-f'][(p.nombre||'').charCodeAt(0)%6];
+  filtrados.forEach(function(t) {
+    var color = TRAB_ESTATUS_COLORS[t.estatus] || '#aaa';
+    var label = TRAB_ESTATUS_LABELS[t.estatus] || t.estatus;
+    var icon  = TRAB_ESTATUS_ICONS[t.estatus]  || 'ti-circle';
+    var intStr = INTERES_LABELS[t.interes] || t.interes || '';
+    var nombre = esc(t.cliente_nombre || '');
+    var tel    = esc(t.cliente_telefono || '');
+    var ini    = (t.cliente_nombre||'').charAt(0).toUpperCase();
+    var avCls  = ['av-a','av-b','av-c','av-d','av-e','av-f'][(t.cliente_nombre||'').charCodeAt(0)%6];
+    var paquetes = [];
+    try { paquetes = JSON.parse(t.paquetes_cotizados_json||'[]'); } catch(e) {}
+    var props = [];
+    try { props = JSON.parse(t.propiedades_interes_json||'[]'); } catch(e) {}
+    var detalleId = 'trab-det-' + t.id;
 
-    html += '<div style="background:var(--card);border-radius:12px;border:1.5px solid var(--border);overflow:hidden;transition:box-shadow 120ms" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">';
-
-    // Franja superior de color
+    html += '<div style="background:var(--card);border-radius:12px;border:1.5px solid var(--border);overflow:hidden">';
     html += '<div style="height:3px;background:'+color+'"></div>';
-
-    html += '<div style="padding:14px 16px;display:flex;align-items:flex-start;gap:12px">';
-
-    // Avatar
-    html += '<div class="td-avatar '+avCls+'" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0">'+ini+'</div>';
-
-    // Cuerpo
+    html += '<div style="padding:12px 16px">';
+    html += '<div style="display:flex;align-items:flex-start;gap:10px">';
+    html += '<div class="td-avatar '+avCls+'" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">'+ini+'</div>';
     html += '<div style="flex:1;min-width:0">';
-    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">';
-    html += '<span style="font-size:14px;font-weight:700;color:var(--ink-1)">'+esc(p.nombre)+'</span>';
-    html += '<a href="tel:'+esc(p.telefono)+'" style="font-size:12px;color:var(--ink-3);text-decoration:none">'+esc(p.telefono)+'</a>';
-    html += '</div>';
-    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">';
-    html += '<span style="font-size:12px;color:var(--ink-3);display:flex;align-items:center;gap:3px"><i class="ti ti-calendar" style="font-size:12px"></i> '+fecha+' · '+hora+'</span>';
+    html += '<div style="font-size:14px;font-weight:700;color:var(--ink-1);margin-bottom:3px">'+nombre+'</div>';
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">';
+    if (tel) html += '<a href="tel:'+tel+'" style="font-size:12px;color:var(--ink-3);text-decoration:none">'+tel+'</a>';
     if (intStr) html += '<span style="font-size:11px;font-weight:600;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00);border-radius:20px;padding:2px 9px">'+esc(intStr)+'</span>';
+    if (t.presupuesto_estimado > 0) html += '<span style="font-size:11px;color:var(--ink-3)">$'+t.presupuesto_estimado.toLocaleString()+'</span>';
     html += '</div>';
-    if (p.notas) html += '<div style="font-size:12px;color:var(--ink-2);margin-top:6px;line-height:1.45;white-space:pre-wrap;background:var(--page);border-radius:6px;padding:7px 10px">'+esc(p.notas)+'</div>';
     html += '</div>';
-
-    // Estatus pill + select
-    html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">';
+    html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">';
     html += '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'18;border-radius:20px;padding:3px 10px;white-space:nowrap;display:flex;align-items:center;gap:4px"><i class="ti '+icon+'" style="font-size:11px"></i>'+label+'</span>';
-    html += '<select onchange="cambiarEstatusProspecto(\''+p.id+'\', this.value)" style="font-size:11px;padding:4px 7px;border:1.5px solid var(--border2);border-radius:6px;background:var(--page);color:var(--ink-2);cursor:pointer;outline:none">';
-    ['pendiente','contactado','convertido','descartado'].forEach(function(s){
-      html += '<option value="'+s+'"'+(p.estatus===s?' selected':'')+'>'+PROSP_ESTATUS_LABELS[s]+'</option>';
+    html += '<select onchange="cambiarEstatusTrabajo(\''+t.id+'\',this.value,this)" style="font-size:11px;padding:4px 7px;border:1.5px solid var(--border2,#ddd);border-radius:6px;background:var(--page);color:var(--ink-2);cursor:pointer;outline:none">';
+    ['nuevo','intentando','en_seguimiento','cotizado','descartado'].forEach(function(s){
+      html += '<option value="'+s+'"'+(t.estatus===s?' selected':'')+'>'+TRAB_ESTATUS_LABELS[s]+'</option>';
     });
     html += '</select>';
     html += '</div>';
-
+    html += '</div>';
+    html += '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">';
+    html += '<button onclick="toggleDetalleTrabajo(\''+detalleId+'\')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-chevron-down" style="font-size:10px"></i> Detalles</button>';
+    html += '<button onclick="abrirModalNotaTrabajo(\''+t.id+'\',\''+t.cliente_id+'\')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-note" style="font-size:10px"></i> Nota</button>';
+    if (t.estatus !== 'convertido' && t.estatus !== 'descartado') {
+      html += '<button onclick="crearContratoDesdeWork('+[t.id,t.cliente_nombre,t.cliente_id,t.cliente_telefono,t.cliente_correo].map(jsArg).join(',')+')" style="font-size:11px;background:var(--gold);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#1a1000;font-weight:600"><i class="ti ti-file-plus" style="font-size:10px"></i> Crear contrato</button>';
+    }
+    if (t.contrato_token) {
+      html += '<a href="'+PORTAL_BASE+'?token='+esc(t.contrato_token)+'" target="_blank" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-3);text-decoration:none"><i class="ti ti-external-link" style="font-size:10px"></i> Portal</a>';
+    }
+    html += '</div>';
+    html += '<div id="'+detalleId+'" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px">';
+    if (paquetes.length) {
+      html += '<div style="margin-bottom:8px"><span style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.4px">Paquetes cotizados</span><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">';
+      paquetes.forEach(function(p){ html += '<span style="font-size:11px;background:var(--page);border:1px solid var(--border);border-radius:20px;padding:2px 9px">'+esc(CATALOGO_PKG_LABELS[p]||p)+'</span>'; });
+      html += '</div></div>';
+    }
+    if (props.length) {
+      html += '<div style="margin-bottom:8px"><span style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.4px">Propiedades de interés</span>';
+      props.forEach(function(p){ html += '<div style="font-size:12px;color:var(--ink-2);margin-top:4px">'+(p.zona?esc(p.zona):'')+(p.tipo?' · '+esc(p.tipo):'')+(p.descripcion?' — '+esc(p.descripcion):'')+'</div>'; });
+      html += '</div>';
+    }
+    if (t.notas) html += '<div style="font-size:12px;color:var(--ink-2);background:var(--page);border-radius:6px;padding:7px 10px;white-space:pre-wrap">'+esc(t.notas)+'</div>';
+    html += '</div>';
     html += '</div></div>';
   });
   html += '</div>';
   el.innerHTML = html;
 }
 
-function cargarProspectos() {
-  var el = document.getElementById('lista-prospectos');
+function toggleDetalleTrabajo(id) {
+  var el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+function cambiarEstatusTrabajo(id, estatus, selectEl) {
+  apiPost({ action:'actualizarEstatusTrabajo', id:id, estatus:estatus })
+    .then(function(r) { if (r.ok) cargarClientes(); });
+}
+
+// ── LISTA DE CLIENTES ──────────────────────────────────────────────────────────
+
+function renderListaClientes(clientes) {
+  var el = document.getElementById('clientes-lista');
   if (!el) return;
-  el.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>';
+  var q = (document.getElementById('clientes-search')||{}).value || '';
+  var items = q ? clientes.filter(function(c){
+    return clienteNombreVal(c).toLowerCase().includes(q.toLowerCase()) ||
+           clienteTelefonoVal(c).includes(q);
+  }) : clientes;
 
-  apiGet({ action: 'listarProspectos' })
-    .then(function(r) {
-      var items = r.prospectos || [];
-      _renderListaProspectos(items, 'lista-prospectos', '');
-      var badge = document.getElementById('bnav-badge-prospectos');
-      if (badge) {
-        var pendientes = items.filter(function(p){ return p.estatus === 'pendiente'; }).length;
-        if (pendientes > 0) { badge.textContent = pendientes; badge.style.display = ''; }
-        else badge.style.display = 'none';
-      }
-    })
-    .catch(function() {
-      el.innerHTML = '<p style="color:#c0392b;font-size:13px">Error al cargar prospectos.</p>';
-    });
+  if (!items.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px 20px;color:var(--ink-3);font-size:13px">Sin clientes registrados</div>';
+    return;
+  }
+  var html = '<div style="display:flex;flex-direction:column;gap:8px">';
+  items.forEach(function(c) {
+    var id = clienteIdVal(c);
+    var nombre = clienteNombreVal(c);
+    var telefono = clienteTelefonoVal(c);
+    var correo = clienteCorreoVal(c);
+    var trabajosActivos = clienteTrabajosActivosVal(c);
+    var numContratos = clienteNumContratosVal(c);
+    var ini = (nombre||'').charAt(0).toUpperCase();
+    var avCls = ['av-a','av-b','av-c','av-d','av-e','av-f'][(nombre||'').charCodeAt(0)%6];
+    var origenStr = ORIGEN_LABELS[clienteOrigenVal(c)] || '';
+    var waNum = normalizarTelWA(telefono||'');
+    html += '<div style="background:var(--card);border-radius:10px;border:1.5px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px">';
+    html += '<div class="td-avatar '+avCls+'" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0">'+ini+'</div>';
+    html += '<div style="flex:1;min-width:0">';
+    html += '<div style="font-size:14px;font-weight:700;color:var(--ink-1)">'+esc(nombre)+'</div>';
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:3px">';
+    if (telefono) html += '<a href="tel:'+esc(telefono)+'" style="font-size:12px;color:var(--ink-3);text-decoration:none">'+esc(telefono)+'</a>';
+    if (correo) html += '<span style="font-size:12px;color:var(--ink-3)">'+esc(correo)+'</span>';
+    if (origenStr) html += '<span style="font-size:11px;background:var(--page);border:1px solid var(--border);border-radius:20px;padding:1px 8px;color:var(--ink-3)">'+esc(origenStr)+'</span>';
+    if (trabajosActivos > 0) html += '<span style="font-size:11px;font-weight:700;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00);border-radius:20px;padding:1px 8px">'+trabajosActivos+' en pipeline</span>';
+    if (numContratos > 0) html += '<span style="font-size:11px;color:var(--ink-3)">'+numContratos+' contrato'+(numContratos!==1?'s':'')+'</span>';
+    html += '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:6px;flex-shrink:0">';
+    if (telefono && waNum) html += '<a href="https://wa.me/'+waNum+'" target="_blank" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:rgba(37,211,102,0.12);color:#128C7E;text-decoration:none" title="WhatsApp"><i class="ti ti-brand-whatsapp" style="font-size:15px"></i></a>';
+    if (id) html += '<button onclick="abrirModalTrabajo('+jsArg(id)+')" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:none;cursor:pointer;color:var(--ink-2)" title="Nuevo trabajo"><i class="ti ti-calendar-plus" style="font-size:15px"></i></button>';
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
 }
 
-function cambiarEstatusProspecto(id, estatus) {
-  apiPost({ action:'actualizarEstatusProspecto', id: id, estatus: estatus })
-    .then(function(r) { if (r.ok) cargarProspectos(); });
+function t_id(id) { return (id||'').replace(/'/g,"\\'"); }
+
+function filtrarListaClientes() {
+  renderListaClientes(_clientesDataCache);
 }
+
+// ── MODAL NUEVO CLIENTE ───────────────────────────────────────────────────────
+
+function abrirModalCliente() {
+  var modal = document.getElementById('modal-nuevo-cliente');
+  if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+  if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalCliente() {
+  document.getElementById('modal-nuevo-cliente').style.display = 'none';
+  ['cli-nombre','cli-telefono','cli-correo','cli-notas-perfil'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value='';
+  });
+  var sel = document.getElementById('cli-origen'); if(sel) sel.value='';
+  var msg = document.getElementById('cli-msg'); if(msg) msg.textContent='';
+}
+
+function guardarNuevoCliente() {
+  var nombre = (document.getElementById('cli-nombre').value||'').trim();
+  if (!nombre) { document.getElementById('cli-msg').textContent='Nombre requerido'; return; }
+  var msg = document.getElementById('cli-msg');
+  msg.style.color='var(--ink-3)'; msg.textContent='Guardando…';
+  apiPost({
+    action:'crearCliente',
+    nombre: nombre,
+    telefono: (document.getElementById('cli-telefono').value||'').trim(),
+    correo:   (document.getElementById('cli-correo').value||'').trim(),
+    origen:   document.getElementById('cli-origen').value,
+    notasPerfil: (document.getElementById('cli-notas-perfil').value||'').trim()
+  }).then(function(r){
+    if (r.ok) { msg.style.color='#1E8449'; msg.textContent='¡Cliente creado!'; setTimeout(function(){ cerrarModalCliente(); cargarClientes(); _clientesCache=[]; cargarClientesParaAutocomplete(); }, 800); }
+    else { msg.style.color='var(--red,#c0392b)'; msg.textContent=r.error||'Error'; }
+  });
+}
+
+// ── MODAL NUEVO TRABAJO ───────────────────────────────────────────────────────
+
+var _trabClienteIdSel = null;
+
+function abrirModalTrabajo(clienteIdPreseleccionado) {
+  _trabClienteIdSel = clienteIdPreseleccionado || null;
+  var modal = document.getElementById('modal-nuevo-trabajo');
+  if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+  document.getElementById('trab-cliente-id').value = _trabClienteIdSel || '';
+  var banner = document.getElementById('trab-cliente-banner');
+  var campoBusqueda = document.getElementById('trab-cliente-search-campo');
+  if (_trabClienteIdSel) {
+    var cli = _clientesDataCache.find(function(c){ return clienteIdVal(c) === _trabClienteIdSel; });
+    if (cli) {
+      document.getElementById('trab-cliente-nombre-banner').textContent = clienteNombreVal(cli);
+      banner.style.display = '';
+      if (campoBusqueda) campoBusqueda.style.display = 'none';
+    }
+  } else {
+    banner.style.display = 'none';
+    if (campoBusqueda) campoBusqueda.style.display = '';
+  }
+  if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalTrabajo() {
+  document.getElementById('modal-nuevo-trabajo').style.display = 'none';
+  _trabClienteIdSel = null;
+  ['trab-cliente-search','trab-presupuesto','trab-prop-zona','trab-prop-tipo','trab-prop-desc','trab-fecha-llamada','trab-hora-llamada','trab-notas'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value = id==='trab-hora-llamada'?'10:00':'';
+  });
+  document.getElementById('trab-cliente-id').value='';
+  document.querySelectorAll('#trab-interes-btns .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
+  document.querySelectorAll('#trab-paquetes-checks input').forEach(function(cb){ cb.checked=false; });
+  _trabInteresActivo = '';
+  var msg = document.getElementById('trab-msg'); if(msg) msg.textContent='';
+}
+
+function seleccionarInteresTrab(btn) {
+  document.querySelectorAll('#trab-interes-btns .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
+  btn.classList.add('activo-par');
+  _trabInteresActivo = btn.dataset.val;
+}
+
+function buscarClienteParaTrabajo() {
+  var q = (document.getElementById('trab-cliente-search').value||'').trim().toLowerCase();
+  var dd = document.getElementById('trab-cliente-dropdown');
+  if (!q || !dd) { if(dd) dd.style.display='none'; return; }
+  var matches = _clientesCache.filter(function(c){
+    return clienteIdVal(c) &&
+      (clienteNombreVal(c).toLowerCase().includes(q) || clienteTelefonoVal(c).includes(q));
+  }).slice(0,6);
+  if (!matches.length) { dd.style.display='none'; return; }
+  dd.innerHTML = matches.map(function(c){
+    var id = clienteIdVal(c);
+    var nombre = clienteNombreVal(c);
+    var telefono = clienteTelefonoVal(c);
+    return '<div onclick="seleccionarClienteTrabajo('+jsArg(id)+','+jsArg(nombre)+')" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background=\'var(--page)\'" onmouseout="this.style.background=\'\'">'+esc(nombre)+' <span style="color:var(--ink-3);font-size:11px">'+esc(telefono||'')+'</span></div>';
+  }).join('');
+  dd.style.display='';
+}
+
+function seleccionarClienteTrabajo(id, nombre) {
+  _trabClienteIdSel = id;
+  document.getElementById('trab-cliente-id').value = id;
+  document.getElementById('trab-cliente-search').value = nombre;
+  var dd = document.getElementById('trab-cliente-dropdown');
+  if(dd) dd.style.display='none';
+}
+
+function guardarNuevoTrabajo() {
+  var clienteId = document.getElementById('trab-cliente-id').value || _trabClienteIdSel;
+  var fechaLlamada = document.getElementById('trab-fecha-llamada').value;
+  if (!clienteId) { document.getElementById('trab-msg').textContent='Selecciona un cliente'; return; }
+  if (!fechaLlamada) { document.getElementById('trab-msg').textContent='Fecha requerida'; return; }
+  var msg = document.getElementById('trab-msg');
+  msg.style.color='var(--ink-3)'; msg.textContent='Creando…';
+  var paquetes = Array.from(document.querySelectorAll('#trab-paquetes-checks input:checked')).map(function(cb){ return cb.value; });
+  var zona = (document.getElementById('trab-prop-zona').value||'').trim();
+  var tipo = (document.getElementById('trab-prop-tipo').value||'').trim();
+  var desc = (document.getElementById('trab-prop-desc').value||'').trim();
+  var propiedadesInteres = (zona||tipo||desc) ? [{zona:zona,tipo:tipo,descripcion:desc}] : [];
+  apiPost({
+    action:'crearTrabajo',
+    clienteId: clienteId,
+    interes: _trabInteresActivo,
+    paquetesCotizados: paquetes,
+    propiedadesInteres: propiedadesInteres,
+    presupuestoEstimado: parseFloat(document.getElementById('trab-presupuesto').value)||0,
+    notas: (document.getElementById('trab-notas').value||'').trim(),
+    fechaLlamada: fechaLlamada,
+    horaLlamada: document.getElementById('trab-hora-llamada').value||'10:00'
+  }).then(function(r){
+    if (r.ok) { msg.style.color='#1E8449'; msg.textContent='¡Trabajo creado!'; setTimeout(function(){ cerrarModalTrabajo(); cargarClientes(); }, 800); }
+    else { msg.style.color='var(--red,#c0392b)'; msg.textContent=r.error||'Error'; }
+  });
+}
+
+// ── MODAL NOTA DE TRABAJO ─────────────────────────────────────────────────────
+
+function abrirModalNotaTrabajo(trabajoId, clienteId) {
+  var nota = prompt('Agregar nota de seguimiento:');
+  if (!nota || !nota.trim()) return;
+  apiPost({ action:'agregarNota', clienteId:clienteId, trabajoId:trabajoId, descripcion:nota.trim() })
+    .then(function(r){ if(r.ok) cargarClientes(); });
+}
+
+// ── CREAR CONTRATO DESDE TRABAJO ──────────────────────────────────────────────
+
+function crearContratoDesdeWork(trabajoId, nombre, clienteId, telefono, correo) {
+  _trabajoOrigenId = trabajoId;
+  _clienteOrigenId = clienteId;
+  mostrarTab('nuevo', null);
+  document.getElementById('est-nombre').value   = nombre;
+  document.getElementById('est-telefono').value = telefono;
+  document.getElementById('est-correo').value   = correo;
+  var banner = document.getElementById('banner-desde-trabajo');
+  if (banner) {
+    document.getElementById('banner-trabajo-nombre').textContent = nombre;
+    banner.style.display = 'flex';
+  }
+  var hiddenCli = document.getElementById('contrato-cliente-id-hidden');
+  if (!hiddenCli) {
+    hiddenCli = document.createElement('input');
+    hiddenCli.type = 'hidden';
+    hiddenCli.id = 'contrato-cliente-id-hidden';
+    document.getElementById('sec-nuevo').appendChild(hiddenCli);
+  }
+  hiddenCli.value = clienteId || '';
+  if (clienteId) {
+    var search = document.getElementById('contrato-cliente-search');
+    if (search) search.value = nombre || '';
+    var sel = document.getElementById('contrato-cliente-seleccionado');
+    var selNom = document.getElementById('contrato-cliente-sel-nombre');
+    if (sel) sel.style.display='flex';
+    if (selNom) selNom.textContent = nombre || '';
+  }
+}
+
+// ── BÚSQUEDA DE CLIENTE EN FORM CONTRATO ─────────────────────────────────────
+
+function buscarClienteParaContrato() {
+  var q = (document.getElementById('contrato-cliente-search').value||'').trim().toLowerCase();
+  var dd = document.getElementById('contrato-cliente-dropdown');
+  if (!q || !dd) { if(dd) dd.style.display='none'; return; }
+  var matches = _clientesCache.filter(function(c){
+    return clienteIdVal(c) && (clienteNombreVal(c).toLowerCase().includes(q) || clienteTelefonoVal(c).includes(q));
+  }).slice(0,6);
+  if (!matches.length) { dd.style.display='none'; return; }
+  dd.innerHTML = matches.map(function(c){
+    var id = clienteIdVal(c);
+    var nombre = clienteNombreVal(c);
+    var telefono = clienteTelefonoVal(c);
+    var correo = clienteCorreoVal(c);
+    return '<div onclick="seleccionarClienteContrato('+[id,nombre,telefono,correo].map(jsArg).join(',')+')" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background=\'var(--page)\'" onmouseout="this.style.background=\'\'">'+esc(nombre)+' <span style="color:var(--ink-3);font-size:11px">'+esc(telefono||'')+'</span></div>';
+  }).join('');
+  dd.style.display='';
+}
+
+function seleccionarClienteContrato(id, nombre, telefono, correo) {
+  _clienteOrigenId = id;
+  var hiddenCli = document.getElementById('contrato-cliente-id-hidden');
+  if (!hiddenCli) {
+    hiddenCli = document.createElement('input');
+    hiddenCli.type='hidden'; hiddenCli.id='contrato-cliente-id-hidden';
+    document.getElementById('sec-nuevo').appendChild(hiddenCli);
+  }
+  hiddenCli.value = id;
+  document.getElementById('est-nombre').value = nombre;
+  document.getElementById('est-telefono').value = telefono;
+  document.getElementById('est-correo').value = correo;
+  document.getElementById('contrato-cliente-search').value = nombre;
+  var dd = document.getElementById('contrato-cliente-dropdown'); if(dd) dd.style.display='none';
+  var sel = document.getElementById('contrato-cliente-seleccionado');
+  var selNom = document.getElementById('contrato-cliente-sel-nombre');
+  if(sel) sel.style.display='flex';
+  if(selNom) selNom.textContent = nombre;
+}
+
+function limpiarClienteContrato() {
+  _clienteOrigenId = null;
+  var hiddenCli = document.getElementById('contrato-cliente-id-hidden'); if(hiddenCli) hiddenCli.value='';
+  var search = document.getElementById('contrato-cliente-search'); if(search) search.value='';
+  var sel = document.getElementById('contrato-cliente-seleccionado'); if(sel) sel.style.display='none';
+  var selNom = document.getElementById('contrato-cliente-sel-nombre'); if(selNom) selNom.textContent='';
+  var dd = document.getElementById('contrato-cliente-dropdown'); if(dd) dd.style.display='none';
+}
+
+function limpiarOrigenTrabajoContrato() {
+  _trabajoOrigenId = null;
+  _clienteOrigenId = null;
+  var banner = document.getElementById('banner-desde-trabajo');
+  if (banner) banner.style.display='none';
+  limpiarClienteContrato();
+}
+
+// ── AGENDAR LLAMADA DESDE CONTRATO ────────────────────────────────────────────
+
+function agendarLlamadaDesdeContrato() {
+  var ctx = window._contratoActivo;
+  if (!ctx) return;
+  var c = ctx.c;
+  var fecha = document.getElementById('contrato-llamada-fecha');
+  var hora  = document.getElementById('contrato-llamada-hora');
+  var notas = document.getElementById('contrato-llamada-notas');
+  var msg   = document.getElementById('contrato-llamada-msg');
+  if (!fecha || !fecha.value) { if(msg){msg.style.color='var(--red,#c0392b)';msg.textContent='Fecha requerida';} return; }
+  if(msg){ msg.style.color='var(--ink-3)'; msg.textContent='Agendando…'; }
+  apiPost({
+    action:'agendarLlamada',
+    clienteId: c.ClienteId || '',
+    nombre: c.NombreCliente,
+    telefono: c.TelefonoCliente,
+    contratoToken: c.Token,
+    fechaLlamada: fecha.value,
+    horaLlamada: (hora&&hora.value)||'10:00',
+    descripcion: (notas&&notas.value||'').trim()
+  }).then(function(r){
+    if(r.ok){
+      if(msg){msg.style.color='#1E8449';msg.textContent='Llamada agendada en Calendar.';}
+      if(fecha) fecha.value='';
+      if(notas) notas.value='';
+      setTimeout(function(){ if(msg) msg.textContent=''; }, 3000);
+    } else {
+      if(msg){msg.style.color='var(--red,#c0392b)';msg.textContent=r.error||'Error';}
+    }
+  });
+}
+
+// ── MENÚ NUEVO ────────────────────────────────────────────────────────────────
+
+function toggleMenuNuevo(e) {
+  e.stopPropagation();
+  var menu = document.getElementById('menu-nuevo');
+  var overlay = document.getElementById('menu-nuevo-overlay');
+  var abierto = menu.style.display !== 'none';
+  menu.style.display = abierto ? 'none' : '';
+  overlay.style.display = abierto ? 'none' : '';
+}
+
+function cerrarMenuNuevo() {
+  var menu = document.getElementById('menu-nuevo');
+  var overlay = document.getElementById('menu-nuevo-overlay');
+  if(menu) menu.style.display='none';
+  if(overlay) overlay.style.display='none';
+}
+
+// ── Legacy stubs ──────────────────────────────────────────────────────────────
+
+function _renderListaProspectos() {}
+function cargarProspectos() {}
+function cambiarEstatusProspecto() {}
 
 
 </script>

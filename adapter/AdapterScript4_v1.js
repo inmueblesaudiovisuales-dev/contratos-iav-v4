@@ -1,7 +1,7 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-02 14:31:23 CST — R34: simplifica descripcion Calendar (procesarFirma, primerAbono, reagendarPropiedad); quita PDF/Drive/checklist/detalles internos
+// Ultima modificacion: 2026-06-03 21:20:34 CST — R35: agendarLlamadaProspecto renombrado a agendarLlamadaCliente; soporta contratoToken y seguimiento de clientes existentes
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -40,7 +40,8 @@ function doPost(e) {
       notificarUpsell: notificarUpsell,
       obtenerLogoCliente: obtenerLogoCliente,
       syncBackup: syncBackup,
-      agendarLlamadaProspecto: agendarLlamadaProspecto
+      agendarLlamadaProspecto: agendarLlamadaCliente,
+      agendarLlamadaCliente: agendarLlamadaCliente
     };
     if (!handlers[action]) return jsonResp({ error: 'Acción no reconocida: ' + action });
     var result = handlers[action](body);
@@ -867,10 +868,22 @@ function syncBackup(body) {
   syncHoja('Propiedades4', data.propiedades, [
     'contrato_token','num_propiedad','tipo','paquete','fecha_sesion','hora_sesion','direccion'
   ]);
-  syncHoja('Paquetes4', data.paquetes, [
-    'clave','tipo','nombre','precio','es_adicional','activo','orden'
-  ]);
-}
+	  syncHoja('Paquetes4', data.paquetes, [
+	    'clave','tipo','nombre','precio','es_adicional','activo','orden'
+	  ]);
+	  syncHoja('Clientes4', data.clientes, [
+	    'id','nombre','telefono','correo','origen','notas_perfil','fecha_creacion','fecha_ultima_actividad',
+	    'trabajos_activos','num_contratos','ultimo_contrato','total_facturado'
+	  ]);
+	  syncHoja('Trabajos4', data.trabajos, [
+	    'id','cliente_id','estatus','interes','paquetes_cotizados_json','portafolio_links_json',
+	    'propiedades_interes_json','presupuesto_estimado','notas','contrato_token',
+	    'fecha_creacion','fecha_ultima_actividad'
+	  ]);
+	  syncHoja('Actividades4', data.actividades, [
+	    'id','cliente_id','trabajo_id','tipo','descripcion','fecha_actividad','hora','fecha_creacion'
+	  ]);
+	}
 
 // ── INSTALAR TRIGGERS ─────────────────────────────────────────────────────
 
@@ -1075,13 +1088,14 @@ function obtenerOCrearCarpetaContratosFirmados_() {
 
 // ── PROSPECTOS — agenda llamada en Calendar ──────────────────────────────────
 
-function agendarLlamadaProspecto(body) {
-  var nombre       = body.nombre || '';
-  var telefono     = body.telefono || '';
-  var interes      = body.interes || '';
-  var fechaLlamada = body.fechaLlamada || '';
-  var horaLlamada  = body.horaLlamada || '09:00';
-  var notas        = body.notas || '';
+function agendarLlamadaCliente(body) {
+  var nombre        = body.nombre || '';
+  var telefono      = body.telefono || '';
+  var interes       = body.interes || '';
+  var fechaLlamada  = body.fechaLlamada || '';
+  var horaLlamada   = body.horaLlamada || '09:00';
+  var notas         = body.notas || '';
+  var contratoToken = body.contratoToken || '';
 
   if (!fechaLlamada) return { error: 'fechaLlamada requerida' };
 
@@ -1095,7 +1109,7 @@ function agendarLlamadaProspecto(body) {
     parseInt(partesHora[1] || 0),
     0
   );
-  var fin = new Date(inicio.getTime() + 30 * 60 * 1000); // 30 minutos
+  var fin = new Date(inicio.getTime() + 30 * 60 * 1000);
 
   var interesLabels = {
     'foto':  'Fotografía',
@@ -1103,18 +1117,21 @@ function agendarLlamadaProspecto(body) {
     '360':   'Recorrido 360°',
     'combo': 'Paquete completo'
   };
-  var interesLabel = interesLabels[interes] || interes || 'Sin especificar';
+  var interesLabel = interesLabels[interes] || interes || '';
 
-  var descripcion = [
-    'Llamada con prospecto — IAV Contratos',
+  var lineas = [
+    contratoToken ? 'Seguimiento de cliente — IAV Contratos' : 'Llamada con cliente — IAV Contratos',
     '',
     'Nombre: ' + nombre,
     'Teléfono: ' + telefono,
-    'Le interesa: ' + interesLabel,
+    interesLabel ? 'Le interesa: ' + interesLabel : '',
+    contratoToken ? 'Portal: ' + CONFIG.WORKER_URL + '/portal.html?token=' + contratoToken : '',
     notas ? 'Notas: ' + notas : ''
-  ].filter(Boolean).join('\n');
+  ];
 
-  var titulo = 'Llamada prospecto — ' + nombre + ' (' + interesLabel + ')';
+  var descripcion = lineas.filter(Boolean).join('\n');
+  var titulo = (contratoToken ? 'Seguimiento — ' : 'Llamada — ') + nombre +
+               (interesLabel ? ' (' + interesLabel + ')' : '');
 
   CalendarApp.getDefaultCalendar().createEvent(titulo, inicio, fin, {
     description: descripcion
