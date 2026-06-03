@@ -72,21 +72,46 @@ export async function handleTrabajos(request, env, ctx, action) {
   if (action === 'listarTrabajos') {
     const url = new URL(request.url);
     let clienteId = url.searchParams.get('clienteId');
-    if (!clienteId && request.method === 'POST') {
-      const body = await request.json();
-      clienteId = body.clienteId || null;
+    const grupo = url.searchParams.get('grupo');
+    const mostrarCancelados = url.searchParams.get('cancelados') === '1';
+
+    const GRUPO_ESTATUSES = {
+      prospectos: ['Nuevo', 'En cotizacion'],
+      por_firmar: ['Pendiente firma', 'Firmado'],
+      confirmados: ['Reservado', 'En produccion', 'Entregado', 'Completado'],
+      cancelados: ['Cancelado']
+    };
+
+    const conditions = [];
+    const params = [];
+
+    if (clienteId) {
+      conditions.push('t.cliente_id = ?');
+      params.push(clienteId);
     }
-    const sql = clienteId
-      ? `SELECT t.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.correo AS cliente_correo
-         FROM trabajos t JOIN clientes c ON c.id = t.cliente_id
-         WHERE t.cliente_id = ?
-         ORDER BY CASE WHEN t.fecha_ultima_actividad = '' OR t.fecha_ultima_actividad IS NULL
-                  THEN t.fecha_creacion ELSE t.fecha_ultima_actividad END DESC`
-      : `SELECT t.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.correo AS cliente_correo
-         FROM trabajos t JOIN clientes c ON c.id = t.cliente_id
-         ORDER BY CASE WHEN t.fecha_ultima_actividad = '' OR t.fecha_ultima_actividad IS NULL
-                  THEN t.fecha_creacion ELSE t.fecha_ultima_actividad END DESC`;
-    const params = clienteId ? [clienteId] : [];
+
+    if (grupo && GRUPO_ESTATUSES[grupo]) {
+      const ph = GRUPO_ESTATUSES[grupo].map(() => '?').join(',');
+      conditions.push(`t.estatus IN (${ph})`);
+      params.push(...GRUPO_ESTATUSES[grupo]);
+    } else if (!mostrarCancelados) {
+      conditions.push(`t.estatus != 'Cancelado'`);
+    }
+
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+    const sql = `
+      SELECT t.*,
+             c.nombre  AS cliente_nombre,
+             c.telefono AS cliente_telefono,
+             c.correo  AS cliente_correo,
+             c.inmobiliaria AS cliente_inmobiliaria
+      FROM trabajos t
+      JOIN clientes c ON c.id = t.cliente_id
+      ${where}
+      ORDER BY
+        CASE WHEN t.fecha_ultima_actividad = '' OR t.fecha_ultima_actividad IS NULL
+             THEN t.fecha_creacion ELSE t.fecha_ultima_actividad END DESC`;
+
     const { results } = await query(db, sql, params);
     return ok({ ok: true, trabajos: results });
   }
@@ -123,22 +148,41 @@ export async function handleTrabajos(request, env, ctx, action) {
     const body = await request.json();
     const { id, estatus } = body;
     if (!id || !ESTATUSES_VALIDOS.includes(estatus)) return err('id y estatus válido requeridos');
-    const t = await queryOne(db, 'SELECT cliente_id, estatus, contrato_token FROM trabajos WHERE id=?', [id]);
+
+    const t = await queryOne(db, 'SELECT * FROM trabajos WHERE id=?', [id]);
     if (!t) return err('Trabajo no encontrado', 404);
-    if (t.estatus === 'convertido' && t.contrato_token) {
-      return err('Un trabajo convertido debe actualizarse desde el contrato asociado', 409);
-    }
     const ts = now();
-    await batch(db, [
-      {
-        sql: `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE id=?`,
-        params: [estatus, ts, id]
-      },
-      {
-        sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
-        params: [ts, t.cliente_id]
+
+    const statements = [
+      { sql: `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE id=?`, params: [estatus, ts, id] },
+      { sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`, params: [ts, t.cliente_id] }
+    ];
+
+    // If trabajo has a contrato, keep contratos.estatus in sync
+    if (t.token) {
+      const contratoExiste = await queryOne(db, 'SELECT token FROM contratos WHERE token=?', [t.token]);
+      if (contratoExiste) {
+        statements.push({
+          sql: `UPDATE contratos SET estatus=? WHERE token=?`,
+          params: [estatus, t.token]
+        });
       }
-    ]);
+    }
+
+    await batch(db, statements);
+
+    // Fire calendar event when work becomes Reservado
+    if (estatus === 'Reservado') {
+      const cliente = await queryOne(db, 'SELECT nombre, telefono FROM clientes WHERE id=?', [t.cliente_id]);
+      callAdapter(ctx, env, 'crearEventoReservado', {
+        trabajoId: id,
+        token: t.token || '',
+        nombreCliente: cliente?.nombre || '',
+        telefono: cliente?.telefono || '',
+        equipoUrl: `https://contratos.inmueblesaudiovisuales.com/equipo.html?token=${t.token || id}`
+      });
+    }
+
     return ok({ ok: true });
   }
 
