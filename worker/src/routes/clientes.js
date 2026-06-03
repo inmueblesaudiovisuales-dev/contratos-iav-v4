@@ -8,13 +8,13 @@ export async function handleClientes(request, env, ctx, action) {
 
   if (action === 'crearCliente') {
     const body = await request.json();
-    const { nombre, telefono, correo, origen, notasPerfil } = body;
+    const { nombre, telefono, correo, origen, notasPerfil, inmobiliaria } = body;
     if (!nombre) return err('Nombre requerido');
     const id = uuid();
     await run(db,
-      `INSERT INTO clientes (id, nombre, telefono, correo, origen, notas_perfil, fecha_creacion)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, nombre, telefono || '', correo || '', origen || '', notasPerfil || '', now()]
+      `INSERT INTO clientes (id, nombre, telefono, correo, origen, notas_perfil, inmobiliaria, fecha_creacion)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, nombre, telefono || '', correo || '', origen || '', notasPerfil || '', inmobiliaria || '', now()]
     );
     return ok({ ok: true, id });
   }
@@ -22,11 +22,12 @@ export async function handleClientes(request, env, ctx, action) {
   if (action === 'listarClientes') {
     const { results } = await query(db,
       `WITH clientes_base AS (
-         SELECT id, nombre, telefono, correo, origen, notas_perfil, fecha_creacion, fecha_ultima_actividad
+         SELECT id, nombre, telefono, correo, origen, notas_perfil, inmobiliaria, fecha_creacion, fecha_ultima_actividad
          FROM clientes
          UNION ALL
          SELECT '' AS id, ct.nombre_cliente AS nombre, MAX(ct.telefono_cliente) AS telefono,
                 ct.correo_cliente AS correo, 'contrato' AS origen, '' AS notas_perfil,
+                '' AS inmobiliaria,
                 MIN(ct.fecha_creacion) AS fecha_creacion, MAX(ct.fecha_creacion) AS fecha_ultima_actividad
          FROM contratos ct
          WHERE ct.oculto = 0
@@ -95,12 +96,16 @@ export async function handleClientes(request, env, ctx, action) {
 
   if (action === 'actualizarCliente') {
     const body = await request.json();
-    const { id, nombre, telefono, correo, origen, notasPerfil } = body;
+    const { id, nombre, telefono, correo, origen, notasPerfil, inmobiliaria, _soloInmobiliaria } = body;
     if (!id) return err('id requerido');
+    if (_soloInmobiliaria) {
+      await run(db, `UPDATE clientes SET inmobiliaria=? WHERE id=?`, [inmobiliaria || '', id]);
+      return ok({ ok: true });
+    }
     if (!nombre) return err('Nombre requerido');
     await run(db,
-      `UPDATE clientes SET nombre=?, telefono=?, correo=?, origen=?, notas_perfil=? WHERE id=?`,
-      [nombre, telefono || '', correo || '', origen || '', notasPerfil || '', id]
+      `UPDATE clientes SET nombre=?, telefono=?, correo=?, origen=?, notas_perfil=?, inmobiliaria=? WHERE id=?`,
+      [nombre, telefono || '', correo || '', origen || '', notasPerfil || '', inmobiliaria || '', id]
     );
     return ok({ ok: true });
   }

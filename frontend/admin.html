@@ -744,6 +744,7 @@
     .cli-card-meta { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:3px; }
     .cli-card-tel { font-size:12px; color:var(--ink-3); text-decoration:none; }
     .cli-card-correo { font-size:12px; color:var(--ink-3); }
+    .cli-card-inmob { font-size:11px; color:var(--ink-3); margin-top:2px; }
     .cli-card-acciones { display:flex; gap:6px; flex-shrink:0; }
     .cli-card-action-btn {
       display:flex; align-items:center; justify-content:center;
@@ -1490,6 +1491,7 @@
           </div>
         </div>
 
+        <input type="hidden" id="nuevo-trabajo-id" value="">
         <div class="form-msg" id="msg-crear"></div>
         <button class="btn-primario gold" style="width:100%;margin-top:6px" id="btn-crear" onclick="crearContrato()">
           Crear contrato y generar link
@@ -1513,6 +1515,7 @@
     </div>
     <div style="display:flex;gap:8px;align-items:center">
       <button class="btn-secundario btn-sm" onclick="cargarClientes()" title="Actualizar"><i class="ti ti-refresh"></i></button>
+      <button class="btn-secundario btn-sm" onclick="abrirModalTrabajo()"><i class="ti ti-plus"></i> Nuevo trabajo</button>
       <button class="btn-primario gold btn-sm" onclick="abrirModalCliente()"><i class="ti ti-user-plus"></i> Nuevo cliente</button>
     </div>
   </div>
@@ -1821,7 +1824,12 @@
       <div class="lifecycle-wrap"></div>
       <div id="panel-sesion" class="panel-sesion" style="display:none"></div>
     </div>
-    <button class="panel-close" onclick="cerrarPanel()"><i class="ti ti-x"></i></button>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+      <button class="panel-close" onclick="cerrarPanel()"><i class="ti ti-x"></i></button>
+      <button id="panel-btn-crear-contrato" class="btn-primario btn-sm" style="display:none;font-size:11px" onclick="irANuevoDesdePanel()">
+        <i class="ti ti-file-plus"></i> Crear contrato
+      </button>
+    </div>
   </div>
   <!-- KPI cards + pay progress (populated by renderPanel) -->
   <div id="panel-kpis"></div>
@@ -3091,6 +3099,9 @@ async function abrirPanel(token) {
   if (_pk) _pk.innerHTML = '';
   const _pab = document.getElementById('panel-action-bar');
   if (_pab) _pab.innerHTML = '';
+  // Hide "Crear contrato" button — not applicable for contrato panels
+  const _bcc = document.getElementById('panel-btn-crear-contrato');
+  if (_bcc) _bcc.style.display = 'none';
   ['info','pagos','prod','llamada'].forEach(id =>
     document.getElementById('pane-' + id).innerHTML =
       '<p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:4px 0">Cargando...</p>'
@@ -3144,6 +3155,7 @@ async function abrirPanelCliente(id) {
   const _ps  = document.getElementById('panel-sesion');      if (_ps)  _ps.style.display = 'none';
   const _pk  = document.getElementById('panel-kpis');        if (_pk)  _pk.innerHTML = '';
   const _pab = document.getElementById('panel-action-bar');  if (_pab) _pab.innerHTML = '';
+  const _bcc2 = document.getElementById('panel-btn-crear-contrato'); if (_bcc2) _bcc2.style.display = 'none';
   document.querySelector('.lifecycle-wrap').innerHTML = '';
 
   ['info','pagos','prod','llamada'].forEach(function(pid, i) {
@@ -3186,9 +3198,17 @@ function renderPanelCliente(data) {
     _pc.style.display = parts.length ? '' : 'none';
   }
 
-  if (c.notas_perfil) {
-    var _pk = document.getElementById('panel-kpis');
-    if (_pk) _pk.innerHTML = '<div style="font-size:12px;color:var(--ink-2);padding:10px 16px 0;white-space:pre-wrap;line-height:1.5">'+esc(c.notas_perfil)+'</div>';
+  var _pk = document.getElementById('panel-kpis');
+  if (_pk) {
+    var kpiHtml = '';
+    if (c.notas_perfil) kpiHtml += '<div style="font-size:12px;color:var(--ink-2);padding:10px 16px 0;white-space:pre-wrap;line-height:1.5">'+esc(c.notas_perfil)+'</div>';
+    kpiHtml += '<div style="padding:10px 16px 0">' +
+      '<label style="font-size:10px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em">Inmobiliaria</label>' +
+      '<input type="text" id="cli-panel-inmobiliaria" value="'+esc(c.inmobiliaria||'')+'" placeholder="—" ' +
+        'onchange="guardarInmobiliariaCliente('+jsArg(c.id)+')" ' +
+        'style="font-size:13px;background:none;border:none;border-bottom:1px solid var(--border);width:100%;padding:3px 0;color:var(--ink-1);outline:none">' +
+      '</div>';
+    _pk.innerHTML = kpiHtml;
   }
 
   var waNum = normalizarTelWA(c.telefono || '');
@@ -3354,6 +3374,13 @@ function renderPanel(data) {
     } else {
       panelSesionEl.style.display = 'none';
     }
+  }
+
+  // "Crear contrato" button — visible only when trabajo has no contrato
+  const _btnCrearContrato = document.getElementById('panel-btn-crear-contrato');
+  if (_btnCrearContrato) {
+    const _tieneContrato = !!(data._equipoData && data._equipoData.tieneContrato);
+    _btnCrearContrato.style.display = _tieneContrato ? 'none' : '';
   }
 
   // KPI cards + payment progress bar
@@ -5490,6 +5517,8 @@ function renderListaClientes(clientes) {
     if (telefono) html += '<span class="cli-card-tel">'+esc(telefono)+'</span>';
     html += '</div>';
     if (correo) html += '<div style="font-size:11px;color:var(--ink-3);margin-top:1px">'+esc(correo)+'</div>';
+    var inmobiliaria = c.Inmobiliaria || c.inmobiliaria || '';
+    if (inmobiliaria) html += '<div class="cli-card-inmob"><i class="ti ti-building" style="font-size:11px"></i> '+esc(inmobiliaria)+'</div>';
     var badges = [];
     if (origenStr) badges.push('<span class="badge" style="font-size:10px;background:var(--page);border:1px solid var(--border);color:var(--ink-3)">'+esc(origenStr)+'</span>');
     if (trabajosActivos > 0) badges.push('<span class="badge" style="font-size:10px;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00)">'+trabajosActivos+' en pipeline</span>');
@@ -5660,6 +5689,14 @@ async function borrarCliente(id, nombre) {
   } catch(e) { alert('Error de red: ' + e.message); }
 }
 
+function guardarInmobiliariaCliente(id) {
+  var inp = document.getElementById('cli-panel-inmobiliaria');
+  if (!inp) return;
+  var val = inp.value.trim();
+  apiPost({ action: 'actualizarCliente', id: id, inmobiliaria: val, _soloInmobiliaria: true })
+    .catch(function() {});
+}
+
 // ── MODAL NUEVO TRABAJO ───────────────────────────────────────────────────────
 
 var _trabClienteIdSel = null;
@@ -5818,6 +5855,25 @@ function crearContratoDesdeWork(trabajoId, nombre, clienteId, telefono, correo) 
     if (sel) sel.style.display='flex';
     if (selNom) selNom.textContent = nombre || '';
   }
+}
+
+// ── CREAR CONTRATO DESDE PANEL DE TRABAJO ─────────────────────────────────────
+
+function irANuevoDesdePanel() {
+  var t = window._trabajoActivo;
+  if (!t) return;
+  crearContratoDesdeWork(
+    t.id,
+    t.cliente_nombre || '',
+    t.cliente_id || '',
+    t.cliente_telefono || '',
+    t.cliente_correo || ''
+  );
+  // Pre-fill hidden trabajo id in form
+  setTimeout(function() {
+    var hiddenTrabajo = document.getElementById('nuevo-trabajo-id');
+    if (hiddenTrabajo) hiddenTrabajo.value = t.id;
+  }, 50);
 }
 
 // ── BÚSQUEDA DE CLIENTE EN FORM CONTRATO ─────────────────────────────────────
