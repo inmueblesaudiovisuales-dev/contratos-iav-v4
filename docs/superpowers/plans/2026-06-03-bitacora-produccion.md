@@ -20,7 +20,7 @@
 - Modify `frontend/checklist.html`
   - Full UI rewrite for Bitacora de Produccion while preserving API URLs, token loading, autosave, polling, name persistence, error/loading states, and static deploy compatibility.
 - Modify `MASTER_V4.md`
-  - Document R46 after implementation and update the top "Ultima actualizacion" line.
+  - Document R48 after implementation and update the top "Ultima actualizacion" line.
 
 ---
 
@@ -459,7 +459,7 @@ Run:
 
 ```bash
 git add frontend/checklist-logic.js frontend/checklist-logic.test.js
-git commit -m "R46 — logica bitacora de produccion"
+git commit -m "R48 — logica bitacora de produccion"
 ```
 
 ---
@@ -587,7 +587,7 @@ Run:
 
 ```bash
 git add frontend/checklist.html
-git commit -m "R46 — rediseña checklist como bitacora"
+git commit -m "R48 — rediseña checklist como bitacora"
 ```
 
 ---
@@ -605,23 +605,23 @@ Use:
 TZ="America/Monterrey" date "+%Y-%m-%d %H:%M:%S %Z"
 ```
 
-Update the first block to reference R46 and Bitacora de Produccion.
+Update the first block to reference R48 and Bitacora de Produccion.
 
-- [ ] **Step 2: Add R46 section near the top of applied changes**
+- [ ] **Step 2: Add R48 section near the top of applied changes**
 
 Add a section before R37:
 
 ```markdown
-### Ronda 46 — Bitacora de Produccion en checklist.html (usar la hora real de Monterrey del momento de documentar)
+### Ronda 48 — Bitacora de Produccion en checklist.html (usar la hora real de Monterrey del momento de documentar)
 
 **Cambio:** `checklist.html` se rediseña como Bitacora de Produccion para registrar capturas en campo y dejar secuencia util para edicion.
 
 | ID | Archivo | Cambio |
 |----|---------|--------|
-| R46-01 | `frontend/checklist-logic.js` | Nuevo modulo de logica pura para formato v2, migracion legacy, servicios activos, espacios en lote, registro de capturas, undo, pendientes y filtros de bitacora. |
-| R46-02 | `frontend/checklist-logic.test.js` | Pruebas con `node:test` para migracion, parsing de espacios/subespacios, orden independiente Video/Drone, servicios desactivados y undo. |
-| R46-03 | `frontend/checklist.html` | Rediseño completo a Bitacora de Produccion: modos Foto/360/Video/Drone, espacios/subespacios, Drone separado, bitacora cronologica, cierre de pendientes, acciones secundarias y autosave. |
-| R46-04 | `MASTER_V4.md` | Documenta R46. No requiere cambios al adapter ni a D1 fuera del JSON existente. |
+| R48-01 | `frontend/checklist-logic.js` | Nuevo modulo de logica pura para formato v2, migracion legacy, servicios activos, espacios en lote, registro de capturas, undo, pendientes y filtros de bitacora. |
+| R48-02 | `frontend/checklist-logic.test.js` | Pruebas con `node:test` para migracion, parsing de espacios/subespacios, orden independiente Video/Drone, servicios desactivados y undo. |
+| R48-03 | `frontend/checklist.html` | Rediseño completo a Bitacora de Produccion: modos Foto/360/Video/Drone, espacios/subespacios, Drone separado, bitacora cronologica, cierre de pendientes, acciones secundarias y autosave. |
+| R48-04 | `MASTER_V4.md` | Documenta R48. No requiere cambios al adapter ni a D1 fuera del JSON existente. |
 ```
 
 - [ ] **Step 3: Commit docs**
@@ -630,7 +630,7 @@ Run:
 
 ```bash
 git add MASTER_V4.md
-git commit -m "R46 — documenta bitacora de produccion"
+git commit -m "R48 — documenta bitacora de produccion"
 ```
 
 ---
@@ -739,7 +739,7 @@ git status --short --branch
 git log --oneline -5
 ```
 
-Expected: local branch contains R46 commits and no unintended uncommitted files except a running server process, if any.
+Expected: local branch contains R48 commits and no unintended uncommitted files except a running server process, if any.
 
 ---
 

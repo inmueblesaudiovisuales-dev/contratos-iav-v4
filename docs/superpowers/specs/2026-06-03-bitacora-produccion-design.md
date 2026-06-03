@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-06-03  
 **Archivo objetivo:** `frontend/checklist.html`  
-**Ronda propuesta:** R46  
+**Ronda propuesta:** R48  
 
 ---
 
