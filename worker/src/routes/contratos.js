@@ -1,6 +1,6 @@
 import { query, queryOne, run, batch, uuid, now } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
-import { callAdapter } from '../google.js';
+import { callAdapter, callAdapterSync } from '../google.js';
 import { generarFolio, asignarFolio } from '../folios.js';
 
 export async function handleContratos(request, env, ctx, action) {
@@ -112,7 +112,22 @@ export async function handleContratos(request, env, ctx, action) {
       }
     }
 
-    const token = uuid();
+    // trabajoId is REQUIRED — every contrato comes from a trabajo
+    if (!trabajoId) return err('trabajoId requerido para crear un contrato');
+    const trabajoOrigen = await queryOne(db,
+      'SELECT * FROM trabajos WHERE id=?', [trabajoId]);
+    if (!trabajoOrigen) return err('Trabajo no encontrado', 404);
+    if (!trabajoOrigen.token) return err('El trabajo no tiene token — guarda el trabajo primero', 400);
+    const contratoExistente = await queryOne(db, 'SELECT token FROM contratos WHERE token=?', [trabajoOrigen.token]);
+    if (contratoExistente) return err('Este trabajo ya tiene un contrato', 409);
+
+    const token = trabajoOrigen.token; // USE TRABAJO TOKEN — not uuid()
+    const clienteIdFinal = trabajoOrigen.cliente_id;
+
+    if (clienteId && clienteId !== clienteIdFinal) {
+      return err('El clienteId no coincide con el cliente del trabajo', 409);
+    }
+
     const paqueteBaseFinal = paqueteBase || prop1?.paquete || '';
     const tipoPaqueteFinal = tipoPaquete || prop1?.tipo || '';
     const paquete = await queryOne(db, 'SELECT precio FROM paquetes WHERE clave = ?', [paqueteBaseFinal]);
@@ -127,24 +142,6 @@ export async function handleContratos(request, env, ctx, action) {
     const tieneExpress = [...adicionalesOfrecidos, ...extrasObjs].some(
       a => a === 'ADD-EXPRESS' || (a && a.clave === 'ADD-EXPRESS')
     );
-
-	    let clienteIdFinal = clienteId || '';
-	    let trabajoOrigen = null;
-	    if (trabajoId) {
-	      trabajoOrigen = await queryOne(db, 'SELECT id, cliente_id, estatus, contrato_token FROM trabajos WHERE id=?', [trabajoId]);
-	      if (!trabajoOrigen) return err('Trabajo no encontrado', 404);
-	      if (trabajoOrigen.estatus === 'convertido' && trabajoOrigen.contrato_token) {
-	        return err('Trabajo ya convertido', 409);
-	      }
-	      if (clienteIdFinal && clienteIdFinal !== trabajoOrigen.cliente_id) {
-	        return err('El trabajo pertenece a otro cliente', 409);
-	      }
-	      clienteIdFinal = trabajoOrigen.cliente_id;
-	    }
-	    if (clienteIdFinal) {
-	      const clienteExiste = await queryOne(db, 'SELECT id FROM clientes WHERE id=?', [clienteIdFinal]);
-	      if (!clienteExiste) return err('Cliente no encontrado', 404);
-	    }
 
 	    // Siempre generar folio desde propiedad 1
 	    const folio = prop1.fechaSesion ? await asignarFolio(db, prop1.fechaSesion) : null;
@@ -184,31 +181,39 @@ export async function handleContratos(request, env, ctx, action) {
 	      }
 	    ];
 
-	    if (trabajoOrigen) {
-	      const tsConv = now();
-	      statements.push(
-	        {
-	          sql: `UPDATE trabajos SET estatus='convertido', contrato_token=?, fecha_ultima_actividad=? WHERE id=?`,
-	          params: [token, tsConv, trabajoId]
-	        },
-	        {
-	          sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
-	          params: [tsConv, clienteIdFinal]
-	        },
-	        {
-	          sql: `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
-	                VALUES (?, ?, ?, 'contrato_generado', ?, ?, '', ?)`,
-	          params: [uuid(), clienteIdFinal, trabajoId, 'Contrato generado: ' + token, tsConv.substring(0, 10), tsConv]
-	        }
-	      );
-	    } else if (clienteIdFinal) {
-	      statements.push({
-	        sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
-	        params: [creacionNow, clienteIdFinal]
-	      });
-	    }
+    // Update trabajo to Pendiente firma
+    const tsConv = now();
+    statements.push(
+      {
+        sql: `UPDATE trabajos SET estatus='Pendiente firma', fecha_ultima_actividad=? WHERE id=?`,
+        params: [tsConv, trabajoId]
+      },
+      {
+        sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
+        params: [tsConv, clienteIdFinal]
+      },
+      {
+        sql: `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
+              VALUES (?, ?, ?, 'contrato_generado', ?, ?, '', ?)`,
+        params: [uuid(), clienteIdFinal, trabajoId, 'Contrato generado: ' + token, tsConv.substring(0, 10), tsConv]
+      }
+    );
 
-	    await batch(db, statements);
+    await batch(db, statements);
+
+    // Create Drive folders synchronously so they exist before any file upload
+    const { results: paquetesNombres } = await query(db, 'SELECT clave, nombre FROM paquetes');
+    const pkMapNombres = Object.fromEntries(paquetesNombres.map(p => [p.clave, p.nombre]));
+    await callAdapterSync(env, 'crearCarpetas', {
+      token,
+      folio,
+      nombreCliente,
+      propiedades: propsData.map((p, i) => ({
+        numPropiedad: i + 1,
+        tipo: p.tipo || tipoPaqueteFinal,
+        paquete: pkMapNombres[p.paquete || paqueteBaseFinal] || p.paquete || paqueteBaseFinal
+      }))
+    });
 
     const linkPortal = `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`;
     return ok({ ok: true, token, folio, url: linkPortal, linkPortal });
@@ -216,18 +221,17 @@ export async function handleContratos(request, env, ctx, action) {
 
   if (action === 'actualizarEstatus') {
     const { token, estatus, forzar } = await request.json();
-    const ESTATUSES_VALIDOS = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado','Completado'];
+    const ESTATUSES_VALIDOS = ['Pendiente firma','Firmado','Reservado','En produccion','Entregado','Completado','Cancelado'];
     if (!ESTATUSES_VALIDOS.includes(estatus)) return err('Estatus no válido');
     const c = await queryOne(db, 'SELECT estatus FROM contratos WHERE token=?', [token]);
     if (!c) return err('Contrato no encontrado', 404);
     const TRANSICIONES_BLOQUEADAS = {
-      'Pendiente firma'  : ['En produccion','Entregado','Liquidado','Completado'],
-      'Firmado'          : ['Entregado','Liquidado','Completado'],
-      'Entregado'        : ['Pendiente firma','Firmado','Anticipo recibido'],
-      'Liquidado'        : ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado'],
-      'Completado'       : ['Pendiente firma','Firmado','Anticipo recibido','En produccion'],
-      'En produccion'    : ['Pendiente firma'],
-      'Anticipo recibido': ['Pendiente firma'],
+      'Pendiente firma' : ['En produccion','Entregado','Completado'],
+      'Firmado'         : ['Entregado','Completado'],
+      'Entregado'       : ['Pendiente firma','Firmado','Reservado'],
+      'Completado'      : ['Pendiente firma','Firmado','Reservado','En produccion'],
+      'En produccion'   : ['Pendiente firma'],
+      'Reservado'       : ['Pendiente firma'],
     };
     const forzarBool = forzar === true || forzar === 'true' || forzar === 1;
     if (!forzarBool) {
@@ -242,6 +246,8 @@ export async function handleContratos(request, env, ctx, action) {
       }
     }
     await run(db, 'UPDATE contratos SET estatus=? WHERE token=?', [estatus, token]);
+    // Keep trabajos.estatus in sync
+    await run(db, `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE token=?`, [estatus, new Date().toISOString(), token]);
     return ok({ ok: true, estatus });
   }
 
