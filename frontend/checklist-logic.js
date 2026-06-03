@@ -15,6 +15,110 @@
     'Roof / terraza',
     'Toma de cierre',
   ];
+  const TEMPLATE_DEFS = {
+    casa: {
+      label: 'Casa residencial',
+      description: 'Interior, exterior, recamaras y servicios comunes.',
+      spaces: [
+        ['Fachada', 'exterior', true],
+        ['Cochera', 'exterior', false],
+        ['Jardin / Terraza', 'exterior', true],
+        ['Patio', 'exterior', false],
+        ['Acceso / Recibidor', 'interior', false],
+        ['Sala', 'interior', true],
+        ['Comedor', 'interior', false],
+        ['Cocina', 'interior', true],
+        ['Bano de visitas', 'interior', false],
+        ['Recamara principal', 'interior', true],
+        ['Bano principal', 'interior', false, 'Recamara principal'],
+        ['Closet', 'interior', false, 'Recamara principal'],
+        ['Recamara 2', 'interior', false],
+        ['Bano', 'interior', false, 'Recamara 2'],
+        ['Recamara 3', 'interior', false],
+        ['Lavanderia', 'interior', false],
+      ],
+    },
+    departamento: {
+      label: 'Departamento',
+      description: 'Departamento con interiores y amenidades del edificio.',
+      spaces: [
+        ['Acceso', 'interior', false],
+        ['Sala', 'interior', true],
+        ['Comedor', 'interior', false],
+        ['Cocina', 'interior', true],
+        ['Bano de visitas', 'interior', false],
+        ['Recamara principal', 'interior', true],
+        ['Bano principal', 'interior', false, 'Recamara principal'],
+        ['Closet', 'interior', false, 'Recamara principal'],
+        ['Recamara secundaria', 'interior', false],
+        ['Balcon / Terraza', 'exterior', true],
+        ['Lavanderia', 'interior', false],
+        ['Lobby', 'amenidades', true],
+        ['Alberca', 'amenidades', true],
+        ['Gimnasio', 'amenidades', true],
+        ['Salon de eventos', 'amenidades', false],
+        ['Terraza comun', 'amenidades', true],
+        ['Asadores', 'amenidades', false],
+      ],
+    },
+    terreno: {
+      label: 'Terreno',
+      description: 'Perimetro, accesos, entorno y vistas generales.',
+      spaces: [
+        ['Frente del terreno', 'exterior', true],
+        ['Vista desde calle', 'exterior', true],
+        ['Lateral izquierdo', 'exterior', false],
+        ['Lateral derecho', 'exterior', false],
+        ['Fondo', 'exterior', false],
+        ['Vista panoramica', 'exterior', true],
+        ['Acceso', 'exterior', true],
+        ['Servicios / entorno', 'exterior', false],
+      ],
+    },
+    amenidades: {
+      label: 'Amenidades',
+      description: 'Areas comunes que venden el desarrollo o edificio.',
+      spaces: [
+        ['Alberca', 'amenidades', true],
+        ['Gimnasio', 'amenidades', true],
+        ['Lobby', 'amenidades', true],
+        ['Salon de eventos', 'amenidades', false],
+        ['Terraza comun', 'amenidades', true],
+        ['Asadores', 'amenidades', false],
+        ['Area infantil', 'amenidades', false],
+        ['Cancha', 'amenidades', false],
+        ['Cowork', 'amenidades', false],
+        ['Jardines', 'amenidades', true],
+        ['Estacionamiento de visitas', 'amenidades', false],
+        ['Acceso / Caseta', 'amenidades', true],
+        ['Elevadores', 'amenidades', false],
+        ['Pasillos / areas comunes', 'amenidades', false],
+      ],
+    },
+    exterior_drone: {
+      label: 'Exterior / Drone',
+      description: 'Exteriores de apoyo y tomas aereas base.',
+      spaces: [
+        ['Fachada', 'exterior', true],
+        ['Calle / acceso', 'exterior', true],
+        ['Cochera', 'exterior', false],
+        ['Jardin', 'exterior', false],
+        ['Terraza', 'exterior', true],
+        ['Roof garden', 'exterior', true],
+        ['Vista exterior', 'exterior', false],
+      ],
+      drone: [
+        'Fachada aerea',
+        'Vista general de propiedad',
+        'Calle / acceso',
+        'Entorno / ubicacion',
+        'Amenidades aereas',
+        'Terreno completo',
+        'Roof / terraza',
+        'Toma de cierre',
+      ],
+    },
+  };
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -30,6 +134,10 @@
       t360: { estado: 'pendiente' },
       video: { estado: 'pendiente' },
     };
+  }
+
+  function normalizeZone(value) {
+    return value || 'interior';
   }
 
   function createDroneItems() {
@@ -67,6 +175,7 @@
         parentId: space.parentId || null,
         orden: space.orden || index + 1,
         clave: !!space.clave,
+        zona: normalizeZone(space.zona),
         estados: Object.assign(blankEstados(), space.estados || {}),
       }));
       normalized.droneItems = (normalized.droneItems && normalized.droneItems.length ? normalized.droneItems : createDroneItems())
@@ -97,6 +206,7 @@
       parentId: null,
       orden: index + 1,
       clave: false,
+      zona: 'interior',
       estados: {
         foto: legacyValueToState(room.foto || room.completado),
         t360: legacyValueToState(room.t360 || room.completado),
@@ -135,8 +245,9 @@
     return result;
   }
 
-  function addSpacesFromText(state, text) {
+  function addSpacesFromText(state, text, options) {
     const next = clone(state);
+    const zone = normalizeZone(options && options.zona);
     const parsed = parseSpacesText(text);
     parsed.forEach((item) => {
       next.espacios.push({
@@ -145,9 +256,54 @@
         parentId: item.parentId,
         orden: next.espacios.length + 1,
         clave: false,
+        zona: zone,
         estados: blankEstados(),
       });
     });
+    return next;
+  }
+
+  function buildTemplateSpaces(template) {
+    const spaces = [];
+    const byName = {};
+    template.spaces.forEach((row) => {
+      const item = {
+        id: makeId('esp'),
+        nombre: row[0],
+        zona: row[1],
+        clave: !!row[2],
+        parentId: null,
+        orden: spaces.length + 1,
+        estados: blankEstados(),
+      };
+      if (row[3] && byName[row[3]]) item.parentId = byName[row[3]].id;
+      spaces.push(item);
+      byName[item.nombre] = item;
+    });
+    return spaces;
+  }
+
+  function applyTemplate(state, key, options) {
+    const template = TEMPLATE_DEFS[key];
+    if (!template) return clone(state);
+    const mode = (options && options.mode) || 'append';
+    const next = mode === 'replace' ? createDefaultState() : clone(state);
+    if (mode === 'replace') {
+      next.servicios = clone(state.servicios || SERVICES_DEFAULT);
+      next.modoActual = state.modoActual || 'video';
+    }
+    buildTemplateSpaces(template).forEach((space) => {
+      space.orden = next.espacios.length + 1;
+      next.espacios.push(space);
+    });
+    if (template.drone) {
+      next.droneItems = template.drone.map((nombre, index) => ({
+        id: makeId('drone'),
+        nombre,
+        estado: 'pendiente',
+        ordenLista: index + 1,
+      }));
+    }
     return next;
   }
 
@@ -179,6 +335,16 @@
     const next = clone(state);
     const tipo = options.tipo;
     const targetId = options.targetId;
+    const intencion = options.intencion || 'principal';
+    if (tipo !== 'drone') {
+      const existingSpace = next.espacios.find((entry) => entry.id === targetId);
+      const existingState = existingSpace && existingSpace.estados[tipo];
+      if (existingState && existingState.estado === 'hecho' && (tipo === 'foto' || tipo === 't360')) return next;
+      if (existingState && existingState.estado === 'hecho' && tipo === 'video' && intencion === 'principal') return next;
+    } else {
+      const existingDrone = next.droneItems.find((entry) => entry.id === targetId);
+      if (existingDrone && existingDrone.estado === 'hecho' && intencion === 'principal') return next;
+    }
     const order = tipo === 'video' || tipo === 'drone' ? getNextOrder(next, tipo) : null;
     const hora = formatTime(options.now);
     const log = {
@@ -191,6 +357,7 @@
       hora,
       nota: '',
       bandera: '',
+      intencion,
     };
 
     if (tipo === 'drone') {
@@ -249,7 +416,16 @@
   }
 
   function getPendingSummary(state) {
-    const summary = { byService: {}, totalPending: 0, totalRequired: 0, totalDone: 0 };
+    const summary = { byService: {}, byZone: {}, keyPending: [], totalPending: 0, totalRequired: 0, totalDone: 0 };
+    function addZonePending(zone, service, name, isKey) {
+      const normalizedZone = normalizeZone(zone);
+      if (!summary.byZone[normalizedZone]) summary.byZone[normalizedZone] = {};
+      if (!summary.byZone[normalizedZone][service]) {
+        summary.byZone[normalizedZone][service] = { label: SERVICE_LABELS[service], pending: [], done: 0, required: 0 };
+      }
+      summary.byZone[normalizedZone][service].pending.push(name);
+      if (isKey) summary.keyPending.push({ zona: normalizedZone, service, nombre: name, label: SERVICE_LABELS[service] });
+    }
     ['foto', 't360', 'video'].forEach((service) => {
       if (!state.servicios[service]) return;
       const pending = state.espacios
@@ -257,6 +433,15 @@
         .map((space) => space.nombre);
       const required = state.espacios
         .filter((space) => (space.estados[service] || {}).estado !== 'no_aplica').length;
+      state.espacios.forEach((space) => {
+        const status = (space.estados[service] || {}).estado;
+        const zone = normalizeZone(space.zona);
+        if (!summary.byZone[zone]) summary.byZone[zone] = {};
+        if (!summary.byZone[zone][service]) summary.byZone[zone][service] = { label: SERVICE_LABELS[service], pending: [], done: 0, required: 0 };
+        if (status !== 'no_aplica') summary.byZone[zone][service].required++;
+        if (status === 'hecho') summary.byZone[zone][service].done++;
+        if (status !== 'hecho' && status !== 'no_aplica') addZonePending(space.zona, service, space.nombre, space.clave);
+      });
       summary.byService[service] = { label: SERVICE_LABELS[service], pending, required, done: required - pending.length };
       summary.totalPending += pending.length;
       summary.totalRequired += required;
@@ -285,10 +470,12 @@
     SERVICES_DEFAULT,
     SERVICE_LABELS,
     DRONE_DEFAULTS,
+    TEMPLATE_DEFS,
     createDefaultState,
     normalizeChecklistData,
     parseSpacesText,
     addSpacesFromText,
+    applyTemplate,
     setServiceActive,
     registerCapture,
     undoLastLog,

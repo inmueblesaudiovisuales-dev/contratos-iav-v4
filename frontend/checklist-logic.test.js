@@ -89,3 +89,60 @@ test('undo removes the last capture and restores the target state when no previo
   assert.equal(state.bitacora.length, 0);
   assert.equal(state.espacios[0].estados.foto.estado, 'pendiente');
 });
+
+test('applies amenidades template as first-class amenidades zone with key spaces', () => {
+  let state = logic.createDefaultState();
+  state = logic.applyTemplate(state, 'amenidades', { mode: 'replace' });
+
+  assert.equal(state.espacios.length > 8, true);
+  assert.equal(state.espacios.every((space) => space.zona === 'amenidades'), true);
+  assert.equal(state.espacios.some((space) => space.nombre === 'Alberca' && space.clave), true);
+  assert.equal(state.espacios.some((space) => space.nombre === 'Gimnasio'), true);
+});
+
+test('applies departamento template with interior and amenidades zones', () => {
+  let state = logic.createDefaultState();
+  state = logic.applyTemplate(state, 'departamento', { mode: 'replace' });
+
+  assert.equal(state.espacios.some((space) => space.zona === 'interior' && space.nombre === 'Sala'), true);
+  assert.equal(state.espacios.some((space) => space.zona === 'amenidades' && space.nombre === 'Alberca'), true);
+});
+
+test('does not duplicate foto or 360 captures when already completed', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Sala');
+  const salaId = state.espacios[0].id;
+
+  state = logic.registerCapture(state, { tipo: 'foto', targetId: salaId, autor: 'Ana', now: new Date('2026-06-03T17:00:00Z') });
+  const afterSecondFoto = logic.registerCapture(state, { tipo: 'foto', targetId: salaId, autor: 'Ana', now: new Date('2026-06-03T17:01:00Z') });
+  assert.equal(afterSecondFoto.bitacora.length, 1);
+
+  state = logic.registerCapture(state, { tipo: 't360', targetId: salaId, autor: 'Luis', now: new Date('2026-06-03T17:02:00Z') });
+  const afterSecond360 = logic.registerCapture(state, { tipo: 't360', targetId: salaId, autor: 'Luis', now: new Date('2026-06-03T17:03:00Z') });
+  assert.equal(afterSecond360.bitacora.filter((entry) => entry.tipo === 't360').length, 1);
+});
+
+test('requires explicit intention to add a repeated video take', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Sala');
+  const salaId = state.espacios[0].id;
+
+  state = logic.registerCapture(state, { tipo: 'video', targetId: salaId, autor: 'Bruno', now: new Date('2026-06-03T17:00:00Z') });
+  const accidental = logic.registerCapture(state, { tipo: 'video', targetId: salaId, autor: 'Bruno', now: new Date('2026-06-03T17:01:00Z') });
+  assert.equal(accidental.bitacora.length, 1);
+
+  const repeated = logic.registerCapture(state, { tipo: 'video', targetId: salaId, autor: 'Bruno', intencion: 'repetida', now: new Date('2026-06-03T17:02:00Z') });
+  assert.equal(repeated.bitacora.length, 2);
+  assert.equal(repeated.bitacora[1].intencion, 'repetida');
+  assert.equal(repeated.bitacora[1].orden, 2);
+});
+
+test('pending summary groups active pending items by zone and key priority', () => {
+  let state = logic.createDefaultState();
+  state = logic.applyTemplate(state, 'departamento', { mode: 'replace' });
+  const alberca = state.espacios.find((space) => space.nombre === 'Alberca');
+
+  const summary = logic.getPendingSummary(state);
+  assert.equal(summary.byZone.amenidades.video.pending.includes('Alberca'), true);
+  assert.equal(summary.keyPending.some((item) => item.nombre === alberca.nombre && item.service === 'video'), true);
+});
