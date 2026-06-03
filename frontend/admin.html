@@ -728,8 +728,6 @@
     /* ── MISC ─────────────────────────────────────────── */
     .msg-ok { font-size: 12px; color: var(--success); }
     .msg-err { font-size: 12px; color: var(--danger); }
-    .crm-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-
     /* ── EXISTING @media (max-width: 640px) BLOCK PRESERVED BELOW ── */
     @media (max-width: 640px) {
       .contenido { padding: 12px 12px 32px; }
@@ -759,7 +757,6 @@
       .stats-item { font-size: 12px; }
       .met-cards-grid { grid-template-columns: repeat(2,1fr); }
       .met-bottom-grid { grid-template-columns: 1fr; }
-      .crm-grid { grid-template-columns: 1fr; }
       .prop-card-acciones { flex-direction: column !important; }
       .prop-card-acciones button { width: 100% !important; justify-content: center; }
     }
@@ -876,7 +873,6 @@
       .clientes-col-pipeline { width: 360px; flex-shrink: 0; }
       .clientes-col-lista { flex: 1; min-width: 0; }
       #prosp-layout { grid-template-columns: 380px 1fr; }
-      .crm-grid { grid-template-columns: 1fr 1fr; }
       .met-cards-grid { grid-template-columns: repeat(4, 1fr); }
       .met-bottom-grid { grid-template-columns: 1fr 1fr 2fr; }
 
@@ -1339,9 +1335,6 @@
         <button id="atab-paquetes" class="ajustes-tab" onclick="setAjustesTab('paquetes')">
           <i class="ti ti-package"></i> Paquetes
         </button>
-        <button id="atab-clientes" class="ajustes-tab" onclick="setAjustesTab('clientes')">
-          <i class="ti ti-users"></i> Clientes
-        </button>
       </div>
 
       <!-- Pane: Métricas -->
@@ -1366,17 +1359,6 @@
           <button class="btn-primario gold btn-sm" onclick="abrirModalNuevoPaquete()"><i class="ti ti-plus"></i> Nuevo paquete</button>
         </div>
         <div id="lista-paquetes-admin">
-          <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
-        </div>
-      </div>
-
-      <!-- Pane: Clientes -->
-      <div id="apane-clientes" class="ajustes-pane">
-        <div class="barra">
-          <p style="font-size:13px;color:var(--ink-3);flex:1">Clientes únicos con historial de proyectos.</p>
-          <button class="btn-secundario btn-sm" onclick="cargarCRM()"><i class="ti ti-refresh"></i> Actualizar</button>
-        </div>
-        <div class="crm-grid" id="crm-grid">
           <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
         </div>
       </div>
@@ -1795,8 +1777,7 @@ function mostrarTab(id, btn) {
   if (id === 'clientes') cargarClientes();
   if (id === 'ajustes') {
     var paneActivo = document.querySelector('.ajustes-pane.activo-apane');
-    if (paneActivo && paneActivo.id === 'apane-clientes') cargarCRM();
-    else if (paneActivo && paneActivo.id === 'apane-paquetes') cargarPaquetesAdmin();
+    if (paneActivo && paneActivo.id === 'apane-paquetes') cargarPaquetesAdmin();
     else cargarMetricas();
   }
   if (id === 'nuevo') cargarClientesParaAutocomplete();
@@ -1809,7 +1790,6 @@ function setAjustesTab(pane) {
   document.getElementById('apane-' + pane).classList.add('activo-apane');
   if (pane === 'metricas') cargarMetricas();
   if (pane === 'paquetes') cargarPaquetesAdmin();
-  if (pane === 'clientes') cargarCRM();
 }
 
 
@@ -3869,37 +3849,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
-
-// ── CRM ───────────────────────────────────────────────────────────────────────
-
-async function cargarCRM() {
-  document.getElementById('crm-grid').innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>';
-  try {
-    const data = await apiGet({ action: 'listarClientes' });
-    if (!data.ok) throw new Error(data.error || 'Error');
-    const lista = data.clientes || [];
-    if (!lista.length) {
-      document.getElementById('crm-grid').innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Sin clientes registrados aún.</p>';
-      return;
-    }
-	    document.getElementById('crm-grid').innerHTML = lista.map(cl => `
-	      <div class="crm-card">
-	        <div class="crm-nombre">${esc(clienteNombreVal(cl))}</div>
-	        <div class="crm-correo">${esc(clienteCorreoVal(cl))}${clienteTelefonoVal(cl) ? ' · ' + esc(clienteTelefonoVal(cl)) : ''}</div>
-	        <div class="crm-proyectos-hdr">${clienteNumContratosVal(cl)} contrato${clienteNumContratosVal(cl) !== 1 ? 's' : ''}</div>
-	        <div class="crm-proyecto">
-	          <span class="crm-folio">Total facturado</span>
-	          ${fmxn(cl.TotalFacturado ?? cl.total_facturado)}
-	        </div>
-	        <div class="crm-proyecto">
-	          <span class="crm-folio">Último contrato</span>
-	          ${fmxnFecha(cl.UltimoContrato ?? cl.ultimo_contrato)}
-	        </div>
-	      </div>`).join('');
-  } catch (e) {
-    document.getElementById('crm-grid').innerHTML = `<p style="color:var(--danger);font-size:13px">Error: ${esc(e.message)}</p>`;
-  }
-}
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
