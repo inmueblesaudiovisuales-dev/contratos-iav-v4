@@ -2828,7 +2828,7 @@ function renderPanel(data) {
       <div class="panel-pay-bar-bg"><div class="panel-pay-bar-fill" style="width:${_pct}%"></div></div>
     </div>`;
 
-  // Sticky action bar
+  // Sticky action bar — solo 2 acciones primarias
   const _waTelPortal = normalizarTelWA(c.TelefonoCliente);
   const _nombre1wa   = (c.NombreCliente || '').split(' ')[0];
   const _waTexto = (() => {
@@ -2840,47 +2840,14 @@ function renderPanel(data) {
   const _waUrl = 'https://wa.me/' + _waTelPortal + '?text=' + encodeURIComponent(_waTexto);
   const _pab = document.getElementById('panel-action-bar');
   if (_pab) _pab.innerHTML = `
-    <div class="panel-action-bar">
-      <button class="panel-action-btn primary" onclick="const el=document.getElementById('abono-monto'); if(el){el.closest('details')&&(el.closest('details').open=true);el.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>el.focus(),300)}">
+    <div class="panel-action-bar" style="flex-direction:row;gap:8px">
+      <button class="panel-action-btn primary" style="flex:1;justify-content:center" onclick="mostrarPanelTab('produccion',document.querySelectorAll('.panel-tab-btn')[1])">
         <i class="ti ti-cash"></i> Registrar abono
       </button>
-      <a class="panel-action-btn wa" href="${esc(_waUrl)}" target="_blank" rel="noopener">
+      <a class="panel-action-btn wa" style="flex:1;justify-content:center;text-align:center" href="${esc(_waUrl)}" target="_blank" rel="noopener">
         <i class="ti ti-brand-whatsapp"></i> WhatsApp
       </a>
-      <a class="panel-action-btn" href="${esc(urlPortal)}" target="_blank" rel="noopener">
-        <i class="ti ti-world"></i> Portal
-      </a>
-      <a class="panel-action-btn" href="${esc(EQUIPO_BASE + '?token=' + tok)}" target="_blank" rel="noopener">
-        <i class="ti ti-camera"></i> Equipo
-      </a>
-      <button class="panel-action-btn" onclick="abrirModalUpsell()">
-        <i class="ti ti-plus"></i> Extra
-      </button>
     </div>`;
-
-  // Sección de agendar llamada de seguimiento
-  const _pabParent = _pab ? _pab.parentElement : null;
-  if (_pabParent) {
-    let _llamadaSection = document.getElementById('panel-llamada-section');
-    if (!_llamadaSection) {
-      _llamadaSection = document.createElement('div');
-      _llamadaSection.id = 'panel-llamada-section';
-      _llamadaSection.style.cssText = 'padding:16px 20px;border-top:1px solid var(--border)';
-      _pabParent.appendChild(_llamadaSection);
-    }
-    _llamadaSection.innerHTML = `
-      <div style="font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Agendar llamada de seguimiento</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <input type="date" id="contrato-llamada-fecha" style="font-size:13px">
-        <input type="time" id="contrato-llamada-hora" value="10:00" style="font-size:13px">
-      </div>
-      <textarea id="contrato-llamada-notas" rows="2" placeholder="Notas de la llamada…" style="width:100%;font-size:13px;margin-bottom:8px;resize:vertical;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:inherit;color:var(--ink-1);background:var(--card)"></textarea>
-      <button class="btn-secundario btn-sm" style="width:100%;justify-content:center" onclick="agendarLlamadaDesdeContrato()">
-        <i class="ti ti-phone-plus"></i> Agendar llamada
-      </button>
-      <span id="contrato-llamada-msg" style="font-size:12px;display:block;margin-top:6px"></span>
-    `;
-  }
 
   // ── PANE GENERAL ──
   const addHtml = adicionales.length
@@ -3278,6 +3245,23 @@ function renderPanel(data) {
   const entregaRevocada = !!(c.EntregaRevocada && String(c.EntregaRevocada).trim());
 
   document.getElementById('pane-entrega').innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <a class="panel-action-btn" style="flex:1;min-width:120px;justify-content:center;text-decoration:none" href="${esc(urlPortal)}" target="_blank" rel="noopener"><i class="ti ti-world"></i> Portal</a>
+      <a class="panel-action-btn" style="flex:1;min-width:120px;justify-content:center;text-decoration:none" href="${esc(EQUIPO_BASE + '?token=' + tok)}" target="_blank" rel="noopener"><i class="ti ti-camera"></i> Equipo</a>
+      <button class="panel-action-btn" style="flex:1;min-width:120px;justify-content:center" onclick="abrirModalUpsell()"><i class="ti ti-plus"></i> Extra</button>
+    </div>
+    <details style="margin-bottom:16px;border:1px solid var(--border);border-radius:var(--r);padding:10px 14px">
+      <summary style="list-style:none;cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3)">Agendar llamada de seguimiento</summary>
+      <div style="margin-top:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <input type="date" id="contrato-llamada-fecha" style="font-size:13px">
+          <input type="time" id="contrato-llamada-hora" value="10:00" style="font-size:13px">
+        </div>
+        <textarea id="contrato-llamada-notas" rows="2" placeholder="Notas de la llamada…" style="width:100%;font-size:13px;margin-bottom:8px;resize:vertical"></textarea>
+        <button class="btn-secundario btn-sm" style="width:100%;justify-content:center" onclick="agendarLlamadaDesdeContrato()"><i class="ti ti-phone-plus"></i> Agendar llamada</button>
+        <span id="contrato-llamada-msg" style="font-size:12px;display:block;margin-top:6px"></span>
+      </div>
+    </details>
     ${entregaRevocada ? `
     <div style="background:rgba(231,76,60,.12);border:1px solid var(--error,#e74c3c);border-radius:8px;padding:12px;margin-bottom:16px">
       <div style="font-size:13px;color:var(--error,#e74c3c);font-weight:600;margin-bottom:2px"><i class="ti ti-eye-off"></i> Acceso revocado</div>
