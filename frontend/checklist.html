@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-  <title>Checklist de rodaje</title>
+  <title>Bitacora de Produccion</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,434 +11,392 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --onyx:   #1C1C1E;
-      --gold:   #C9A84C;
-      --gold-d: #a8863b;
-      --page:   #F5F5F5;
-      --card:   #FFFFFF;
-      --ink-1:  #1C1C1E;
-      --ink-2:  #6B6B6B;
-      --ink-3:  #A8A8A8;
-      --border: #E5E5E5;
-      --success:#2A9D5C;
-      --r:      12px;
+      --black: #111111;
+      --page: #F9F9F7;
+      --card: #FFFFFF;
+      --soft: #F1F1EE;
+      --line: #E5E2DA;
+      --ink-1: #171717;
+      --ink-2: #56534D;
+      --ink-3: #918C82;
+      --gold: #C9A84C;
+      --gold-soft: #F8F1DA;
+      --green: #17803D;
+      --green-soft: #E8F6EC;
+      --red: #C24132;
+      --red-soft: #FCEDEA;
+      --blue: #2457A6;
+      --blue-soft: #EAF0FA;
+      --violet: #6F4EA8;
+      --violet-soft: #F0EAF8;
+      --radius: 8px;
+      --shadow: 0 8px 24px rgba(17,17,17,0.08);
     }
 
-    html, body { height: 100%; background: var(--page); }
+    html, body { min-height: 100%; background: var(--page); }
     body {
       font-family: 'Montserrat', system-ui, sans-serif;
       color: var(--ink-1);
       -webkit-font-smoothing: antialiased;
-      min-height: 100vh; min-height: 100dvh;
     }
 
-    /* ── TOP BAR ── */
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .app { max-width: 920px; margin: 0 auto; padding-bottom: 92px; }
+
     .topbar {
-      background: var(--onyx); color: #fff;
-      padding-top: max(14px, env(safe-area-inset-top));
-      padding-left: 16px; padding-right: 16px; padding-bottom: 0;
-      position: sticky; top: 0; z-index: 50;
+      position: sticky; top: 0; z-index: 30;
+      background: rgba(249,249,247,0.96);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+      padding: max(12px, env(safe-area-inset-top)) 14px 10px;
     }
-    .topbar-row1 { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; }
-    .topbar-info { flex: 1; min-width: 0; }
-    .topbar-folio {
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--gold); margin-bottom: 2px;
+    .top-row { display: flex; align-items: center; gap: 10px; }
+    .title-block { min-width: 0; flex: 1; }
+    .eyebrow {
+      color: var(--gold); font-size: 10px; font-weight: 800;
+      letter-spacing: 0.11em; text-transform: uppercase;
     }
-    .topbar-nombre {
-      font-size: 14px; font-weight: 700;
+    .title {
+      font-size: 18px; font-weight: 800; line-height: 1.15;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .sync-wrap { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
-    .sync-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: #4ade80; transition: background 0.3s;
+    .folio { margin-top: 2px; font-size: 11px; color: var(--ink-3); font-weight: 700; }
+    .sync {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; color: var(--ink-3); font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.05em;
     }
-    .sync-dot.syncing { background: #fbbf24; animation: pulse 1s infinite; }
-    .sync-dot.error   { background: #f87171; }
-    .sync-label { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 600; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+    .dot.syncing { background: #D99A21; animation: pulse 1s infinite; }
+    .dot.error { background: var(--red); }
+    @keyframes pulse { 50% { opacity: .35; } }
 
-    /* nombre dentro del topbar */
-    .nombre-row {
-      display: flex; align-items: center; gap: 10px;
-      padding-bottom: 12px;
+    .name-row {
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 8px; margin-top: 10px;
     }
-    .nombre-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.45); white-space: nowrap; }
-    .nombre-input {
-      flex: 1;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 8px; color: #fff;
-      font-family: inherit; font-size: 13px; font-weight: 600;
-      padding: 7px 12px; outline: none;
+    .name-input {
+      min-width: 0; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--card); padding: 10px 12px;
+      font-size: 13px; font-weight: 700; outline: none;
     }
-    .nombre-input::placeholder { color: rgba(255,255,255,0.3); }
-    .nombre-input:focus { border-color: var(--gold); }
+    .name-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
 
-    /* ── COLUMNAS CONFIG ── */
-    .columnas-bar {
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
-      padding: 10px 16px;
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    .icon-btn, .text-btn {
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--card); color: var(--ink-1);
+      min-height: 40px; padding: 0 12px;
+      font-size: 12px; font-weight: 800;
     }
-    .columnas-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); margin-right: 2px; }
-    .col-chip {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 5px 12px; border-radius: 99px;
-      border: 1.5px solid var(--border);
-      background: var(--page);
-      font-family: inherit; font-size: 12px; font-weight: 700;
-      color: var(--ink-3); cursor: pointer; transition: all 0.18s;
+    .icon-btn { min-width: 40px; padding: 0; }
+    .primary-btn {
+      background: var(--black); color: #fff; border: 0; border-radius: var(--radius);
+      min-height: 42px; padding: 0 14px; font-size: 13px; font-weight: 800;
     }
-    .col-chip.activo {
-      border-color: var(--gold);
-      background: rgba(201,168,76,0.12);
-      color: var(--gold-d);
-    }
-    .col-chip .chip-ico { font-size: 14px; }
+    .danger-btn { color: var(--red); border-color: #E8C6C0; background: var(--red-soft); }
 
-    /* ── PROGRESS ── */
-    .progress-section {
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
-      padding: 10px 16px 12px;
+    .mode-wrap {
+      padding: 12px 14px 8px;
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
     }
-    .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 7px; }
-    .progress-track {
-      flex: 1; height: 6px;
-      background: var(--border); border-radius: 99px; overflow: hidden;
+    .mode-btn {
+      min-height: 56px; border: 1px solid var(--line);
+      background: var(--card); border-radius: var(--radius);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      font-weight: 800; color: var(--ink-2);
     }
-    .progress-fill {
-      height: 100%; border-radius: 99px;
-      background: var(--gold); transition: width 0.35s ease;
-    }
-    .progress-fill.completo { background: var(--success); }
-    .progress-text { font-size: 12px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
-    .progress-detalle { font-size: 11px; color: var(--ink-3); font-weight: 600; }
-    .progress-detalle span { color: var(--ink-2); }
+    .mode-btn span:first-child { font-size: 18px; line-height: 1; }
+    .mode-btn.active { border-color: var(--black); background: var(--black); color: #fff; }
 
-    /* ── PENDIENTES ── */
-    .pendientes-section {
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
+    .tabs {
+      padding: 0 14px 10px;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
     }
-    .pendientes-toggle {
-      width: 100%; background: none; border: none;
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 16px;
-      font-family: inherit; font-size: 12px; font-weight: 700;
-      color: var(--ink-2); cursor: pointer; text-align: left;
+    .tab-btn {
+      border: 0; border-radius: var(--radius); background: transparent;
+      padding: 9px 6px; color: var(--ink-3); font-size: 12px; font-weight: 800;
     }
-    .pendientes-toggle .badge {
-      background: var(--gold); color: #fff;
-      border-radius: 99px; padding: 1px 7px;
-      font-size: 10px; font-weight: 700;
-    }
-    .pendientes-toggle .chevron { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
-    .pendientes-toggle.abierto .chevron { transform: rotate(180deg); }
-    .pendientes-body { padding: 0 16px 12px; display: none; }
-    .pendiente-item {
-      display: flex; align-items: baseline; gap: 8px;
-      padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px;
-    }
-    .pendiente-item:last-child { border-bottom: none; }
-    .pendiente-nombre { font-weight: 700; min-width: 0; flex: 1; }
-    .pendiente-falta { color: var(--ink-3); font-size: 11px; font-weight: 600; white-space: nowrap; }
-    .pendientes-vacio { font-size: 13px; color: var(--success); font-weight: 700; padding: 4px 0; }
+    .tab-btn.active { background: var(--card); color: var(--ink-1); box-shadow: inset 0 0 0 1px var(--line); }
 
-    /* ── LISTA ── */
-    .lista { padding: 12px 16px 120px; max-width: 620px; margin: 0 auto; }
+    .summary {
+      margin: 0 14px 12px; padding: 12px;
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      display: grid; gap: 8px;
+    }
+    .progress-top { display: flex; align-items: center; gap: 12px; }
+    .progress-track { flex: 1; height: 7px; background: var(--soft); border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--gold); border-radius: inherit; transition: width .25s; }
+    .progress-text { font-size: 12px; font-weight: 800; white-space: nowrap; }
+    .mini-pending { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mini-chip {
+      border-radius: 999px; padding: 5px 8px; background: var(--soft);
+      font-size: 11px; font-weight: 800; color: var(--ink-2);
+    }
+    .mini-chip.done { background: var(--green-soft); color: var(--green); }
 
-    /* ── CUARTO CARD ── */
-    .cuarto-card {
-      background: var(--card); border-radius: var(--r);
-      margin-bottom: 10px; overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-    }
-    .cuarto-header {
-      display: flex; align-items: center;
-      padding: 12px 14px 10px; gap: 10px;
-    }
-    .cuarto-nombre {
-      flex: 1; font-size: 15px; font-weight: 700;
-      border: none; background: transparent;
-      font-family: inherit; color: var(--ink-1);
-      padding: 0; outline: none; min-width: 0;
-    }
-    .cuarto-nombre::placeholder { color: var(--ink-3); }
-    .btn-borrar-cuarto {
-      background: none; border: none; color: var(--ink-3); cursor: pointer;
-      width: 28px; height: 28px; display: flex; align-items: center;
-      justify-content: center; border-radius: 6px; flex-shrink: 0;
-      font-size: 16px; transition: color 0.15s, background 0.15s;
-    }
-    .btn-borrar-cuarto:hover { color: #dc2626; background: rgba(220,38,38,0.08); }
-
-    /* ── CHECKS ROW ── */
-    .checks-row { display: grid; gap: 6px; padding: 0 14px 12px; }
-    .checks-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
-    .checks-row.cols-2 { grid-template-columns: 1fr 1fr; }
-    .checks-row.cols-1 { grid-template-columns: 1fr; }
-    .check-btn {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 3px;
-      padding: 10px 6px; border-radius: 10px;
-      border: 1.5px solid var(--border); background: var(--page);
-      cursor: pointer; transition: border-color 0.18s, background 0.18s;
-      font-family: inherit; min-height: 64px;
-    }
-    .check-btn:active { transform: scale(0.96); }
-    .check-btn.marcado { border-color: var(--gold); background: rgba(201,168,76,0.1); }
-    .check-icon  { font-size: 20px; line-height: 1; }
-    .check-label { font-size: 11px; font-weight: 700; color: var(--ink-2); letter-spacing: 0.03em; }
-    .check-btn.marcado .check-label { color: var(--gold-d); }
-    .check-quien {
-      font-size: 9px; font-weight: 700; color: var(--gold-d);
-      letter-spacing: 0.02em;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      max-width: 90px; text-align: center;
+    .content { padding: 0 14px; }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
+    .search {
+      flex: 1; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--card); min-height: 42px; padding: 0 12px;
+      font-size: 13px; font-weight: 700; outline: none;
     }
 
-    /* ── COMENTARIOS ── */
-    .comentarios-wrap { border-top: 1px solid var(--border); }
-    .comentarios-toggle {
-      width: 100%; background: none; border: none;
-      display: flex; align-items: center; gap: 7px; padding: 9px 14px;
-      font-family: inherit; font-size: 12px; font-weight: 600;
-      color: var(--ink-2); cursor: pointer; text-align: left;
+    .empty {
+      border: 1px dashed var(--line); border-radius: var(--radius); background: var(--card);
+      padding: 24px 18px; text-align: center; color: var(--ink-2);
     }
-    .comentarios-toggle .ico { font-size: 14px; }
-    .comentarios-toggle .badge {
-      background: var(--gold); color: #fff;
-      border-radius: 99px; padding: 1px 6px; font-size: 9px; font-weight: 700;
-    }
-    .comentarios-toggle .chevron { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
-    .comentarios-toggle.abierto .chevron { transform: rotate(180deg); }
-    .comentarios-body { padding: 0 14px 12px; display: none; }
-    .comentario-item {
-      background: var(--page); border-radius: 8px;
-      padding: 9px 12px; margin-bottom: 7px;
-    }
-    .comentario-texto { font-size: 13px; line-height: 1.5; word-break: break-word; }
-    .comentario-meta {
-      display: flex; justify-content: space-between; align-items: center; margin-top: 4px;
-    }
-    .comentario-autor { font-size: 10px; font-weight: 700; color: var(--gold-d); }
-    .comentario-hora  { font-size: 10px; color: var(--ink-3); }
-    .btn-borrar-comentario {
-      background: none; border: none; cursor: pointer;
-      color: var(--ink-3); font-size: 11px; padding: 0;
-    }
-    .btn-borrar-comentario:hover { color: #dc2626; }
-    .comentarios-vacio { font-size: 12px; color: var(--ink-3); padding: 4px 0 8px; }
-    .comentario-form { display: flex; gap: 7px; margin-top: 4px; }
-    .comentario-input {
-      flex: 1; border: 1.5px solid var(--border); border-radius: 8px;
-      padding: 8px 10px; font-family: inherit; font-size: 13px;
-      outline: none; resize: none; background: var(--card);
-    }
-    .comentario-input:focus { border-color: var(--gold); }
-    .btn-enviar-comentario {
-      background: var(--onyx); color: #fff; border: none; border-radius: 8px;
-      padding: 0 14px; cursor: pointer;
-      font-family: inherit; font-size: 12px; font-weight: 700; flex-shrink: 0;
-    }
-    .btn-enviar-comentario:active { background: #333; }
+    .empty h2 { font-size: 16px; margin-bottom: 6px; }
+    .empty p { font-size: 13px; line-height: 1.5; }
 
-    /* ── AGREGAR CUARTO ── */
-    .agregar-wrap { display: flex; gap: 8px; margin-top: 4px; }
-    .agregar-input {
-      flex: 1; border: 1.5px dashed var(--border); border-radius: var(--r);
-      background: var(--card); padding: 13px 14px;
-      font-family: inherit; font-size: 14px; color: var(--ink-1); outline: none;
+    .space-list, .log-list, .close-list { display: grid; gap: 8px; }
+    .space-card, .log-card, .close-card {
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      overflow: hidden;
     }
-    .agregar-input::placeholder { color: var(--ink-3); }
-    .agregar-input:focus { border-color: var(--gold); border-style: solid; }
-    .btn-agregar {
-      background: var(--onyx); color: #fff; border: none; border-radius: var(--r);
-      padding: 0 18px; cursor: pointer;
-      font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap;
+    .space-main {
+      width: 100%; border: 0; background: transparent;
+      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px;
+      padding: 12px; text-align: left;
     }
-    .btn-agregar:active { background: #333; }
+    .space-name { min-width: 0; }
+    .space-title { display: block; font-size: 14px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .space-sub { display: block; margin-top: 3px; color: var(--ink-3); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+    .space-card.child .space-main { padding-left: 26px; }
+    .space-card.child .space-title::before { content: "- "; color: var(--ink-3); }
+    .space-actions { display: flex; align-items: center; gap: 6px; }
+    .capture-pill {
+      border-radius: 999px; background: var(--black); color: #fff;
+      padding: 7px 9px; font-size: 11px; font-weight: 800; white-space: nowrap;
+    }
+    .more-btn {
+      border: 1px solid var(--line); background: var(--page); border-radius: 7px;
+      width: 34px; height: 34px; font-size: 18px; font-weight: 800;
+    }
+    .status-row { border-top: 1px solid var(--line); padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .status-chip {
+      border-radius: 999px; padding: 5px 8px; background: var(--soft);
+      color: var(--ink-3); font-size: 10px; font-weight: 800;
+    }
+    .status-chip.done { background: var(--green-soft); color: var(--green); }
+    .status-chip.na { background: var(--red-soft); color: var(--red); }
+    .status-chip.video { background: var(--blue-soft); color: var(--blue); }
+    .status-chip.drone { background: var(--violet-soft); color: var(--violet); }
 
-    .btn-restablecer {
-      background: none; color: var(--ink-3); border: 1.5px solid var(--border);
-      border-radius: var(--r); padding: 0 18px; cursor: pointer;
-      font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap;
-      transition: border-color 0.15s, color 0.15s;
+    .log-filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; }
+    .filter-btn {
+      border: 1px solid var(--line); background: var(--card); border-radius: 999px;
+      padding: 8px 11px; font-size: 11px; font-weight: 800; color: var(--ink-2); white-space: nowrap;
     }
-    .btn-restablecer:hover { border-color: #dc2626; color: #dc2626; }
+    .filter-btn.active { background: var(--black); color: #fff; border-color: var(--black); }
+    .log-card { padding: 11px 12px; }
+    .log-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .log-kind { font-size: 12px; font-weight: 900; }
+    .log-meta { color: var(--ink-3); font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .log-name { margin-top: 4px; font-size: 14px; font-weight: 800; }
+    .log-note { margin-top: 7px; color: var(--ink-2); font-size: 12px; line-height: 1.45; }
+    .log-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
-    /* ── ESTADOS ── */
-    .estado-pantalla {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; min-height: 60vh; padding: 32px;
-      text-align: center; gap: 14px;
+    .close-card { padding: 13px; }
+    .close-card h3 { font-size: 13px; margin-bottom: 8px; }
+    .pending-line { color: var(--ink-2); font-size: 12px; line-height: 1.5; margin-top: 4px; }
+    .sequence { margin-top: 7px; display: grid; gap: 5px; }
+    .sequence-item { font-size: 12px; color: var(--ink-2); }
+
+    .overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(17,17,17,.36); display: none; align-items: flex-end;
     }
-    .estado-pantalla .ico { font-size: 36px; }
-    .estado-pantalla h2  { font-size: 18px; font-weight: 700; }
-    .estado-pantalla p   { font-size: 14px; color: var(--ink-2); max-width: 300px; line-height: 1.6; }
+    .overlay.visible { display: flex; }
+    .sheet {
+      width: 100%; max-height: 86dvh; overflow: auto;
+      background: var(--card); border-radius: 14px 14px 0 0;
+      padding: 16px; box-shadow: var(--shadow);
+    }
+    .sheet-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .sheet-title { font-size: 16px; font-weight: 900; }
+    .sheet-grid { display: grid; gap: 10px; }
+    .service-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border: 1px solid var(--line); border-radius: var(--radius); padding: 12px;
+    }
+    .service-row strong { font-size: 14px; }
+    .service-row span { display: block; margin-top: 3px; color: var(--ink-3); font-size: 11px; font-weight: 700; }
+    .toggle {
+      width: 48px; height: 28px; border: 0; border-radius: 99px; background: var(--line); position: relative;
+    }
+    .toggle::after {
+      content: ""; position: absolute; width: 22px; height: 22px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; transition: transform .18s;
+    }
+    .toggle.on { background: var(--black); }
+    .toggle.on::after { transform: translateX(20px); }
+    .textarea {
+      width: 100%; min-height: 170px; resize: vertical;
+      border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 12px; outline: none; font-size: 13px; line-height: 1.5;
+    }
+    .template-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .action-grid .text-btn { min-height: 44px; }
+
+    .toast {
+      position: fixed; left: 14px; right: 14px; bottom: max(16px, env(safe-area-inset-bottom));
+      z-index: 130; transform: translateY(120%); transition: transform .2s ease;
+      background: var(--black); color: #fff; border-radius: var(--radius);
+      padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      box-shadow: var(--shadow); font-size: 12px; font-weight: 800;
+    }
+    .toast.visible { transform: translateY(0); }
+    .toast button { border: 1px solid rgba(255,255,255,.28); background: transparent; color: #fff; border-radius: 7px; padding: 7px 9px; font-size: 11px; font-weight: 900; }
+
+    .state-screen {
+      min-height: 65dvh; display: grid; place-items: center; padding: 30px 18px; text-align: center;
+    }
+    .state-card { max-width: 340px; }
     .spinner {
-      width: 36px; height: 36px; border: 3px solid var(--border);
-      border-top-color: var(--gold); border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      width: 36px; height: 36px; margin: 0 auto 14px;
+      border: 3px solid var(--line); border-top-color: var(--gold); border-radius: 50%;
+      animation: spin .7s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .state-card h2 { font-size: 18px; margin-bottom: 8px; }
+    .state-card p { color: var(--ink-2); font-size: 13px; line-height: 1.55; }
 
-    /* ── TOAST ── */
-    .toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-      background: var(--onyx); color: #fff;
-      padding: 11px 18px; border-radius: 10px;
-      font-size: 13px; font-weight: 600;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-      opacity: 0; transition: opacity 0.2s;
-      pointer-events: none; z-index: 200; white-space: nowrap;
+    @media (min-width: 760px) {
+      .app { padding-top: 18px; }
+      .topbar { border: 1px solid var(--line); border-radius: 12px; margin: 0 14px 12px; top: 14px; }
+      .mode-wrap { grid-template-columns: repeat(4, 120px); justify-content: center; }
+      .tabs { max-width: 520px; margin: 0 auto 10px; }
+      .sheet { max-width: 560px; margin: 0 auto; border-radius: 14px 14px 0 0; }
+      .toast { left: 50%; right: auto; min-width: 340px; transform: translate(-50%, 120%); }
+      .toast.visible { transform: translate(-50%, 0); }
     }
-    .toast.visible { opacity: 1; }
   </style>
 </head>
 <body>
-
-<div id="topbar" style="display:none" class="topbar">
-  <div class="topbar-row1">
-    <div class="topbar-info">
-      <div class="topbar-folio" id="top-folio">—</div>
-      <div class="topbar-nombre" id="top-nombre">—</div>
-    </div>
-    <div class="sync-wrap">
-      <div class="sync-dot" id="sync-dot"></div>
-      <span class="sync-label" id="sync-label"></span>
+  <div id="app" class="app">
+    <div class="state-screen">
+      <div class="state-card"><div class="spinner"></div><p>Cargando bitacora...</p></div>
     </div>
   </div>
-  <div class="nombre-row">
-    <span class="nombre-label">Tu nombre:</span>
-    <input class="nombre-input" id="mi-nombre" type="text" placeholder="Ej. Bruno" maxlength="30" autocomplete="off">
+
+  <div id="overlay" class="overlay" onclick="cerrarModal(event)">
+    <div class="sheet" id="sheet" onclick="event.stopPropagation()"></div>
   </div>
-</div>
 
-<div id="columnas-bar" class="columnas-bar" style="display:none">
-  <span class="columnas-label">Columnas</span>
-  <button class="col-chip activo" id="chip-foto"  onclick="toggleColumna('foto')">
-    <span class="chip-ico">&#128247;</span> Foto
-  </button>
-  <button class="col-chip activo" id="chip-video" onclick="toggleColumna('video')">
-    <span class="chip-ico">&#127916;</span> Video
-  </button>
-  <button class="col-chip activo" id="chip-t360"  onclick="toggleColumna('t360')">
-    <span class="chip-ico">&#128260;</span> 360°
-  </button>
-</div>
+  <div class="toast" id="toast"></div>
 
-<div id="progress-section" class="progress-section" style="display:none">
-  <div class="progress-row">
-    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-    <span class="progress-text" id="progress-text">0 / 0</span>
-  </div>
-  <div class="progress-detalle" id="progress-detalle"></div>
-</div>
-
-<div id="pendientes-section" class="pendientes-section" style="display:none">
-  <button class="pendientes-toggle" id="pendientes-toggle" onclick="togglePendientes()">
-    <span>Pendientes</span>
-    <span class="badge" id="pendientes-badge">0</span>
-    <span class="chevron">&#8964;</span>
-  </button>
-  <div class="pendientes-body" id="pendientes-body"></div>
-</div>
-
-<div id="main">
-  <div class="estado-pantalla"><div class="spinner"></div></div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-const API   = 'https://contratos.inmueblesaudiovisuales.com/api';
+  <script src="./checklist-logic.js"></script>
+  <script>
+const API = 'https://contratos.inmueblesaudiovisuales.com/api';
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
+const logic = window.IAVChecklistLogic;
 
-// ── ESTADO GLOBAL ──
-let cuartos   = [];
-let columnas  = { foto: true, video: true, t360: true };
+let meta = { folio: '', nombreCliente: '' };
+let state = logic.createDefaultState();
+let activeView = 'captura';
+let logFilter = 'todo';
+let searchTerm = '';
+let selectedAction = null;
+let pollingId = null;
+let saveTimer = null;
+let retryTimer = null;
+let saving = false;
+let dirty = false;
+let retryCount = 0;
+let toastTimer = null;
 
-let pollingId   = null;
-let guardandoId = null;
-let pendiente   = false;
-let guardando   = false;
+const SERVICE_UI = {
+  foto: { label: 'Foto', icon: 'F', hint: 'Fotos normales' },
+  t360: { label: '360', icon: '360', hint: 'Recorrido / foto 360' },
+  video: { label: 'Video', icon: 'V', hint: 'Secuencia de video' },
+  drone: { label: 'Drone', icon: 'D', hint: 'Tomas aereas' },
+};
 
-let _debounceMax = null;
-let _reintentos  = 0;
-let _retryId     = null;
-let _domStale    = false;
+const TEMPLATES = {
+  casa: `Fachada
+Sala
+Comedor
+Cocina
+Recamara principal
+  Bano principal
+  Closet
+Recamara 2
+  Bano
+Bano de visitas
+Lavanderia
+Cochera
+Jardin / Terraza`,
+  departamento: `Acceso
+Sala
+Comedor
+Cocina
+Recamara principal
+  Bano principal
+  Closet
+Recamara secundaria
+Bano de visitas
+Balcon
+Amenidades`,
+  amenidades: `Alberca
+Gimnasio
+Salon de eventos
+Lobby
+Terraza comun
+Area infantil
+Asadores`,
+  exterior: `Fachada
+Calle / acceso
+Cochera
+Jardin
+Terraza
+Roof garden
+Vista exterior`,
+};
 
-const COLS_DEF = [
-  { campo: 'foto',  label: 'Foto',  ico: '&#128247;' },
-  { campo: 'video', label: 'Video', ico: '&#127916;' },
-  { campo: 't360',  label: '360°',  ico: '&#128260;' },
-];
-
-// ── HELPERS ──
-function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function esc(value) {
+  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function miNombre() {
-  return document.getElementById('mi-nombre').value.trim() || 'Anónimo';
+  const input = document.getElementById('mi-nombre');
+  return (input && input.value.trim()) || 'Anonimo';
 }
 
-function colsActivas() {
-  return COLS_DEF.filter(c => columnas[c.campo]);
+function activeServices() {
+  return ['foto', 't360', 'video', 'drone'].filter((key) => state.servicios[key]);
 }
 
-// ── NOMBRE PERSISTIDO ──
-function iniciarNombreInput() {
-  const inp = document.getElementById('mi-nombre');
-  inp.value = localStorage.getItem('checklist_nombre') || '';
-  inp.addEventListener('input', () => localStorage.setItem('checklist_nombre', inp.value.trim()));
-}
-
-// ── SYNC VISUAL ──
-function setSync(estado) {
-  const dot   = document.getElementById('sync-dot');
+function setSync(status) {
+  const dot = document.getElementById('sync-dot');
   const label = document.getElementById('sync-label');
-  dot.className = 'sync-dot' + (estado === 'syncing' ? ' syncing' : estado === 'error' ? ' error' : '');
-  label.textContent = estado === 'syncing' ? 'Guardando...' : estado === 'error' ? 'Error' : '';
+  if (!dot || !label) return;
+  dot.className = 'dot' + (status === 'syncing' ? ' syncing' : status === 'error' ? ' error' : '');
+  label.textContent = status === 'syncing' ? 'Guardando' : status === 'error' ? 'Error' : 'En vivo';
 }
 
-// ── TOAST ──
-let _toastTimer;
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('visible');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('visible'), 2500);
-}
-
-// ── API ──
-async function apiGet(p) {
-  const action = p.action;
-  const rest = Object.assign({}, p, { token: TOKEN });
+async function apiGet(payload) {
+  const action = payload.action;
+  const rest = Object.assign({}, payload, { token: TOKEN });
   delete rest.action;
-  const qs = new URLSearchParams(rest).toString();
   const ctrl = new AbortController();
   const tid = setTimeout(() => ctrl.abort(), 10000);
   try {
-    const res = await fetch(API + '/' + action + '?' + qs, { signal: ctrl.signal });
+    const res = await fetch(API + '/' + action + '?' + new URLSearchParams(rest).toString(), { signal: ctrl.signal });
     clearTimeout(tid);
     return res.json();
-  } catch (e) {
+  } catch (err) {
     clearTimeout(tid);
-    throw e;
+    throw err;
   }
 }
 
-async function apiPost(body) {
-  const action = body.action;
-  const rest = Object.assign({}, body, { token: TOKEN });
+async function apiPost(payload) {
+  const action = payload.action;
+  const rest = Object.assign({}, payload, { token: TOKEN });
   delete rest.action;
   const ctrl = new AbortController();
   const tid = setTimeout(() => ctrl.abort(), 10000);
@@ -451,518 +409,574 @@ async function apiPost(body) {
     });
     clearTimeout(tid);
     return res.json();
-  } catch (e) {
+  } catch (err) {
     clearTimeout(tid);
-    throw e;
+    throw err;
   }
 }
 
-// ── GUARDAR ──
-function guardarDebounce() {
-  _reintentos = 0;
-  pendiente = true;
-  clearTimeout(guardandoId);
-  clearTimeout(_retryId);
-  guardandoId = setTimeout(guardarAhora, 500);
-  if (!_debounceMax) _debounceMax = setTimeout(() => { _debounceMax = null; guardarAhora(); }, 4000);
+function scheduleSave() {
+  dirty = true;
+  retryCount = 0;
+  clearTimeout(saveTimer);
+  clearTimeout(retryTimer);
+  saveTimer = setTimeout(saveNow, 550);
 }
 
-async function guardarAhora() {
-  clearTimeout(_debounceMax); _debounceMax = null;
-  if (!pendiente || guardando) return;
-  pendiente = false;
-  guardando = true;
+async function saveNow() {
+  if (!dirty || saving) return;
+  dirty = false;
+  saving = true;
   setSync('syncing');
   try {
-    const data = await apiPost({ action: 'guardarChecklist', cuartos, columnas });
-    guardando = false;
-    _reintentos = 0;
-    if (data.error) { setSync('error'); toast('Error al guardar: ' + data.error); return; }
+    const data = await apiPost({ action: 'guardarChecklist', cuartos: state, columnas: state.servicios });
+    saving = false;
+    if (data.error) {
+      setSync('error');
+      showToast('Error al guardar');
+      return;
+    }
     setSync('ok');
   } catch (_) {
-    guardando = false;
+    saving = false;
     setSync('error');
-    if (_reintentos < 4) {
-      _reintentos++;
-      pendiente = true;
-      toast('Sin conexión. Reintentando (' + _reintentos + '/4)...');
-      _retryId = setTimeout(guardarAhora, 8000);
+    if (retryCount < 4) {
+      retryCount++;
+      dirty = true;
+      showToast('Sin conexion. Reintentando...');
+      retryTimer = setTimeout(saveNow, 7000);
     } else {
-      toast('Error persistente. Revisa tu conexión.');
+      showToast('No se pudo guardar. Revisa conexion.');
     }
   }
 }
 
-// ── CARGAR ──
 async function cargar() {
   try {
     const data = await apiGet({ action: 'obtenerChecklist' });
-    if (data.error) { mostrarError(data.error); return; }
-    const rawCuartos = data.cuartos || [];
-    cuartos = rawCuartos.map(function(c) {
-      if (typeof c === 'object' && ('completado' in c) && !('foto' in c)) {
-        return { nombre: c.nombre || '', foto: !!c.completado, video: !!c.completado, t360: !!c.completado };
-      }
-      return c;
-    });
-    columnas = data.columnas || { foto: true, video: true, t360: true };
-
-    document.getElementById('top-folio').textContent  = data.folio        || '—';
-    document.getElementById('top-nombre').textContent = data.nombreCliente || '—';
-    document.getElementById('topbar').style.display           = '';
-    document.getElementById('columnas-bar').style.display     = '';
-    document.getElementById('progress-section').style.display = '';
-    document.getElementById('pendientes-section').style.display = '';
-
-    buildLista();
-    actualizarColChips();
-    actualizarProgreso();
+    if (data.error) return mostrarError(data.error);
+    meta = { folio: data.folio || '', nombreCliente: data.nombreCliente || '' };
+    const payload = data.cuartos && data.cuartos.version === 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
+    state = logic.normalizeChecklistData(payload);
+    ensureActiveMode();
+    render();
+    iniciarPolling();
   } catch (_) {
-    mostrarError('No se pudo cargar el checklist.');
+    mostrarError('No se pudo cargar la bitacora.');
   }
 }
 
-// ── POLLING ──
 async function poll() {
-  if (pendiente || guardando) return;
-
-  if (_domStale && !document.activeElement?.classList.contains('cuarto-nombre')) {
-    buildLista();
-    _domStale = false;
-    actualizarProgreso();
-  }
-
+  if (dirty || saving) return;
   try {
     const data = await apiGet({ action: 'obtenerChecklist' });
-    if (data.error || !data.cuartos) return;
-    if (guardando) return;
-
-    const nuevasColumnas = data.columnas || { foto: true, video: true, t360: true };
-    const colsChanged = JSON.stringify(nuevasColumnas) !== JSON.stringify(columnas);
-    columnas = nuevasColumnas;
-
-    // Detectar cambios estructurales (cuartos añadidos o eliminados)
-    if (data.cuartos.length !== cuartos.length || colsChanged) {
-      const huboDeleciones = data.cuartos.length < cuartos.length;
-      cuartos = data.cuartos;
-      actualizarColChips();
-      actualizarProgreso();
-      const focused = document.activeElement?.classList.contains('cuarto-nombre');
-      if (!focused || huboDeleciones) {
-        buildLista();
-        _domStale = false;
-      } else {
-        _domStale = true;
-      }
-      return;
+    if (data.error) return;
+    const payload = data.cuartos && data.cuartos.version === 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
+    const next = logic.normalizeChecklistData(payload);
+    if (JSON.stringify(next) !== JSON.stringify(state)) {
+      state = next;
+      ensureActiveMode();
+      render();
     }
-
-    // Actualizar solo botones que cambiaron — sin tocar el DOM del resto
-    let huboNombres = false;
-    data.cuartos.forEach((c, idx) => {
-      if (c.nombre !== cuartos[idx].nombre) huboNombres = true;
-      COLS_DEF.forEach(({ campo }) => {
-        if (c[campo] !== cuartos[idx][campo]) {
-          cuartos[idx][campo] = c[campo];
-          actualizarCheckBtn(idx, campo);
-        }
-      });
-      cuartos[idx].comentarios = c.comentarios;
-    });
-
-    if (huboNombres) {
-      const focused = document.activeElement?.classList.contains('cuarto-nombre');
-      if (!pendiente && !guardando && !focused) {
-        data.cuartos.forEach((c, i) => {
-          if (cuartos[i]) cuartos[i].nombre = c.nombre;
-          const inp = document.querySelector('#cuarto-' + i + ' .cuarto-nombre');
-          if (inp && inp !== document.activeElement) inp.value = c.nombre;
-        });
-      }
-    }
-    actualizarProgreso();
   } catch (_) {}
 }
 
 function iniciarPolling() {
-  if (pollingId) clearInterval(pollingId);
-  pollingId = setInterval(poll, 4000);
+  clearInterval(pollingId);
+  pollingId = setInterval(poll, 5000);
 }
 
-// ── PROGRESO ──
-function actualizarProgreso() {
-  const activas = colsActivas();
-  const total   = cuartos.length;
-
-  // Por cuarto: completo si todas las columnas activas están marcadas
-  const completos = cuartos.filter(c => activas.every(col => c[col.campo])).length;
-  const pct = total > 0 ? Math.round(completos / total * 100) : 0;
-
-  const fill = document.getElementById('progress-fill');
-  fill.style.width = pct + '%';
-  fill.className = 'progress-fill' + (pct === 100 ? ' completo' : '');
-  document.getElementById('progress-text').textContent = completos + ' / ' + total + ' cuartos';
-
-  // Desglose por columna activa
-  const detalle = activas.map(col => {
-    const hechos = cuartos.filter(c => c[col.campo]).length;
-    return `<span>${col.label} ${hechos}/${total}</span>`;
-  }).join(' &nbsp;·&nbsp; ');
-  document.getElementById('progress-detalle').innerHTML = detalle;
-
-  // Pendientes
-  const pendientesItems = cuartos.map((c, idx) => {
-    const faltantes = activas.filter(col => !c[col.campo]).map(col => col.label);
-    return faltantes.length ? { idx, nombre: c.nombre, faltantes } : null;
-  }).filter(Boolean);
-
-  const badge = document.getElementById('pendientes-badge');
-  badge.textContent = pendientesItems.length;
-
-  const body = document.getElementById('pendientes-body');
-  if (pendientesItems.length === 0) {
-    body.innerHTML = '<p class="pendientes-vacio">Todo listo.</p>';
-  } else {
-    body.innerHTML = pendientesItems.map(p =>
-      `<div class="pendiente-item">
-        <span class="pendiente-nombre">${esc(p.nombre)}</span>
-        <span class="pendiente-falta">${p.faltantes.join(', ')}</span>
-      </div>`
-    ).join('');
+function ensureActiveMode() {
+  if (!state.servicios[state.modoActual]) {
+    state.modoActual = activeServices()[0] || 'video';
   }
 }
 
-// ── COLUMNAS ──
-function actualizarColChips() {
-  COLS_DEF.forEach(({ campo }) => {
-    const chip = document.getElementById('chip-' + campo);
-    if (chip) chip.classList.toggle('activo', !!columnas[campo]);
-  });
-}
-
-function toggleColumna(campo) {
-  const estaActivo = columnas[campo];
-
-  if (estaActivo) {
-    // Contar marcas existentes en esa columna
-    const marcas = cuartos.filter(c => c[campo]).length;
-    if (marcas > 0) {
-      const ok = confirm(
-        'La columna "' + COLS_DEF.find(c => c.campo === campo).label +
-        '" tiene ' + marcas + ' cuarto' + (marcas > 1 ? 's' : '') + ' marcado' + (marcas > 1 ? 's' : '') + '.\n\n' +
-        'Las marcas se conservan pero la columna quedará oculta. ¿Desactivarla?'
-      );
-      if (!ok) return;
-    }
-  }
-
-  columnas[campo] = !estaActivo;
-  actualizarColChips();
-
-  // Actualizar la grid de checks en cada tarjeta
-  document.querySelectorAll('.checks-row').forEach((row, idx) => {
-    actualizarGridCols(row);
-    COLS_DEF.forEach(({ campo: c }) => {
-      const btn = row.querySelector('[data-campo="' + c + '"]');
-      if (btn) btn.style.display = columnas[c] ? '' : 'none';
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    ${renderHeader()}
+    ${renderModeSwitch()}
+    ${renderTabs()}
+    ${renderSummary()}
+    <main class="content" id="main">${renderActiveView()}</main>
+  `;
+  const name = document.getElementById('mi-nombre');
+  name.value = localStorage.getItem('checklist_nombre') || '';
+  name.addEventListener('input', () => localStorage.setItem('checklist_nombre', name.value.trim()));
+  const search = document.getElementById('space-search');
+  if (search) {
+    search.value = searchTerm;
+    search.addEventListener('input', (event) => {
+      searchTerm = event.target.value;
+      render();
     });
-  });
-
-  actualizarProgreso();
-  guardarDebounce();
-}
-
-// ── BUILD LISTA (render completo — solo en carga inicial y cambios estructurales) ──
-function buildLista() {
-  const main = document.getElementById('main');
-  main.innerHTML = '';
-
-  const lista = document.createElement('div');
-  lista.className = 'lista';
-
-  cuartos.forEach((c, idx) => lista.appendChild(crearCardCuarto(c, idx)));
-
-  const agrWrap = document.createElement('div');
-  agrWrap.className = 'agregar-wrap';
-  agrWrap.innerHTML = `
-    <input class="agregar-input" id="nuevo-cuarto" type="text" placeholder="Nombre del cuarto o espacio..." maxlength="60">
-    <button class="btn-agregar" onclick="agregarCuarto()">Agregar</button>
-    <button class="btn-restablecer" onclick="restablecerCuartos()">Restablecer</button>
-  `;
-  agrWrap.querySelector('#nuevo-cuarto').addEventListener('keydown', e => {
-    if (e.key === 'Enter') agregarCuarto();
-  });
-
-  lista.appendChild(agrWrap);
-  main.appendChild(lista);
-}
-
-function crearCardCuarto(c, idx) {
-  const card = document.createElement('div');
-  card.className = 'cuarto-card';
-  card.id = 'cuarto-' + idx;
-
-  // Header
-  const header = document.createElement('div');
-  header.className = 'cuarto-header';
-
-  const inp = document.createElement('input');
-  inp.className = 'cuarto-nombre';
-  inp.type = 'text'; inp.value = c.nombre;
-  inp.placeholder = 'Nombre del espacio';
-  inp.addEventListener('input', e => {
-    cuartos[idx].nombre = e.target.value.trim();
-    guardarDebounce();
-  });
-
-  const btnDel = document.createElement('button');
-  btnDel.className = 'btn-borrar-cuarto';
-  btnDel.title = 'Eliminar espacio';
-  btnDel.innerHTML = '&#10005;';
-  btnDel.addEventListener('click', () => borrarCuarto(idx));
-
-  header.appendChild(inp);
-  header.appendChild(btnDel);
-  card.appendChild(header);
-
-  // Checks
-  const checksRow = document.createElement('div');
-  checksRow.className = 'checks-row';
-  checksRow.setAttribute('data-idx', idx);
-  actualizarGridCols(checksRow);
-
-  COLS_DEF.forEach(({ campo, label, ico }) => {
-    const btn = crearCheckBtn(idx, campo, label, ico, c[campo]);
-    if (!columnas[campo]) btn.style.display = 'none';
-    checksRow.appendChild(btn);
-  });
-
-  card.appendChild(checksRow);
-
-  // Comentarios
-  card.appendChild(crearComentariosSection(c, idx));
-
-  return card;
-}
-
-function crearCheckBtn(idx, campo, label, ico, valor) {
-  const btn = document.createElement('button');
-  btn.className = 'check-btn' + (valor ? ' marcado' : '');
-  btn.setAttribute('data-campo', campo);
-  btn.innerHTML = buildCheckBtnInner(ico, label, valor);
-  btn.addEventListener('click', () => toggleCheck(idx, campo));
-  return btn;
-}
-
-function buildCheckBtnInner(ico, label, valor) {
-  return `<span class="check-icon">${ico}</span>
-    <span class="check-label">${label}</span>
-    ${valor ? `<span class="check-quien">${esc(valor)}</span>` : ''}`;
-}
-
-// Actualizar un solo botón sin tocar el resto del DOM
-function actualizarCheckBtn(idx, campo) {
-  const row  = document.querySelector('#cuarto-' + idx + ' .checks-row');
-  if (!row) return;
-  const btn  = row.querySelector('[data-campo="' + campo + '"]');
-  if (!btn) return;
-  const col  = COLS_DEF.find(c => c.campo === campo);
-  const valor = cuartos[idx][campo];
-  btn.className = 'check-btn' + (valor ? ' marcado' : '');
-  btn.innerHTML = buildCheckBtnInner(col.ico, col.label, valor);
-  if (!columnas[campo]) btn.style.display = 'none';
-}
-
-function actualizarGridCols(row) {
-  const n = Object.values(columnas).filter(Boolean).length;
-  row.className = 'checks-row cols-' + Math.max(1, n);
-}
-
-// ── COMENTARIOS ──
-function crearComentariosSection(c, idx) {
-  const wrap = document.createElement('div');
-  wrap.className = 'comentarios-wrap';
-
-  const num = (c.comentarios || []).length;
-  const togBtn = document.createElement('button');
-  togBtn.className = 'comentarios-toggle';
-  togBtn.innerHTML = `
-    <span class="ico">&#128172;</span>
-    <span>${num > 0 ? 'Comentarios' : 'Agregar comentario'}</span>
-    ${num > 0 ? `<span class="badge">${num}</span>` : ''}
-    <span class="chevron">&#8964;</span>
-  `;
-
-  const body = document.createElement('div');
-  body.className = 'comentarios-body';
-
-  togBtn.addEventListener('click', () => {
-    const abierto = body.style.display !== 'none';
-    body.style.display = abierto ? 'none' : 'block';
-    togBtn.classList.toggle('abierto', !abierto);
-  });
-
-  const comentariosHtml = (c.comentarios || []).map((cm, ci) => `
-    <div class="comentario-item">
-      <div class="comentario-texto">${esc(cm.texto)}</div>
-      <div class="comentario-meta">
-        <span>
-          <span class="comentario-autor">${esc(cm.autor)}</span>
-          <span class="comentario-hora"> · ${esc(cm.hora || '')}</span>
-        </span>
-        <button class="btn-borrar-comentario" onclick="borrarComentario(${idx},${ci})">Borrar</button>
-      </div>
-    </div>
-  `).join('');
-
-  body.innerHTML = comentariosHtml
-    + (num === 0 ? '<p class="comentarios-vacio">Sin comentarios aún.</p>' : '')
-    + `<div class="comentario-form">
-         <textarea class="comentario-input" rows="1" placeholder="Escribe un comentario..." maxlength="300"></textarea>
-         <button class="btn-enviar-comentario">Enviar</button>
-       </div>`;
-
-  const textarea = body.querySelector('.comentario-input');
-  body.querySelector('.btn-enviar-comentario').addEventListener('click', () => enviarComentario(idx, textarea));
-  textarea.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarComentario(idx, textarea); }
-  });
-
-  wrap.appendChild(togBtn);
-  wrap.appendChild(body);
-  return wrap;
-}
-
-// ── PENDIENTES TOGGLE ──
-function togglePendientes() {
-  const body   = document.getElementById('pendientes-body');
-  const toggle = document.getElementById('pendientes-toggle');
-  const abierto = body.style.display !== 'none';
-  body.style.display = abierto ? 'none' : 'block';
-  toggle.classList.toggle('abierto', !abierto);
-}
-
-// ── ACCIONES ──
-function toggleCheck(idx, campo) {
-  cuartos[idx][campo] = cuartos[idx][campo] ? null : miNombre();
-  actualizarCheckBtn(idx, campo);
-  actualizarProgreso();
-  guardarDebounce();
-}
-
-function borrarCuarto(idx) {
-  if (!confirm('¿Eliminar "' + cuartos[idx].nombre + '"?')) return;
-  cuartos.splice(idx, 1);
-  guardarDebounce();
-  buildLista();
-  actualizarProgreso();
-}
-
-function agregarCuarto() {
-  const inp = document.getElementById('nuevo-cuarto');
-  const nombre = (inp.value || '').trim();
-  if (!nombre) { inp.focus(); return; }
-  cuartos.push({ id: 'c-' + Date.now(), nombre, foto: null, video: null, t360: null, comentarios: [] });
-  inp.value = '';
-  guardarDebounce();
-  buildLista();
-  actualizarProgreso();
-  setTimeout(() => {
-    const cards = document.querySelectorAll('.cuarto-card');
-    if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 50);
-}
-
-const CUARTOS_DEFECTO = [
-  'Sala', 'Comedor', 'Cocina', 'Habitación principal', 'Baño y closet principal',
-  'Habitación 2', 'Habitación 3', 'Baño de visita', 'Cochera', 'Jardín/Exterior', 'Área de lavado'
-];
-
-function restablecerCuartos() {
-  if (!confirm(
-    '¿Reemplazar TODOS los espacios actuales con los 11 predefinidos?\n\n' +
-    'Los nombres, checks y comentarios actuales se perderán. Esta acción no se puede deshacer.'
-  )) return;
-  const ts = Date.now();
-  cuartos = CUARTOS_DEFECTO.map((nombre, i) => ({
-    id: 'c-def-' + ts + '-' + i,
-    nombre,
-    foto: null, video: null, t360: null, comentarios: []
-  }));
-  buildLista();
-  actualizarProgreso();
-  guardarDebounce();
-}
-
-function rebuildComentarios(idx) {
-  const card = document.getElementById('cuarto-' + idx);
-  if (!card) return;
-  const oldWrap = card.querySelector('.comentarios-wrap');
-  if (!oldWrap) return;
-  const oldBody = oldWrap.querySelector('.comentarios-body');
-  const estaAbierto = oldBody && oldBody.style.display === 'block';
-  const nuevaSeccion = crearComentariosSection(cuartos[idx], idx);
-  oldWrap.replaceWith(nuevaSeccion);
-  if (estaAbierto) {
-    nuevaSeccion.querySelector('.comentarios-body').style.display = 'block';
-    nuevaSeccion.querySelector('.comentarios-toggle').classList.add('abierto');
   }
+  setSync('ok');
 }
 
-function enviarComentario(idx, textarea) {
-  const texto = (textarea.value || '').trim();
-  if (!texto) { textarea.focus(); return; }
-  if (!cuartos[idx].comentarios) cuartos[idx].comentarios = [];
-  const ahora = new Date();
-  const hora  = ahora.getHours().toString().padStart(2,'0') + ':' + ahora.getMinutes().toString().padStart(2,'0');
-  cuartos[idx].comentarios.push({ texto, autor: miNombre(), hora });
-  textarea.value = '';
-  guardarDebounce();
-  rebuildComentarios(idx);
-  actualizarProgreso();
-  setTimeout(() => {
-    const card = document.getElementById('cuarto-' + idx);
-    if (!card) return;
-    const toggle = card.querySelector('.comentarios-toggle');
-    const body   = card.querySelector('.comentarios-body');
-    if (toggle && body && body.style.display === 'none') {
-      body.style.display = 'block';
-      toggle.classList.add('abierto');
-    }
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 50);
+function renderHeader() {
+  return `
+    <header class="topbar">
+      <div class="top-row">
+        <div class="title-block">
+          <div class="eyebrow">Bitacora de Produccion</div>
+          <h1 class="title">${esc(meta.nombreCliente || 'Sesion')}</h1>
+          <div class="folio">${esc(meta.folio || 'Sin folio')}</div>
+        </div>
+        <div class="sync"><span class="dot" id="sync-dot"></span><span id="sync-label">En vivo</span></div>
+      </div>
+      <div class="name-row">
+        <input class="name-input" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" autocomplete="off">
+        <button class="text-btn" onclick="abrirServicios()">Servicios</button>
+      </div>
+    </header>
+  `;
 }
 
-function borrarComentario(idxCuarto, idxComentario) {
-  if (!confirm('¿Borrar este comentario?')) return;
-  cuartos[idxCuarto].comentarios.splice(idxComentario, 1);
-  guardarDebounce();
-  rebuildComentarios(idxCuarto);
-  actualizarProgreso();
+function renderModeSwitch() {
+  return `<section class="mode-wrap">
+    ${activeServices().map((key) => `
+      <button class="mode-btn ${state.modoActual === key ? 'active' : ''}" onclick="setMode('${key}')">
+        <span>${SERVICE_UI[key].icon}</span><small>${SERVICE_UI[key].label}</small>
+      </button>
+    `).join('')}
+  </section>`;
 }
 
-// ── ESTADOS ──
-function mostrarCargando() {
-  document.getElementById('main').innerHTML =
-    '<div class="estado-pantalla"><div class="spinner"></div></div>';
+function renderTabs() {
+  const tabs = [
+    ['captura', 'Captura'],
+    ['bitacora', 'Bitacora'],
+    ['cierre', 'Cierre'],
+  ];
+  return `<nav class="tabs">${tabs.map(([key, label]) => `
+    <button class="tab-btn ${activeView === key ? 'active' : ''}" onclick="setView('${key}')">${label}</button>
+  `).join('')}</nav>`;
 }
 
-function mostrarError(msg) {
-  document.getElementById('main').innerHTML = `
-    <div class="estado-pantalla">
-      <div class="ico">&#9888;</div>
-      <h2>Algo salió mal</h2>
-      <p>${esc(msg)}</p>
+function renderSummary() {
+  const summary = logic.getPendingSummary(state);
+  const pct = summary.totalRequired ? Math.round(summary.totalDone / summary.totalRequired * 100) : 0;
+  const chips = Object.entries(summary.byService).map(([key, item]) =>
+    `<span class="mini-chip ${item.pending.length === 0 ? 'done' : ''}">${SERVICE_UI[key].label}: ${item.done}/${item.required}</span>`
+  ).join('');
+  return `<section class="summary">
+    <div class="progress-top">
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-text">${summary.totalDone}/${summary.totalRequired}</div>
+    </div>
+    <div class="mini-pending">${chips || '<span class="mini-chip done">Sin servicios activos</span>'}</div>
+  </section>`;
+}
+
+function renderActiveView() {
+  if (activeView === 'bitacora') return renderLogView();
+  if (activeView === 'cierre') return renderCloseView();
+  return renderCaptureView();
+}
+
+function currentCaptureItems() {
+  if (state.modoActual === 'drone') return state.droneItems.map((item) => ({ type: 'drone', item }));
+  const term = searchTerm.trim().toLowerCase();
+  return state.espacios
+    .filter((item) => !term || item.nombre.toLowerCase().includes(term))
+    .sort((a, b) => (a.orden || 0) - (b.orden || 0))
+    .map((item) => ({ type: 'space', item }));
+}
+
+function renderCaptureView() {
+  const items = currentCaptureItems();
+  return `
+    <div class="toolbar">
+      ${state.modoActual === 'drone' ? '' : '<input class="search" id="space-search" type="search" placeholder="Buscar espacio...">'}
+      <button class="primary-btn" onclick="abrirLote()">${state.modoActual === 'drone' ? '+ Drone' : '+ Espacios'}</button>
+    </div>
+    ${items.length ? `<div class="space-list">${items.map(renderCaptureItem).join('')}</div>` : renderEmptyCapture()}
+  `;
+}
+
+function renderEmptyCapture() {
+  const text = state.modoActual === 'drone'
+    ? 'Agrega tomas de drone o restaura la lista base.'
+    : 'Agrega espacios en lote para empezar a registrar capturas.';
+  return `<div class="empty"><h2>Sin elementos</h2><p>${text}</p></div>`;
+}
+
+function renderCaptureItem(entry) {
+  if (entry.type === 'drone') return renderDroneItem(entry.item);
+  return renderSpaceItem(entry.item);
+}
+
+function renderSpaceItem(space) {
+  const service = state.modoActual;
+  const chips = ['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => statusChip(key, space.estados[key])).join('');
+  const child = space.parentId ? 'child' : '';
+  return `<article class="space-card ${child}">
+    <button class="space-main" onclick="registrar('${space.id}')">
+      <span class="space-name">
+        <span class="space-title">${esc(space.nombre)}</span>
+        <span class="space-sub">${space.parentId ? 'Subespacio' : 'Espacio'} - tocar registra ${SERVICE_UI[service].label}</span>
+      </span>
+      <span class="space-actions">
+        <span class="capture-pill">${SERVICE_UI[service].label}</span>
+      </span>
+    </button>
+    <div class="status-row">
+      ${chips}
+      <button class="more-btn" onclick="abrirAcciones('space','${space.id}')">...</button>
+    </div>
+  </article>`;
+}
+
+function renderDroneItem(item) {
+  const stateClass = item.estado === 'hecho' ? 'done drone' : item.noAplica ? 'na' : '';
+  const label = item.estado === 'hecho' ? `Drone ${String(item.ultimoOrden || '').padStart(2, '0')}` : item.noAplica ? 'No aplica' : 'Pendiente';
+  return `<article class="space-card">
+    <button class="space-main" onclick="registrar('${item.id}')">
+      <span class="space-name">
+        <span class="space-title">${esc(item.nombre)}</span>
+        <span class="space-sub">Toma de drone - tocar registra Drone</span>
+      </span>
+      <span class="space-actions"><span class="capture-pill">Drone</span></span>
+    </button>
+    <div class="status-row">
+      <span class="status-chip ${stateClass}">${label}</span>
+      <button class="more-btn" onclick="abrirAcciones('drone','${item.id}')">...</button>
+    </div>
+  </article>`;
+}
+
+function statusChip(key, value) {
+  const status = (value || {}).estado || 'pendiente';
+  let label = SERVICE_UI[key].label + ' falta';
+  let cls = '';
+  if (status === 'hecho') {
+    label = key === 'video' && value.ultimoOrden ? `Video ${String(value.ultimoOrden).padStart(2, '0')}` : SERVICE_UI[key].label + ' listo';
+    cls = 'done ' + (key === 'video' ? 'video' : '');
+  }
+  if (status === 'no_aplica') {
+    label = SERVICE_UI[key].label + ' no aplica';
+    cls = 'na';
+  }
+  return `<span class="status-chip ${cls}">${label}</span>`;
+}
+
+function renderLogView() {
+  const filters = ['todo', 'video', 'drone', 't360', 'foto', 'notas'];
+  const logs = logic.filterLog(state, logFilter).slice().reverse();
+  return `
+    <div class="log-filters">${filters.map((key) => `
+      <button class="filter-btn ${logFilter === key ? 'active' : ''}" onclick="setLogFilter('${key}')">${filterLabel(key)}</button>
+    `).join('')}</div>
+    ${logs.length ? `<div class="log-list">${logs.map(renderLogItem).join('')}</div>` : '<div class="empty"><h2>Sin registros</h2><p>Las capturas apareceran aqui en orden cronologico.</p></div>'}
+  `;
+}
+
+function filterLabel(key) {
+  return key === 'todo' ? 'Todo' : key === 'notas' ? 'Notas' : SERVICE_UI[key].label;
+}
+
+function renderLogItem(log) {
+  const order = log.orden ? ` ${String(log.orden).padStart(2, '0')}` : '';
+  const flag = log.bandera ? `<span class="mini-chip">${esc(flagLabel(log.bandera))}</span>` : '';
+  const note = log.nota ? `<div class="log-note">${esc(log.nota)}</div>` : '';
+  return `<article class="log-card" onclick="abrirAcciones('log','${log.id}')">
+    <div class="log-top">
+      <div class="log-kind">${SERVICE_UI[log.tipo].label}${order}</div>
+      <div class="log-meta">${esc(log.hora)} - ${esc(log.autor)}</div>
+    </div>
+    <div class="log-name">${esc(log.nombre)}</div>
+    ${note}
+    ${flag ? `<div class="log-flags">${flag}</div>` : ''}
+  </article>`;
+}
+
+function renderCloseView() {
+  const summary = logic.getPendingSummary(state);
+  const services = Object.entries(summary.byService).map(([key, item]) => renderCloseService(key, item)).join('');
+  const video = state.bitacora.filter((entry) => entry.tipo === 'video');
+  const drone = state.bitacora.filter((entry) => entry.tipo === 'drone');
+  const issues = state.bitacora.filter((entry) => entry.bandera && entry.bandera !== 'usar');
+  const disabled = Object.entries(state.servicios).filter(([, active]) => !active).map(([key]) => SERVICE_UI[key].label).join(', ');
+  return `<div class="close-list">
+    <article class="close-card"><h3>Revision antes de irnos</h3>${services || '<p class="pending-line">No hay servicios activos.</p>'}</article>
+    <article class="close-card"><h3>Secuencia Video</h3>${renderSequence(video, 'Sin tomas de video registradas.')}</article>
+    <article class="close-card"><h3>Secuencia Drone</h3>${renderSequence(drone, 'Sin tomas de drone registradas.')}</article>
+    <article class="close-card"><h3>Notas y problemas</h3>${issues.length ? issues.map((entry) => `<p class="pending-line">${esc(flagLabel(entry.bandera))}: ${esc(entry.nombre)}${entry.nota ? ' - ' + esc(entry.nota) : ''}</p>`).join('') : '<p class="pending-line">Sin problemas marcados.</p>'}</article>
+    <article class="close-card"><h3>Servicios desactivados</h3><p class="pending-line">${disabled || 'Ninguno'}</p></article>
+  </div>`;
+}
+
+function renderCloseService(key, item) {
+  if (item.pending.length === 0) return `<p class="pending-line">${SERVICE_UI[key].label}: todo listo (${item.done}/${item.required}).</p>`;
+  return `<p class="pending-line">${SERVICE_UI[key].label}: falta ${item.pending.slice(0, 8).map(esc).join(', ')}${item.pending.length > 8 ? '...' : ''}</p>`;
+}
+
+function renderSequence(items, empty) {
+  if (!items.length) return `<p class="pending-line">${empty}</p>`;
+  return `<div class="sequence">${items.map((entry) => `<div class="sequence-item">${String(entry.orden).padStart(2, '0')} - ${esc(entry.nombre)} - ${esc(entry.autor)}</div>`).join('')}</div>`;
+}
+
+function setMode(mode) {
+  state.modoActual = mode;
+  searchTerm = '';
+  render();
+  scheduleSave();
+}
+
+function setView(view) {
+  activeView = view;
+  render();
+}
+
+function setLogFilter(filter) {
+  logFilter = filter;
+  render();
+}
+
+function registrar(targetId) {
+  const previous = state;
+  state = logic.registerCapture(state, { tipo: state.modoActual, targetId, autor: miNombre(), now: new Date() });
+  render();
+  scheduleSave();
+  const latest = state.bitacora[state.bitacora.length - 1];
+  showToast(`${SERVICE_UI[latest.tipo].label}${latest.orden ? ' ' + String(latest.orden).padStart(2, '0') : ''} registrado`, () => {
+    state = previous;
+    render();
+    scheduleSave();
+  });
+}
+
+function abrirServicios() {
+  const html = `<div class="sheet-header"><div class="sheet-title">Servicios activos</div><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    <div class="sheet-grid">
+      ${Object.keys(SERVICE_UI).map((key) => `
+        <div class="service-row">
+          <div><strong>${SERVICE_UI[key].label}</strong><span>${SERVICE_UI[key].hint}</span></div>
+          <button class="toggle ${state.servicios[key] ? 'on' : ''}" onclick="toggleServicio('${key}')"></button>
+        </div>
+      `).join('')}
     </div>`;
+  abrirModal(html);
 }
 
-// ── INIT ──
-if (!TOKEN) {
-  mostrarError('Este enlace no tiene un token de contrato. Usa el botón "Checklist de rodaje" desde el panel de administración.');
-} else {
-  iniciarNombreInput();
-  cargar().then(() => iniciarPolling());
+function toggleServicio(key) {
+  state = logic.setServiceActive(state, key, !state.servicios[key]);
+  ensureActiveMode();
+  abrirServicios();
+  render();
+  scheduleSave();
 }
-</script>
+
+function abrirLote() {
+  const drone = state.modoActual === 'drone';
+  const html = `<div class="sheet-header"><div class="sheet-title">${drone ? 'Agregar tomas drone' : 'Agregar espacios'}</div><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    ${drone ? renderDroneBatch() : renderSpacesBatch()}`;
+  abrirModal(html);
+}
+
+function renderSpacesBatch() {
+  return `<div class="sheet-grid">
+    <textarea class="textarea" id="batch-text" placeholder="Sala&#10;Cocina&#10;Recamara principal&#10;  Bano principal&#10;  Closet"></textarea>
+    <div class="template-row">
+      <button class="text-btn" onclick="addTemplate('casa')">Casa base</button>
+      <button class="text-btn" onclick="addTemplate('departamento')">Departamento</button>
+      <button class="text-btn" onclick="addTemplate('amenidades')">Amenidades</button>
+      <button class="text-btn" onclick="addTemplate('exterior')">Exterior</button>
+    </div>
+    <button class="primary-btn" onclick="confirmarLote()">Agregar espacios</button>
+  </div>`;
+}
+
+function renderDroneBatch() {
+  return `<div class="sheet-grid">
+    <textarea class="textarea" id="batch-text" placeholder="Fachada aerea&#10;Vista general&#10;Amenidades"></textarea>
+    <div class="template-row"><button class="text-btn" onclick="addDroneBase()">Drone base</button></div>
+    <button class="primary-btn" onclick="confirmarDroneLote()">Agregar tomas</button>
+  </div>`;
+}
+
+function addTemplate(key) {
+  const area = document.getElementById('batch-text');
+  area.value = (area.value ? area.value + '\n' : '') + TEMPLATES[key];
+  area.focus();
+}
+
+function addDroneBase() {
+  const area = document.getElementById('batch-text');
+  area.value = (area.value ? area.value + '\n' : '') + logic.DRONE_DEFAULTS.join('\n');
+  area.focus();
+}
+
+function confirmarLote() {
+  const text = document.getElementById('batch-text').value;
+  if (!text.trim()) return;
+  state = logic.addSpacesFromText(state, text);
+  cerrarModal();
+  render();
+  scheduleSave();
+}
+
+function confirmarDroneLote() {
+  const text = document.getElementById('batch-text').value;
+  if (!text.trim()) return;
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  lines.forEach((nombre) => state.droneItems.push({ id: 'drone-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7), nombre, estado: 'pendiente', ordenLista: state.droneItems.length + 1 }));
+  cerrarModal();
+  render();
+  scheduleSave();
+}
+
+function abrirAcciones(type, id) {
+  selectedAction = { type, id };
+  if (type === 'log') return abrirLogActions(id);
+  return abrirTargetActions(type, id);
+}
+
+function abrirTargetActions(type, id) {
+  const item = type === 'drone' ? state.droneItems.find((entry) => entry.id === id) : state.espacios.find((entry) => entry.id === id);
+  if (!item) return;
+  const serviceButtons = type === 'space' ? ['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => `
+    <button class="text-btn" onclick="markNoAplica('${key}')">${SERVICE_UI[key].label} no aplica</button>
+    <button class="text-btn" onclick="clearEstado('${key}')">Limpiar ${SERVICE_UI[key].label}</button>
+  `).join('') : `
+    <button class="text-btn" onclick="markDroneNoAplica()">Drone no aplica</button>
+    <button class="text-btn" onclick="clearDrone()">Limpiar Drone</button>
+  `;
+  const html = `<div class="sheet-header"><div class="sheet-title">${esc(item.nombre)}</div><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    <div class="action-grid">
+      ${serviceButtons}
+      ${type === 'space' ? '<button class="text-btn" onclick="addSubspace()">Agregar subespacio</button>' : ''}
+      <button class="text-btn" onclick="renameTarget()">Editar nombre</button>
+      <button class="text-btn danger-btn" onclick="deleteTarget()">Borrar</button>
+    </div>`;
+  abrirModal(html);
+}
+
+function abrirLogActions(id) {
+  const log = state.bitacora.find((entry) => entry.id === id);
+  if (!log) return;
+  const html = `<div class="sheet-header"><div class="sheet-title">${esc(log.nombre)}</div><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    <div class="action-grid">
+      <button class="text-btn" onclick="setLogFlag('usar')">Usar esta</button>
+      <button class="text-btn" onclick="setLogFlag('no_usar')">No usar</button>
+      <button class="text-btn" onclick="setLogFlag('repetida')">Repetida</button>
+      <button class="text-btn" onclick="setLogFlag('problema')">Problema</button>
+      <button class="text-btn" onclick="addLogNote()">Agregar nota</button>
+      <button class="text-btn danger-btn" onclick="deleteLog()">Borrar registro</button>
+    </div>`;
+  abrirModal(html);
+}
+
+function markNoAplica(service) {
+  const space = state.espacios.find((entry) => entry.id === selectedAction.id);
+  if (space) space.estados[service] = { estado: 'no_aplica' };
+  cerrarModal(); render(); scheduleSave();
+}
+
+function clearEstado(service) {
+  const space = state.espacios.find((entry) => entry.id === selectedAction.id);
+  if (space) space.estados[service] = { estado: 'pendiente' };
+  cerrarModal(); render(); scheduleSave();
+}
+
+function markDroneNoAplica() {
+  const item = state.droneItems.find((entry) => entry.id === selectedAction.id);
+  if (item) { item.noAplica = true; item.estado = 'pendiente'; }
+  cerrarModal(); render(); scheduleSave();
+}
+
+function clearDrone() {
+  const item = state.droneItems.find((entry) => entry.id === selectedAction.id);
+  if (item) { item.noAplica = false; item.estado = 'pendiente'; delete item.ultimoOrden; }
+  cerrarModal(); render(); scheduleSave();
+}
+
+function addSubspace() {
+  const nombre = prompt('Nombre del subespacio');
+  if (!nombre) return;
+  state.espacios.push({ id: 'esp-' + Date.now().toString(36), nombre: nombre.trim(), parentId: selectedAction.id, orden: state.espacios.length + 1, clave: false, estados: { foto: { estado: 'pendiente' }, t360: { estado: 'pendiente' }, video: { estado: 'pendiente' } } });
+  cerrarModal(); render(); scheduleSave();
+}
+
+function renameTarget() {
+  const list = selectedAction.type === 'drone' ? state.droneItems : state.espacios;
+  const item = list.find((entry) => entry.id === selectedAction.id);
+  if (!item) return;
+  const nombre = prompt('Nuevo nombre', item.nombre);
+  if (!nombre) return;
+  item.nombre = nombre.trim();
+  state.bitacora.forEach((entry) => { if (entry.targetId === item.id) entry.nombre = item.nombre; });
+  cerrarModal(); render(); scheduleSave();
+}
+
+function deleteTarget() {
+  if (!confirm('Borrar este elemento?')) return;
+  if (selectedAction.type === 'drone') {
+    state.droneItems = state.droneItems.filter((entry) => entry.id !== selectedAction.id);
+  } else {
+    const ids = new Set([selectedAction.id]);
+    state.espacios.forEach((entry) => { if (entry.parentId === selectedAction.id) ids.add(entry.id); });
+    state.espacios = state.espacios.filter((entry) => !ids.has(entry.id));
+  }
+  cerrarModal(); render(); scheduleSave();
+}
+
+function setLogFlag(flag) {
+  const log = state.bitacora.find((entry) => entry.id === selectedAction.id);
+  if (log) log.bandera = flag;
+  cerrarModal(); render(); scheduleSave();
+}
+
+function addLogNote() {
+  const log = state.bitacora.find((entry) => entry.id === selectedAction.id);
+  if (!log) return;
+  const note = prompt('Nota para edicion', log.nota || '');
+  if (note === null) return;
+  log.nota = note.trim();
+  cerrarModal(); render(); scheduleSave();
+}
+
+function deleteLog() {
+  if (!confirm('Borrar este registro?')) return;
+  state.bitacora = state.bitacora.filter((entry) => entry.id !== selectedAction.id);
+  cerrarModal(); render(); scheduleSave();
+}
+
+function flagLabel(flag) {
+  return { usar: 'Usar esta', no_usar: 'No usar', repetida: 'Repetida', problema: 'Problema' }[flag] || flag;
+}
+
+function abrirModal(html) {
+  document.getElementById('sheet').innerHTML = html;
+  document.getElementById('overlay').classList.add('visible');
+}
+
+function cerrarModal(event) {
+  if (event && event.target && event.target.id !== 'overlay') return;
+  document.getElementById('overlay').classList.remove('visible');
+  selectedAction = null;
+}
+
+function showToast(message, undoHandler) {
+  const toast = document.getElementById('toast');
+  toast.innerHTML = `<span>${esc(message)}</span>${undoHandler ? '<button id="undo-btn">Deshacer</button>' : ''}`;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  if (undoHandler) document.getElementById('undo-btn').onclick = () => { undoHandler(); toast.classList.remove('visible'); };
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 3500);
+}
+
+function mostrarError(message) {
+  document.getElementById('app').innerHTML = `<div class="state-screen"><div class="state-card"><h2>Algo salio mal</h2><p>${esc(message)}</p></div></div>`;
+}
+
+if (!TOKEN) {
+  mostrarError('Este enlace no tiene un token de contrato. Usa el boton "Checklist de rodaje" desde el panel de administracion.');
+} else {
+  cargar();
+}
+  </script>
 </body>
 </html>
