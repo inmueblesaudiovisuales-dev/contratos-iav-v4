@@ -1649,47 +1649,6 @@ function toggleFiltros() {
   btn.classList.toggle('activo', abierto);
 }
 
-function renderRadar() {
-  const cont = document.getElementById('radar-sesiones');
-  if (!cont) return;
-  const tzOff  = new Date().getTimezoneOffset() * 60000;
-  const hoy    = new Date(Date.now() - tzOff).toISOString().substring(0, 10);
-  const en7    = new Date(Date.now() - tzOff + 7 * 86400000).toISOString().substring(0, 10);
-  const en2    = new Date(Date.now() - tzOff + 2 * 86400000).toISOString().substring(0, 10);
-  const DIAS_CORTO = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  const MESES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-
-  const proximas = todosContratos.filter(c => {
-    if (!c.FechaSesion) return false;
-    const fs = String(c.FechaSesion).substring(0, 10);
-    const en14 = new Date(Date.now() - tzOff + 14 * 86400000).toISOString().substring(0, 10);
-    return fs >= hoy && fs <= en14;
-  }).sort((a, b) => String(a.FechaSesion).localeCompare(String(b.FechaSesion)));
-
-  if (!proximas.length) {
-    cont.style.display = 'none';
-    return;
-  }
-  cont.style.display = 'flex';
-
-  cont.innerHTML = proximas.map(c => {
-    const fs = String(c.FechaSesion).substring(0, 10);
-    const d  = new Date(fs + 'T12:00:00');
-    const esHoy = fs === hoy;
-    const esProxDias = fs > hoy && fs <= en2;
-    const cls = esHoy ? 'radar-pil-hoy' : esProxDias ? 'radar-pil-pronto' : 'radar-pil-semana';
-    const etiqFecha = esHoy
-      ? 'HOY'
-      : `${DIAS_CORTO[d.getDay()]} ${d.getDate()} ${MESES_CORTO[d.getMonth()]}`;
-    const iconoCam = `<i class="ti ti-camera" style="font-size:13px;flex-shrink:0"></i>`;
-    return `<button class="radar-pil ${cls}" onclick="abrirPanel('${esc(c.Token)}')" title="${esc(c.NombreCliente)} · ${esc(c.PaqueteBase||'')}">
-      ${iconoCam}
-      <span style="font-weight:800">${etiqFecha}</span>
-      <span style="font-weight:500;opacity:.85">${esc(c.NombreCliente.split(' ')[0])}</span>
-    </button>`;
-  }).join('');
-}
-
 function actualizarBadgesTabs() {
   const tzOff = new Date().getTimezoneOffset() * 60000;
   const hoy   = new Date(Date.now() - tzOff).toISOString().substring(0, 10);
@@ -1927,7 +1886,8 @@ function irASubseccion(tab, subtab, btn) {
   mostrarTab(tab, null);
   setAjustesTab(subtab);
   // marcar el item del sidebar como activo (mostrarTab ya limpió todos)
-  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('activo'));
+  document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('activo'));
+  document.querySelectorAll('.sm-nav-item').forEach(b => b.classList.remove('activo'));
   if (btn) btn.classList.add('activo');
 }
 
@@ -2249,7 +2209,6 @@ function setCiclo(ciclo) {
   document.getElementById('ctab-todos').classList.toggle('activo-ctab',    ciclo === 'todos');
   document.getElementById('tabla-contratos-card').style.display = ciclo === 'sesiones' ? 'none' : '';
   document.getElementById('sesiones-lista').style.display        = ciclo === 'sesiones' ? ''     : 'none';
-  document.getElementById('radar-sesiones').style.display = ciclo === 'sesiones' ? 'none' : '';
   document.getElementById('filtro-estatus').style.display = ciclo === 'sesiones' ? 'none' : '';
   document.getElementById('btn-filtros-toggle').style.display = ciclo === 'sesiones' ? 'none' : '';
   const fc = document.getElementById('filter-chips');
@@ -2344,7 +2303,6 @@ function filtrarContratos() {
     renderTabla(lista);
   }
   actualizarBadgesTabs();
-  if (filtroCiclo !== 'sesiones') renderRadar();
 }
 
 function diasEnEstatus(c) {
@@ -2476,7 +2434,6 @@ function renderTabla(lista) {
   }).join('');
   actualizarStatsRibbon(todosContratos);
   actualizarNavBadges(todosContratos);
-  renderHoyStrip(todosContratos);
 }
 
 function renderSesiones(lista) {
@@ -4743,31 +4700,6 @@ function actualizarStatsRibbon(contratos) {
   }
 }
 
-function renderHoyStrip(contratos) {
-  if (window.innerWidth < 1024) return;
-  var strip = document.getElementById('hoyStrip');
-  var cards = document.getElementById('hoyCards');
-  var dateEl = document.getElementById('hoyDate');
-  if (!strip || !cards) return;
-  var hoy = fechaLocalISO();
-  var sesiones = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); });
-  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
-  if (!sesiones.length) { strip.style.display='none'; return; }
-  strip.style.display='flex';
-  cards.innerHTML = sesiones.map(function(c){
-    var color = ESTATUS_COLOR[c.Estatus]||'#9CA3AF';
-    return '<div class="session-card" onclick="abrirPanel('+jsArg(c.Token||'')+')">'+
-      '<div class="session-card-accent" style="background:'+color+'"></div>'+
-      '<div class="session-card-body">'+
-        '<div class="session-card-hora">'+esc(c.HoraSesion||'')+'</div>'+
-        '<div class="session-card-nombre">'+esc(c.NombreCliente||'')+'</div>'+
-        '<div class="session-card-meta">'+esc(c.PaqueteBase||'')+'</div>'+
-        '<div class="session-card-status"><span class="session-card-dot" style="background:'+color+'"></span>'+esc(c.Estatus||'')+'</div>'+
-      '</div>'+
-    '</div>';
-  }).join('');
-}
-
 function renderLifecycle(estatus) {
   var stages = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Completado'];
   var labels  = ['Pendiente','Firmado','Anticipo','Produccion','Entregado','Completado'];
@@ -5246,24 +5178,6 @@ function agendarLlamadaDesdeContrato() {
       if(msg){msg.style.color='var(--red,#c0392b)';msg.textContent=r.error||'Error';}
     }
   });
-}
-
-// ── MENÚ NUEVO ────────────────────────────────────────────────────────────────
-
-function toggleMenuNuevo(e) {
-  e.stopPropagation();
-  var menu = document.getElementById('menu-nuevo');
-  var overlay = document.getElementById('menu-nuevo-overlay');
-  var abierto = menu.style.display !== 'none';
-  menu.style.display = abierto ? 'none' : '';
-  overlay.style.display = abierto ? 'none' : '';
-}
-
-function cerrarMenuNuevo() {
-  var menu = document.getElementById('menu-nuevo');
-  var overlay = document.getElementById('menu-nuevo-overlay');
-  if(menu) menu.style.display='none';
-  if(overlay) overlay.style.display='none';
 }
 
 // ── Legacy stubs ──────────────────────────────────────────────────────────────
