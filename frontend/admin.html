@@ -1439,7 +1439,29 @@
           <option value="otro">Otro</option>
         </select>
       </div>
-      <div class="campo" style="margin-bottom:0"><label>Notas del perfil</label><textarea id="cli-notas-perfil" rows="3" placeholder="Notas generales sobre este cliente…" style="resize:vertical;font-size:13px"></textarea></div>
+      <div class="campo"><label>Notas del perfil</label><textarea id="cli-notas-perfil" rows="3" placeholder="Notas generales sobre este cliente…" style="resize:vertical;font-size:13px"></textarea></div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2)">
+          <input type="checkbox" id="cli-iniciar-cot" onchange="toggleCotizacionInline(this.checked)" style="width:auto;margin:0;accent-color:var(--gold)">
+          Iniciar cotización ahora
+        </label>
+        <div id="cli-cot-fields" style="display:none;margin-top:12px;display:none">
+          <div class="campo">
+            <label>¿Qué le interesa?</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px" id="cli-cot-interes-btns">
+              <button class="par-tipo-btn" data-val="foto" onclick="seleccionarInteresCot(this)"><i class="ti ti-camera" style="font-size:13px;margin-right:4px"></i>Fotografía</button>
+              <button class="par-tipo-btn" data-val="video" onclick="seleccionarInteresCot(this)"><i class="ti ti-video" style="font-size:13px;margin-right:4px"></i>Video + Drone</button>
+              <button class="par-tipo-btn" data-val="360" onclick="seleccionarInteresCot(this)"><i class="ti ti-360" style="font-size:13px;margin-right:4px"></i>Recorrido 360°</button>
+              <button class="par-tipo-btn" data-val="combo" onclick="seleccionarInteresCot(this)"><i class="ti ti-layout-grid" style="font-size:13px;margin-right:4px"></i>Paquete completo</button>
+            </div>
+          </div>
+          <div class="fila-2">
+            <div class="campo"><label>Fecha de llamada *</label><input type="date" id="cli-cot-fecha"></div>
+            <div class="campo"><label>Hora</label><input type="time" id="cli-cot-hora" value="10:00"></div>
+          </div>
+          <div class="campo" style="margin-bottom:0"><label>Notas</label><textarea id="cli-cot-notas" rows="2" placeholder="Lo que platicaron, zona de interés, urgencia…" style="resize:vertical;font-size:13px"></textarea></div>
+        </div>
+      </div>
       <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
         <button class="btn-primario gold" style="flex:1;justify-content:center" onclick="guardarNuevoCliente()"><i class="ti ti-user-plus"></i> Crear cliente</button>
         <span id="cli-msg" style="font-size:12px;line-height:1.3;max-width:120px"></span>
@@ -1490,6 +1512,7 @@
       </div>
       <div class="campo">
         <label>Propiedad de interés <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label>
+        <input type="url" id="trab-maps-link" placeholder="Pega un link de Google Maps aquí…" style="font-size:12px;margin-bottom:6px" oninput="detectarMapsLink(this.value)">
         <div style="display:flex;gap:6px">
           <input type="text" id="trab-prop-zona" placeholder="Zona / colonia" style="flex:1;font-size:13px">
           <input type="text" id="trab-prop-tipo" placeholder="Tipo" style="width:120px;font-size:13px">
@@ -4768,7 +4791,7 @@ function clienteCorreoVal(c) { return c.Correo || c.CorreoCliente || c.correo ||
 function clienteOrigenVal(c) { return c.Origen || c.origen || ''; }
 function clienteTrabajosActivosVal(c) { return c.TrabajosActivos ?? c.trabajos_activos ?? 0; }
 function clienteNumContratosVal(c) { return c.NumContratos ?? c.num_contratos ?? 0; }
-function jsArg(v) { return JSON.stringify(String(v || '')); }
+function jsArg(v) { return JSON.stringify(String(v || '')).replace(/"/g, '&quot;'); }
 
 // ── CARGAR CLIENTES (principal) ────────────────────────────────────────────────
 
@@ -4931,7 +4954,7 @@ function renderListaClientes(clientes) {
     if (correo) html += '<span class="cli-card-correo">'+esc(correo)+'</span>';
     if (origenStr) html += '<span class="badge" style="font-size:11px;background:var(--page);border:1px solid var(--border);color:var(--ink-3)">'+esc(origenStr)+'</span>';
     if (trabajosActivos > 0) html += '<span class="badge" style="background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00)">'+trabajosActivos+' en pipeline</span>';
-    if (numContratos > 0) html += '<span style="font-size:11px;color:var(--ink-3)">'+numContratos+' contrato'+(numContratos!==1?'s':'')+'</span>';
+    if (numContratos > 0) html += '<button onclick="toggleContratosCliente('+jsArg(id)+',this)" style="font-size:11px;color:var(--ink-3);background:none;border:1px solid var(--border);border-radius:20px;padding:1px 9px;cursor:pointer">'+numContratos+' contrato'+(numContratos!==1?'s':'')+'</button>';
     html += '</div>';
     html += '</div>';
     html += '<div class="cli-card-acciones">';
@@ -4940,6 +4963,7 @@ function renderListaClientes(clientes) {
     if (id) html += '<button onclick="borrarCliente('+jsArg(id)+','+jsArg(nombre)+')" class="cli-card-action-btn danger" title="Borrar cliente"><i class="ti ti-trash"></i></button>';
     html += '</div>';
     html += '</div>';
+    html += '<div id="cli-contratos-'+esc(id)+'" style="display:none;border-top:1px solid var(--border);padding:10px 16px 6px"></div>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -4949,6 +4973,51 @@ function t_id(id) { return (id||'').replace(/'/g,"\\'"); }
 
 function filtrarListaClientes() {
   renderListaClientes(_clientesDataCache);
+}
+
+var ESTATUS_BADGE_CLI = {
+  'Pendiente firma':  { bg:'#FEF9C3', color:'#92400E' },
+  'Firmado':          { bg:'#DBEAFE', color:'#1D4ED8' },
+  'Anticipo recibido':{ bg:'#DCFCE7', color:'#15803D' },
+  'En produccion':    { bg:'#F5F3FF', color:'#6D28D9' },
+  'Entregado':        { bg:'#E0F2FE', color:'#0369A1' },
+  'Liquidado':        { bg:'#DCFCE7', color:'#065F46' },
+  'Completado':       { bg:'#FEF9ED', color:'#92400E' },
+};
+
+function toggleContratosCliente(id, btn) {
+  var panel = document.getElementById('cli-contratos-' + id);
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  if (panel.dataset.loaded) { panel.style.display = ''; return; }
+  panel.style.display = '';
+  panel.innerHTML = '<span style="font-size:12px;color:var(--ink-3)">Cargando…</span>';
+  apiGet({ action: 'obtenerCliente', id: id }).then(function(r) {
+    if (!r.ok || !r.contratos || !r.contratos.length) {
+      panel.innerHTML = '<span style="font-size:12px;color:var(--ink-3)">Sin contratos.</span>';
+      panel.dataset.loaded = '1';
+      return;
+    }
+    var html = '<div style="display:flex;flex-direction:column;gap:6px">';
+    r.contratos.forEach(function(c) {
+      var bs = ESTATUS_BADGE_CLI[c.estatus] || { bg:'#F3F4F6', color:'#374151' };
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">';
+      html += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:monospace">'+(c.folio||'—')+'</span>';
+      html += '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:'+bs.bg+';color:'+bs.color+'">'+esc(c.estatus)+'</span>';
+      html += '<button onclick="irAContratoDesdeCliente('+jsArg(c.token)+')" style="margin-left:auto;font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:2px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+    panel.innerHTML = html;
+    panel.dataset.loaded = '1';
+  }).catch(function() {
+    panel.innerHTML = '<span style="font-size:12px;color:var(--red,#c0392b)">Error al cargar.</span>';
+  });
+}
+
+function irAContratoDesdeCliente(token) {
+  mostrarTab('contratos', document.querySelector('.sidebar-item[data-tab="contratos"]'));
+  setTimeout(function() { abrirPanel(token); }, 120);
 }
 
 // ── MODAL NUEVO CLIENTE ───────────────────────────────────────────────────────
@@ -4961,16 +5030,38 @@ function abrirModalCliente() {
 
 function cerrarModalCliente() {
   document.getElementById('modal-nuevo-cliente').style.display = 'none';
-  ['cli-nombre','cli-telefono','cli-correo','cli-notas-perfil'].forEach(function(id){
-    var el = document.getElementById(id); if(el) el.value='';
+  ['cli-nombre','cli-telefono','cli-correo','cli-notas-perfil','cli-cot-notas','cli-cot-fecha','cli-cot-hora'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value = id==='cli-cot-hora'?'10:00':'';
   });
   var sel = document.getElementById('cli-origen'); if(sel) sel.value='';
   var msg = document.getElementById('cli-msg'); if(msg) msg.textContent='';
+  var chk = document.getElementById('cli-iniciar-cot'); if(chk) chk.checked=false;
+  var fields = document.getElementById('cli-cot-fields'); if(fields) fields.style.display='none';
+  _cotInteresActivo = '';
+  document.querySelectorAll('#cli-cot-interes-btns .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
+}
+
+var _cotInteresActivo = '';
+
+function toggleCotizacionInline(checked) {
+  var fields = document.getElementById('cli-cot-fields');
+  if (fields) fields.style.display = checked ? '' : 'none';
+}
+
+function seleccionarInteresCot(btn) {
+  document.querySelectorAll('#cli-cot-interes-btns .par-tipo-btn').forEach(function(b){ b.classList.remove('activo-par'); });
+  btn.classList.add('activo-par');
+  _cotInteresActivo = btn.dataset.val;
 }
 
 function guardarNuevoCliente() {
   var nombre = (document.getElementById('cli-nombre').value||'').trim();
   if (!nombre) { document.getElementById('cli-msg').textContent='Nombre requerido'; return; }
+  var hacerCot = document.getElementById('cli-iniciar-cot') && document.getElementById('cli-iniciar-cot').checked;
+  if (hacerCot) {
+    var fechaCot = (document.getElementById('cli-cot-fecha').value||'').trim();
+    if (!fechaCot) { document.getElementById('cli-msg').textContent='Fecha de llamada requerida'; return; }
+  }
   var msg = document.getElementById('cli-msg');
   msg.style.color='var(--ink-3)'; msg.textContent='Guardando…';
   apiPost({
@@ -4981,9 +5072,47 @@ function guardarNuevoCliente() {
     origen:   document.getElementById('cli-origen').value,
     notasPerfil: (document.getElementById('cli-notas-perfil').value||'').trim()
   }).then(function(r){
-    if (r.ok) { msg.style.color='#1E8449'; msg.textContent='¡Cliente creado!'; setTimeout(function(){ cerrarModalCliente(); cargarClientes(); _clientesCache=[]; cargarClientesParaAutocomplete(); }, 800); }
-    else { msg.style.color='var(--red,#c0392b)'; msg.textContent=r.error||'Error'; }
+    if (!r.ok) { msg.style.color='var(--red,#c0392b)'; msg.textContent=r.error||'Error'; return; }
+    var clienteId = r.id;
+    if (!hacerCot) {
+      msg.style.color='#1E8449'; msg.textContent='¡Cliente creado!';
+      setTimeout(function(){ cerrarModalCliente(); cargarClientes(); _clientesCache=[]; cargarClientesParaAutocomplete(); }, 800);
+      return;
+    }
+    return apiPost({
+      action:'crearTrabajo',
+      clienteId: clienteId,
+      interes: _cotInteresActivo,
+      paquetesCotizados: [],
+      propiedadesInteres: [],
+      presupuestoEstimado: 0,
+      notas: (document.getElementById('cli-cot-notas').value||'').trim(),
+      fechaLlamada: document.getElementById('cli-cot-fecha').value,
+      horaLlamada: document.getElementById('cli-cot-hora').value||'10:00'
+    });
+  }).then(function(r2){
+    if (!r2) return;
+    if (r2.ok) { msg.style.color='#1E8449'; msg.textContent='¡Listo!'; }
+    else { msg.style.color='var(--red,#c0392b)'; msg.textContent='Cliente creado, pero error en cotización: '+(r2.error||''); }
+    setTimeout(function(){ cerrarModalCliente(); cargarClientes(); _clientesCache=[]; cargarClientesParaAutocomplete(); }, 900);
   });
+}
+
+function detectarMapsLink(val) {
+  if (!val) return;
+  var dir = null;
+  try {
+    var u = new URL(val);
+    if (u.hostname.includes('google') || u.hostname.includes('goo.gl')) {
+      var m = u.pathname.match(/\/maps\/place\/([^\/\@?]+)/);
+      if (m) dir = decodeURIComponent(m[1].replace(/\+/g, ' '));
+      if (!dir) { var q = u.searchParams.get('q'); if (q) dir = q; }
+    }
+  } catch(e) {}
+  if (dir) {
+    var zona = document.getElementById('trab-prop-zona');
+    if (zona && !zona.value) zona.value = dir;
+  }
 }
 
 async function borrarCliente(id, nombre) {
@@ -5028,7 +5157,7 @@ function abrirModalTrabajo(clienteIdPreseleccionado) {
 function cerrarModalTrabajo() {
   document.getElementById('modal-nuevo-trabajo').style.display = 'none';
   _trabClienteIdSel = null;
-  ['trab-cliente-search','trab-presupuesto','trab-prop-zona','trab-prop-tipo','trab-prop-desc','trab-fecha-llamada','trab-hora-llamada','trab-notas'].forEach(function(id){
+  ['trab-cliente-search','trab-presupuesto','trab-maps-link','trab-prop-zona','trab-prop-tipo','trab-prop-desc','trab-fecha-llamada','trab-hora-llamada','trab-notas'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value = id==='trab-hora-llamada'?'10:00':'';
   });
   document.getElementById('trab-cliente-id').value='';
