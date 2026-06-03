@@ -37,12 +37,13 @@ export async function handleContratos(request, env, ctx, action) {
 
   if (action === 'listarClientes') {
     const { results } = await query(db,
-      `SELECT nombre_cliente, correo_cliente,
-              MAX(telefono_cliente) as telefono_cliente,
-              COUNT(*) as num_contratos, MAX(fecha_creacion) as ultimo_contrato,
-              SUM(precio_total) as total_facturado
-       FROM contratos WHERE oculto = 0 AND correo_cliente != ''
-       GROUP BY correo_cliente ORDER BY ultimo_contrato DESC`
+      `SELECT c.*,
+              (SELECT COUNT(*) FROM trabajos t WHERE t.cliente_id = c.id
+               AND t.estatus IN ('nuevo','intentando','en_seguimiento','cotizado')) AS trabajos_activos,
+              (SELECT COUNT(*) FROM contratos ct WHERE ct.cliente_id = c.id) AS num_contratos
+       FROM clientes c
+       ORDER BY CASE WHEN c.fecha_ultima_actividad = '' OR c.fecha_ultima_actividad IS NULL
+                THEN c.fecha_creacion ELSE c.fecha_ultima_actividad END DESC`
     );
     return ok({ ok: true, clientes: results });
   }
@@ -98,7 +99,7 @@ export async function handleContratos(request, env, ctx, action) {
     const { nombreCliente, correoCliente, telefonoCliente,
             tipoPaquete, paqueteBase, adicionales, extrasAcordados,
             precioTotal, anticipo, notasContrato, numPropiedades,
-            propiedades: propsData } = body;
+            propiedades: propsData, clienteId, trabajoId } = body;
 
     if (!nombreCliente) return err('Nombre del cliente requerido');
     if (!propsData || !propsData.length) return err('Al menos una propiedad es requerida');
@@ -173,6 +174,27 @@ export async function handleContratos(request, env, ctx, action) {
         params: [portalToken, token, 'contrato', portalExpira]
       }
     ]);
+
+    // Vincular con cliente y trabajo si vienen en el payload
+    if (clienteId) {
+      await run(db, `UPDATE contratos SET cliente_id=? WHERE token=?`, [clienteId, token]);
+    }
+    if (trabajoId) {
+      const tsConv = now();
+      await run(db,
+        `UPDATE trabajos SET estatus='convertido', contrato_token=?, fecha_ultima_actividad=? WHERE id=?`,
+        [token, tsConv, trabajoId]
+      );
+      const cliId = clienteId || (await queryOne(db, 'SELECT cliente_id FROM trabajos WHERE id=?', [trabajoId]))?.cliente_id;
+      if (cliId) {
+        await run(db, `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`, [tsConv, cliId]);
+        await run(db,
+          `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
+           VALUES (?, ?, ?, 'contrato_generado', ?, ?, '', ?)`,
+          [uuid(), cliId, trabajoId, 'Contrato generado: ' + token, tsConv.substring(0, 10), tsConv]
+        );
+      }
+    }
 
     const linkPortal = `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`;
     return ok({ ok: true, token, folio, url: linkPortal, linkPortal });

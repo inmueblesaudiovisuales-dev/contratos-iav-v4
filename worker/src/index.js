@@ -7,7 +7,9 @@ import { handleChecklist } from './routes/checklist.js';
 import { handleArchivos } from './routes/archivos.js';
 import { handleRevision } from './routes/revision.js';
 import { handleEquipo } from './routes/equipo.js';
-import { handleProspectos } from './routes/prospectos.js';
+import { handleClientes } from './routes/clientes.js';
+import { handleTrabajos } from './routes/trabajos.js';
+import { handleActividades } from './routes/actividades.js';
 import { syncToSheets } from './cron.js';
 import { err } from './auth.js';
 
@@ -33,7 +35,9 @@ const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];
 const RUTAS_ARCHIVOS = ['subirArchivo','subirArchivoAdmin'];
 const RUTAS_REVISION = ['obtenerRevision','guardarRevision'];
 const RUTAS_EQUIPO       = ['obtenerEquipo','marcarProduccion'];
-const RUTAS_PROSPECTOS   = ['crearProspecto','listarProspectos','actualizarEstatusProspecto'];
+const RUTAS_CLIENTES    = ['crearCliente','listarClientes','obtenerCliente','actualizarCliente'];
+const RUTAS_TRABAJOS    = ['crearTrabajo','listarTrabajos','actualizarTrabajo','actualizarEstatusTrabajo','convertirTrabajo'];
+const RUTAS_ACTIVIDADES = ['agendarLlamada','agregarNota','listarActividades'];
 
 export default {
   async fetch(request, env, ctx) {
@@ -75,8 +79,12 @@ export default {
       response = await handleRevision(request, env, ctx, action);
     } else if (RUTAS_EQUIPO.includes(action)) {
       response = await handleEquipo(request, env, ctx, action);
-    } else if (RUTAS_PROSPECTOS.includes(action)) {
-      response = await handleProspectos(request, env, ctx, action);
+    } else if (RUTAS_CLIENTES.includes(action)) {
+      response = await handleClientes(request, env, ctx, action);
+    } else if (RUTAS_TRABAJOS.includes(action)) {
+      response = await handleTrabajos(request, env, ctx, action);
+    } else if (RUTAS_ACTIVIDADES.includes(action)) {
+      response = await handleActividades(request, env, ctx, action);
     } else {
       response = err('Acción no encontrada', 404);
     }
