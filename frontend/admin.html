@@ -1050,6 +1050,7 @@
       #menu-item-seleccion { display: none !important; }
       #th-check { display: none !important; }
       .td-check { display: none !important; }
+      #bulk-bar { display: none !important; }
     }
 
     /* ── DESKTOP LAYOUT ───────────────────────────────── */
@@ -3659,7 +3660,7 @@ function renderPanel(data) {
       <div class="panel-acord-body">
         <div class="estatus-fila" style="margin-bottom:8px">
           <select id="panel-estatus">
-            ${['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado','Completado'].map(s =>
+            ${['Pendiente firma','Firmado','Reservado','En produccion','Entregado','Completado','Cancelado'].map(s =>
               `<option value="${s}" ${c.Estatus === s ? 'selected' : ''}>${s === 'En produccion' ? 'En producción' : esc(s)}</option>`
             ).join('')}
           </select>
