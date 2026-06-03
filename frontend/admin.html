@@ -3599,7 +3599,28 @@ function renderPanel(data) {
       '</select>'
     : '';
 
-  document.getElementById('pane-prod').innerHTML = `
+  // ── Estado de producción (read-only) ──
+  const _fotos = c.FotografiaLista;
+  const _video = c.VideoListo;
+  const _rec   = c.RecorridoListo;
+  const prodEstadoHtml = `
+  <div class="panel-acord" style="border-radius:8px;border:1px solid var(--border);padding:10px 12px;margin-bottom:10px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:0.05em;color:var(--ink-3);margin-bottom:8px;text-transform:uppercase">Estado de producción</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span style="display:flex;align-items:center;gap:5px;font-size:13px;padding:5px 10px;border-radius:6px;background:${_fotos ? '#DCFCE7' : '#F3F4F6'};color:${_fotos ? '#065F46' : '#374151'}">
+        <i class="ti ${_fotos ? 'ti-check' : 'ti-clock'}"></i> Fotos${_fotos ? ' · ' + fmxnFecha(_fotos) : ''}
+      </span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:13px;padding:5px 10px;border-radius:6px;background:${_video ? '#DCFCE7' : '#F3F4F6'};color:${_video ? '#065F46' : '#374151'}">
+        <i class="ti ${_video ? 'ti-check' : 'ti-clock'}"></i> Video${_video ? ' · ' + fmxnFecha(_video) : ''}
+      </span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:13px;padding:5px 10px;border-radius:6px;background:${_rec ? '#DCFCE7' : '#F3F4F6'};color:${_rec ? '#065F46' : '#374151'}">
+        <i class="ti ${_rec ? 'ti-check' : 'ti-clock'}"></i> Recorrido${_rec ? ' · ' + fmxnFecha(_rec) : ''}
+      </span>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--ink-3)">Solo editable desde equipo.html · <a href="${EQUIPO_BASE + '?token=' + esc(tok)}" target="_blank" style="color:var(--ink-2);text-decoration:underline">Abrir equipo</a></div>
+  </div>`;
+
+  document.getElementById('pane-prod').innerHTML = prodEstadoHtml + `
     <!-- Estado del contrato -->
     <details class="panel-acord" open>
       <summary>Estado del contrato</summary>
@@ -3699,7 +3720,6 @@ function renderPanel(data) {
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-          <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${'https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-checkbox"></i> Checklist</a>
           <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${EQUIPO_BASE + '?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-camera"></i> Equipo</a>
         </div>
       </div>
