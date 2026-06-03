@@ -2513,7 +2513,7 @@ async function abrirPanel(token) {
   );
   document.getElementById('panel-lateral').classList.add('visible');
   document.getElementById('overlay').classList.add('visible');
-  document.body.classList.add('panel-abierto');
+  document.body.classList.add('panel-open');
   document.querySelectorAll('.panel-tab-btn').forEach((b,i) => b.classList.toggle('activo', i===0));
   document.querySelectorAll('.panel-tab-pane').forEach((p,i) => p.classList.toggle('activo', i===0));
 
@@ -2534,7 +2534,7 @@ function cerrarPanel() {
   if (history.replaceState) history.replaceState({}, '', location.pathname);
   document.getElementById('panel-lateral').classList.remove('visible');
   document.getElementById('overlay').classList.remove('visible');
-  document.body.classList.remove('panel-abierto');
+  document.body.classList.remove('panel-open');
   document.querySelectorAll('#tabla-body tr').forEach(tr => tr.classList.remove('activo'));
 }
 
