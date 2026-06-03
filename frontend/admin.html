@@ -242,6 +242,31 @@
     .contratos-tab.activo-ctab .ctab-badge { background: var(--gold); color: white; }
     .contratos-tab:not(.activo-ctab) .ctab-badge { background: var(--ink-4); color: var(--ink-2); }
 
+    /* ── SUBTAB STRIP ────────────────────────────────── */
+    .subtab-strip {
+      display: flex;
+      gap: 0;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      background: white;
+    }
+    .subtab-btn {
+      padding: 8px 14px;
+      border: none;
+      border-bottom: 2px solid transparent;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-2);
+      background: transparent;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .subtab-btn.activo {
+      color: var(--ink-1);
+      border-bottom-color: var(--ink-1);
+    }
+    .subtab-btn:not(.activo):hover { color: var(--ink-1); }
+
     /* ── TOOLBAR ──────────────────────────────────────── */
     .barra { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
     .barra-fila-principal { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -1191,11 +1216,11 @@
       </div>
     </div>
     <div class="sidebar-section-label">Menu</div>
-    <button class="sidebar-item activo" data-tab="contratos" onclick="mostrarTab('contratos', this)">
+    <button class="sidebar-item activo" data-tab="trabajos" onclick="mostrarTab('trabajos', this)">
       <div class="sidebar-indicator"></div>
       <i class="ti ti-file-text sidebar-icon"></i>
-      <span class="sidebar-label">Contratos</span>
-      <span class="sidebar-badge" id="bnav-badge-contratos" style="display:none"></span>
+      <span class="sidebar-label">Trabajos</span>
+      <span class="sidebar-badge" id="bnav-badge-trabajos" style="display:none"></span>
     </button>
     <button class="sidebar-item" data-tab="clientes" onclick="mostrarTab('clientes', this)">
       <div class="sidebar-indicator"></div>
@@ -1232,11 +1257,11 @@
       <div class="sm-brand-name">Inmuebles Audiovisuales</div>
       <div class="sm-brand-sub">Panel de administracion</div>
     </div>
-    <button class="sm-nav-item activo" data-tab="contratos" onclick="cerrarSideMenu();mostrarTab('contratos',this)">
+    <button class="sm-nav-item activo" data-tab="trabajos" onclick="cerrarSideMenu();mostrarTab('trabajos',this)">
       <div class="sm-indicator"></div>
       <i class="ti ti-file-text sm-nav-icon"></i>
-      <span class="sm-nav-label">Contratos</span>
-      <span class="sm-nav-badge" id="sm-badge-contratos" style="display:none"></span>
+      <span class="sm-nav-label">Trabajos</span>
+      <span class="sm-nav-badge" id="sm-badge-trabajos" style="display:none"></span>
     </button>
     <button class="sm-nav-item" data-tab="clientes" onclick="cerrarSideMenu();mostrarTab('clientes',this)">
       <div class="sm-indicator"></div>
@@ -1279,8 +1304,8 @@
   <div class="main-content">
   <div class="contenido">
 
-    <!-- ── CONTRATOS ──────────────────────────────────── -->
-    <div id="sec-contratos" class="seccion activa">
+    <!-- ── TRABAJOS ──────────────────────────────────── -->
+    <div id="sec-trabajos" class="seccion activa">
 
       <!-- Stats — línea compacta (JS la llena) -->
       <div id="stats-bar"></div>
@@ -1305,17 +1330,11 @@
         </div>
       </div>
 
-      <!-- Tabs de navegación con contadores -->
-      <div class="contratos-tabs">
-        <button id="ctab-sesiones" class="contratos-tab" onclick="setCiclo('sesiones')">
-          Sesiones <span id="ctab-badge-sesiones" class="ctab-badge"></span>
-        </button>
-        <button id="ctab-abiertos" class="contratos-tab activo-ctab" onclick="setCiclo('abiertos')">
-          Abiertos <span id="ctab-badge-abiertos" class="ctab-badge"></span>
-        </button>
-        <button id="ctab-todos" class="contratos-tab" onclick="setCiclo('todos')">
-          Todos
-        </button>
+      <!-- Sub-tabs de trabajos -->
+      <div class="subtab-strip" id="trabajos-subtabs">
+        <button class="subtab-btn activo" data-grupo="confirmados" onclick="cambiarGrupoTrabajos('confirmados',this)">Confirmados</button>
+        <button class="subtab-btn" data-grupo="por_firmar" onclick="cambiarGrupoTrabajos('por_firmar',this)">Por firmar</button>
+        <button class="subtab-btn" data-grupo="prospectos" onclick="cambiarGrupoTrabajos('prospectos',this)">Prospectos</button>
       </div>
 
 
@@ -1349,6 +1368,9 @@
             <i class="ti ti-calendar-search"></i> Fechas
             <span id="badge-filtros" class="filtros-badge" style="display:none">1</span>
           </button>
+          <button id="btn-cancelados" class="btn-filtros-toggle" onclick="toggleCancelados()">
+            <i class="ti ti-eye"></i> Mostrar cancelados
+          </button>
           <button class="btn-primario gold" id="btn-nuevo-toolbar" onclick="irANuevo()">
             <i class="ti ti-plus"></i> Nuevo
           </button>
@@ -1357,7 +1379,7 @@
               <i class="ti ti-dots"></i>
             </button>
             <div class="toolbar-menu-dropdown" id="toolbar-menu-dropdown">
-              <button class="toolbar-menu-item" onclick="cargarContratos();cerrarToolbarMenu()">
+              <button class="toolbar-menu-item" onclick="cargarTrabajos();cerrarToolbarMenu()">
                 <i class="ti ti-refresh"></i> Actualizar
               </button>
               <button class="toolbar-menu-item" onclick="descargarCSV();cerrarToolbarMenu()">
@@ -1413,8 +1435,8 @@
     <!-- ── NUEVO CONTRATO ─────────────────────────────── -->
     <div id="sec-nuevo" class="seccion">
       <div class="form-card">
-        <button class="btn-volver" onclick="mostrarTab('contratos', null)">
-          <i class="ti ti-arrow-left"></i> Contratos
+        <button class="btn-volver" onclick="mostrarTab('trabajos', null)">
+          <i class="ti ti-arrow-left"></i> Trabajos
         </button>
         <h2>Nuevo contrato</h2>
         <p class="form-desc">Configura el contrato para tu cliente. Agrega una o más propiedades.</p>
@@ -1844,7 +1866,7 @@ var tiposProp      = {};  // formulario unificado: { 1: 'Residencial', 2: 'Terre
 var numProps       = 1;   // número de propiedades en el formulario unificado
 var modosNombre    = {};  // { 1: 'paquete'|'custom', ... }
 var filtroCiclo    = 'abiertos';
-const ESTATUS_ABIERTOS = ['Pendiente firma', 'Firmado', 'Anticipo recibido', 'En produccion'];
+const ESTATUS_ABIERTOS = ['Pendiente firma', 'Firmado', 'Reservado', 'En produccion', 'Entregado'];
 
 // ── Selección masiva (TEMPORAL — quitar cuando ya no se necesite) ──
 let modoSeleccion = false;
@@ -2035,7 +2057,7 @@ function _entrarAdmin(tokenInicial) {
   document.getElementById('pantalla-admin').style.display = 'block';
   if (history.replaceState) history.replaceState({}, '', location.pathname);
   cargarPaquetes();
-  cargarContratos(tokenInicial);
+  cargarTrabajos(tokenInicial);
   cargarClientesParaAutocomplete();
 }
 
@@ -2092,11 +2114,11 @@ function mostrarTab(id, btn) {
   var smBtn = document.querySelector('#side-menu .sm-nav-item[data-tab="' + id + '"]');
   if (smBtn) smBtn.classList.add('activo');
   // Update mobile topbar title
-  var titles = { contratos: 'Contratos', clientes: 'Clientes', ajustes: 'Ajustes', nuevo: 'Nuevo contrato', metricas: 'Métricas', paquetes: 'Paquetes' };
+  var titles = { trabajos: 'Trabajos', clientes: 'Clientes', ajustes: 'Ajustes', nuevo: 'Nuevo contrato', metricas: 'Métricas', paquetes: 'Paquetes' };
   var titleEl = document.getElementById('topbar-section-title');
   if (titleEl && titles[id]) titleEl.textContent = titles[id];
   // Trigger data loads
-  if (id === 'contratos') cargarContratos();
+  if (id === 'trabajos') cargarTrabajos();
   if (id === 'clientes') cargarClientes();
   if (id === 'ajustes') {
     var paneActivo = document.querySelector('.ajustes-pane.activo-apane');
@@ -2501,6 +2523,103 @@ function setCiclo(ciclo) {
   const fc = document.getElementById('filter-chips');
   if (fc) fc.style.visibility = ciclo === 'sesiones' ? 'hidden' : '';
   filtrarContratos();
+}
+
+// ── TRABAJOS ──────────────────────────────────────────────────────────────────
+
+function fmtFecha(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+var _grupoActual = 'confirmados';
+var _mostrarCancelados = false;
+
+function cambiarGrupoTrabajos(grupo, btn) {
+  _grupoActual = grupo;
+  document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('activo'));
+  if (btn) btn.classList.add('activo');
+  cargarTrabajos();
+}
+
+function toggleCancelados() {
+  _mostrarCancelados = !_mostrarCancelados;
+  const btn = document.getElementById('btn-cancelados');
+  if (btn) {
+    btn.innerHTML = _mostrarCancelados
+      ? '<i class="ti ti-eye-off"></i> Ocultar cancelados'
+      : '<i class="ti ti-eye"></i> Mostrar cancelados';
+  }
+  cargarTrabajos();
+}
+
+async function cargarTrabajos(tokenInicial) {
+  try {
+    const params = { action: 'listarTrabajos', grupo: _grupoActual };
+    if (_mostrarCancelados) params.cancelados = '1';
+    const data = await apiGet(params);
+    const lista = data.trabajos || [];
+    window.todosTrabajos = lista;
+    renderTablaTrabajos(lista);
+    renderCardsTrabajos(lista);
+    if (tokenInicial) {
+      const t = lista.find(t => t.token === tokenInicial || t.id === tokenInicial);
+      if (t) seleccionarTrabajo(t);
+    }
+  } catch(e) {
+    console.error('cargarTrabajos error:', e);
+  }
+}
+
+function renderTablaTrabajos(lista) {
+  const tbody = document.getElementById('contratos-tbody');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-2)">Sin trabajos en esta vista.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(function(t) {
+    var _em = ESTATUS_MAP[t.estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: t.estatus || '—' };
+    var folio = t.folio || '—';
+    var tid = jsArg(t.id || '');
+    return '<tr class="cont-row" onclick="seleccionarTrabajo(' + tid + ')">' +
+      '<td><span class="estatus-badge" style="background:' + _em.bg + ';color:' + _em.color + '">' +
+        '<span class="dot" style="background:' + _em.dot + '"></span>' + esc(_em.label) + '</span></td>' +
+      '<td>' + esc(t.cliente_nombre || '—') + '</td>' +
+      '<td>' + esc(t.interes ? t.interes.substring(0,60) : '—') + '</td>' +
+      '<td>' + esc(folio) + '</td>' +
+      '<td style="color:var(--ink-2);font-size:12px">' + fmtFecha(t.fecha_creacion) + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function renderCardsTrabajos(lista) {
+  var cont = document.getElementById('contratos-cards');
+  if (!cont) return;
+  cont.innerHTML = lista.map(function(t) {
+    var _em = ESTATUS_MAP[t.estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: t.estatus || '—' };
+    var tid = jsArg(t.id || '');
+    return '<div class="cont-card" onclick="seleccionarTrabajo(' + tid + ')">' +
+      '<div class="cont-card-top">' +
+        '<span class="cont-card-folio">' + esc(t.folio || (t.id || '').substring(0,8)) + '</span>' +
+        '<span class="cont-card-pill" style="background:' + _em.bg + ';color:' + _em.color + '">' + esc(_em.label) + '</span>' +
+      '</div>' +
+      '<div class="cont-card-nombre">' + esc(t.cliente_nombre || '—') + '</div>' +
+      '<div class="cont-card-paquete">' + esc(t.interes ? t.interes.substring(0,50) : '—') + '</div>' +
+      '<div class="cont-card-bottom">' +
+        '<span>' + esc(fmtFecha(t.fecha_creacion)) + '</span>' +
+        '<span style="color:var(--ink-2)">' + esc(t.cliente_telefono || '') + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function seleccionarTrabajo(id) {
+  // Panel rendering will be implemented in Task 13
+  var t = (window.todosTrabajos || []).find(function(x) { return x.id === id || x.token === id; });
+  console.log('seleccionarTrabajo:', id, t);
 }
 
 function renderAlertas() {
@@ -5322,7 +5441,7 @@ function toggleContratosCliente(id, btn) {
 }
 
 function irAContratoDesdeCliente(token) {
-  mostrarTab('contratos', document.querySelector('.sidebar-item[data-tab="contratos"]'));
+  mostrarTab('trabajos', document.querySelector('.sidebar-item[data-tab="trabajos"]'));
   setTimeout(function() { abrirPanel(token); }, 120);
 }
 
