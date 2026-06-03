@@ -15,32 +15,38 @@
     body {
       font-family: 'Montserrat', system-ui, sans-serif;
       font-size: 14px; line-height: 1.5;
-      color: #111; background: #F9F9F7;
+      color: #111; background: #F8F5F1;
       -webkit-font-smoothing: antialiased;
     }
     button, input, textarea, select { font-family: inherit; font-size: inherit; }
 
     :root {
       --black:        #111111;
-      --page:         #F9F9F7;
-      --card:         #FFFFFF;
-      --border:       #EBEBEB;
-      --border-2:     #E0E0E0;
-      --ink-1:        #111111;
-      --ink-2:        #555555;
-      --ink-3:        #888888;
-      --ink-4:        #BBBBBB;
+      --page:         #F8F5F1;
+      --card:         #FFFEFB;
+      --border:       #E6DFD4;
+      --border-2:     #D9D0C3;
+      --ink-1:        #1A1714;
+      --ink-2:        #4A4440;
+      --ink-3:        #7A7068;
+      --ink-4:        #B8AFA4;
       --gold:         #C9A84C;
       --gold-light:   #FEF9ED;
       --gold-border:  #E8D89A;
       --gold-pale:    #FEF9ED;
-      --onyx:         #111111;
+      --gold-text:    #8A6A00;
+      --gold-dim:     rgba(201,168,76,0.14);
+      --gold-dark:    #9A7A2F;
+      --onyx:         #1A1714;
       --success:      #16A34A;
       --success-bg:   #DCFCE7;
       --warn:         #D97706;
-      --warn-bg:      #FEF9C3;
+      --warn-bg:      #FEF3C7;
+      --warn-border:  #F0C040;
       --danger:       #DC2626;
       --danger-bg:    #FEE2E2;
+      --error:        #DC2626;
+      --red:          #C0392B;
       --purple:       #6D28D9;
       --purple-bg:    #F5F3FF;
       --blue:         #1D4ED8;
@@ -380,7 +386,8 @@
       border-radius: 2px; margin: 10px auto 4px; flex-shrink: 0;
     }
     .panel-header {
-      padding: 14px 16px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      position: relative; padding: 14px 44px 10px 16px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
     }
     .panel-nombre { font-size: 16px; font-weight: 700; color: var(--ink-1); }
     .panel-folio { font-size: 11px; color: var(--ink-3); font-family: 'Courier New', monospace; margin-top: 2px; }
@@ -707,7 +714,7 @@
       font-size: 11px; font-weight: 600; color: var(--ink-2);
       cursor: pointer; transition: all 120ms; font-family: inherit;
     }
-    .filter-chip.activo { border-color: var(--ink-1); background: var(--ink-1); color: white; }
+    .filter-chip.on { border-color: var(--ink-1); background: var(--ink-1); color: white; }
     .chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
     /* ── LIFECYCLE PIPELINE ───────────────────────────── */
@@ -728,6 +735,157 @@
     /* ── MISC ─────────────────────────────────────────── */
     .msg-ok { font-size: 12px; color: var(--success); }
     .msg-err { font-size: 12px; color: var(--danger); }
+    .section-title { font-size: 15px; font-weight: 700; color: var(--ink-1); margin-bottom: 4px; }
+    .form-hint { font-size: 11px; color: var(--ink-3); margin-top: 4px; line-height: 1.4; }
+    .campo-sm { margin-bottom: 8px; }
+
+    /* ── AVATARES ─────────────────────────────────────── */
+    .td-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .av-a { background: #F59E0B; color: #1a1000; }
+    .av-b { background: #3B82F6; }
+    .av-c { background: #EC4899; }
+    .av-d { background: #8B5CF6; }
+    .av-e { background: #10B981; }
+    .av-f { background: #F97316; }
+
+    /* ── PANEL KPI CARDS ──────────────────────────────── */
+    #panel-kpis { padding: 14px 16px 0; flex-shrink: 0; }
+    .panel-kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
+    .panel-kpi-card {
+      background: var(--page); border-radius: var(--r);
+      padding: 10px 12px; text-align: center;
+    }
+    .panel-kpi-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin-bottom: 3px; }
+    .panel-kpi-val { font-size: 16px; font-weight: 700; color: var(--ink-1); line-height: 1; }
+    .panel-kpi-val.green { color: var(--success); }
+    .panel-kpi-val.amber { color: var(--warn); }
+    .panel-kpi-sub { font-size: 9px; color: var(--ink-3); margin-top: 2px; }
+    .panel-pay-progress { padding: 4px 0 10px; }
+    .panel-pay-labels { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .panel-pay-label { font-size: 10px; color: var(--ink-3); }
+    .panel-pay-label.strong { font-weight: 700; color: var(--ink-2); }
+    .panel-pay-bar-bg {
+      height: 5px; background: var(--border); border-radius: 3px; overflow: hidden;
+    }
+    .panel-pay-bar-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width 400ms; }
+
+    /* ── PANEL ACTION BAR ─────────────────────────────── */
+    #panel-action-bar { padding: 10px 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .panel-action-bar { display: flex; flex-direction: column; gap: 6px; }
+
+    /* ── PANEL INFO FILAS ─────────────────────────────── */
+    .panel-acord { border: none; margin-bottom: 2px; }
+    .panel-acord > summary {
+      list-style: none; cursor: pointer;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--ink-3);
+      padding: 12px 0 8px; border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .panel-acord > summary::after { content: '▾'; margin-left: auto; font-size: 12px; }
+    .panel-acord[open] > summary::after { content: '▴'; }
+    .panel-acord::-webkit-details-marker { display: none; }
+    .panel-acord-body { padding-bottom: 8px; }
+    .info-fila {
+      display: flex; align-items: baseline; gap: 8px;
+      padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .info-fila:last-child { border-bottom: none; }
+    .etiq { font-size: 10px; font-weight: 700; color: var(--ink-3); min-width: 60px; flex-shrink: 0; }
+    .val { color: var(--ink-1); flex: 1; word-break: break-word; }
+
+    /* ── PANEL ABONOS ─────────────────────────────────── */
+    .abono-fila {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid var(--border); gap: 10px;
+    }
+    .abono-fila:last-child { border-bottom: none; }
+    .abono-metodo { font-size: 13px; font-weight: 600; color: var(--ink-1); }
+    .abono-fecha { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+    .abono-monto { font-size: 13px; font-weight: 700; color: var(--success); white-space: nowrap; }
+    .pago-resumen { margin-bottom: 12px; }
+    .pago-fila {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--border);
+    }
+    .pago-fila:last-child { border-bottom: none; }
+    .pago-barra-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 8px 0; }
+    .pago-barra-fill { height: 100%; background: var(--gold); border-radius: 3px; }
+
+    /* ── PANEL LINK PORTAL ────────────────────────────── */
+    .link-portal-box {
+      background: var(--page); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 12px 14px; margin: 10px 0;
+    }
+    .link-portal-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin-bottom: 4px; }
+    .link-portal-url { font-size: 11px; color: var(--ink-2); word-break: break-all; margin-bottom: 8px; font-family: 'Courier New', monospace; }
+    .link-portal-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-copiar {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border: 1.5px solid var(--border-2); border-radius: var(--r);
+      background: var(--card); font-family: inherit; font-size: 12px; font-weight: 600;
+      color: var(--ink-2); cursor: pointer; transition: all 120ms;
+    }
+    .btn-copiar:hover { border-color: var(--ink-4); }
+    .btn-wa {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border: 1.5px solid #25D366; border-radius: var(--r);
+      background: #25D366; font-family: inherit; font-size: 12px; font-weight: 600;
+      color: white; cursor: pointer; text-decoration: none; transition: filter 120ms;
+    }
+    .btn-wa:hover { filter: brightness(0.92); }
+
+    /* ── PROP DATO ────────────────────────────────────── */
+    .prop-dato { display: flex; align-items: baseline; gap: 6px; font-size: 13px; padding: 4px 0; }
+    .prop-dato .lbl { font-size: 10px; font-weight: 700; color: var(--ink-3); min-width: 58px; flex-shrink: 0; }
+    .prop-card-titulo { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+
+    /* ── RESULTADO CREACION CONTRATO ──────────────────── */
+    .resultado-box {
+      background: var(--success-bg); border: 1px solid #A7F3D0;
+      border-radius: var(--r-lg); padding: 20px; margin-top: 14px;
+    }
+    .resultado-titulo { font-size: 15px; font-weight: 700; color: var(--success); margin-bottom: 8px; }
+    .resultado-url { font-size: 12px; color: var(--ink-2); word-break: break-all; margin-bottom: 12px; font-family: 'Courier New', monospace; }
+    .resultado-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── ADD-ONS LIST ─────────────────────────────────── */
+    .add-lista { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .add-item { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .add-item:last-child { border-bottom: none; }
+    .add-item-nombre { flex: 1; color: var(--ink-1); }
+    .add-item-precio { font-size: 12px; color: var(--ink-3); font-family: 'Courier New', monospace; }
+
+    /* ── CLIENTES ─────────────────────────────────────── */
+    .cli-card {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 12px 14px;
+    }
+    .cli-card-body { flex: 1; min-width: 0; }
+    .cli-card-nombre { font-size: 13px; font-weight: 700; color: var(--ink-1); }
+    .cli-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 3px; }
+    .cli-card-tel { font-size: 12px; color: var(--ink-3); text-decoration: none; }
+    .cli-card-tel:hover { color: var(--ink-1); }
+    .cli-card-correo { font-size: 12px; color: var(--ink-3); }
+    .cli-card-acciones { display: flex; gap: 6px; flex-shrink: 0; }
+    .cli-card-action-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: var(--r);
+      border: 1.5px solid var(--border-2); background: var(--page);
+      color: var(--ink-2); cursor: pointer; font-size: 16px;
+      text-decoration: none; transition: all 120ms;
+    }
+    .cli-card-action-btn:hover { border-color: var(--ink-4); background: var(--card); }
+    .cli-card-action-btn.wa { background: #25D366; border-color: #25D366; color: white; }
+    .cli-card-action-btn.wa:hover { filter: brightness(0.92); }
+    .cli-card-action-btn.danger { border-color: #FECACA; color: var(--danger); }
+    .cli-card-action-btn.danger:hover { background: var(--danger-bg); border-color: #FCA5A5; }
+
     /* ── EXISTING @media (max-width: 640px) BLOCK PRESERVED BELOW ── */
     @media (max-width: 640px) {
       .contenido { padding: 12px 12px 32px; }
@@ -777,7 +935,7 @@
       #sidebar {
         display: flex; flex-direction: column;
         position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w);
-        background: var(--card); border-right: 1px solid var(--border);
+        background: #FFFDF9; border-right: 1px solid var(--border);
         padding: 20px 12px; z-index: 100;
       }
       .sidebar-logo {
@@ -943,14 +1101,25 @@
       <span class="sidebar-label">Clientes</span>
       <span class="sidebar-badge" id="bnav-badge-clientes" style="display:none"></span>
     </button>
+    <div class="sidebar-section-label" style="margin-top:12px">Gestión</div>
+    <button class="sidebar-item" data-tab="metricas" onclick="irAMetricas(this)">
+      <div class="sidebar-indicator"></div>
+      <i class="ti ti-chart-bar sidebar-icon"></i>
+      <span class="sidebar-label">Métricas</span>
+    </button>
+    <button class="sidebar-item" data-tab="paquetes" onclick="irAPaquetes(this)">
+      <div class="sidebar-indicator"></div>
+      <i class="ti ti-package sidebar-icon"></i>
+      <span class="sidebar-label">Paquetes</span>
+    </button>
     <div class="sidebar-footer">
       <div class="sidebar-avatar"><span>IA</span></div>
       <div>
         <div class="sidebar-user-name">Admin IAV</div>
         <div class="sidebar-user-role">Administrador</div>
       </div>
-      <button class="sidebar-gear" onclick="mostrarTab('ajustes', null)" title="Ajustes">
-        <i class="ti ti-settings"></i>
+      <button class="sidebar-gear" onclick="cerrarSesion()" title="Cerrar sesión">
+        <i class="ti ti-logout"></i>
       </button>
     </div>
   </nav>
@@ -972,11 +1141,17 @@
       <i class="ti ti-users sm-nav-icon"></i>
       <span class="sm-nav-label">Clientes</span>
     </button>
+    <button class="sm-nav-item" data-tab="metricas" onclick="cerrarSideMenu();irAMetricas(this)">
+      <div class="sm-indicator"></div>
+      <i class="ti ti-chart-bar sm-nav-icon"></i>
+      <span class="sm-nav-label">Métricas</span>
+    </button>
+    <button class="sm-nav-item" data-tab="paquetes" onclick="cerrarSideMenu();irAPaquetes(this)">
+      <div class="sm-indicator"></div>
+      <i class="ti ti-package sm-nav-icon"></i>
+      <span class="sm-nav-label">Paquetes</span>
+    </button>
     <div class="sm-footer">
-      <button class="sm-footer-item" onclick="cerrarSideMenu();mostrarTab('ajustes',null)">
-        <i class="ti ti-settings sm-footer-icon"></i>
-        <span class="sm-footer-label">Ajustes</span>
-      </button>
       <div class="sm-user">
         <div class="sm-user-avatar"><span>IA</span></div>
         <div>
@@ -1201,7 +1376,10 @@
       <div class="sec-clientes-titulo">Clientes</div>
       <div class="sec-clientes-sub">Pipeline de ventas y seguimiento</div>
     </div>
-    <button class="btn-secundario btn-sm" onclick="cargarClientes()" title="Actualizar"><i class="ti ti-refresh"></i></button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-secundario btn-sm" onclick="cargarClientes()" title="Actualizar"><i class="ti ti-refresh"></i></button>
+      <button class="btn-primario gold btn-sm" onclick="abrirModalCliente()"><i class="ti ti-user-plus"></i> Nuevo cliente</button>
+    </div>
   </div>
 
   <div class="clientes-grid">
@@ -1491,7 +1669,7 @@
       <div class="lifecycle-wrap"></div>
       <div id="panel-sesion" class="panel-sesion" style="display:none"></div>
     </div>
-    <button class="btn-cerrar" onclick="cerrarPanel()"><i class="ti ti-x"></i></button>
+    <button class="panel-close" onclick="cerrarPanel()"><i class="ti ti-x"></i></button>
   </div>
   <!-- KPI cards + pay progress (populated by renderPanel) -->
   <div id="panel-kpis"></div>
@@ -1691,10 +1869,6 @@ function cerrarSideMenu() {
   document.body.style.overflow = '';
 }
 
-function mostrarTabMobile(id, btn) {
-  mostrarTab(id, btn);
-}
-
 function normalizarTelWA(tel) {
   if (!tel) return '';
   var d = String(tel).replace(/\D/g, '');
@@ -1769,7 +1943,7 @@ function mostrarTab(id, btn) {
   var smBtn = document.querySelector('#side-menu .sm-nav-item[data-tab="' + id + '"]');
   if (smBtn) smBtn.classList.add('activo');
   // Update mobile topbar title
-  var titles = { contratos: 'Contratos', clientes: 'Clientes', ajustes: 'Ajustes', nuevo: 'Nuevo contrato' };
+  var titles = { contratos: 'Contratos', clientes: 'Clientes', ajustes: 'Ajustes', nuevo: 'Nuevo contrato', metricas: 'Métricas', paquetes: 'Paquetes' };
   var titleEl = document.getElementById('topbar-section-title');
   if (titleEl && titles[id]) titleEl.textContent = titles[id];
   // Trigger data loads
@@ -1781,6 +1955,16 @@ function mostrarTab(id, btn) {
     else cargarMetricas();
   }
   if (id === 'nuevo') cargarClientesParaAutocomplete();
+}
+
+function irAMetricas(btn) {
+  mostrarTab('ajustes', btn || document.querySelector('.sidebar-item[data-tab="metricas"]'));
+  setAjustesTab('metricas');
+}
+
+function irAPaquetes(btn) {
+  mostrarTab('ajustes', btn || document.querySelector('.sidebar-item[data-tab="paquetes"]'));
+  setAjustesTab('paquetes');
 }
 
 function setAjustesTab(pane) {
@@ -1801,6 +1985,11 @@ function mostrarPanelTab(id, btn) {
 }
 
 function irANuevo() {
+  var secActiva = document.querySelector('.seccion.activa');
+  if (secActiva && secActiva.id === 'sec-clientes') {
+    abrirModalCliente();
+    return;
+  }
   if (window.innerWidth >= 1024) {
     abrirDrawerNuevo();
     return;
@@ -1860,15 +2049,6 @@ function actualizarBadgeClientes(trabajos) {
     if (activos > 0) { bdg.textContent = activos; bdg.style.display = ''; }
     else bdg.style.display = 'none';
   }
-}
-
-function irASubseccion(tab, subtab, btn) {
-  mostrarTab(tab, null);
-  setAjustesTab(subtab);
-  // marcar el item del sidebar como activo (mostrarTab ya limpió todos)
-  document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('activo'));
-  document.querySelectorAll('.sm-nav-item').forEach(b => b.classList.remove('activo'));
-  if (btn) btn.classList.add('activo');
 }
 
 async function enviarRecordatorio() {
@@ -2240,7 +2420,7 @@ function renderAlertas() {
   }
 
   bar.style.display = '';
-  bar.innerHTML = `<div class="stats-linea">${items.join('<span class="stats-sep" style="color:var(--border2)">·</span>')}</div>`;
+  bar.innerHTML = `<div class="stats-linea">${items.join('<span class="stats-sep" style="color:var(--border-2)">·</span>')}</div>`;
   actualizarBadgesTabs();
 }
 
@@ -4651,13 +4831,16 @@ function actualizarStatsRibbon(contratos) {
 
 function renderLifecycle(estatus) {
   var stages = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Completado'];
-  var labels  = ['Pendiente','Firmado','Anticipo','Produccion','Entregado','Completado'];
+  var labels  = ['Pendiente','Firmado','Anticipo','Producción','Entregado','Completado'];
   var idx = stages.indexOf(estatus);
   if (idx < 0) idx = -1;
-  return '<div class="lifecycle">'+stages.map(function(s,i){
-    var cls = i<idx?'done':i===idx?'current':'';
-    return '<div class="lc-step '+cls+'"><div class="lc-dot">'+(i<idx?'<span class="lc-dot-check">&#10003;</span>':'')+'</div><div class="lc-label">'+labels[i]+'</div></div>';
-  }).join('')+'</div>';
+  var parts = [];
+  stages.forEach(function(s, i) {
+    var cls = i < idx ? 'done' : i === idx ? 'current' : '';
+    parts.push('<div class="lc-step '+cls+'"><div class="lc-dot"></div><div class="lc-label">'+labels[i]+'</div></div>');
+    if (i < stages.length - 1) parts.push('<div class="lc-line'+(i < idx ? ' done' : '')+'"></div>');
+  });
+  return '<div class="lifecycle-pipeline">'+parts.join('')+'</div>';
 }
 
 // ── CLIENTES + TRABAJOS ────────────────────────────────────────────────────────
@@ -4764,7 +4947,7 @@ function renderPipeline(trabajos) {
     html += '</div>';
     html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">';
     html += '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'18;border-radius:20px;padding:3px 10px;white-space:nowrap;display:flex;align-items:center;gap:4px"><i class="ti '+icon+'" style="font-size:11px"></i>'+label+'</span>';
-    html += '<select onchange="cambiarEstatusTrabajo(\''+t.id+'\',this.value,this)" style="font-size:11px;padding:4px 7px;border:1.5px solid var(--border2,#ddd);border-radius:6px;background:var(--page);color:var(--ink-2);cursor:pointer;outline:none">';
+    html += '<select onchange="cambiarEstatusTrabajo(\''+t.id+'\',this.value,this)" style="font-size:11px;padding:4px 7px;border:1.5px solid var(--border-2);border-radius:6px;background:var(--page);color:var(--ink-2);cursor:pointer;outline:none">';
     ['nuevo','intentando','en_seguimiento','cotizado','descartado'].forEach(function(s){
       html += '<option value="'+s+'"'+(t.estatus===s?' selected':'')+'>'+TRAB_ESTATUS_LABELS[s]+'</option>';
     });
@@ -4852,6 +5035,7 @@ function renderListaClientes(clientes) {
     html += '<div class="cli-card-acciones">';
     if (telefono && waNum) html += '<a href="https://wa.me/'+waNum+'" target="_blank" class="cli-card-action-btn wa" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>';
     if (id) html += '<button onclick="abrirModalTrabajo('+jsArg(id)+')" class="cli-card-action-btn" title="Nuevo trabajo"><i class="ti ti-calendar-plus"></i></button>';
+    if (id) html += '<button onclick="borrarCliente('+jsArg(id)+','+jsArg(nombre)+')" class="cli-card-action-btn danger" title="Borrar cliente"><i class="ti ti-trash"></i></button>';
     html += '</div>';
     html += '</div>';
   });
@@ -4898,6 +5082,20 @@ function guardarNuevoCliente() {
     if (r.ok) { msg.style.color='#1E8449'; msg.textContent='¡Cliente creado!'; setTimeout(function(){ cerrarModalCliente(); cargarClientes(); _clientesCache=[]; cargarClientesParaAutocomplete(); }, 800); }
     else { msg.style.color='var(--red,#c0392b)'; msg.textContent=r.error||'Error'; }
   });
+}
+
+async function borrarCliente(id, nombre) {
+  if (!confirm('¿Eliminar permanentemente a "' + nombre + '"?\n\nSe borrarán también sus trabajos del pipeline. Esta acción no se puede deshacer.\n\nEscribe el nombre en la siguiente ventana para confirmar.')) return;
+  var confirmacion = prompt('Escribe el nombre del cliente para confirmar:');
+  if (!confirmacion || confirmacion.trim().toLowerCase() !== nombre.trim().toLowerCase()) {
+    alert('El nombre no coincide. No se eliminó nada.');
+    return;
+  }
+  try {
+    var r = await apiPost({ action: 'borrarCliente', id: id });
+    if (r.ok) { cargarClientes(); }
+    else { alert('Error: ' + (r.error || 'No se pudo eliminar')); }
+  } catch(e) { alert('Error de red: ' + e.message); }
 }
 
 // ── MODAL NUEVO TRABAJO ───────────────────────────────────────────────────────

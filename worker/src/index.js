@@ -35,7 +35,7 @@ const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];
 const RUTAS_ARCHIVOS = ['subirArchivo','subirArchivoAdmin'];
 const RUTAS_REVISION = ['obtenerRevision','guardarRevision'];
 const RUTAS_EQUIPO       = ['obtenerEquipo','marcarProduccion'];
-const RUTAS_CLIENTES    = ['crearCliente','listarClientes','obtenerCliente','actualizarCliente'];
+const RUTAS_CLIENTES    = ['crearCliente','listarClientes','obtenerCliente','actualizarCliente','borrarCliente'];
 const RUTAS_TRABAJOS    = ['crearTrabajo','listarTrabajos','actualizarTrabajo','actualizarEstatusTrabajo','convertirTrabajo'];
 const RUTAS_ACTIVIDADES = ['agendarLlamada','agregarNota','listarActividades'];
 

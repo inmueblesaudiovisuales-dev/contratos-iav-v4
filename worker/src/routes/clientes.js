@@ -1,4 +1,4 @@
-import { query, queryOne, run, uuid, now } from '../db.js';
+import { query, queryOne, run, batch, uuid, now } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 
 export async function handleClientes(request, env, ctx, action) {
@@ -102,6 +102,21 @@ export async function handleClientes(request, env, ctx, action) {
       `UPDATE clientes SET nombre=?, telefono=?, correo=?, origen=?, notas_perfil=? WHERE id=?`,
       [nombre, telefono || '', correo || '', origen || '', notasPerfil || '', id]
     );
+    return ok({ ok: true });
+  }
+
+  if (action === 'borrarCliente') {
+    const body = await request.json();
+    const { id } = body;
+    if (!id) return err('id requerido');
+    const conContrato = await queryOne(db,
+      `SELECT token FROM contratos WHERE cliente_id = ? AND oculto = 0 LIMIT 1`, [id]);
+    if (conContrato) return err('El cliente tiene contratos activos. Archiva los contratos primero.');
+    await batch(db, [
+      { sql: 'DELETE FROM trabajos WHERE cliente_id = ?', params: [id] },
+      { sql: 'DELETE FROM actividades WHERE cliente_id = ?', params: [id] },
+      { sql: 'DELETE FROM clientes WHERE id = ?', params: [id] },
+    ]);
     return ok({ ok: true });
   }
 
