@@ -6,31 +6,31 @@
   <title>Bitacora de Produccion</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --black: #111111;
-      --page: #F9F9F7;
+      --black: #101010;
+      --page: #F7F6F1;
       --card: #FFFFFF;
-      --soft: #F1F1EE;
-      --line: #E5E2DA;
-      --ink-1: #171717;
-      --ink-2: #56534D;
-      --ink-3: #918C82;
+      --line: #E1DED6;
+      --muted: #F0EEE8;
+      --ink-1: #151515;
+      --ink-2: #5F5A50;
+      --ink-3: #948D80;
       --gold: #C9A84C;
-      --gold-soft: #F8F1DA;
-      --green: #17803D;
-      --green-soft: #E8F6EC;
-      --red: #C24132;
-      --red-soft: #FCEDEA;
+      --gold-soft: #F8F0D2;
+      --green: #147A3A;
+      --green-soft: #E8F5EC;
+      --red: #B83227;
+      --red-soft: #FCEAE7;
       --blue: #2457A6;
-      --blue-soft: #EAF0FA;
-      --violet: #6F4EA8;
-      --violet-soft: #F0EAF8;
+      --blue-soft: #E7EEF9;
+      --purple: #6E489C;
+      --purple-soft: #EFE8F7;
       --radius: 8px;
-      --shadow: 0 8px 24px rgba(17,17,17,0.08);
+      --shadow: 0 10px 28px rgba(16,16,16,.12);
     }
 
     html, body { min-height: 100%; background: var(--page); }
@@ -39,254 +39,210 @@
       color: var(--ink-1);
       -webkit-font-smoothing: antialiased;
     }
-
     button, input, textarea { font: inherit; }
     button { cursor: pointer; }
 
-    .app { max-width: 920px; margin: 0 auto; padding-bottom: 92px; }
+    .app { max-width: 960px; margin: 0 auto; padding-bottom: 92px; }
 
     .topbar {
       position: sticky; top: 0; z-index: 30;
-      background: rgba(249,249,247,0.96);
+      background: rgba(247,246,241,.97);
       backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--line);
       padding: max(12px, env(safe-area-inset-top)) 14px 10px;
     }
-    .top-row { display: flex; align-items: center; gap: 10px; }
-    .title-block { min-width: 0; flex: 1; }
+    .top-row { display: flex; align-items: center; gap: 12px; }
+    .job { min-width: 0; flex: 1; }
     .eyebrow {
-      color: var(--gold); font-size: 10px; font-weight: 800;
-      letter-spacing: 0.11em; text-transform: uppercase;
+      color: var(--gold); font-size: 10px; font-weight: 900;
+      letter-spacing: .12em; text-transform: uppercase;
     }
-    .title {
-      font-size: 18px; font-weight: 800; line-height: 1.15;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .folio { margin-top: 2px; font-size: 11px; color: var(--ink-3); font-weight: 700; }
+    .job h1 { font-size: 18px; line-height: 1.12; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .folio { color: var(--ink-3); font-size: 11px; font-weight: 800; margin-top: 2px; }
     .sync {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 10px; color: var(--ink-3); font-weight: 800;
-      text-transform: uppercase; letter-spacing: 0.05em;
+      display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3);
+      font-size: 10px; font-weight: 900; text-transform: uppercase;
     }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
-    .dot.syncing { background: #D99A21; animation: pulse 1s infinite; }
+    .dot.syncing { background: #D99021; animation: pulse 1s infinite; }
     .dot.error { background: var(--red); }
     @keyframes pulse { 50% { opacity: .35; } }
 
-    .name-row {
-      display: grid; grid-template-columns: 1fr auto;
-      gap: 8px; margin-top: 10px;
-    }
-    .name-input {
-      min-width: 0; border: 1px solid var(--line); border-radius: var(--radius);
-      background: var(--card); padding: 10px 12px;
-      font-size: 13px; font-weight: 700; outline: none;
-    }
-    .name-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
-
-    .icon-btn, .text-btn {
+    .name-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
+    .field {
       border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--card); min-height: 42px; padding: 0 12px;
+      outline: none; font-size: 13px; font-weight: 800;
+    }
+    .field:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
+
+    .btn, .icon-btn, .primary {
+      border-radius: var(--radius); min-height: 42px; padding: 0 13px;
+      font-size: 13px; font-weight: 900; border: 1px solid var(--line);
       background: var(--card); color: var(--ink-1);
-      min-height: 40px; padding: 0 12px;
-      font-size: 12px; font-weight: 800;
     }
-    .icon-btn { min-width: 40px; padding: 0; }
-    .primary-btn {
-      background: var(--black); color: #fff; border: 0; border-radius: var(--radius);
-      min-height: 42px; padding: 0 14px; font-size: 13px; font-weight: 800;
-    }
-    .danger-btn { color: var(--red); border-color: #E8C6C0; background: var(--red-soft); }
+    .icon-btn { width: 42px; padding: 0; }
+    .primary { border-color: var(--black); background: var(--black); color: #fff; }
+    .danger { border-color: #EDC2BC; background: var(--red-soft); color: var(--red); }
+    .ghost { background: transparent; }
 
-    .mode-wrap {
-      padding: 12px 14px 8px;
-      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
-    }
+    .mode-area { padding: 12px 14px 0; }
+    .mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .mode-btn {
-      min-height: 56px; border: 1px solid var(--line);
-      background: var(--card); border-radius: var(--radius);
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-      font-weight: 800; color: var(--ink-2);
+      border: 1px solid var(--line); background: var(--card); border-radius: var(--radius);
+      min-height: 52px; text-align: left; padding: 10px 11px;
     }
-    .mode-btn span:first-child { font-size: 18px; line-height: 1; }
-    .mode-btn.active { border-color: var(--black); background: var(--black); color: #fff; }
+    .mode-btn strong { display: block; font-size: 13px; font-weight: 900; }
+    .mode-btn span { display: block; margin-top: 2px; color: var(--ink-3); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    .mode-btn.active { background: var(--black); color: #fff; border-color: var(--black); }
+    .mode-btn.active span { color: rgba(255,255,255,.64); }
+    .active-band {
+      margin-top: 10px; border-radius: var(--radius); background: var(--black); color: #fff;
+      padding: 12px; display: grid; gap: 3px;
+    }
+    .active-band strong { font-size: 15px; font-weight: 900; }
+    .active-band span { color: rgba(255,255,255,.68); font-size: 12px; font-weight: 700; line-height: 1.4; }
 
-    .tabs {
-      padding: 0 14px 10px;
-      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+    .tabs { padding: 12px 14px 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .tab {
+      border: 1px solid transparent; border-radius: var(--radius); background: transparent;
+      min-height: 40px; font-size: 12px; font-weight: 900; color: var(--ink-3);
     }
-    .tab-btn {
-      border: 0; border-radius: var(--radius); background: transparent;
-      padding: 9px 6px; color: var(--ink-3); font-size: 12px; font-weight: 800;
-    }
-    .tab-btn.active { background: var(--card); color: var(--ink-1); box-shadow: inset 0 0 0 1px var(--line); }
-
-    .summary {
-      margin: 0 14px 12px; padding: 12px;
-      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-      display: grid; gap: 8px;
-    }
-    .progress-top { display: flex; align-items: center; gap: 12px; }
-    .progress-track { flex: 1; height: 7px; background: var(--soft); border-radius: 99px; overflow: hidden; }
-    .progress-fill { height: 100%; background: var(--gold); border-radius: inherit; transition: width .25s; }
-    .progress-text { font-size: 12px; font-weight: 800; white-space: nowrap; }
-    .mini-pending { display: flex; flex-wrap: wrap; gap: 6px; }
-    .mini-chip {
-      border-radius: 999px; padding: 5px 8px; background: var(--soft);
-      font-size: 11px; font-weight: 800; color: var(--ink-2);
-    }
-    .mini-chip.done { background: var(--green-soft); color: var(--green); }
+    .tab.active { border-color: var(--line); background: var(--card); color: var(--ink-1); }
 
     .content { padding: 0 14px; }
-    .toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
-    .search {
-      flex: 1; border: 1px solid var(--line); border-radius: var(--radius);
-      background: var(--card); min-height: 42px; padding: 0 12px;
-      font-size: 13px; font-weight: 700; outline: none;
-    }
-
-    .empty {
-      border: 1px dashed var(--line); border-radius: var(--radius); background: var(--card);
-      padding: 24px 18px; text-align: center; color: var(--ink-2);
-    }
-    .empty h2 { font-size: 16px; margin-bottom: 6px; }
-    .empty p { font-size: 13px; line-height: 1.5; }
-
-    .space-list, .log-list, .close-list { display: grid; gap: 8px; }
-    .space-card, .log-card, .close-card {
+    .summary-card {
       background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-      overflow: hidden;
+      padding: 12px; margin-bottom: 12px;
     }
-    .space-main {
-      width: 100%; border: 0; background: transparent;
-      display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px;
-      padding: 12px; text-align: left;
-    }
-    .space-name { min-width: 0; }
-    .space-title { display: block; font-size: 14px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .space-sub { display: block; margin-top: 3px; color: var(--ink-3); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
-    .space-card.child .space-main { padding-left: 26px; }
-    .space-card.child .space-title::before { content: "- "; color: var(--ink-3); }
-    .space-actions { display: flex; align-items: center; gap: 6px; }
-    .capture-pill {
-      border-radius: 999px; background: var(--black); color: #fff;
-      padding: 7px 9px; font-size: 11px; font-weight: 800; white-space: nowrap;
-    }
-    .more-btn {
-      border: 1px solid var(--line); background: var(--page); border-radius: 7px;
-      width: 34px; height: 34px; font-size: 18px; font-weight: 800;
-    }
-    .status-row { border-top: 1px solid var(--line); padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 6px; }
-    .status-chip {
-      border-radius: 999px; padding: 5px 8px; background: var(--soft);
-      color: var(--ink-3); font-size: 10px; font-weight: 800;
-    }
-    .status-chip.done { background: var(--green-soft); color: var(--green); }
-    .status-chip.na { background: var(--red-soft); color: var(--red); }
-    .status-chip.video { background: var(--blue-soft); color: var(--blue); }
-    .status-chip.drone { background: var(--violet-soft); color: var(--violet); }
+    .progress-row { display: flex; align-items: center; gap: 10px; }
+    .track { flex: 1; height: 8px; background: var(--muted); border-radius: 99px; overflow: hidden; }
+    .fill { height: 100%; background: var(--gold); border-radius: 99px; }
+    .progress-num { font-size: 12px; font-weight: 900; }
+    .summary-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+    .tag { border-radius: 999px; padding: 5px 8px; background: var(--muted); color: var(--ink-2); font-size: 10px; font-weight: 900; }
+    .tag.ok { background: var(--green-soft); color: var(--green); }
+    .tag.warn { background: var(--gold-soft); color: #8B6A13; }
+    .tag.bad { background: var(--red-soft); color: var(--red); }
 
-    .log-filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; }
-    .filter-btn {
-      border: 1px solid var(--line); background: var(--card); border-radius: 999px;
-      padding: 8px 11px; font-size: 11px; font-weight: 800; color: var(--ink-2); white-space: nowrap;
+    .prepare {
+      background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+      padding: 18px; display: grid; gap: 14px;
     }
-    .filter-btn.active { background: var(--black); color: #fff; border-color: var(--black); }
-    .log-card { padding: 11px 12px; }
-    .log-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-    .log-kind { font-size: 12px; font-weight: 900; }
-    .log-meta { color: var(--ink-3); font-size: 10px; font-weight: 800; white-space: nowrap; }
-    .log-name { margin-top: 4px; font-size: 14px; font-weight: 800; }
-    .log-note { margin-top: 7px; color: var(--ink-2); font-size: 12px; line-height: 1.45; }
-    .log-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .prepare h2 { font-size: 22px; line-height: 1.15; }
+    .prepare p { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
+    .template-grid { display: grid; gap: 9px; }
+    .template-card {
+      width: 100%; border: 1px solid var(--line); background: var(--page); border-radius: var(--radius);
+      padding: 13px; text-align: left; display: grid; gap: 5px;
+    }
+    .template-card strong { font-size: 15px; font-weight: 900; }
+    .template-card span { color: var(--ink-2); font-size: 12px; line-height: 1.4; font-weight: 700; }
 
-    .close-card { padding: 13px; }
-    .close-card h3 { font-size: 13px; margin-bottom: 8px; }
-    .pending-line { color: var(--ink-2); font-size: 12px; line-height: 1.5; margin-top: 4px; }
-    .sequence { margin-top: 7px; display: grid; gap: 5px; }
-    .sequence-item { font-size: 12px; color: var(--ink-2); }
+    .toolbar { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 10px; }
+    .zone { margin-bottom: 15px; }
+    .zone-title {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 2px 2px 8px; color: var(--ink-3);
+      font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .cards { display: grid; gap: 8px; }
+    .capture-card {
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 12px; display: grid; gap: 11px;
+    }
+    .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .card-name { min-width: 0; }
+    .card-name strong { display: block; font-size: 15px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-name span { display: block; margin-top: 3px; color: var(--ink-3); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+    .child .card-name strong::before { content: "- "; color: var(--ink-3); }
+    .state-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .state {
+      border-radius: 999px; padding: 5px 8px; font-size: 10px; font-weight: 900;
+      color: var(--ink-2); background: var(--muted);
+    }
+    .state.done { color: var(--green); background: var(--green-soft); }
+    .state.video { color: var(--blue); background: var(--blue-soft); }
+    .state.drone { color: var(--purple); background: var(--purple-soft); }
+    .state.na { color: var(--red); background: var(--red-soft); }
+    .primary-action {
+      width: 100%; border: 0; border-radius: var(--radius); background: var(--black); color: #fff;
+      min-height: 48px; font-size: 14px; font-weight: 900;
+    }
+    .primary-action.manage { background: var(--gold); color: var(--black); }
+
+    .empty { border: 1px dashed var(--line); background: var(--card); border-radius: var(--radius); padding: 22px 16px; text-align: center; }
+    .empty h2 { font-size: 16px; margin-bottom: 6px; }
+    .empty p { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
+
+    .close-list, .edit-list { display: grid; gap: 9px; }
+    .panel {
+      background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 13px;
+    }
+    .panel h3 { font-size: 14px; font-weight: 900; margin-bottom: 8px; }
+    .line { color: var(--ink-2); font-size: 12px; line-height: 1.48; margin-top: 5px; }
+    .sequence { display: grid; gap: 5px; }
+    .sequence div { color: var(--ink-2); font-size: 12px; line-height: 1.45; }
 
     .overlay {
-      position: fixed; inset: 0; z-index: 100;
-      background: rgba(17,17,17,.36); display: none; align-items: flex-end;
+      position: fixed; inset: 0; z-index: 100; background: rgba(16,16,16,.38);
+      display: none; align-items: flex-end;
     }
     .overlay.visible { display: flex; }
     .sheet {
-      width: 100%; max-height: 86dvh; overflow: auto;
-      background: var(--card); border-radius: 14px 14px 0 0;
-      padding: 16px; box-shadow: var(--shadow);
+      width: 100%; max-height: 88dvh; overflow: auto; background: var(--card);
+      border-radius: 16px 16px 0 0; padding: 16px; box-shadow: var(--shadow);
     }
-    .sheet-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .sheet-title { font-size: 16px; font-weight: 900; }
-    .sheet-grid { display: grid; gap: 10px; }
-    .service-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      border: 1px solid var(--line); border-radius: var(--radius); padding: 12px;
-    }
-    .service-row strong { font-size: 14px; }
-    .service-row span { display: block; margin-top: 3px; color: var(--ink-3); font-size: 11px; font-weight: 700; }
-    .toggle {
-      width: 48px; height: 28px; border: 0; border-radius: 99px; background: var(--line); position: relative;
-    }
-    .toggle::after {
-      content: ""; position: absolute; width: 22px; height: 22px; left: 3px; top: 3px;
-      background: #fff; border-radius: 50%; transition: transform .18s;
-    }
-    .toggle.on { background: var(--black); }
-    .toggle.on::after { transform: translateX(20px); }
+    .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .sheet-head h2 { font-size: 18px; font-weight: 900; }
+    .sheet-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+    .sheet-tab { border: 1px solid var(--line); background: var(--page); border-radius: var(--radius); min-height: 40px; font-size: 12px; font-weight: 900; }
+    .sheet-tab.active { background: var(--black); color: #fff; border-color: var(--black); }
+    .sheet-body { display: grid; gap: 10px; }
+    .preview { background: var(--page); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; max-height: 250px; overflow: auto; }
+    .preview h3 { font-size: 13px; margin: 12px 0 6px; }
+    .preview h3:first-child { margin-top: 0; }
+    .preview div { color: var(--ink-2); font-size: 12px; line-height: 1.45; }
     .textarea {
-      width: 100%; min-height: 170px; resize: vertical;
-      border: 1px solid var(--line); border-radius: var(--radius);
-      padding: 12px; outline: none; font-size: 13px; line-height: 1.5;
+      width: 100%; min-height: 170px; resize: vertical; border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 12px; font-size: 13px; line-height: 1.5; outline: none;
     }
-    .template-row { display: flex; flex-wrap: wrap; gap: 6px; }
-    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .action-grid .text-btn { min-height: 44px; }
-
+    .action-stack { display: grid; gap: 8px; }
     .toast {
       position: fixed; left: 14px; right: 14px; bottom: max(16px, env(safe-area-inset-bottom));
-      z-index: 130; transform: translateY(120%); transition: transform .2s ease;
+      z-index: 130; transform: translateY(120%); transition: transform .2s;
       background: var(--black); color: #fff; border-radius: var(--radius);
-      padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      box-shadow: var(--shadow); font-size: 12px; font-weight: 800;
+      padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      font-size: 12px; font-weight: 900; box-shadow: var(--shadow);
     }
     .toast.visible { transform: translateY(0); }
-    .toast button { border: 1px solid rgba(255,255,255,.28); background: transparent; color: #fff; border-radius: 7px; padding: 7px 9px; font-size: 11px; font-weight: 900; }
+    .toast button { border: 1px solid rgba(255,255,255,.28); color: #fff; background: transparent; border-radius: 7px; padding: 7px 9px; font-weight: 900; }
 
-    .state-screen {
-      min-height: 65dvh; display: grid; place-items: center; padding: 30px 18px; text-align: center;
-    }
-    .state-card { max-width: 340px; }
-    .spinner {
-      width: 36px; height: 36px; margin: 0 auto 14px;
-      border: 3px solid var(--line); border-top-color: var(--gold); border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
+    .state-screen { min-height: 70dvh; display: grid; place-items: center; padding: 28px; text-align: center; }
+    .spinner { width: 34px; height: 34px; margin: 0 auto 14px; border: 3px solid var(--line); border-top-color: var(--gold); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .state-card h2 { font-size: 18px; margin-bottom: 8px; }
-    .state-card p { color: var(--ink-2); font-size: 13px; line-height: 1.55; }
 
     @media (min-width: 760px) {
-      .app { padding-top: 18px; }
-      .topbar { border: 1px solid var(--line); border-radius: 12px; margin: 0 14px 12px; top: 14px; }
-      .mode-wrap { grid-template-columns: repeat(4, 120px); justify-content: center; }
-      .tabs { max-width: 520px; margin: 0 auto 10px; }
-      .sheet { max-width: 560px; margin: 0 auto; border-radius: 14px 14px 0 0; }
-      .toast { left: 50%; right: auto; min-width: 340px; transform: translate(-50%, 120%); }
+      .app { padding-top: 16px; }
+      .topbar { top: 14px; margin: 0 14px 12px; border: 1px solid var(--line); border-radius: 12px; }
+      .mode-grid { grid-template-columns: repeat(4, 1fr); }
+      .template-grid { grid-template-columns: repeat(2, 1fr); }
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .sheet { max-width: 620px; margin: 0 auto; }
+      .toast { left: 50%; right: auto; min-width: 360px; transform: translate(-50%, 120%); }
       .toast.visible { transform: translate(-50%, 0); }
     }
   </style>
 </head>
 <body>
   <div id="app" class="app">
-    <div class="state-screen">
-      <div class="state-card"><div class="spinner"></div><p>Cargando bitacora...</p></div>
-    </div>
+    <div class="state-screen"><div><div class="spinner"></div><p>Cargando bitacora...</p></div></div>
   </div>
 
   <div id="overlay" class="overlay" onclick="cerrarModal(event)">
     <div class="sheet" id="sheet" onclick="event.stopPropagation()"></div>
   </div>
-
   <div class="toast" id="toast"></div>
 
   <script src="./checklist-logic.js"></script>
@@ -298,64 +254,25 @@ const logic = window.IAVChecklistLogic;
 let meta = { folio: '', nombreCliente: '' };
 let state = logic.createDefaultState();
 let activeView = 'captura';
-let logFilter = 'todo';
-let searchTerm = '';
+let modalTab = 'plantillas';
+let selectedTemplate = 'casa';
 let selectedAction = null;
-let pollingId = null;
+let searchTerm = '';
 let saveTimer = null;
 let retryTimer = null;
+let pollingId = null;
 let saving = false;
 let dirty = false;
 let retryCount = 0;
 let toastTimer = null;
 
 const SERVICE_UI = {
-  foto: { label: 'Foto', icon: 'F', hint: 'Fotos normales' },
-  t360: { label: '360', icon: '360', hint: 'Recorrido / foto 360' },
-  video: { label: 'Video', icon: 'V', hint: 'Secuencia de video' },
-  drone: { label: 'Drone', icon: 'D', hint: 'Tomas aereas' },
+  foto: { label: 'Foto normal', short: 'Foto', verb: 'foto', help: 'Marca cobertura fotografica.' },
+  t360: { label: 'Recorrido 360', short: '360', verb: 'recorrido 360', help: 'Marca recorridos por espacio.' },
+  video: { label: 'Video', short: 'Video', verb: 'video', help: 'Registra el orden real de tomas.' },
+  drone: { label: 'Drone', short: 'Drone', verb: 'toma drone', help: 'Registra secuencia aerea.' },
 };
-
-const TEMPLATES = {
-  casa: `Fachada
-Sala
-Comedor
-Cocina
-Recamara principal
-  Bano principal
-  Closet
-Recamara 2
-  Bano
-Bano de visitas
-Lavanderia
-Cochera
-Jardin / Terraza`,
-  departamento: `Acceso
-Sala
-Comedor
-Cocina
-Recamara principal
-  Bano principal
-  Closet
-Recamara secundaria
-Bano de visitas
-Balcon
-Amenidades`,
-  amenidades: `Alberca
-Gimnasio
-Salon de eventos
-Lobby
-Terraza comun
-Area infantil
-Asadores`,
-  exterior: `Fachada
-Calle / acceso
-Cochera
-Jardin
-Terraza
-Roof garden
-Vista exterior`,
-};
+const ZONE_LABELS = { interior: 'Interior', exterior: 'Exterior', amenidades: 'Amenidades', drone: 'Drone' };
 
 function esc(value) {
   return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -368,6 +285,10 @@ function miNombre() {
 
 function activeServices() {
   return ['foto', 't360', 'video', 'drone'].filter((key) => state.servicios[key]);
+}
+
+function ensureActiveMode() {
+  if (!state.servicios[state.modoActual]) state.modoActual = activeServices()[0] || 'video';
 }
 
 function setSync(status) {
@@ -431,11 +352,7 @@ async function saveNow() {
   try {
     const data = await apiPost({ action: 'guardarChecklist', cuartos: state, columnas: state.servicios });
     saving = false;
-    if (data.error) {
-      setSync('error');
-      showToast('Error al guardar');
-      return;
-    }
+    if (data.error) { setSync('error'); showToast('Error al guardar'); return; }
     setSync('ok');
   } catch (_) {
     saving = false;
@@ -446,7 +363,7 @@ async function saveNow() {
       showToast('Sin conexion. Reintentando...');
       retryTimer = setTimeout(saveNow, 7000);
     } else {
-      showToast('No se pudo guardar. Revisa conexion.');
+      showToast('No se pudo guardar.');
     }
   }
 }
@@ -486,279 +403,364 @@ function iniciarPolling() {
   pollingId = setInterval(poll, 5000);
 }
 
-function ensureActiveMode() {
-  if (!state.servicios[state.modoActual]) {
-    state.modoActual = activeServices()[0] || 'video';
-  }
-}
-
 function render() {
-  const app = document.getElementById('app');
-  app.innerHTML = `
+  document.getElementById('app').innerHTML = `
     ${renderHeader()}
-    ${renderModeSwitch()}
-    ${renderTabs()}
-    ${renderSummary()}
-    <main class="content" id="main">${renderActiveView()}</main>
+    ${state.espacios.length ? renderModeArea() : ''}
+    ${state.espacios.length ? renderTabs() : ''}
+    <main class="content">${state.espacios.length ? renderActiveView() : renderPrepareView()}</main>
   `;
   const name = document.getElementById('mi-nombre');
-  name.value = localStorage.getItem('checklist_nombre') || '';
-  name.addEventListener('input', () => localStorage.setItem('checklist_nombre', name.value.trim()));
+  if (name) {
+    name.value = localStorage.getItem('checklist_nombre') || '';
+    name.addEventListener('input', () => localStorage.setItem('checklist_nombre', name.value.trim()));
+  }
   const search = document.getElementById('space-search');
   if (search) {
     search.value = searchTerm;
-    search.addEventListener('input', (event) => {
-      searchTerm = event.target.value;
-      render();
-    });
+    search.addEventListener('input', (event) => { searchTerm = event.target.value; render(); });
   }
   setSync('ok');
 }
 
 function renderHeader() {
-  return `
-    <header class="topbar">
-      <div class="top-row">
-        <div class="title-block">
-          <div class="eyebrow">Bitacora de Produccion</div>
-          <h1 class="title">${esc(meta.nombreCliente || 'Sesion')}</h1>
-          <div class="folio">${esc(meta.folio || 'Sin folio')}</div>
-        </div>
-        <div class="sync"><span class="dot" id="sync-dot"></span><span id="sync-label">En vivo</span></div>
+  return `<header class="topbar">
+    <div class="top-row">
+      <div class="job">
+        <div class="eyebrow">Bitacora de Produccion</div>
+        <h1>${esc(meta.nombreCliente || 'Sesion')}</h1>
+        <div class="folio">${esc(meta.folio || 'Sin folio')}</div>
       </div>
-      <div class="name-row">
-        <input class="name-input" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" autocomplete="off">
-        <button class="text-btn" onclick="abrirServicios()">Servicios</button>
-      </div>
-    </header>
-  `;
+      <div class="sync"><span class="dot" id="sync-dot"></span><span id="sync-label">En vivo</span></div>
+    </div>
+    <div class="name-row">
+      <input class="field" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" autocomplete="off">
+      <button class="btn" onclick="abrirServicios()">Servicios</button>
+    </div>
+  </header>`;
 }
 
-function renderModeSwitch() {
-  return `<section class="mode-wrap">
-    ${activeServices().map((key) => `
+function renderModeArea() {
+  return `<section class="mode-area">
+    <div class="mode-grid">${activeServices().map((key) => `
       <button class="mode-btn ${state.modoActual === key ? 'active' : ''}" onclick="setMode('${key}')">
-        <span>${SERVICE_UI[key].icon}</span><small>${SERVICE_UI[key].label}</small>
+        <strong>${SERVICE_UI[key].label}</strong><span>${SERVICE_UI[key].help}</span>
       </button>
-    `).join('')}
+    `).join('')}</div>
+    <div class="active-band">
+      <strong>Modo activo: ${SERVICE_UI[state.modoActual].label}</strong>
+      <span>${state.modoActual === 'video' ? 'Registra los espacios conforme los grabas. Si ya existe video, eliges si es repetida, extra o reemplazo.' : state.modoActual === 'drone' ? 'Registra el orden real de las tomas aereas.' : 'Toca el boton grande de cada espacio para marcarlo sin duplicados accidentales.'}</span>
+    </div>
   </section>`;
 }
 
 function renderTabs() {
-  const tabs = [
-    ['captura', 'Captura'],
-    ['bitacora', 'Bitacora'],
-    ['cierre', 'Cierre'],
-  ];
-  return `<nav class="tabs">${tabs.map(([key, label]) => `
-    <button class="tab-btn ${activeView === key ? 'active' : ''}" onclick="setView('${key}')">${label}</button>
-  `).join('')}</nav>`;
+  const tabs = [['captura', 'Capturar'], ['cierre', 'Cierre'], ['edicion', 'Edicion']];
+  return `<nav class="tabs">${tabs.map(([key, label]) => `<button class="tab ${activeView === key ? 'active' : ''}" onclick="setView('${key}')">${label}</button>`).join('')}</nav>`;
+}
+
+function renderActiveView() {
+  if (activeView === 'cierre') return renderCloseView();
+  if (activeView === 'edicion') return renderEditView();
+  return renderCaptureView();
+}
+
+function renderPrepareView() {
+  return `<section class="prepare">
+    <div>
+      <h2>Prepara esta propiedad</h2>
+      <p>Elige una plantilla para empezar rapido. Amenidades tiene su propia plantilla para que no se pierdan las areas que venden el desarrollo.</p>
+    </div>
+    <div class="template-grid">${Object.keys(logic.TEMPLATE_DEFS).map(renderTemplateCard).join('')}
+      <button class="template-card" onclick="abrirEspacios('lista')"><strong>Lista propia</strong><span>Pega tus espacios con subespacios usando sangria.</span></button>
+    </div>
+  </section>`;
+}
+
+function renderTemplateCard(key) {
+  const template = logic.TEMPLATE_DEFS[key];
+  return `<button class="template-card" onclick="abrirTemplate('${key}')">
+    <strong>${esc(template.label)}</strong>
+    <span>${esc(template.description)} ${template.spaces.length} elementos.</span>
+  </button>`;
 }
 
 function renderSummary() {
   const summary = logic.getPendingSummary(state);
   const pct = summary.totalRequired ? Math.round(summary.totalDone / summary.totalRequired * 100) : 0;
-  const chips = Object.entries(summary.byService).map(([key, item]) =>
-    `<span class="mini-chip ${item.pending.length === 0 ? 'done' : ''}">${SERVICE_UI[key].label}: ${item.done}/${item.required}</span>`
-  ).join('');
-  return `<section class="summary">
-    <div class="progress-top">
-      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="progress-text">${summary.totalDone}/${summary.totalRequired}</div>
+  return `<section class="summary-card">
+    <div class="progress-row"><div class="track"><div class="fill" style="width:${pct}%"></div></div><div class="progress-num">${summary.totalDone}/${summary.totalRequired}</div></div>
+    <div class="summary-tags">
+      ${summary.keyPending.length ? `<span class="tag bad">${summary.keyPending.length} claves faltan</span>` : '<span class="tag ok">Claves listas</span>'}
+      ${Object.entries(summary.byService).map(([key, item]) => `<span class="tag ${item.pending.length ? '' : 'ok'}">${SERVICE_UI[key].short}: ${item.done}/${item.required}</span>`).join('')}
     </div>
-    <div class="mini-pending">${chips || '<span class="mini-chip done">Sin servicios activos</span>'}</div>
   </section>`;
 }
 
-function renderActiveView() {
-  if (activeView === 'bitacora') return renderLogView();
-  if (activeView === 'cierre') return renderCloseView();
-  return renderCaptureView();
+function renderCaptureView() {
+  return `${renderSummary()}
+    <div class="toolbar">
+      ${state.modoActual === 'drone' ? '<div></div>' : '<input class="field" id="space-search" type="search" placeholder="Buscar espacio...">'}
+      <button class="primary" onclick="abrirEspacios('plantillas')">+ Espacios</button>
+    </div>
+    ${state.modoActual === 'drone' ? renderDroneCards() : renderSpaceGroups()}`;
 }
 
-function currentCaptureItems() {
-  if (state.modoActual === 'drone') return state.droneItems.map((item) => ({ type: 'drone', item }));
+function visibleSpaces() {
   const term = searchTerm.trim().toLowerCase();
   return state.espacios
-    .filter((item) => !term || item.nombre.toLowerCase().includes(term))
-    .sort((a, b) => (a.orden || 0) - (b.orden || 0))
-    .map((item) => ({ type: 'space', item }));
+    .filter((space) => !term || space.nombre.toLowerCase().includes(term))
+    .sort((a, b) => (a.orden || 0) - (b.orden || 0));
 }
 
-function renderCaptureView() {
-  const items = currentCaptureItems();
-  return `
-    <div class="toolbar">
-      ${state.modoActual === 'drone' ? '' : '<input class="search" id="space-search" type="search" placeholder="Buscar espacio...">'}
-      <button class="primary-btn" onclick="abrirLote()">${state.modoActual === 'drone' ? '+ Drone' : '+ Espacios'}</button>
+function renderSpaceGroups() {
+  const groups = {};
+  visibleSpaces().forEach((space) => {
+    const zone = space.zona || 'interior';
+    if (!groups[zone]) groups[zone] = [];
+    groups[zone].push(space);
+  });
+  const order = ['interior', 'exterior', 'amenidades'];
+  return order.filter((zone) => groups[zone] && groups[zone].length).map((zone) => `
+    <section class="zone">
+      <div class="zone-title"><span>${ZONE_LABELS[zone]}</span><span>${groups[zone].length}</span></div>
+      <div class="cards">${groups[zone].map(renderSpaceCard).join('')}</div>
+    </section>
+  `).join('') || '<div class="empty"><h2>Sin resultados</h2><p>No hay espacios con esa busqueda.</p></div>';
+}
+
+function renderDroneCards() {
+  return `<section class="zone">
+    <div class="zone-title"><span>Tomas Drone</span><span>${state.droneItems.length}</span></div>
+    <div class="cards">${state.droneItems.map(renderDroneCard).join('')}</div>
+  </section>`;
+}
+
+function renderSpaceCard(space) {
+  const current = (space.estados[state.modoActual] || {}).estado || 'pendiente';
+  const managing = current === 'hecho';
+  return `<article class="capture-card ${space.parentId ? 'child' : ''}">
+    <div class="card-head">
+      <div class="card-name"><strong>${esc(space.nombre)}</strong><span>${ZONE_LABELS[space.zona || 'interior']}${space.clave ? ' - Clave' : ''}</span></div>
+      <button class="icon-btn" onclick="abrirAcciones('space','${space.id}')">...</button>
     </div>
-    ${items.length ? `<div class="space-list">${items.map(renderCaptureItem).join('')}</div>` : renderEmptyCapture()}
-  `;
-}
-
-function renderEmptyCapture() {
-  const text = state.modoActual === 'drone'
-    ? 'Agrega tomas de drone o restaura la lista base.'
-    : 'Agrega espacios en lote para empezar a registrar capturas.';
-  return `<div class="empty"><h2>Sin elementos</h2><p>${text}</p></div>`;
-}
-
-function renderCaptureItem(entry) {
-  if (entry.type === 'drone') return renderDroneItem(entry.item);
-  return renderSpaceItem(entry.item);
-}
-
-function renderSpaceItem(space) {
-  const service = state.modoActual;
-  const chips = ['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => statusChip(key, space.estados[key])).join('');
-  const child = space.parentId ? 'child' : '';
-  return `<article class="space-card ${child}">
-    <button class="space-main" onclick="registrar('${space.id}')">
-      <span class="space-name">
-        <span class="space-title">${esc(space.nombre)}</span>
-        <span class="space-sub">${space.parentId ? 'Subespacio' : 'Espacio'} - tocar registra ${SERVICE_UI[service].label}</span>
-      </span>
-      <span class="space-actions">
-        <span class="capture-pill">${SERVICE_UI[service].label}</span>
-      </span>
-    </button>
-    <div class="status-row">
-      ${chips}
-      <button class="more-btn" onclick="abrirAcciones('space','${space.id}')">...</button>
-    </div>
+    <div class="state-list">${['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => renderStateToken(key, space.estados[key])).join('')}</div>
+    <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${space.id}')">${managing ? 'Gestionar ' : 'Registrar '}${SERVICE_UI[state.modoActual].verb}</button>
   </article>`;
 }
 
-function renderDroneItem(item) {
-  const stateClass = item.estado === 'hecho' ? 'done drone' : item.noAplica ? 'na' : '';
-  const label = item.estado === 'hecho' ? `Drone ${String(item.ultimoOrden || '').padStart(2, '0')}` : item.noAplica ? 'No aplica' : 'Pendiente';
-  return `<article class="space-card">
-    <button class="space-main" onclick="registrar('${item.id}')">
-      <span class="space-name">
-        <span class="space-title">${esc(item.nombre)}</span>
-        <span class="space-sub">Toma de drone - tocar registra Drone</span>
-      </span>
-      <span class="space-actions"><span class="capture-pill">Drone</span></span>
-    </button>
-    <div class="status-row">
-      <span class="status-chip ${stateClass}">${label}</span>
-      <button class="more-btn" onclick="abrirAcciones('drone','${item.id}')">...</button>
+function renderDroneCard(item) {
+  const managing = item.estado === 'hecho';
+  return `<article class="capture-card">
+    <div class="card-head">
+      <div class="card-name"><strong>${esc(item.nombre)}</strong><span>Drone${item.noAplica ? ' - No aplica' : ''}</span></div>
+      <button class="icon-btn" onclick="abrirAcciones('drone','${item.id}')">...</button>
     </div>
+    <div class="state-list"><span class="state ${item.estado === 'hecho' ? 'done drone' : item.noAplica ? 'na' : ''}">${item.estado === 'hecho' ? 'Drone ' + String(item.ultimoOrden || '').padStart(2, '0') : item.noAplica ? 'No aplica' : 'Drone pendiente'}</span></div>
+    <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${item.id}')">${managing ? 'Gestionar toma drone' : 'Registrar toma drone'}</button>
   </article>`;
 }
 
-function statusChip(key, value) {
-  const status = (value || {}).estado || 'pendiente';
-  let label = SERVICE_UI[key].label + ' falta';
-  let cls = '';
-  if (status === 'hecho') {
-    label = key === 'video' && value.ultimoOrden ? `Video ${String(value.ultimoOrden).padStart(2, '0')}` : SERVICE_UI[key].label + ' listo';
-    cls = 'done ' + (key === 'video' ? 'video' : '');
+function renderStateToken(key, stateValue) {
+  const status = (stateValue || {}).estado || 'pendiente';
+  if (status === 'no_aplica') return `<span class="state na">${SERVICE_UI[key].short} no aplica</span>`;
+  if (status !== 'hecho') return `<span class="state">${SERVICE_UI[key].short} falta</span>`;
+  const order = stateValue.ultimoOrden ? ' ' + String(stateValue.ultimoOrden).padStart(2, '0') : '';
+  return `<span class="state done ${key === 'video' ? 'video' : ''}">${SERVICE_UI[key].short}${order} listo</span>`;
+}
+
+function setMode(mode) { state.modoActual = mode; searchTerm = ''; render(); scheduleSave(); }
+function setView(view) { activeView = view; render(); }
+
+function capturar(targetId) {
+  if (state.modoActual === 'drone') {
+    const item = state.droneItems.find((entry) => entry.id === targetId);
+    if (item && item.estado === 'hecho') return abrirGestionCaptura('drone', targetId);
+  } else {
+    const space = state.espacios.find((entry) => entry.id === targetId);
+    const current = space && space.estados[state.modoActual];
+    if (current && current.estado === 'hecho') return abrirGestionCaptura(state.modoActual, targetId);
   }
-  if (status === 'no_aplica') {
-    label = SERVICE_UI[key].label + ' no aplica';
-    cls = 'na';
+  registrarCaptura(targetId, 'principal');
+}
+
+function registrarCaptura(targetId, intencion) {
+  const previous = state;
+  state = logic.registerCapture(state, { tipo: state.modoActual, targetId, autor: miNombre(), intencion, now: new Date() });
+  render();
+  scheduleSave();
+  const latest = state.bitacora[state.bitacora.length - 1];
+  if (latest && previous !== state) {
+    showToast(`${SERVICE_UI[latest.tipo].short}${latest.orden ? ' ' + String(latest.orden).padStart(2, '0') : ''} registrado`, () => {
+      state = previous;
+      render();
+      scheduleSave();
+    });
   }
-  return `<span class="status-chip ${cls}">${label}</span>`;
 }
 
-function renderLogView() {
-  const filters = ['todo', 'video', 'drone', 't360', 'foto', 'notas'];
-  const logs = logic.filterLog(state, logFilter).slice().reverse();
-  return `
-    <div class="log-filters">${filters.map((key) => `
-      <button class="filter-btn ${logFilter === key ? 'active' : ''}" onclick="setLogFilter('${key}')">${filterLabel(key)}</button>
-    `).join('')}</div>
-    ${logs.length ? `<div class="log-list">${logs.map(renderLogItem).join('')}</div>` : '<div class="empty"><h2>Sin registros</h2><p>Las capturas apareceran aqui en orden cronologico.</p></div>'}
-  `;
+function abrirGestionCaptura(tipo, targetId) {
+  selectedAction = { type: tipo === 'drone' ? 'drone' : 'space', id: targetId, service: tipo };
+  const target = tipo === 'drone' ? state.droneItems.find((entry) => entry.id === targetId) : state.espacios.find((entry) => entry.id === targetId);
+  if (!target) return;
+  if (tipo === 'video' || tipo === 'drone') {
+    abrirModal(`<div class="sheet-head"><h2>${esc(target.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+      <div class="action-stack">
+        <button class="primary" onclick="registrarIntencion('repetida')">Repetir toma</button>
+        <button class="btn" onclick="registrarIntencion('extra')">Toma extra</button>
+        <button class="btn" onclick="registrarIntencion('reemplazo')">Esta reemplaza la anterior</button>
+        <button class="btn" onclick="addTargetNote()">Agregar nota</button>
+        <button class="btn ghost" onclick="cerrarModal()">Cancelar</button>
+      </div>`);
+    return;
+  }
+  abrirModal(`<div class="sheet-head"><h2>${esc(target.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    <div class="action-stack">
+      <button class="btn" onclick="clearEstado('${tipo}')">Marcar pendiente</button>
+      <button class="btn" onclick="markNoAplica('${tipo}')">Marcar no aplica</button>
+      <button class="btn" onclick="addTargetNote()">Agregar nota</button>
+      <button class="btn ghost" onclick="cerrarModal()">Cancelar</button>
+    </div>`);
 }
 
-function filterLabel(key) {
-  return key === 'todo' ? 'Todo' : key === 'notas' ? 'Notas' : SERVICE_UI[key].label;
-}
-
-function renderLogItem(log) {
-  const order = log.orden ? ` ${String(log.orden).padStart(2, '0')}` : '';
-  const flag = log.bandera ? `<span class="mini-chip">${esc(flagLabel(log.bandera))}</span>` : '';
-  const note = log.nota ? `<div class="log-note">${esc(log.nota)}</div>` : '';
-  return `<article class="log-card" onclick="abrirAcciones('log','${log.id}')">
-    <div class="log-top">
-      <div class="log-kind">${SERVICE_UI[log.tipo].label}${order}</div>
-      <div class="log-meta">${esc(log.hora)} - ${esc(log.autor)}</div>
-    </div>
-    <div class="log-name">${esc(log.nombre)}</div>
-    ${note}
-    ${flag ? `<div class="log-flags">${flag}</div>` : ''}
-  </article>`;
+function registrarIntencion(intencion) {
+  const id = selectedAction.id;
+  state.modoActual = selectedAction.service;
+  cerrarModal();
+  registrarCaptura(id, intencion);
 }
 
 function renderCloseView() {
   const summary = logic.getPendingSummary(state);
-  const services = Object.entries(summary.byService).map(([key, item]) => renderCloseService(key, item)).join('');
-  const video = state.bitacora.filter((entry) => entry.tipo === 'video');
-  const drone = state.bitacora.filter((entry) => entry.tipo === 'drone');
-  const issues = state.bitacora.filter((entry) => entry.bandera && entry.bandera !== 'usar');
-  const disabled = Object.entries(state.servicios).filter(([, active]) => !active).map(([key]) => SERVICE_UI[key].label).join(', ');
+  const repeated = state.bitacora.filter((entry) => ['repetida', 'extra', 'reemplazo', 'problema'].includes(entry.intencion) || entry.bandera);
+  const noAplica = getNoAplicaItems();
+  const disabled = Object.entries(state.servicios).filter(([, active]) => !active).map(([key]) => SERVICE_UI[key].label);
   return `<div class="close-list">
-    <article class="close-card"><h3>Revision antes de irnos</h3>${services || '<p class="pending-line">No hay servicios activos.</p>'}</article>
-    <article class="close-card"><h3>Secuencia Video</h3>${renderSequence(video, 'Sin tomas de video registradas.')}</article>
-    <article class="close-card"><h3>Secuencia Drone</h3>${renderSequence(drone, 'Sin tomas de drone registradas.')}</article>
-    <article class="close-card"><h3>Notas y problemas</h3>${issues.length ? issues.map((entry) => `<p class="pending-line">${esc(flagLabel(entry.bandera))}: ${esc(entry.nombre)}${entry.nota ? ' - ' + esc(entry.nota) : ''}</p>`).join('') : '<p class="pending-line">Sin problemas marcados.</p>'}</article>
-    <article class="close-card"><h3>Servicios desactivados</h3><p class="pending-line">${disabled || 'Ninguno'}</p></article>
+    <section class="panel"><h3>Faltantes clave</h3>${summary.keyPending.length ? summary.keyPending.slice(0, 10).map((item) => `<p class="line">Falta ${item.label} en ${esc(item.nombre)} (${ZONE_LABELS[item.zona] || item.zona})</p>`).join('') : '<p class="line">No faltan espacios clave.</p>'}</section>
+    ${renderZonePending(summary)}
+    <section class="panel"><h3>Tomas repetidas / extras</h3>${repeated.length ? repeated.map((entry) => `<p class="line">${SERVICE_UI[entry.tipo].short} ${entry.orden || ''} - ${esc(entry.nombre)} - ${esc(entry.intencion || entry.bandera)}</p>`).join('') : '<p class="line">Sin repetidas ni extras.</p>'}</section>
+    <section class="panel"><h3>No aplica</h3>${noAplica.length ? noAplica.map((item) => `<p class="line">${esc(item)}</p>`).join('') : '<p class="line">Nada marcado como no aplica.</p>'}</section>
+    <section class="panel"><h3>Servicios desactivados</h3><p class="line">${disabled.join(', ') || 'Ninguno'}</p></section>
   </div>`;
 }
 
-function renderCloseService(key, item) {
-  if (item.pending.length === 0) return `<p class="pending-line">${SERVICE_UI[key].label}: todo listo (${item.done}/${item.required}).</p>`;
-  return `<p class="pending-line">${SERVICE_UI[key].label}: falta ${item.pending.slice(0, 8).map(esc).join(', ')}${item.pending.length > 8 ? '...' : ''}</p>`;
+function renderZonePending(summary) {
+  const zones = ['interior', 'exterior', 'amenidades'];
+  return zones.map((zone) => {
+    const data = summary.byZone[zone] || {};
+    const lines = Object.entries(data).flatMap(([service, item]) => item.pending.map((name) => `Falta ${SERVICE_UI[service].label} en ${name}`));
+    return `<section class="panel"><h3>${ZONE_LABELS[zone]}</h3>${lines.length ? lines.slice(0, 12).map((line) => `<p class="line">${esc(line)}</p>`).join('') : '<p class="line">Todo listo.</p>'}</section>`;
+  }).join('');
 }
 
-function renderSequence(items, empty) {
-  if (!items.length) return `<p class="pending-line">${empty}</p>`;
-  return `<div class="sequence">${items.map((entry) => `<div class="sequence-item">${String(entry.orden).padStart(2, '0')} - ${esc(entry.nombre)} - ${esc(entry.autor)}</div>`).join('')}</div>`;
+function renderEditView() {
+  const video = primarySequence('video');
+  const drone = primarySequence('drone');
+  const repeated = state.bitacora.filter((entry) => ['repetida', 'extra', 'reemplazo'].includes(entry.intencion));
+  const notes = state.bitacora.filter((entry) => entry.nota || entry.bandera);
+  const amenities = state.espacios.filter((space) => space.zona === 'amenidades');
+  return `<div class="edit-list">
+    <section class="panel"><h3>Video principal</h3>${renderSequence(video, 'Sin video registrado.')}</section>
+    <section class="panel"><h3>Drone principal</h3>${renderSequence(drone, 'Sin drone registrado.')}</section>
+    <section class="panel"><h3>Repetidas / extras</h3>${repeated.length ? repeated.map((entry) => `<p class="line">${SERVICE_UI[entry.tipo].short} ${entry.orden} ${esc(entry.nombre)} - ${esc(entry.intencion)}</p>`).join('') : '<p class="line">Sin repetidas ni extras.</p>'}</section>
+    <section class="panel"><h3>Notas</h3>${notes.length ? notes.map((entry) => `<p class="line">${esc(entry.nombre)} - ${esc(entry.nota || entry.bandera)}</p>`).join('') : '<p class="line">Sin notas.</p>'}</section>
+    <section class="panel"><h3>Amenidades</h3>${amenities.length ? amenities.map((space) => `<p class="line">${esc(space.nombre)} - ${amenityDone(space)}</p>`).join('') : '<p class="line">Sin amenidades cargadas.</p>'}</section>
+  </div>`;
 }
 
-function setMode(mode) {
-  state.modoActual = mode;
-  searchTerm = '';
-  render();
-  scheduleSave();
+function primarySequence(tipo) {
+  const entries = state.bitacora.filter((entry) => entry.tipo === tipo && (!entry.intencion || entry.intencion === 'principal' || entry.intencion === 'reemplazo'));
+  const replacements = new Set(state.bitacora.filter((entry) => entry.tipo === tipo && entry.intencion === 'reemplazo').map((entry) => entry.targetId));
+  return entries.filter((entry) => entry.intencion === 'reemplazo' || !replacements.has(entry.targetId));
 }
 
-function setView(view) {
-  activeView = view;
-  render();
+function renderSequence(items, emptyText) {
+  if (!items.length) return `<p class="line">${emptyText}</p>`;
+  return `<div class="sequence">${items.map((entry) => `<div>${String(entry.orden || '').padStart(2, '0')} - ${esc(entry.nombre)} - ${esc(entry.autor)}</div>`).join('')}</div>`;
 }
 
-function setLogFilter(filter) {
-  logFilter = filter;
-  render();
+function amenityDone(space) {
+  return ['foto', 't360', 'video'].filter((service) => (space.estados[service] || {}).estado === 'hecho').map((service) => SERVICE_UI[service].short).join(', ') || 'pendiente';
 }
 
-function registrar(targetId) {
-  const previous = state;
-  state = logic.registerCapture(state, { tipo: state.modoActual, targetId, autor: miNombre(), now: new Date() });
-  render();
-  scheduleSave();
-  const latest = state.bitacora[state.bitacora.length - 1];
-  showToast(`${SERVICE_UI[latest.tipo].label}${latest.orden ? ' ' + String(latest.orden).padStart(2, '0') : ''} registrado`, () => {
-    state = previous;
-    render();
-    scheduleSave();
+function getNoAplicaItems() {
+  const items = [];
+  state.espacios.forEach((space) => {
+    ['foto', 't360', 'video'].forEach((service) => {
+      if ((space.estados[service] || {}).estado === 'no_aplica') items.push(`${SERVICE_UI[service].label}: ${space.nombre}`);
+    });
   });
+  state.droneItems.forEach((item) => { if (item.noAplica) items.push(`Drone: ${item.nombre}`); });
+  return items;
+}
+
+function abrirTemplate(key) {
+  selectedTemplate = key;
+  modalTab = 'plantillas';
+  renderTemplateSheet();
+}
+
+function abrirEspacios(tab) {
+  modalTab = tab || 'plantillas';
+  renderTemplateSheet();
+}
+
+function renderTemplateSheet() {
+  const template = logic.TEMPLATE_DEFS[selectedTemplate] || logic.TEMPLATE_DEFS.casa;
+  const html = `<div class="sheet-head"><h2>Agregar espacios</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    <div class="sheet-tabs">
+      <button class="sheet-tab ${modalTab === 'plantillas' ? 'active' : ''}" onclick="modalTab='plantillas';renderTemplateSheet()">Plantillas</button>
+      <button class="sheet-tab ${modalTab === 'lista' ? 'active' : ''}" onclick="modalTab='lista';renderTemplateSheet()">Lista propia</button>
+    </div>
+    ${modalTab === 'plantillas' ? renderTemplateTab(template) : renderListTab()}`;
+  abrirModal(html);
+}
+
+function renderTemplateTab(template) {
+  return `<div class="sheet-body">
+    <div class="template-grid">${Object.keys(logic.TEMPLATE_DEFS).map((key) => `<button class="template-card" onclick="selectedTemplate='${key}';renderTemplateSheet()"><strong>${esc(logic.TEMPLATE_DEFS[key].label)}</strong><span>${esc(logic.TEMPLATE_DEFS[key].description)}</span></button>`).join('')}</div>
+    <div class="preview">${renderTemplatePreview(template)}</div>
+    <button class="primary" onclick="usarTemplate('replace')">${state.espacios.length ? 'Reemplazar todo' : 'Usar plantilla'}</button>
+    ${state.espacios.length ? '<button class="btn" onclick="usarTemplate(&quot;append&quot;)">Agregar a existente</button>' : ''}
+  </div>`;
+}
+
+function renderTemplatePreview(template) {
+  const groups = {};
+  template.spaces.forEach((row) => {
+    if (!groups[row[1]]) groups[row[1]] = [];
+    groups[row[1]].push(row);
+  });
+  return Object.entries(groups).map(([zone, rows]) => `<h3>${ZONE_LABELS[zone]}</h3>${rows.map((row) => `<div>${row[3] ? '&nbsp;&nbsp;- ' : '- '}${esc(row[0])}${row[2] ? ' (clave)' : ''}</div>`).join('')}`).join('');
+}
+
+function renderListTab() {
+  return `<div class="sheet-body">
+    <textarea class="textarea" id="batch-text" placeholder="Sala&#10;Cocina&#10;Recamara principal&#10;  Bano principal&#10;  Closet"></textarea>
+    <div class="preview" id="batch-preview"><h3>Ejemplo</h3><div>Recamara principal</div><div>&nbsp;&nbsp;- Bano principal</div><div>&nbsp;&nbsp;- Closet</div></div>
+    <button class="primary" onclick="confirmarLista()">Agregar espacios</button>
+  </div>`;
+}
+
+function usarTemplate(mode) {
+  state = logic.applyTemplate(state, selectedTemplate, { mode });
+  cerrarModal();
+  render();
+  scheduleSave();
+}
+
+function confirmarLista() {
+  const text = document.getElementById('batch-text').value;
+  if (!text.trim()) return;
+  state = logic.addSpacesFromText(state, text);
+  cerrarModal();
+  render();
+  scheduleSave();
 }
 
 function abrirServicios() {
-  const html = `<div class="sheet-header"><div class="sheet-title">Servicios activos</div><button class="icon-btn" onclick="cerrarModal()">X</button></div>
-    <div class="sheet-grid">
-      ${Object.keys(SERVICE_UI).map((key) => `
-        <div class="service-row">
-          <div><strong>${SERVICE_UI[key].label}</strong><span>${SERVICE_UI[key].hint}</span></div>
-          <button class="toggle ${state.servicios[key] ? 'on' : ''}" onclick="toggleServicio('${key}')"></button>
-        </div>
-      `).join('')}
-    </div>`;
-  abrirModal(html);
+  abrirModal(`<div class="sheet-head"><h2>Servicios activos</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    <div class="action-stack">${Object.keys(SERVICE_UI).map((key) => `<button class="btn" onclick="toggleServicio('${key}')">${state.servicios[key] ? 'Apagar' : 'Activar'} ${SERVICE_UI[key].label}</button>`).join('')}</div>`);
 }
 
 function toggleServicio(key) {
@@ -769,109 +771,23 @@ function toggleServicio(key) {
   scheduleSave();
 }
 
-function abrirLote() {
-  const drone = state.modoActual === 'drone';
-  const html = `<div class="sheet-header"><div class="sheet-title">${drone ? 'Agregar tomas drone' : 'Agregar espacios'}</div><button class="icon-btn" onclick="cerrarModal()">X</button></div>
-    ${drone ? renderDroneBatch() : renderSpacesBatch()}`;
-  abrirModal(html);
-}
-
-function renderSpacesBatch() {
-  return `<div class="sheet-grid">
-    <textarea class="textarea" id="batch-text" placeholder="Sala&#10;Cocina&#10;Recamara principal&#10;  Bano principal&#10;  Closet"></textarea>
-    <div class="template-row">
-      <button class="text-btn" onclick="addTemplate('casa')">Casa base</button>
-      <button class="text-btn" onclick="addTemplate('departamento')">Departamento</button>
-      <button class="text-btn" onclick="addTemplate('amenidades')">Amenidades</button>
-      <button class="text-btn" onclick="addTemplate('exterior')">Exterior</button>
-    </div>
-    <button class="primary-btn" onclick="confirmarLote()">Agregar espacios</button>
-  </div>`;
-}
-
-function renderDroneBatch() {
-  return `<div class="sheet-grid">
-    <textarea class="textarea" id="batch-text" placeholder="Fachada aerea&#10;Vista general&#10;Amenidades"></textarea>
-    <div class="template-row"><button class="text-btn" onclick="addDroneBase()">Drone base</button></div>
-    <button class="primary-btn" onclick="confirmarDroneLote()">Agregar tomas</button>
-  </div>`;
-}
-
-function addTemplate(key) {
-  const area = document.getElementById('batch-text');
-  area.value = (area.value ? area.value + '\n' : '') + TEMPLATES[key];
-  area.focus();
-}
-
-function addDroneBase() {
-  const area = document.getElementById('batch-text');
-  area.value = (area.value ? area.value + '\n' : '') + logic.DRONE_DEFAULTS.join('\n');
-  area.focus();
-}
-
-function confirmarLote() {
-  const text = document.getElementById('batch-text').value;
-  if (!text.trim()) return;
-  state = logic.addSpacesFromText(state, text);
-  cerrarModal();
-  render();
-  scheduleSave();
-}
-
-function confirmarDroneLote() {
-  const text = document.getElementById('batch-text').value;
-  if (!text.trim()) return;
-  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  lines.forEach((nombre) => state.droneItems.push({ id: 'drone-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7), nombre, estado: 'pendiente', ordenLista: state.droneItems.length + 1 }));
-  cerrarModal();
-  render();
-  scheduleSave();
-}
-
 function abrirAcciones(type, id) {
   selectedAction = { type, id };
-  if (type === 'log') return abrirLogActions(id);
-  return abrirTargetActions(type, id);
-}
-
-function abrirTargetActions(type, id) {
   const item = type === 'drone' ? state.droneItems.find((entry) => entry.id === id) : state.espacios.find((entry) => entry.id === id);
   if (!item) return;
-  const serviceButtons = type === 'space' ? ['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => `
-    <button class="text-btn" onclick="markNoAplica('${key}')">${SERVICE_UI[key].label} no aplica</button>
-    <button class="text-btn" onclick="clearEstado('${key}')">Limpiar ${SERVICE_UI[key].label}</button>
-  `).join('') : `
-    <button class="text-btn" onclick="markDroneNoAplica()">Drone no aplica</button>
-    <button class="text-btn" onclick="clearDrone()">Limpiar Drone</button>
-  `;
-  const html = `<div class="sheet-header"><div class="sheet-title">${esc(item.nombre)}</div><button class="icon-btn" onclick="cerrarModal()">X</button></div>
-    <div class="action-grid">
-      ${serviceButtons}
-      ${type === 'space' ? '<button class="text-btn" onclick="addSubspace()">Agregar subespacio</button>' : ''}
-      <button class="text-btn" onclick="renameTarget()">Editar nombre</button>
-      <button class="text-btn danger-btn" onclick="deleteTarget()">Borrar</button>
-    </div>`;
-  abrirModal(html);
-}
-
-function abrirLogActions(id) {
-  const log = state.bitacora.find((entry) => entry.id === id);
-  if (!log) return;
-  const html = `<div class="sheet-header"><div class="sheet-title">${esc(log.nombre)}</div><button class="icon-btn" onclick="cerrarModal()">X</button></div>
-    <div class="action-grid">
-      <button class="text-btn" onclick="setLogFlag('usar')">Usar esta</button>
-      <button class="text-btn" onclick="setLogFlag('no_usar')">No usar</button>
-      <button class="text-btn" onclick="setLogFlag('repetida')">Repetida</button>
-      <button class="text-btn" onclick="setLogFlag('problema')">Problema</button>
-      <button class="text-btn" onclick="addLogNote()">Agregar nota</button>
-      <button class="text-btn danger-btn" onclick="deleteLog()">Borrar registro</button>
-    </div>`;
-  abrirModal(html);
+  const serviceActions = type === 'space' ? ['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => `<button class="btn" onclick="markNoAplica('${key}')">${SERVICE_UI[key].label} no aplica</button>`).join('') : '<button class="btn" onclick="markDroneNoAplica()">Drone no aplica</button>';
+  abrirModal(`<div class="sheet-head"><h2>${esc(item.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    <div class="action-stack">
+      ${serviceActions}
+      ${type === 'space' ? '<button class="btn" onclick="addSubspace()">Agregar subespacio</button>' : ''}
+      <button class="btn" onclick="renameTarget()">Editar nombre</button>
+      <button class="danger btn" onclick="deleteTarget()">Borrar</button>
+    </div>`);
 }
 
 function markNoAplica(service) {
   const space = state.espacios.find((entry) => entry.id === selectedAction.id);
-  if (space) space.estados[service] = { estado: 'no_aplica' };
+  if (space && (!space.clave || confirm(`Marcar ${space.nombre} como no aplica para ${SERVICE_UI[service].label}?`))) space.estados[service] = { estado: 'no_aplica' };
   cerrarModal(); render(); scheduleSave();
 }
 
@@ -887,16 +803,11 @@ function markDroneNoAplica() {
   cerrarModal(); render(); scheduleSave();
 }
 
-function clearDrone() {
-  const item = state.droneItems.find((entry) => entry.id === selectedAction.id);
-  if (item) { item.noAplica = false; item.estado = 'pendiente'; delete item.ultimoOrden; }
-  cerrarModal(); render(); scheduleSave();
-}
-
 function addSubspace() {
   const nombre = prompt('Nombre del subespacio');
   if (!nombre) return;
-  state.espacios.push({ id: 'esp-' + Date.now().toString(36), nombre: nombre.trim(), parentId: selectedAction.id, orden: state.espacios.length + 1, clave: false, estados: { foto: { estado: 'pendiente' }, t360: { estado: 'pendiente' }, video: { estado: 'pendiente' } } });
+  const parent = state.espacios.find((entry) => entry.id === selectedAction.id);
+  state.espacios.push({ id: 'esp-' + Date.now().toString(36), nombre: nombre.trim(), parentId: selectedAction.id, orden: state.espacios.length + 1, zona: parent ? parent.zona : 'interior', clave: false, estados: { foto: { estado: 'pendiente' }, t360: { estado: 'pendiente' }, video: { estado: 'pendiente' } } });
   cerrarModal(); render(); scheduleSave();
 }
 
@@ -923,29 +834,14 @@ function deleteTarget() {
   cerrarModal(); render(); scheduleSave();
 }
 
-function setLogFlag(flag) {
-  const log = state.bitacora.find((entry) => entry.id === selectedAction.id);
-  if (log) log.bandera = flag;
-  cerrarModal(); render(); scheduleSave();
-}
-
-function addLogNote() {
-  const log = state.bitacora.find((entry) => entry.id === selectedAction.id);
-  if (!log) return;
-  const note = prompt('Nota para edicion', log.nota || '');
+function addTargetNote() {
+  const note = prompt('Nota para edicion');
   if (note === null) return;
-  log.nota = note.trim();
+  const targetId = selectedAction.id;
+  const tipo = selectedAction.service || state.modoActual;
+  const name = tipo === 'drone' ? (state.droneItems.find((entry) => entry.id === targetId) || {}).nombre : (state.espacios.find((entry) => entry.id === targetId) || {}).nombre;
+  state.bitacora.push({ id: 'log-note-' + Date.now().toString(36), tipo, targetId, nombre: name || '', autor: miNombre(), hora: new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0'), nota: note.trim(), bandera: 'nota', intencion: 'nota' });
   cerrarModal(); render(); scheduleSave();
-}
-
-function deleteLog() {
-  if (!confirm('Borrar este registro?')) return;
-  state.bitacora = state.bitacora.filter((entry) => entry.id !== selectedAction.id);
-  cerrarModal(); render(); scheduleSave();
-}
-
-function flagLabel(flag) {
-  return { usar: 'Usar esta', no_usar: 'No usar', repetida: 'Repetida', problema: 'Problema' }[flag] || flag;
 }
 
 function abrirModal(html) {
@@ -965,15 +861,15 @@ function showToast(message, undoHandler) {
   toast.classList.add('visible');
   clearTimeout(toastTimer);
   if (undoHandler) document.getElementById('undo-btn').onclick = () => { undoHandler(); toast.classList.remove('visible'); };
-  toastTimer = setTimeout(() => toast.classList.remove('visible'), 3500);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 3400);
 }
 
 function mostrarError(message) {
-  document.getElementById('app').innerHTML = `<div class="state-screen"><div class="state-card"><h2>Algo salio mal</h2><p>${esc(message)}</p></div></div>`;
+  document.getElementById('app').innerHTML = `<div class="state-screen"><div><h2>Algo salio mal</h2><p>${esc(message)}</p></div></div>`;
 }
 
 if (!TOKEN) {
-  mostrarError('Este enlace no tiene un token de contrato. Usa el boton "Checklist de rodaje" desde el panel de administracion.');
+  mostrarError('Este enlace no tiene un token de contrato. Usa el boton Checklist desde el panel de administracion.');
 } else {
   cargar();
 }
