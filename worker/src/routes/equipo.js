@@ -9,18 +9,36 @@ export async function handleEquipo(request, env, ctx, action) {
     const token = url.searchParams.get('token');
     if (!token) return err('Token requerido');
 
+    // Token is always the trabajo token in V5
+    const trabajo = await queryOne(db, 'SELECT * FROM trabajos WHERE token = ?', [token]);
+    // Contrato may or may not exist
     const contrato = await queryOne(db, 'SELECT * FROM contratos WHERE token = ?', [token]);
-    if (!contrato) return err('Contrato no encontrado', 404);
 
-    const { results: propiedades } = await query(db,
-      'SELECT * FROM propiedades WHERE contrato_token = ? ORDER BY num_propiedad',
-      [token]
-    );
+    if (!trabajo && !contrato) return err('Token no encontrado', 404);
+
+    const clienteId = trabajo?.cliente_id || contrato?.cliente_id || '';
+    const cliente = clienteId
+      ? await queryOne(db, 'SELECT * FROM clientes WHERE id = ?', [clienteId])
+      : null;
+
+    const trabajoId = trabajo?.id || '';
+    const { results: actividades } = trabajoId
+      ? await query(db,
+          `SELECT * FROM actividades WHERE trabajo_id = ?
+           ORDER BY fecha_actividad DESC, fecha_creacion DESC LIMIT 50`,
+          [trabajoId])
+      : { results: [] };
+
+    const propiedades = contrato
+      ? (await query(db,
+          'SELECT * FROM propiedades WHERE contrato_token = ? ORDER BY num_propiedad',
+          [token])).results
+      : [];
 
     const { results: todosLosPaquetes } = await query(db, 'SELECT clave, nombre FROM paquetes');
     const pkMap = Object.fromEntries(todosLosPaquetes.map(p => [p.clave, p.nombre]));
 
-    const adicionales = JSON.parse(contrato.adicionales_json || '[]');
+    const adicionales = JSON.parse(contrato?.adicionales_json || '[]');
     const acordados = adicionales.filter(i => typeof i === 'object' && i.precio && !i.ofrecido);
     const extrasAcordados = acordados.map(i => ({
       nombre: i.nombre || pkMap[i.clave] || i.clave,
@@ -29,18 +47,39 @@ export async function handleEquipo(request, env, ctx, action) {
 
     return ok({
       ok: true,
-      token: contrato.token,
-      folio: contrato.folio,
-      nombreCliente: contrato.nombre_cliente,
-      telefonoCliente: contrato.telefono_cliente,
-      estatus: contrato.estatus,
-      entregaExpress: contrato.entrega_express ? 1 : 0,
-      paqueteBase: pkMap[contrato.paquete_base] || contrato.paquete_base,
-      fotografiaLista: contrato.fotografia_lista || null,
-      videoListo: contrato.video_listo || null,
-      recorridoListo: contrato.recorrido_listo || null,
-      recorridoUrl: contrato.recorrido_url || '',
-      tieneRecorrido: contrato.tiene_recorrido === 0 ? 0 : 1,
+      token,
+      // Trabajo / cotización
+      trabajoId,
+      estatus: trabajo?.estatus || contrato?.estatus || '',
+      interes: trabajo?.interes || '',
+      ubicacion: trabajo?.ubicacion || '',
+      paquetesCotizados: JSON.parse(trabajo?.paquetes_cotizados_json || '[]'),
+      portafolioLinks: JSON.parse(trabajo?.portafolio_links_json || '[]'),
+      propiedadesInteres: JSON.parse(trabajo?.propiedades_interes_json || '[]'),
+      notasCotizacion: trabajo?.notas || '',
+      // Cliente
+      cliente: cliente ? {
+        id: cliente.id,
+        nombre: cliente.nombre,
+        telefono: cliente.telefono,
+        correo: cliente.correo,
+        inmobiliaria: cliente.inmobiliaria || '',
+        origen: cliente.origen || ''
+      } : null,
+      // Actividades
+      actividades,
+      // Contrato (si existe)
+      tieneContrato: !!contrato,
+      folio: contrato?.folio || '',
+      nombreCliente: contrato?.nombre_cliente || cliente?.nombre || '',
+      telefonoCliente: contrato?.telefono_cliente || cliente?.telefono || '',
+      entregaExpress: contrato?.entrega_express ? 1 : 0,
+      paqueteBase: pkMap[contrato?.paquete_base] || contrato?.paquete_base || '',
+      fotografiaLista: contrato?.fotografia_lista || null,
+      videoListo: contrato?.video_listo || null,
+      recorridoListo: contrato?.recorrido_listo || null,
+      recorridoUrl: contrato?.recorrido_url || '',
+      tieneRecorrido: contrato?.tiene_recorrido === 0 ? 0 : 1,
       extrasAcordados,
       propiedades: propiedades.map(p => ({
         numPropiedad: p.num_propiedad,
