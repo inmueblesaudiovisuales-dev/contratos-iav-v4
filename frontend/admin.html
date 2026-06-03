@@ -207,6 +207,7 @@
 
     /* Hide desktop-only elements on mobile */
     .kpi-grid { display: none; }
+    #contratos-cards { display: none; }
     #statsRibbon { display: none; }
     .filter-chips { display: none; }
     .search-icon { display: none; }
@@ -931,6 +932,33 @@
       .met-bottom-grid { grid-template-columns: 1fr; }
       .prop-card-acciones { flex-direction: column !important; }
       .prop-card-acciones button { width: 100% !important; justify-content: center; }
+
+      /* Cards mobile de contratos */
+      #contratos-cards { display: flex; flex-direction: column; gap: 8px; }
+      .cont-card {
+        background: var(--card); border-radius: 10px;
+        border: 1px solid var(--border); padding: 12px 14px;
+        cursor: pointer; display: block;
+        border-left: 3px solid transparent;
+        transition: border-color 80ms;
+      }
+      .cont-card.activo { border-left-color: var(--gold); }
+      .cont-card.tr-ses-hoy   { border-left-color: var(--gold); }
+      .cont-card.tr-ses-pronto { border-left-color: var(--warn); }
+      .cont-card.tr-ses-semana { border-left-color: #3B82F6; }
+      .cont-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+      .cont-card-folio { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: var(--ink-3); letter-spacing: 0.07em; text-transform: uppercase; }
+      .cont-card-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+      .cont-card-pill-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+      .cont-card-nombre { font-size: 14px; font-weight: 700; color: var(--ink-1); }
+      .cont-card-paquete { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+      .cont-card-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 7px; }
+      .cont-card-fecha { font-size: 11px; color: var(--ink-3); }
+      .cont-card-saldo { font-size: 13px; font-weight: 700; }
+      .cont-card-saldo.green { color: var(--success); }
+      .cont-card-saldo.amber { color: var(--warn); }
+      .cont-card-saldo.red   { color: var(--danger); }
+      .tabla-card { display: none; }
     }
 
     /* ── DESKTOP LAYOUT ───────────────────────────────── */
@@ -1284,6 +1312,9 @@
           </button>
         </div>
       </div>
+
+      <!-- Cards mobile de contratos -->
+      <div id="contratos-cards"></div>
 
       <!-- Tabla de contratos -->
       <div class="tabla-card" id="tabla-contratos-card">
@@ -2513,6 +2544,66 @@ const ESTATUS_MAP = {
 // Alias backward-compat para renderPanel (usa ESTATUS_COLOR[x])
 const ESTATUS_COLOR = Object.fromEntries(Object.entries(ESTATUS_MAP).map(([k,v]) => [k, v.dot]));
 
+function renderContratosCards(lista) {
+  var cont = document.getElementById('contratos-cards');
+  if (!cont) return;
+  if (!lista.length) {
+    cont.innerHTML = '<div class="tabla-vacio">Sin contratos que mostrar.</div>';
+    return;
+  }
+  var ahora  = Date.now();
+  var tzOff  = new Date().getTimezoneOffset() * 60000;
+  var hoyStr = new Date(ahora - tzOff).toISOString().substring(0, 10);
+  var en2Str = new Date(ahora - tzOff + 2 * 86400000).toISOString().substring(0, 10);
+  var en7Str = new Date(ahora - tzOff + 7 * 86400000).toISOString().substring(0, 10);
+
+  cont.innerHTML = lista.map(function(c) {
+    var fs = c.FechaSesion ? String(c.FechaSesion).substring(0, 10) : '';
+    var sesClass = fs
+      ? (fs === hoyStr ? 'tr-ses-hoy'
+         : fs <= en2Str ? 'tr-ses-pronto'
+         : fs <= en7Str ? 'tr-ses-semana' : '')
+      : '';
+    var activo = tokenActivo === c.Token ? 'activo' : '';
+    var _em = ESTATUS_MAP[c.Estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: c.Estatus || '—' };
+
+    var saldoVal  = parseFloat(c.SaldoPendiente) || 0;
+    var precioVal = parseFloat(c.PrecioTotal) || 0;
+    var pagadoPct = precioVal > 0 ? Math.min(100, Math.round((precioVal - saldoVal) / precioVal * 100)) : 0;
+    var saldoCls  = saldoVal <= 0 ? 'green' : pagadoPct >= 50 ? 'amber' : 'red';
+    var saldoTxt  = saldoVal <= 0 ? '<i class="ti ti-check"></i> Liquidado' : fmxn(saldoVal);
+
+    var fechaTxt = '';
+    if (fs) {
+      var sesColorStyle = sesClass === 'tr-ses-hoy'    ? 'color:var(--gold);font-weight:700'
+                        : sesClass === 'tr-ses-pronto' ? 'color:var(--warn);font-weight:600'
+                        : sesClass === 'tr-ses-semana' ? 'color:#3B82F6;font-weight:600'
+                        : '';
+      fechaTxt = '<span class="cont-card-fecha" style="'+sesColorStyle+'">'+fmxnFecha(fs)+'</span>';
+    }
+
+    var expressHtml = c.EntregaExpress
+      ? '<span style="background:var(--express-bg);color:var(--express-color);font-size:9px;font-weight:800;letter-spacing:.8px;padding:1px 6px;border-radius:3px;margin-right:5px;vertical-align:middle">EXPRESS</span>'
+      : '';
+
+    return '<div class="cont-card '+[activo, sesClass].filter(Boolean).join(' ')+'" onclick="abrirPanel('+jsArg(c.Token)+')">'
+      + '<div class="cont-card-top">'
+      +   '<span class="cont-card-folio">'+(esc(c.Folio)||'—')+'</span>'
+      +   '<span class="cont-card-pill" style="background:'+_em.bg+';color:'+_em.color+'">'
+      +     '<span class="cont-card-pill-dot" style="background:'+_em.dot+'"></span>'
+      +     _em.label
+      +   '</span>'
+      + '</div>'
+      + '<div class="cont-card-nombre">'+expressHtml+esc(c.NombreCliente)+'</div>'
+      + (c.PaqueteBase ? '<div class="cont-card-paquete">'+esc(c.PaqueteBase)+'</div>' : '')
+      + '<div class="cont-card-bottom">'
+      +   (fechaTxt || '<span></span>')
+      +   '<span class="cont-card-saldo '+saldoCls+'">'+saldoTxt+'</span>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
 function renderTabla(lista) {
   const tbody = document.getElementById('tabla-body');
   if (!lista.length) {
@@ -2603,6 +2694,7 @@ function renderTabla(lista) {
       ${saldoCell}
     </tr>`;
   }).join('');
+  renderContratosCards(lista);
   actualizarStatsRibbon(todosContratos);
   actualizarNavBadges(todosContratos);
 }
