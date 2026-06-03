@@ -35,48 +35,6 @@ export async function handleContratos(request, env, ctx, action) {
     return ok({ ok: true, contratos: lista });
   }
 
-	  if (action === 'listarClientes') {
-	    const { results } = await query(db,
-	      `WITH clientes_base AS (
-	         SELECT id, nombre, telefono, correo, origen, notas_perfil, fecha_creacion, fecha_ultima_actividad
-	         FROM clientes
-	         UNION ALL
-	         SELECT '' AS id, ct.nombre_cliente AS nombre, MAX(ct.telefono_cliente) AS telefono,
-	                ct.correo_cliente AS correo, 'contrato' AS origen, '' AS notas_perfil,
-	                MIN(ct.fecha_creacion) AS fecha_creacion, MAX(ct.fecha_creacion) AS fecha_ultima_actividad
-	         FROM contratos ct
-	         WHERE ct.oculto = 0
-	           AND IFNULL(ct.cliente_id, '') = ''
-	           AND ct.correo_cliente != ''
-	           AND NOT EXISTS (SELECT 1 FROM clientes c2 WHERE c2.correo = ct.correo_cliente)
-	         GROUP BY ct.correo_cliente
-	       )
-	       SELECT c.*,
-	              c.id AS cliente_id,
-	              c.nombre AS nombre_cliente,
-	              c.telefono AS telefono_cliente,
-	              c.correo AS correo_cliente,
-	              (SELECT COUNT(*) FROM trabajos t WHERE t.cliente_id = c.id
-	               AND t.estatus IN ('nuevo','intentando','en_seguimiento','cotizado')) AS trabajos_activos,
-	              CASE WHEN c.id = ''
-	                THEN (SELECT COUNT(*) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
-	                ELSE (SELECT COUNT(*) FROM contratos ct WHERE ct.cliente_id = c.id)
-	              END AS num_contratos,
-	              CASE WHEN c.id = ''
-	                THEN (SELECT MAX(ct.fecha_creacion) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
-	                ELSE (SELECT MAX(ct.fecha_creacion) FROM contratos ct WHERE ct.cliente_id = c.id)
-	              END AS ultimo_contrato,
-	              CASE WHEN c.id = ''
-	                THEN (SELECT COALESCE(SUM(ct.precio_total), 0) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
-	                ELSE (SELECT COALESCE(SUM(ct.precio_total), 0) FROM contratos ct WHERE ct.cliente_id = c.id)
-	              END AS total_facturado
-	       FROM clientes_base c
-	       ORDER BY CASE WHEN c.fecha_ultima_actividad = '' OR c.fecha_ultima_actividad IS NULL
-	                THEN c.fecha_creacion ELSE c.fecha_ultima_actividad END DESC`
-	    );
-    return ok({ ok: true, clientes: results });
-  }
-
   if (action === 'obtenerContrato') {
     const token = new URL(request.url).searchParams.get('token');
     if (!token) return err('Token requerido');
@@ -136,10 +94,10 @@ export async function handleContratos(request, env, ctx, action) {
 
     const totalNum = parseFloat(precioTotal) || 0;
     if (totalNum <= 0) return err('El precio total debe ser mayor a $0');
-    const anticNum = Math.min(
-      anticipo !== undefined && anticipo !== '' ? parseFloat(anticipo) || 0 : 0,
-      totalNum
-    );
+    const anticipoProvisto = anticipo !== undefined && anticipo !== '';
+    const anticipoRaw = anticipoProvisto ? parseFloat(anticipo) : 0;
+    if (!Number.isFinite(anticipoRaw) || anticipoRaw < 0) return err('El anticipo no puede ser negativo');
+    const anticNum = Math.min(anticipoRaw, totalNum);
 
     // Validar propiedades
     const prop1 = propsData[0];
@@ -487,7 +445,9 @@ export async function handleContratos(request, env, ctx, action) {
   if (action === 'eliminarContrato') {
     const { token } = await request.json();
     // D1 no respeta FOREIGN KEYS — cascada manual en orden correcto
+    const ts = now();
     await batch(db, [
+      { sql: `UPDATE trabajos SET estatus='cotizado', contrato_token='', fecha_ultima_actividad=? WHERE contrato_token=?`, params: [ts, token] },
       { sql: 'DELETE FROM revisiones_video WHERE contrato_id=?', params: [token] },
       { sql: 'DELETE FROM checklist WHERE contrato_token=?', params: [token] },
       { sql: 'DELETE FROM propiedades WHERE contrato_token=?', params: [token] },

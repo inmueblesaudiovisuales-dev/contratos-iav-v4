@@ -1717,7 +1717,7 @@
         <!-- Datos del cliente -->
         <div id="banner-desde-trabajo" style="display:none;background:rgba(30,132,73,0.08);border:1.5px solid rgba(30,132,73,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#1E8449;align-items:center;justify-content:space-between">
           <span><i class="ti ti-circle-check" style="margin-right:6px"></i>Contrato para: <strong id="banner-trabajo-nombre"></strong></span>
-          <button onclick="_trabajoOrigenId=null;_clienteOrigenId=null;document.getElementById('banner-desde-trabajo').style.display='none'" style="background:none;border:none;color:#1E8449;cursor:pointer;font-size:16px;padding:0 4px">✕</button>
+          <button onclick="limpiarOrigenTrabajoContrato()" style="background:none;border:none;color:#1E8449;cursor:pointer;font-size:16px;padding:0 4px">✕</button>
         </div>
         <div class="campo" id="campo-cliente-search-contrato">
           <label>Cliente existente <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label>
@@ -4277,6 +4277,7 @@ function limpiarFormCrear() {
   renderTodasLasProps();
   actualizarPaquetesAdicionales();
   cerrarDropdownAC();
+  limpiarOrigenTrabajoContrato();
 
   var logoHint = document.getElementById('ac-logo-hint-est');
   if (logoHint) logoHint.remove();
@@ -4358,6 +4359,15 @@ function seleccionarClienteAC(idx, esParticular) {
   if (elNombre)   elNombre.value   = clienteNombreVal(cl);
   if (elCorreo)   elCorreo.value   = clienteCorreoVal(cl);
   if (elTelefono) elTelefono.value = clienteTelefonoVal(cl);
+
+  if (!esParticular) {
+    const clienteId = clienteIdVal(cl);
+    if (clienteId) {
+      seleccionarClienteContrato(clienteId, clienteNombreVal(cl), clienteTelefonoVal(cl), clienteCorreoVal(cl));
+    } else {
+      limpiarClienteContrato();
+    }
+  }
 
   // Fix M1: suprimir reapertura del dropdown cuando el input event se dispare
   _acSeleccionRecien = true;
@@ -4468,6 +4478,19 @@ function fmxnFechaLarga(val) {
   const d = new Date(str);
   if (isNaN(d)) return String(val);
   return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function fechaLocalISO(date) {
+  var d = date || new Date();
+  var yyyy = d.getFullYear();
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return yyyy + '-' + mm + '-' + dd;
+}
+
+function mesLocalISO(date) {
+  var d = date || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
 function calcFechaEntrega(fechaISO, express) {
@@ -5202,10 +5225,10 @@ function hashColor(str) {
 
 function actualizarStatsRibbon(contratos) {
   if (window.innerWidth < 1024) return;
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = fechaLocalISO();
   const ahora = new Date();
-  const mesActual = ahora.toISOString().slice(0,7);
-  const mesPasado = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString().slice(0,7);
+  const mesActual = mesLocalISO(ahora);
+  const mesPasado = mesLocalISO(new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1));
   const el = function(id){ return document.getElementById(id); };
 
   if (el('statSesionesHoy'))     el('statSesionesHoy').textContent  = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); }).length;
@@ -5240,20 +5263,20 @@ function renderHoyStrip(contratos) {
   var cards = document.getElementById('hoyCards');
   var dateEl = document.getElementById('hoyDate');
   if (!strip || !cards) return;
-  var hoy = new Date().toISOString().slice(0,10);
+  var hoy = fechaLocalISO();
   var sesiones = contratos.filter(function(c){ return (c.FechaSesion||'').startsWith(hoy); });
   if (dateEl) dateEl.textContent = new Date().toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'});
   if (!sesiones.length) { strip.style.display='none'; return; }
   strip.style.display='flex';
   cards.innerHTML = sesiones.map(function(c){
     var color = ESTATUS_COLOR[c.Estatus]||'#9CA3AF';
-    return '<div class="session-card" onclick="abrirPanel(\''+(c.Token||'')+'\')">'+
+    return '<div class="session-card" onclick="abrirPanel('+jsArg(c.Token||'')+')">'+
       '<div class="session-card-accent" style="background:'+color+'"></div>'+
       '<div class="session-card-body">'+
-        '<div class="session-card-hora">'+(c.HoraSesion||'')+'</div>'+
-        '<div class="session-card-nombre">'+(c.NombreCliente||'')+'</div>'+
-        '<div class="session-card-meta">'+(c.PaqueteBase||'')+'</div>'+
-        '<div class="session-card-status"><span class="session-card-dot" style="background:'+color+'"></span>'+(c.Estatus||'')+'</div>'+
+        '<div class="session-card-hora">'+esc(c.HoraSesion||'')+'</div>'+
+        '<div class="session-card-nombre">'+esc(c.NombreCliente||'')+'</div>'+
+        '<div class="session-card-meta">'+esc(c.PaqueteBase||'')+'</div>'+
+        '<div class="session-card-status"><span class="session-card-dot" style="background:'+color+'"></span>'+esc(c.Estatus||'')+'</div>'+
       '</div>'+
     '</div>';
   }).join('');
@@ -5639,6 +5662,14 @@ function crearContratoDesdeWork(trabajoId, nombre, clienteId, telefono, correo) 
     document.getElementById('sec-nuevo').appendChild(hiddenCli);
   }
   hiddenCli.value = clienteId || '';
+  if (clienteId) {
+    var search = document.getElementById('contrato-cliente-search');
+    if (search) search.value = nombre || '';
+    var sel = document.getElementById('contrato-cliente-seleccionado');
+    var selNom = document.getElementById('contrato-cliente-sel-nombre');
+    if (sel) sel.style.display='flex';
+    if (selNom) selNom.textContent = nombre || '';
+  }
 }
 
 // ── BÚSQUEDA DE CLIENTE EN FORM CONTRATO ─────────────────────────────────────
@@ -5648,7 +5679,7 @@ function buscarClienteParaContrato() {
   var dd = document.getElementById('contrato-cliente-dropdown');
   if (!q || !dd) { if(dd) dd.style.display='none'; return; }
   var matches = _clientesCache.filter(function(c){
-    return clienteNombreVal(c).toLowerCase().includes(q) || clienteTelefonoVal(c).includes(q);
+    return clienteIdVal(c) && (clienteNombreVal(c).toLowerCase().includes(q) || clienteTelefonoVal(c).includes(q));
   }).slice(0,6);
   if (!matches.length) { dd.style.display='none'; return; }
   dd.innerHTML = matches.map(function(c){
@@ -5686,6 +5717,16 @@ function limpiarClienteContrato() {
   var hiddenCli = document.getElementById('contrato-cliente-id-hidden'); if(hiddenCli) hiddenCli.value='';
   var search = document.getElementById('contrato-cliente-search'); if(search) search.value='';
   var sel = document.getElementById('contrato-cliente-seleccionado'); if(sel) sel.style.display='none';
+  var selNom = document.getElementById('contrato-cliente-sel-nombre'); if(selNom) selNom.textContent='';
+  var dd = document.getElementById('contrato-cliente-dropdown'); if(dd) dd.style.display='none';
+}
+
+function limpiarOrigenTrabajoContrato() {
+  _trabajoOrigenId = null;
+  _clienteOrigenId = null;
+  var banner = document.getElementById('banner-desde-trabajo');
+  if (banner) banner.style.display='none';
+  limpiarClienteContrato();
 }
 
 // ── AGENDAR LLAMADA DESDE CONTRATO ────────────────────────────────────────────

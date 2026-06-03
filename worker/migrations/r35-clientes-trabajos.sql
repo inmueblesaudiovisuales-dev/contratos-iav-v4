@@ -1,8 +1,6 @@
--- One-shot migration for existing R34/R35 D1 databases.
--- Do not run this after bootstrapping a fresh DB with worker/schema.sql.
-ALTER TABLE propiedades ADD COLUMN ocultar_formato_video INTEGER DEFAULT 1;
-ALTER TABLE contratos ADD COLUMN tiene_recorrido INTEGER DEFAULT 1;
-ALTER TABLE contratos ADD COLUMN cliente_id TEXT DEFAULT '';
+-- R35 CRM tables and indexes.
+-- Column additions used by this branch are already present in production D1
+-- and are included in worker/schema.sql for fresh databases.
 
 CREATE TABLE IF NOT EXISTS clientes (
   id TEXT PRIMARY KEY,

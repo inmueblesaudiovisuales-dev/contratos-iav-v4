@@ -33,7 +33,10 @@ export async function syncToSheets(env) {
 	        }
 	      })
     });
-    if (!res.ok) console.error('syncToSheets: adapter respondió', res.status);
+    const body = await res.json().catch(() => null);
+    if (!res.ok || body?.error || body?.ok === false) {
+      console.error('syncToSheets: adapter respondió', body?.error || body?.message || ('HTTP ' + res.status));
+    }
   } catch (e) {
     console.error('syncToSheets error:', e.message);
   }

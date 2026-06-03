@@ -1,4 +1,4 @@
-import { queryOne, query, run, now } from '../db.js';
+import { queryOne, query, batch, now } from '../db.js';
 import { ok, err } from '../auth.js';
 import { callAdapter } from '../google.js';
 
@@ -38,23 +38,25 @@ export async function handleRevision(request, env, ctx, action) {
     if (!Array.isArray(revisiones) || !revisiones.length) return err('Sin revisiones');
 
     const fecha = now();
-    let insertadas = 0;
-    for (const r of revisiones) {
-      if (!r.descripcion_ajuste?.trim()) continue;
-      await run(db,
-        'INSERT INTO revisiones_video (contrato_id, minuto_segundo, descripcion_ajuste, fecha) VALUES (?, ?, ?, ?)',
-        [token, (r.minuto_segundo || '').trim(), r.descripcion_ajuste.trim(), fecha]
-      );
-      insertadas++;
-    }
+    const revisionesInsertadas = revisiones
+      .map(r => ({
+        minuto_segundo: (r.minuto_segundo || '').trim(),
+        descripcion_ajuste: (r.descripcion_ajuste || '').trim()
+      }))
+      .filter(r => r.descripcion_ajuste);
 
-    if (insertadas === 0) return err('Agrega al menos una nota con descripción');
+    if (revisionesInsertadas.length === 0) return err('Agrega al menos una nota con descripción');
+
+    await batch(db, revisionesInsertadas.map(r => ({
+      sql: 'INSERT INTO revisiones_video (contrato_id, minuto_segundo, descripcion_ajuste, fecha) VALUES (?, ?, ?, ?)',
+      params: [token, r.minuto_segundo, r.descripcion_ajuste, fecha]
+    })));
 
     callAdapter(ctx, env, 'notificarRevision', {
       token,
       folio: contrato.folio,
       nombreCliente: contrato.nombre_cliente,
-      revisiones
+      revisiones: revisionesInsertadas
     });
 
     return ok({ ok: true });

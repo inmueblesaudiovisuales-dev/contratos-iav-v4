@@ -1,4 +1,4 @@
-import { queryOne, query, run, parseFecha, now } from '../db.js';
+import { queryOne, query, run, batch, parseFecha, now } from '../db.js';
 import { ok, err } from '../auth.js';
 import { callAdapter, callAdapterSync } from '../google.js';
 
@@ -236,33 +236,36 @@ export async function handlePortal(request, env, ctx, action) {
     const nuevoEstatus = saldoPendiente === 0 ? 'En produccion' : 'Firmado';
     const nuevoAdicionales = [...acordados, ...adicionalesAceptados];
 
-    const result = await run(db,
-      `UPDATE contratos SET estatus=?, fecha_firma=?, precio_total=?, saldo_pendiente=?,
-       adicionales_json=?, firma_base64_url='pending',
-       correo_cliente=COALESCE(NULLIF(?, ''), correo_cliente),
-       telefono_cliente=COALESCE(NULLIF(?, ''), telefono_cliente)
-       WHERE token=? AND estatus='Pendiente firma'`,
-      [nuevoEstatus, now(), precioTotal, saldoPendiente,
-       JSON.stringify(nuevoAdicionales), correoCliente || '', telefonoCliente || '', token]
-    );
-
-    if (!result.meta?.changes) return err('El contrato ya fue firmado', 409);
-
+    const firmaNow = now();
+    const statements = [
+      {
+        sql: `UPDATE contratos SET estatus=?, fecha_firma=?, precio_total=?, saldo_pendiente=?,
+              adicionales_json=?, firma_base64_url='pending',
+              correo_cliente=COALESCE(NULLIF(?, ''), correo_cliente),
+              telefono_cliente=COALESCE(NULLIF(?, ''), telefono_cliente)
+              WHERE token=? AND estatus='Pendiente firma'`,
+        params: [nuevoEstatus, firmaNow, precioTotal, saldoPendiente,
+                 JSON.stringify(nuevoAdicionales), correoCliente || '', telefonoCliente || '', token]
+      }
+    ];
     if (propsCliente?.length) {
       for (const p of propsCliente) {
-        await run(db,
-           `UPDATE propiedades SET direccion=?, link_maps=?, orientacion=?, sobre_la_propiedad=?,
-            referencias=?, fachada_url=?, perimetro_url=?, datos_especificos=?, logo_url=?,
-            formato_video=?, requiere_acceso=?
-            WHERE contrato_token=? AND num_propiedad=?`,
-           [p.direccion || '', limpiarLinkMaps(p.linkMaps || ''), p.orientacion || '', p.sobreLaPropiedad || '',
-           p.referencias || '', p.fachadaUrl || '', p.perimetroUrl || '',
-           JSON.stringify(p.datosEspecificos || {}), p.logoUrl || '',
-           p.formatoVideo || 'vertical_nativo', p.requiereAcceso || 0,
-           token, p.numPropiedad]
-        );
+        statements.push({
+          sql: `UPDATE propiedades SET direccion=?, link_maps=?, orientacion=?, sobre_la_propiedad=?,
+                referencias=?, fachada_url=?, perimetro_url=?, datos_especificos=?, logo_url=?,
+                formato_video=?, requiere_acceso=?
+                WHERE contrato_token=? AND num_propiedad=?
+                  AND EXISTS (SELECT 1 FROM contratos WHERE token=? AND fecha_firma=?)`,
+          params: [p.direccion || '', limpiarLinkMaps(p.linkMaps || ''), p.orientacion || '', p.sobreLaPropiedad || '',
+                   p.referencias || '', p.fachadaUrl || '', p.perimetroUrl || '',
+                   JSON.stringify(p.datosEspecificos || {}), p.logoUrl || '',
+                   p.formatoVideo || 'vertical_nativo', p.requiereAcceso || 0,
+                   token, p.numPropiedad, token, firmaNow]
+        });
       }
     }
+    const results = await batch(db, statements);
+    if (!results[0]?.meta?.changes) return err('El contrato ya fue firmado', 409);
 
     const { results: propiedadesFirma } = await query(db,
       'SELECT * FROM propiedades WHERE contrato_token = ? ORDER BY num_propiedad', [token]
