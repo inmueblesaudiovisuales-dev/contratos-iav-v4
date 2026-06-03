@@ -5,6 +5,11 @@ import { handlePaquetes } from './routes/paquetes.js';
 import { handleStats } from './routes/stats.js';
 import { handleChecklist } from './routes/checklist.js';
 import { handleArchivos } from './routes/archivos.js';
+import { handleRevision } from './routes/revision.js';
+import { handleEquipo } from './routes/equipo.js';
+import { handleClientes } from './routes/clientes.js';
+import { handleTrabajos } from './routes/trabajos.js';
+import { handleActividades } from './routes/actividades.js';
 import { syncToSheets } from './cron.js';
 import { err } from './auth.js';
 
@@ -15,11 +20,12 @@ const CORS = {
 };
 
 const RUTAS_CONTRATOS = [
-  'listarContratos','listarClientes','obtenerContrato','crearContrato','actualizarEstatus',
+  'listarContratos','obtenerContrato','crearContrato','actualizarEstatus',
   'actualizarContratoUpsell','ocultarContrato','eliminarContrato','guardarNotasInternas',
   'marcarSesionCompletada','guardarProduccion','guardarEntrega','revocarEntrega',
   'guardarCaracteristicas','reagendarPropiedad','exportarCSV','enviarRecordatorio',
-  'guardarNotaPropiedad','actualizarCarpeta','actualizarPdfUrl','actualizarCalendarEvent'
+  'guardarNotaPropiedad','actualizarCarpeta','actualizarPdfUrl','actualizarCalendarEvent',
+  'actualizarExpress','guardarFormatoPropiedad'
 ];
 
 const RUTAS_PORTAL = ['obtenerPortal','firmaCliente','guardarResena','guardarConfiguracion'];
@@ -27,6 +33,11 @@ const RUTAS_ABONOS = ['registrarAbono','listarAbonos'];
 const RUTAS_PAQUETES = ['listarPaquetes','listarPaquetesTodos','crearPaquete','editarPaquete','togglePaquete'];
 const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];
 const RUTAS_ARCHIVOS = ['subirArchivo','subirArchivoAdmin'];
+const RUTAS_REVISION = ['obtenerRevision','guardarRevision'];
+const RUTAS_EQUIPO       = ['obtenerEquipo','marcarProduccion'];
+const RUTAS_CLIENTES    = ['crearCliente','listarClientes','obtenerCliente','actualizarCliente'];
+const RUTAS_TRABAJOS    = ['crearTrabajo','listarTrabajos','actualizarTrabajo','actualizarEstatusTrabajo','convertirTrabajo'];
+const RUTAS_ACTIVIDADES = ['agendarLlamada','agregarNota','listarActividades'];
 
 export default {
   async fetch(request, env, ctx) {
@@ -64,6 +75,16 @@ export default {
       response = await handleChecklist(request, env, ctx, action);
     } else if (RUTAS_ARCHIVOS.includes(action)) {
       response = await handleArchivos(request, env, ctx, action);
+    } else if (RUTAS_REVISION.includes(action)) {
+      response = await handleRevision(request, env, ctx, action);
+    } else if (RUTAS_EQUIPO.includes(action)) {
+      response = await handleEquipo(request, env, ctx, action);
+    } else if (RUTAS_CLIENTES.includes(action)) {
+      response = await handleClientes(request, env, ctx, action);
+    } else if (RUTAS_TRABAJOS.includes(action)) {
+      response = await handleTrabajos(request, env, ctx, action);
+    } else if (RUTAS_ACTIVIDADES.includes(action)) {
+      response = await handleActividades(request, env, ctx, action);
     } else {
       response = err('Acción no encontrada', 404);
     }

@@ -113,6 +113,81 @@
   .orientacion-btn .titulo { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: var(--charcoal); margin-bottom: 3px; }
   .orientacion-btn .desc  { font-size: 10px; color: var(--concrete); line-height: 1.4; }
 
+  /* Formato de video — mobile: lista vertical */
+  .formato-grid { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; }
+  .fmt-wrap { position: relative; }
+  .fmt-badge-over { position: absolute; top: -10px; left: 14px; background: var(--gold); color: var(--charcoal); font-size: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; border-radius: 20px; padding: 3px 10px; white-space: nowrap; box-shadow: 0 2px 6px rgba(201,168,76,0.35); z-index: 1; }
+  .formato-btn { width: 100%; background: var(--bg-chip); border: 1.5px solid var(--border-strong); border-radius: 14px; padding: 14px 16px; cursor: pointer; text-align: left; transition: all 0.18s; display: flex; align-items: center; gap: 16px; }
+  .formato-btn:hover { border-color: var(--gold); background: rgba(201,168,76,0.05); }
+  .formato-btn.activo { border-color: var(--gold); border-width: 2px; background: var(--gold-dim); box-shadow: 0 4px 16px rgba(201,168,76,0.18); }
+  .fmt-mockup-zone { display: flex; align-items: center; justify-content: center; gap: 5px; flex-shrink: 0; width: 60px; }
+  .fmt-text { flex: 1; }
+  .fmt-titulo { font-size: 13px; font-weight: 800; color: var(--charcoal); line-height: 1.3; margin-bottom: 3px; }
+  .fmt-desc { font-size: 11px; color: var(--concrete); line-height: 1.55; }
+  .fmt-canal { color: #B0ADA6; font-weight: 700; }
+  .fmt-grabado { color: var(--charcoal); font-weight: 800; }
+  .fmt-nota { color: var(--concrete); }
+  .fmt-precio { font-size: 12px; font-weight: 700; color: var(--gold); margin-top: 4px; }
+  /* Mockups */
+  .fmt-phone { width: 24px; height: 42px; border: 2.5px solid var(--border-strong); border-radius: 5px; background: var(--white); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: border-color 0.18s; }
+  .formato-btn.activo .fmt-phone { border-color: var(--gold); }
+  .fmt-fill { flex: 1; background: var(--border-strong); margin: 3px 2px 2px; border-radius: 2px; transition: background 0.18s; }
+  .formato-btn.activo .fmt-fill { background: var(--gold); }
+  .fmt-bar { height: 8px; background: var(--charcoal); flex-shrink: 0; }
+  .fmt-mid { flex: 1; margin: 0 2px; background: var(--border-strong); transition: background 0.18s; }
+  .formato-btn.activo .fmt-mid { background: var(--gold); }
+  .fmt-screen { width: 38px; height: 26px; border: 2.5px solid var(--border-strong); border-radius: 4px; background: var(--white); overflow: hidden; flex-shrink: 0; transition: border-color 0.18s; display: flex; }
+  .formato-btn.activo .fmt-screen { border-color: var(--gold); }
+  .fmt-screen-fill { flex: 1; margin: 3px; background: var(--border-strong); border-radius: 2px; transition: background 0.18s; }
+  .formato-btn.activo .fmt-screen-fill { background: var(--gold); }
+  /* Desktop: 3 columnas */
+  @media (min-width: 1024px) {
+    .formato-grid { display: grid; grid-template-columns: repeat(3,1fr); flex-direction: unset; align-items: stretch; gap: 12px; }
+    .fmt-wrap { display: flex; }
+    .fmt-badge-over { top: -11px; left: 50%; transform: translateX(-50%); }
+    .formato-btn { grid-template-rows: 52px 52px 42px 46px 22px; align-items: center; text-align: center; padding: 22px 18px 18px; display: grid; gap: 0; min-height: 196px; }
+    .fmt-mockup-zone { width: auto; height: 52px; align-items: center; justify-content: center; gap: 7px; flex-shrink: 0; }
+    .fmt-text { display: contents; }
+    .fmt-titulo { display: none; }
+    .fmt-desc { font-size: 11px; line-height: 1.45; max-width: 190px; }
+    .fmt-canal, .fmt-grabado, .fmt-nota, .fmt-precio { align-self: center; justify-self: center; margin-top: 0 !important; }
+    .fmt-canal { font-size: 12px; line-height: 1.35; }
+    .fmt-grabado { font-size: 12px; line-height: 1.35; }
+    .fmt-nota { font-size: 11px; line-height: 1.45; }
+    .fmt-precio { padding-top: 0; font-size: 14px; }
+    .fmt-precio.placeholder { visibility: hidden; }
+  }
+  /* Acceso/caseta */
+  .acceso-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+  .acceso-btn { flex: none; min-width: 110px; background: var(--bg-chip); border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 11px 18px; cursor: pointer; text-align: center; transition: all 0.15s; font-size: 13px; font-weight: 700; color: var(--charcoal); }
+  .acceso-btn:hover { border-color: var(--gold); }
+  .acceso-btn.activo { border-color: var(--gold); border-width: 2px; background: var(--gold-dim); }
+  .acceso-detalle { display: none; margin-top: 14px; margin-bottom: 18px; padding: 20px; border: 1.5px solid var(--border); border-left: 3px solid var(--gold); border-radius: 12px; background: var(--white); }
+  .acceso-detalle.visible { display: block; }
+  .acceso-intro { font-size: 12px; color: var(--concrete); line-height: 1.6; margin-bottom: 18px; }
+  .acceso-chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .acceso-chip { background: var(--bg-chip); border: 1.5px solid var(--border-strong); border-radius: 20px; padding: 8px 12px; cursor: pointer; transition: all 0.15s; font-size: 11px; font-weight: 700; color: var(--charcoal); }
+  .acceso-chip:hover { border-color: var(--gold); }
+  .acceso-chip.activo { border-color: var(--gold); background: var(--gold-dim); color: var(--charcoal); }
+  .acceso-sep { border: none; border-top: 1px solid var(--border); margin: 20px 0 4px; }
+  .acceso-punto-section.oculto { display: none; }
+  .acceso-fields { display: grid; grid-template-columns: 1fr; gap: 0; }
+  .acceso-fields > .acceso-sep { grid-column: 1 / -1; }
+  .acceso-edificio { display: none; }
+  .acceso-edificio.visible { display: contents; }
+  .acceso-contacto-otro { display: none; }
+  .acceso-contacto-otro.visible { display: block; }
+  .field select {
+    width: 100%; padding: 11px 13px; border: 1.5px solid var(--border-strong); border-radius: 8px;
+    font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 500; color: var(--charcoal);
+    background: var(--bg-chip); outline: none; transition: border-color 0.15s, background 0.15s;
+  }
+  .field select:focus { border-color: var(--gold); background: var(--white); }
+  @media (min-width: 760px) {
+    .acceso-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; }
+    .acceso-fields .full { grid-column: 1 / -1; }
+  }
+
   /* Add-ons */
   .addon-card { border: 1.5px solid var(--border-strong); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.15s; display: flex; align-items: flex-start; gap: 14px; background: var(--bg-chip); }
   .addon-card:hover  { border-color: var(--gold); }
@@ -381,6 +456,12 @@ var formData          = null;
 var adicionalesOnGlobal = {};
 var adicionalesOnProp   = {};
 var orientaciones     = {};
+var formatosVideo     = {};
+var accesoCaseta      = {};
+var accesoMetodos     = {};
+var accesoTipoEdificio = {};
+var accesoContactoTipo = {};
+var accesoPuntoEncuentro = {};
 var hasStroke         = false;
 var isDrawing         = false;
 var _pctAnticipo      = 0.5; // porcentaje fijado por Bruno; se deriva al cargar datos
@@ -493,6 +574,162 @@ function safeHref(url) {
   return /^https?:\/\//i.test(u) ? esc(u) : '#';
 }
 
+var ACCESO_METODOS = [
+  ['qr', 'QR'],
+  ['invitacion_digital', 'Invitación digital'],
+  ['codigo', 'Código'],
+  ['lista_acceso', 'Lista de acceso'],
+  ['registro_previo', 'Registro previo'],
+  ['llamada_al_llegar', 'Llamada al llegar'],
+  ['otro', 'Otro']
+];
+
+var ACCESO_METODO_LABELS = ACCESO_METODOS.reduce(function(acc, item) {
+  acc[item[0]] = item[1];
+  return acc;
+}, {});
+
+var ACCESO_PUNTOS_POR_TIPO = {
+  '':                     [['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']],
+  'departamento':         [['afuera_departamento','Nos vemos afuera del departamento'],['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']],
+  'condominio_horizontal':[['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']],
+  'oficina_torre':        [['recepcion','Nos vemos en recepción'],['entrada_oficina','Nos vemos en la entrada de la oficina'],['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']],
+  'otro':                 [['lobby','Nos vemos en lobby'],['estacionamiento','Nos vemos en estacionamiento'],['otro','Otro punto']]
+};
+
+var ACCESO_PUNTO_LABELS = {
+  'directo_departamento': 'Pasamos directo al departamento',
+  'afuera_departamento':  'Nos vemos afuera del departamento',
+  'recepcion':            'Nos vemos en recepción',
+  'entrada_oficina':      'Nos vemos en la entrada de la oficina',
+  'lobby':                'Nos vemos en lobby',
+  'estacionamiento':      'Nos vemos en estacionamiento',
+  'otro':                 'Otro punto'
+};
+
+function getPuntosParaTipo(tipo) {
+  return ACCESO_PUNTOS_POR_TIPO[tipo] !== undefined ? ACCESO_PUNTOS_POR_TIPO[tipo] : ACCESO_PUNTOS_POR_TIPO[''];
+}
+
+function getAccesoExistente(p) {
+  return (p && p.datosEspecificos && p.datosEspecificos.acceso) ? p.datosEspecificos.acceso : {};
+}
+
+function requiereDatosEdificio(tipo) {
+  return ['departamento', 'oficina_torre', 'otro'].indexOf(tipo || '') !== -1;
+}
+
+function accesoTieneDatos(acceso) {
+  if (!acceso) return false;
+  return ['nombreRegistro','instruccionesCaseta','contactoAccesoTipo','contactoAcceso','tipoEdificio','torre','piso','departamento','estacionamiento','puntoEncuentro','puntoEncuentroDetalle','restricciones','comentarios'].some(function(k) {
+    return !!(acceso[k] && String(acceso[k]).trim());
+  }) || !!(acceso.metodos && acceso.metodos.length);
+}
+
+function resumenAcceso(acceso) {
+  if (!accesoTieneDatos(acceso)) return 'Requiere acceso especial; sin instrucciones adicionales';
+  var partes = [];
+  if (acceso.metodos && acceso.metodos.length) partes.push('Método: ' + acceso.metodos.map(function(m) { return ACCESO_METODO_LABELS[m] || m; }).join(', '));
+  if (acceso.nombreRegistro) partes.push('Registro: ' + acceso.nombreRegistro);
+  if (acceso.instruccionesCaseta) partes.push('Caseta: ' + acceso.instruccionesCaseta);
+  if (acceso.contactoAccesoTipo === 'yo') partes.push('Contacto: Cliente');
+  if (acceso.contactoAccesoTipo === 'otro' && acceso.contactoAcceso) partes.push('Contacto: ' + acceso.contactoAcceso);
+  var edificio = [acceso.tipoEdificio, acceso.torre, acceso.piso, acceso.departamento].filter(Boolean).join(' · ');
+  if (edificio) partes.push('Edificio: ' + edificio);
+  if (acceso.estacionamiento) partes.push('Estacionamiento: ' + acceso.estacionamiento);
+  if (acceso.puntoEncuentro) partes.push('Punto de encuentro: ' + (ACCESO_PUNTO_LABELS[acceso.puntoEncuentro] || acceso.puntoEncuentro));
+  if (acceso.puntoEncuentroDetalle) partes.push('Detalle de encuentro: ' + acceso.puntoEncuentroDetalle);
+  if (acceso.restricciones) partes.push('Restricciones: ' + acceso.restricciones);
+  if (acceso.comentarios) partes.push('Comentarios: ' + acceso.comentarios);
+  return partes.join('\n');
+}
+
+function renderPuntosChips(n, tipo, puntoActivo) {
+  var puntos = getPuntosParaTipo(tipo);
+  var html = '';
+  puntos.forEach(function(item) {
+    var activo = puntoActivo === item[0] ? ' activo' : '';
+    html += '<button type="button" class="acceso-chip' + activo + '" data-punto-prop="' + n + '" data-punto-valor="' + item[0] + '">' + esc(item[1]) + '</button>';
+  });
+  return html;
+}
+
+function renderAccesoDetalle(n, acceso) {
+  acceso = acceso || {};
+  var metodos = acceso.metodos || [];
+  var tipoActual = acceso.tipoEdificio || '';
+  var puntoEncuentro = acceso.puntoEncuentro || '';
+  var contactoTipo = acceso.contactoAccesoTipo || (acceso.contactoAcceso ? 'otro' : 'yo');
+
+  var html = '<div class="acceso-detalle" id="acceso-detalle-' + n + '">';
+  html += '<p class="acceso-intro">Estos datos ayudan a que el equipo llegue, se registre y entre sin perder tiempo el día de la sesión.</p>';
+
+  /* Tipo de inmueble — chips, al inicio */
+  var tiposInmueble = [
+    ['', 'Casa / privada'],
+    ['departamento', 'Departamento'],
+    ['condominio_horizontal', 'Condominio horizontal'],
+    ['oficina_torre', 'Oficina / torre'],
+    ['otro', 'Otro']
+  ];
+  html += '<div class="field"><label>Tipo de inmueble</label><div class="acceso-chip-grid">';
+  tiposInmueble.forEach(function(opt) {
+    var activo = tipoActual === opt[0] ? ' activo' : '';
+    html += '<button type="button" class="acceso-chip' + activo + '" data-tipo-prop="' + n + '" data-tipo-valor="' + opt[0] + '">' + esc(opt[1]) + '</button>';
+  });
+  html += '</div></div>';
+
+  html += '<hr class="acceso-sep">';
+  html += '<div class="acceso-fields">';
+
+  /* Método de acceso */
+  html += '<div class="field full"><label>Método de acceso <span style="font-weight:500;text-transform:none;letter-spacing:0">(opcional)</span></label><div class="acceso-chip-grid">';
+  ACCESO_METODOS.forEach(function(item) {
+    var activo = metodos.indexOf(item[0]) !== -1 ? ' activo' : '';
+    html += '<button type="button" class="acceso-chip' + activo + '" data-prop="' + n + '" data-metodo="' + item[0] + '">' + esc(item[1]) + '</button>';
+  });
+  html += '</div></div>';
+
+  /* Contacto */
+  html += '<div class="field"><label>Nombre del dueño o contacto autorizado</label><input type="text" id="inp-acceso-registro-' + n + '" placeholder="Ej. Juan Pérez, propietario / administración / asesor" value="' + esc(acceso.nombreRegistro || '') + '"></div>';
+  html += '<div class="field"><label>¿Quién resuelve si hay problema de acceso?</label><div class="acceso-grid">';
+  html += '<div class="acceso-btn' + (contactoTipo === 'yo' ? ' activo' : '') + '" data-contacto-prop="' + n + '" data-contacto-valor="yo">Yo</div>';
+  html += '<div class="acceso-btn' + (contactoTipo === 'otro' ? ' activo' : '') + '" data-contacto-prop="' + n + '" data-contacto-valor="otro">Otro contacto</div>';
+  html += '</div></div>';
+  html += '<div class="field acceso-contacto-otro" id="acceso-contacto-otro-' + n + '"><label>Otro contacto de acceso</label><input type="text" id="inp-acceso-contacto-' + n + '" placeholder="Nombre y teléfono" value="' + esc(acceso.contactoAcceso || '') + '"></div>';
+
+  /* Caseta */
+  html += '<hr class="acceso-sep">';
+  html += '<div class="field full"><label>Indicaciones para guardia o caseta</label><textarea id="inp-acceso-caseta-' + n + '" placeholder="Ej. El equipo ya queda en lista; decir que viene a foto/video. Si no los ubican, llamar al contacto autorizado." style="min-height:88px">' + esc(acceso.instruccionesCaseta || '') + '</textarea></div>';
+  html += '<div class="field full">' + renderUploadField('fachada', n - 1, 'QR, invitación o referencia de acceso', 'Si tienes QR, invitación digital, código o imagen de referencia para caseta, puedes subirla aquí. También puedes enviarla por WhatsApp después.') + '</div>';
+
+  /* Punto de encuentro — oculto para casa/privada */
+  var ocultoPunto = tipoActual === '' ? ' oculto' : '';
+  html += '<div class="full acceso-punto-section' + ocultoPunto + '" id="acceso-punto-section-' + n + '">';
+  html += '<hr class="acceso-sep" style="margin-top:0">';
+  html += '<div class="field full"><label>¿Dónde nos vemos?</label><div class="acceso-chip-grid" id="acceso-puntos-grid-' + n + '">';
+  html += renderPuntosChips(n, tipoActual, puntoEncuentro);
+  html += '</div></div>';
+  html += '<div class="field acceso-contacto-otro full" id="acceso-punto-otro-' + n + '"><label>Detalle del punto de encuentro</label><input type="text" id="inp-acceso-punto-detalle-' + n + '" placeholder="Ej. acceso de proveedores, caseta 2, lobby de torre B" value="' + esc(acceso.puntoEncuentroDetalle || '') + '"></div>';
+  html += '</div>';
+
+  /* Datos de edificio (condicional) */
+  html += '<div class="acceso-edificio" id="acceso-edificio-' + n + '">';
+  html += '<div class="field"><label>Torre</label><input type="text" id="inp-acceso-torre-' + n + '" placeholder="Ej. Torre B" value="' + esc(acceso.torre || '') + '"></div>';
+  html += '<div class="field"><label>Piso</label><input type="text" id="inp-acceso-piso-' + n + '" placeholder="Ej. 7" value="' + esc(acceso.piso || '') + '"></div>';
+  html += '<div class="field"><label>Departamento / interior</label><input type="text" id="inp-acceso-depa-' + n + '" placeholder="Ej. 704" value="' + esc(acceso.departamento || '') + '"></div>';
+  html += '<div class="field full"><label>Estacionamiento / cajón</label><input type="text" id="inp-acceso-estacionamiento-' + n + '" placeholder="Ej. Cajón 22, sótano 1" value="' + esc(acceso.estacionamiento || '') + '"></div>';
+  html += '</div>';
+
+  /* Restricciones y comentarios */
+  html += '<hr class="acceso-sep">';
+  html += '<div class="field full"><label>Restricciones importantes</label><textarea id="inp-acceso-restricciones-' + n + '" placeholder="Horarios, áreas restringidas, permisos, drone, amenidades..." style="min-height:80px">' + esc(acceso.restricciones || '') + '</textarea></div>';
+  html += '<div class="field full"><label>Comentarios para llegar y entrar</label><textarea id="inp-acceso-comentarios-' + n + '" placeholder="Cualquier detalle para llegar y entrar sin perder tiempo." style="min-height:80px">' + esc(acceso.comentarios || '') + '</textarea></div>';
+
+  html += '</div></div>';
+  return html;
+}
+
 /* ── STEPPER ────────────────────────────────────────────────────────────────── */
 
 function actualizarStepper(paso) {
@@ -559,6 +796,12 @@ function init() {
 
 function renderEtapa1() {
   orientaciones = {};
+  formatosVideo = {};
+  accesoCaseta  = {};
+  accesoMetodos = {};
+  accesoTipoEdificio = {};
+  accesoContactoTipo = {};
+  accesoPuntoEncuentro = {};
   mostrarEstado('');
   var d           = portalData;
   var props        = d.propiedades || [];
@@ -569,8 +812,7 @@ function renderEtapa1() {
   // 1-prop: merge all per-prop add-ons into global (strip numPropiedad)
   if (props.length === 1) {
     addonsPorProp.forEach(function(a) {
-      a.numPropiedad = null;
-      addonsGlobal.push(a);
+      addonsGlobal.push(Object.assign({}, a, { numPropiedad: null }));
     });
     addonsPorProp = [];
   }
@@ -750,6 +992,16 @@ function renderEtapa1() {
       var n = i + 1;
       var esTerreno = (p.tipo || '').toLowerCase() === 'terreno';
       orientaciones[n] = 'Vertical (9:16) — Reels, TikTok e Instagram';
+      formatosVideo[n] = p.formatoVideo || 'vertical_nativo';
+      var accesoActual = getAccesoExistente(p);
+      accesoCaseta[n]  = p.requiereAcceso ? 1 : 0;
+      accesoMetodos[n] = {};
+      (accesoActual.metodos || []).forEach(function(m) { accesoMetodos[n][m] = true; });
+      accesoTipoEdificio[n] = accesoActual.tipoEdificio || '';
+      accesoContactoTipo[n] = accesoActual.contactoAccesoTipo || (accesoActual.contactoAcceso ? 'otro' : 'yo');
+      var puntoGuardado = accesoActual.puntoEncuentro || '';
+      if (puntoGuardado === 'directo_departamento') puntoGuardado = 'afuera_departamento';
+      accesoPuntoEncuentro[n] = puntoGuardado;
       html += '<div class="card">';
       if (props.length > 1) {
         html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)">';
@@ -770,16 +1022,59 @@ function renderEtapa1() {
       html += '<div class="field"><label>Referencias de cómo llegar (opcional)</label><textarea id="inp-referencias-' + n + '" placeholder="Entre calles, portón negro, datos de acceso..."></textarea></div>';
 
       html += '<p class="section-title" style="margin-top:18px">Producción</p>';
-      html += '<div class="field" id="field-orientacion-' + n + '" style="display:none"><label>Orientación del video *</label>';
-      html += '<div class="orientacion-grid">';
-      html += '<div class="orientacion-btn" id="ori-h-' + n + '" data-prop="' + n + '" data-valor="Horizontal (16:9) — YouTube, sitios web y pantallas">' +
-        '<div class="img-wrap"><img src="https://inmueblesaudiovisuales.com/orientacion-horizontal.svg" alt="Horizontal"></div>' +
-        '<div class="titulo">HORIZONTAL</div><div class="desc">YouTube · Sitios web · Pantallas</div></div>';
-      html += '<div class="orientacion-btn" id="ori-v-' + n + '" data-prop="' + n + '" data-valor="Vertical (9:16) — Reels, TikTok e Instagram">' +
-        '<div class="img-wrap"><img src="https://inmueblesaudiovisuales.com/orientacion-vertical.svg" alt="Vertical"></div>' +
-        '<div class="titulo">VERTICAL</div><div class="desc">Reels · TikTok · Instagram</div></div>';
-      html += '</div>';
-      html += '<input type="hidden" id="inp-orientacion-' + n + '"><span class="field-error" style="display:none;margin-top:6px" id="err-orientacion-' + n + '">Selecciona una orientación</span></div>';
+      if (!p.ocultarFormatoVideo) {
+        var fmtActual = formatosVideo[n];
+        html += '<div class="field"><label>¿Dónde se va a publicar el video?</label>';
+        html += '<div class="formato-grid">';
+
+        // Opción 1 — Solo redes sociales
+        html += '<div class="fmt-wrap">' +
+          '<span class="fmt-badge-over">Recomendado</span>' +
+          '<div class="formato-btn' + (fmtActual === 'vertical_nativo' ? ' activo' : '') + '" id="fmt-v-' + n + '" data-prop="' + n + '" data-valor="vertical_nativo">' +
+            '<div class="fmt-mockup-zone"><div class="fmt-phone"><div class="fmt-fill"></div></div></div>' +
+            '<div class="fmt-text">' +
+              '<div class="fmt-desc fmt-canal">Instagram · TikTok · Reels · Shorts</div>' +
+              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en vertical</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">No incluye versión horizontal</div>' +
+              '<div class="fmt-precio placeholder">$0</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+        // Opción 2 — Web o YouTube
+        html += '<div class="fmt-wrap">' +
+          '<div class="formato-btn' + (fmtActual === 'horizontal_recorte_vertical' ? ' activo' : '') + '" id="fmt-h-' + n + '" data-prop="' + n + '" data-valor="horizontal_recorte_vertical">' +
+            '<div class="fmt-mockup-zone"><div class="fmt-screen"><div class="fmt-screen-fill"></div></div><div class="fmt-phone"><div class="fmt-bar"></div><div class="fmt-mid"></div><div class="fmt-bar"></div></div></div>' +
+            '<div class="fmt-text">' +
+              '<div class="fmt-desc fmt-canal">YouTube · Sitio web</div>' +
+              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en horizontal</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">En redes se verá con franjas negras</div>' +
+              '<div class="fmt-precio placeholder">$0</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+        // Opción 3 — Los dos formatos
+        html += '<div class="fmt-wrap">' +
+          '<div class="formato-btn' + (fmtActual === 'doble_nativo' ? ' activo' : '') + '" id="fmt-d-' + n + '" data-prop="' + n + '" data-valor="doble_nativo">' +
+            '<div class="fmt-mockup-zone"><div class="fmt-phone"><div class="fmt-fill"></div></div><div class="fmt-screen"><div class="fmt-screen-fill"></div></div></div>' +
+            '<div class="fmt-text">' +
+              '<div class="fmt-desc fmt-canal">Redes + web · Calidad nativa en ambos</div>' +
+              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en ambos formatos</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">Se graba dos veces en la misma visita</div>' +
+              '<div class="fmt-precio">+$1,500</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+        html += '</div></div>';
+      }
+      html += '<div class="field"><label>¿La propiedad está en privada o requiere registro en caseta?</label>';
+      html += '<div class="acceso-grid">';
+      html += '<div class="acceso-btn' + (!accesoCaseta[n] ? ' activo' : '') + '" id="acc-no-' + n + '" data-prop="' + n + '" data-valor="0">No</div>';
+      html += '<div class="acceso-btn' + (accesoCaseta[n] ? ' activo' : '') + '" id="acc-si-' + n + '" data-prop="' + n + '" data-valor="1">Sí</div>';
+      html += '</div></div>';
+      html += renderAccesoDetalle(n, accesoActual);
 
       if (!esTerreno) {
         html += '<div class="field"><label>Sobre la propiedad (opcional)</label><textarea id="inp-sobre-' + n + '" placeholder="Recámaras, baños, m², amenidades, lo que la hace especial, historia, vista..." style="min-height:100px"></textarea><p class="field-hint">Entre más nos cuentes, mejor enfocamos el video.</p></div>';
@@ -831,10 +1126,6 @@ function renderEtapa1() {
   html += '<div class="card"><p class="section-title">Archivos del proyecto</p>';
   html += '<p class="upload-hint" style="margin-bottom:16px">Opcional. Puedes subir estos archivos ahora o enviárnoslos por WhatsApp después. No bloquean la firma.</p>';
   html += renderUploadField('logo', 0, 'Logo de la agencia o cliente', 'Opcional. PNG con fondo transparente y buena resolución.');
-  props.forEach(function(p, i) {
-    var sufijo = props.length > 1 ? ' — Propiedad ' + (i + 1) : '';
-    html += renderUploadField('fachada', i, 'Código QR de acceso' + sufijo, 'Solo si la propiedad está en fraccionamiento o condominio cerrado. La foto de la fachada mándanosla después por WhatsApp.');
-  });
   html += '</div>';
 
   // --- Términos y condiciones (cerrados por defecto) ---
@@ -851,6 +1142,8 @@ function renderEtapa1() {
   html += '<p style="font-size:12px;color:var(--concrete);margin-bottom:16px;line-height:1.6">Dibuja tu firma con el dedo o el cursor para formalizar el contrato.</p>';
   html += '<div class="firma-wrap"><canvas id="firma-canvas"></canvas><div class="firma-overlay" id="firma-overlay"><div class="firma-overlay-linea"></div><span class="firma-overlay-texto">Firma aquí</span></div></div>';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><p class="firma-hint">Dibuja tu firma en el recuadro</p><button class="btn-limpiar" id="btn-limpiar">Limpiar</button></div>';
+  html += '<div style="height:1px;background:var(--border);margin:20px 0"></div>';
+  html += '<div class="terms-row"><input type="checkbox" id="chk-politicas"><label for="chk-politicas">Entiendo que el servicio contempla máximo 2 rondas de revisiones menores y no incluye cambios estructurales ni de música.</label></div>';
   html += '</div>';
   html += '<button class="btn-primary" id="btn-firmar" disabled>FIRMAR CONTRATO</button>';
   html += '<div class="progress-bar-wrap" id="firma-progress-wrap"><div class="progress-bar-fill" id="firma-progress-fill"></div></div>';
@@ -866,6 +1159,33 @@ function renderEtapa1() {
   document.querySelectorAll('.orientacion-btn').forEach(function(el) {
     el.addEventListener('click', function() { seleccionarOrientacion(parseInt(el.dataset.prop, 10), el.dataset.valor); });
   });
+  document.querySelectorAll('.formato-btn').forEach(function(el) {
+    el.addEventListener('click', function() { seleccionarFormato(parseInt(el.dataset.prop, 10), el.dataset.valor); });
+  });
+  document.querySelectorAll('.acceso-btn').forEach(function(el) {
+    el.addEventListener('click', function() { seleccionarAcceso(parseInt(el.dataset.prop, 10), el.dataset.valor); });
+  });
+  document.querySelectorAll('.acceso-chip[data-metodo]').forEach(function(el) {
+    el.addEventListener('click', function() { toggleMetodoAcceso(parseInt(el.dataset.prop, 10), el.dataset.metodo); });
+  });
+  document.querySelectorAll('[data-tipo-prop]').forEach(function(el) {
+    el.addEventListener('click', function() { seleccionarTipoEdificio(parseInt(el.dataset.tipoProp, 10), el.dataset.tipoValor); });
+  });
+  document.querySelectorAll('[data-contacto-prop]').forEach(function(el) {
+    el.addEventListener('click', function() { seleccionarContactoAcceso(parseInt(el.dataset.contactoProp, 10), el.dataset.contactoValor); });
+  });
+  document.querySelectorAll('[data-punto-prop]').forEach(function(el) {
+    el.addEventListener('click', function() { seleccionarPuntoEncuentro(parseInt(el.dataset.puntoProp, 10), el.dataset.puntoValor); });
+  });
+  props.forEach(function(p, i) {
+    var n = i + 1;
+    actualizarBloqueAcceso(n);
+    actualizarBloqueEdificio(n);
+    actualizarContactoAcceso(n);
+    actualizarPuntoEncuentro(n);
+  });
+  var chkPol = document.getElementById('chk-politicas');
+  if (chkPol) chkPol.addEventListener('change', actualizarBtnFirmar);
   hasStroke = false;
   initCanvas();
   document.getElementById('btn-limpiar').addEventListener('click', limpiarFirma);
@@ -917,7 +1237,11 @@ function actualizarTotales() {
     }
     if (selected) addSum += (parseFloat(a.precio) || 0);
   });
-  var total    = base + addSum;
+  var dobleSum = 0;
+  Object.keys(formatosVideo).forEach(function(np) {
+    if (formatosVideo[np] === 'doble_nativo') dobleSum += 1500;
+  });
+  var total    = base + addSum + dobleSum;
   var anticipo = calcAnticipo(total);
 
   var elTotal    = document.getElementById('txt-total');
@@ -980,6 +1304,12 @@ function buildAdicionalesSeleccionados() {
       }
     });
   });
+  // Doble Formato Nativo: agregar automáticamente por propiedad
+  Object.keys(formatosVideo).forEach(function(np) {
+    if (formatosVideo[np] === 'doble_nativo') {
+      sel.push({ clave: 'doble-fmt-' + np, nombre: 'Doble Formato Nativo', precio: 1500, ofrecido: true });
+    }
+  });
   return sel;
 }
 
@@ -994,6 +1324,173 @@ function seleccionarOrientacion(n, valor) {
   if (errEl) errEl.style.display = 'none';
   var fieldEl = document.getElementById('field-orientacion-' + n);
   if (fieldEl) fieldEl.classList.remove('has-error');
+}
+
+function seleccionarFormato(n, valor) {
+  formatosVideo[n] = valor;
+  var oriMap = {
+    'vertical_nativo': 'Vertical (9:16) — Reels, TikTok e Instagram',
+    'horizontal_recorte_vertical': 'Horizontal (16:9) — YouTube, sitios web y pantallas',
+    'doble_nativo': 'Vertical (9:16) — Reels, TikTok e Instagram'
+  };
+  orientaciones[n] = oriMap[valor] || 'Vertical (9:16) — Reels, TikTok e Instagram';
+  document.querySelectorAll('.formato-btn[data-prop="' + n + '"]').forEach(function(b) {
+    b.classList.toggle('activo', b.dataset.valor === valor);
+  });
+  actualizarTotales();
+}
+
+function seleccionarAcceso(n, valor) {
+  accesoCaseta[n] = parseInt(valor, 10);
+  document.querySelectorAll('.acceso-btn[data-prop="' + n + '"]').forEach(function(b) {
+    b.classList.toggle('activo', b.dataset.valor === String(valor));
+  });
+  actualizarBloqueAcceso(n);
+}
+
+function actualizarBloqueAcceso(n) {
+  var detalle = document.getElementById('acceso-detalle-' + n);
+  if (detalle) detalle.classList.toggle('visible', !!accesoCaseta[n]);
+}
+
+function toggleMetodoAcceso(n, metodo) {
+  if (!accesoMetodos[n]) accesoMetodos[n] = {};
+  accesoMetodos[n][metodo] = !accesoMetodos[n][metodo];
+  var el = document.querySelector('.acceso-chip[data-prop="' + n + '"][data-metodo="' + CSS.escape(metodo) + '"]');
+  if (el) el.classList.toggle('activo', !!accesoMetodos[n][metodo]);
+}
+
+function seleccionarTipoEdificio(n, valor) {
+  accesoTipoEdificio[n] = valor !== undefined ? valor : '';
+  /* Actualizar estado visual de chips de tipo */
+  document.querySelectorAll('[data-tipo-prop="' + n + '"]').forEach(function(b) {
+    b.classList.toggle('activo', b.dataset.tipoValor === accesoTipoEdificio[n]);
+  });
+  /* Si el punto actual no existe en la nueva lista, limpiarlo */
+  var puntosNuevos = getPuntosParaTipo(accesoTipoEdificio[n]).map(function(p) { return p[0]; });
+  if (accesoPuntoEncuentro[n] && puntosNuevos.indexOf(accesoPuntoEncuentro[n]) === -1) {
+    accesoPuntoEncuentro[n] = '';
+  }
+  /* Re-renderizar chips de punto de encuentro */
+  var grid = document.getElementById('acceso-puntos-grid-' + n);
+  if (grid) {
+    grid.innerHTML = renderPuntosChips(n, accesoTipoEdificio[n], accesoPuntoEncuentro[n]);
+    grid.querySelectorAll('[data-punto-prop]').forEach(function(el) {
+      el.addEventListener('click', function() { seleccionarPuntoEncuentro(parseInt(el.dataset.puntoProp, 10), el.dataset.puntoValor); });
+    });
+  }
+  actualizarBloqueEdificio(n);
+  actualizarPuntoEncuentro(n);
+  var seccion = document.getElementById('acceso-punto-section-' + n);
+  if (seccion) seccion.classList.toggle('oculto', accesoTipoEdificio[n] === '');
+}
+
+function seleccionarContactoAcceso(n, valor) {
+  accesoContactoTipo[n] = valor || 'yo';
+  document.querySelectorAll('[data-contacto-prop="' + n + '"]').forEach(function(b) {
+    b.classList.toggle('activo', b.dataset.contactoValor === accesoContactoTipo[n]);
+  });
+  actualizarContactoAcceso(n);
+}
+
+function actualizarContactoAcceso(n) {
+  var el = document.getElementById('acceso-contacto-otro-' + n);
+  if (el) el.classList.toggle('visible', accesoContactoTipo[n] === 'otro');
+}
+
+function seleccionarPuntoEncuentro(n, valor) {
+  accesoPuntoEncuentro[n] = accesoPuntoEncuentro[n] === valor ? '' : (valor || '');
+  pintarPuntoEncuentro(n);
+}
+
+function pintarPuntoEncuentro(n) {
+  document.querySelectorAll('[data-punto-prop="' + n + '"]').forEach(function(b) {
+    b.classList.toggle('activo', b.dataset.puntoValor === accesoPuntoEncuentro[n]);
+  });
+  actualizarPuntoEncuentro(n);
+}
+
+function actualizarPuntoEncuentro(n) {
+  var el = document.getElementById('acceso-punto-otro-' + n);
+  if (el) el.classList.toggle('visible', accesoPuntoEncuentro[n] === 'otro');
+}
+
+function actualizarBloqueEdificio(n) {
+  var el = document.getElementById('acceso-edificio-' + n);
+  if (el) el.classList.toggle('visible', requiereDatosEdificio(accesoTipoEdificio[n]));
+}
+
+function valorCampo(id) {
+  var el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function leerAccesoPropiedad(n) {
+  var metodos = [];
+  Object.keys(accesoMetodos[n] || {}).forEach(function(m) {
+    if (accesoMetodos[n][m]) metodos.push(m);
+  });
+  var tipoEdificio = accesoTipoEdificio[n] || '';
+  var contactoTipo = accesoContactoTipo[n] || 'yo';
+  var puntoEncuentro = accesoPuntoEncuentro[n] || '';
+  var acceso = {
+    metodos: metodos,
+    nombreRegistro: valorCampo('inp-acceso-registro-' + n),
+    instruccionesCaseta: valorCampo('inp-acceso-caseta-' + n),
+    contactoAccesoTipo: contactoTipo,
+    tipoEdificio: tipoEdificio,
+    puntoEncuentro: puntoEncuentro,
+    restricciones: valorCampo('inp-acceso-restricciones-' + n),
+    comentarios: valorCampo('inp-acceso-comentarios-' + n)
+  };
+  if (contactoTipo === 'otro') acceso.contactoAcceso = valorCampo('inp-acceso-contacto-' + n);
+  if (puntoEncuentro === 'otro') acceso.puntoEncuentroDetalle = valorCampo('inp-acceso-punto-detalle-' + n);
+  if (requiereDatosEdificio(tipoEdificio)) {
+    acceso.torre = valorCampo('inp-acceso-torre-' + n);
+    acceso.piso = valorCampo('inp-acceso-piso-' + n);
+    acceso.departamento = valorCampo('inp-acceso-depa-' + n);
+    acceso.estacionamiento = valorCampo('inp-acceso-estacionamiento-' + n);
+  }
+  Object.keys(acceso).forEach(function(k) {
+    if (Array.isArray(acceso[k])) {
+      if (!acceso[k].length) delete acceso[k];
+    } else if (!acceso[k]) {
+      delete acceso[k];
+    }
+  });
+  return acceso;
+}
+
+function restaurarAccesoDesdePayload(n, acceso, forzarVisible) {
+  acceso = acceso || {};
+  accesoMetodos[n] = {};
+  (acceso.metodos || []).forEach(function(m) { accesoMetodos[n][m] = true; });
+  accesoTipoEdificio[n] = acceso.tipoEdificio || '';
+  accesoContactoTipo[n] = acceso.contactoAccesoTipo || (acceso.contactoAcceso ? 'otro' : 'yo');
+  accesoPuntoEncuentro[n] = acceso.puntoEncuentro || '';
+  seleccionarAcceso(n, forzarVisible || accesoTieneDatos(acceso) ? 1 : 0);
+  ACCESO_METODOS.forEach(function(item) {
+    var chip = document.querySelector('.acceso-chip[data-prop="' + n + '"][data-metodo="' + item[0] + '"]');
+    if (chip) chip.classList.toggle('activo', !!accesoMetodos[n][item[0]]);
+  });
+  [
+    ['inp-acceso-registro-' + n, acceso.nombreRegistro],
+    ['inp-acceso-contacto-' + n, acceso.contactoAcceso],
+    ['inp-acceso-caseta-' + n, acceso.instruccionesCaseta],
+    ['inp-acceso-punto-detalle-' + n, acceso.puntoEncuentroDetalle],
+    ['inp-acceso-torre-' + n, acceso.torre],
+    ['inp-acceso-piso-' + n, acceso.piso],
+    ['inp-acceso-depa-' + n, acceso.departamento],
+    ['inp-acceso-estacionamiento-' + n, acceso.estacionamiento],
+    ['inp-acceso-restricciones-' + n, acceso.restricciones],
+    ['inp-acceso-comentarios-' + n, acceso.comentarios]
+  ].forEach(function(pair) {
+    var el = document.getElementById(pair[0]);
+    if (el) el.value = pair[1] || '';
+  });
+  seleccionarContactoAcceso(n, accesoContactoTipo[n]);
+  /* Restaura tipo: actualiza chips, re-renderiza puntos y visibilidad de sección */
+  seleccionarTipoEdificio(n, accesoTipoEdificio[n]);
 }
 
 /* ── SIGNATURE CANVAS ───────────────────────────────────────────────────────── */
@@ -1075,7 +1572,9 @@ function actualizarBtnFirmar() {
   if (!btn) return;
   var chk = document.getElementById('chk-terminos');
   var terminos = chk ? chk.checked : true;
-  btn.disabled = !hasStroke || !terminos;
+  var chkP = document.getElementById('chk-politicas');
+  var politicas = chkP ? chkP.checked : true;
+  btn.disabled = !hasStroke || !terminos || !politicas;
 }
 
 /* ── ENVIAR FIRMA ───────────────────────────────────────────────────────────── */
@@ -1145,12 +1644,18 @@ function validarYRevisar() {
       var comsEl = document.getElementById('inp-comentarios');
       if (comsEl) datosEsp.comentarios = comsEl.value.trim();
     }
+    if (accesoCaseta[n]) {
+      var acceso = leerAccesoPropiedad(n);
+      if (accesoTieneDatos(acceso)) datosEsp.acceso = acceso;
+    }
     propsPayload.push({
       numPropiedad     : n,
       direccion        : dir,
       linkMaps         : maps,
       referencias      : (document.getElementById('inp-referencias-' + n) || {value:''}).value.trim(),
       orientacion      : ori,
+      formatoVideo     : formatosVideo[n] || 'vertical_nativo',
+      requiereAcceso   : accesoCaseta[n] || 0,
       sobreLaPropiedad : (document.getElementById('inp-sobre-' + n) || {value:''}).value.trim(),
       datosEspecificos : datosEsp,
       logoUrl          : archivosSubidos['logo-0'] || '',
@@ -1252,12 +1757,18 @@ function validarYFirmar() {
       var comsEl = document.getElementById('inp-comentarios');
       if (comsEl) datosEsp.comentarios = comsEl.value.trim();
     }
+    if (accesoCaseta[n]) {
+      var acceso = leerAccesoPropiedad(n);
+      if (accesoTieneDatos(acceso)) datosEsp.acceso = acceso;
+    }
     propsPayload.push({
       numPropiedad     : n,
       direccion        : dir,
       linkMaps         : maps,
       referencias      : (document.getElementById('inp-referencias-' + n) || {value:''}).value.trim(),
       orientacion      : ori,
+      formatoVideo     : formatosVideo[n] || 'vertical_nativo',
+      requiereAcceso   : accesoCaseta[n] || 0,
       sobreLaPropiedad : (document.getElementById('inp-sobre-' + n) || {value:''}).value.trim(),
       datosEspecificos : datosEsp,
       logoUrl          : archivosSubidos['logo-0'] || '',
@@ -1464,6 +1975,10 @@ function renderRevision() {
     }
     if (fp.direccion) html += '<div class="resumen-fila"><span class="resumen-label">Dirección</span><span class="resumen-valor">' + esc(fp.direccion) + '</span></div>';
     if (fp.orientacion) html += '<div class="resumen-fila"><span class="resumen-label">Orientación del video</span><span class="resumen-valor">' + esc(fp.orientacion.split(' — ')[0] || fp.orientacion) + '</span></div>';
+    if (fp.requiereAcceso) {
+      var accesoResumen = resumenAcceso((fp.datosEspecificos && fp.datosEspecificos.acceso) || {});
+      html += '<div class="resumen-fila"><span class="resumen-label">Acceso y caseta</span><span class="resumen-valor" style="text-align:right;white-space:pre-wrap">' + esc(accesoResumen) + '</span></div>';
+    }
   });
 
   var extrasAcordadosRev = (portalData && portalData.extrasAcordados) || [];
@@ -1540,6 +2055,9 @@ function renderRevision() {
           if (cEl) cEl.value = p.datosEspecificos.comentarios;
         }
         if (p.orientacion) seleccionarOrientacion(n, p.orientacion);
+        if (p.formatoVideo) seleccionarFormato(n, p.formatoVideo);
+        if (p.requiereAcceso) restaurarAccesoDesdePayload(n, (p.datosEspecificos && p.datosEspecificos.acceso) || {}, true);
+        else seleccionarAcceso(n, 0);
       });
       adicionalesOnGlobal = Object.assign({}, formData.adicionalesSnapshotGlobal);
       adicionalesOnProp   = JSON.parse(JSON.stringify(formData.adicionalesSnapshotProp));
@@ -1572,6 +2090,14 @@ function enviarFirma() {
   if (enviando || !formData) return;
   var errEl = document.getElementById('error-firma');
   if (errEl) errEl.style.display = 'none';
+
+  if (!hasStroke) {
+    if (errEl) {
+      errEl.textContent = 'Dibuja tu firma para continuar.';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
 
   if (!canvas) {
     errEl.textContent = 'Error: área de firma no disponible. Recarga la página.';
@@ -2030,6 +2556,12 @@ function renderEtapa4() {
       });
     }
     html += '</div>';
+
+    // Botón de revisión de video
+    var revisionUrl = 'revision.html?token=' + encodeURIComponent(d.token || '');
+    html += '<a href="' + revisionUrl + '" class="btn-secondary" style="display:flex;align-items:center;gap:10px;text-decoration:none;margin-bottom:16px">';
+    html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+    html += 'Enviar notas de revisión</a>';
   }
 
   html += '<details style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden">';

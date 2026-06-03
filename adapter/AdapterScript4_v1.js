@@ -1,6 +1,7 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
+// Ultima modificacion: 2026-06-03 21:20:34 CST — R35: agendarLlamadaProspecto renombrado a agendarLlamadaCliente; soporta contratoToken y seguimiento de clientes existentes
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -34,10 +35,13 @@ function doPost(e) {
       subirArchivo: subirArchivo,
       subirArchivoAdmin: subirArchivoAdmin,
       notificarResena: notificarResena,
+      notificarRevision: notificarRevision,
       enviarRecordatorioPago: enviarRecordatorioPago,
       notificarUpsell: notificarUpsell,
       obtenerLogoCliente: obtenerLogoCliente,
-      syncBackup: syncBackup
+      syncBackup: syncBackup,
+      agendarLlamadaProspecto: agendarLlamadaCliente,
+      agendarLlamadaCliente: agendarLlamadaCliente
     };
     if (!handlers[action]) return jsonResp({ error: 'Acción no reconocida: ' + action });
     var result = handlers[action](body);
@@ -138,18 +142,10 @@ function procesarFirma(body) {
         var mapsOk = limpiarLinkMaps_(prop.link_maps);
         var descripcion = [
           (prop.tipo || '') + (prop.paquete ? ' — ' + prop.paquete : ''),
-          prop.direccion          ? 'Dirección: '               + prop.direccion            : '',
-          mapsOk                  ? 'Mapa: '                    + mapsOk                    : '',
-          prop.orientacion        ? 'Orientación: '             + prop.orientacion          : '',
-          prop.entregables        ? 'Entregables: '             + prop.entregables          : '',
-          prop.referencias        ? 'Cómo llegar: '             + prop.referencias          : '',
-          prop.fachada_url        ? 'Foto de fachada: '         + prop.fachada_url          : '',
-          prop.perimetro_url      ? 'Perímetro: '               + prop.perimetro_url        : '',
-          prop.sobre_la_propiedad ? 'Notas: '                   + prop.sobre_la_propiedad   : '',
-          de.comentarios          ? 'Comentarios del cliente: ' + de.comentarios            : '',
-          urlPDF                  ? 'PDF Referencias: '         + urlPDF                    : '',
-          carpetaUrl              ? 'Carpeta Drive: '           + carpetaUrl                : '',
-          'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
+          prop.direccion  ? 'Dirección: '   + prop.direccion  : '',
+          mapsOk          ? 'Mapa: '        + mapsOk          : '',
+          prop.referencias ? 'Cómo llegar: ' + prop.referencias : '',
+          'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
         ].filter(Boolean).join('\n');
         var titulo = folio + ' IA ' + contrato.nombre_cliente + ' — ' + (prop.paquete || contrato.paquete_base || '');
         var evento = CalendarApp.getDefaultCalendar().createEvent(titulo, fechaEv, fin,
@@ -193,7 +189,7 @@ function procesarPDFsPendientes() {
       }
       enviarCorreoConPDF_(datos.contrato, datos.linkPortal, pdfUrl);
       props.deleteProperty(key);
-      firma.setTrashed(true);
+      if (datos.contrato.correo_cliente) firma.setTrashed(true);
     } catch (e) {
       console.error('Error procesando PDF para ' + datos.token + ':', e.message);
     }
@@ -404,18 +400,10 @@ function primerAbono(body) {
 
       var descripcion = [
         (prop.tipo || '') + (prop.paquete ? ' — ' + prop.paquete : ''),
-        prop.direccion        ? 'Dirección: '              + prop.direccion                       : '',
-        mapsOk                ? 'Mapa: '                   + mapsOk                               : '',
-        prop.orientacion      ? 'Orientación: '            + prop.orientacion                     : '',
-        prop.entregables      ? 'Entregables: '            + prop.entregables                     : '',
-        prop.referencias        ? 'Cómo llegar: '           + prop.referencias                     : '',
-        prop.fachada_url        ? 'Foto de fachada: '       + prop.fachada_url                     : '',
-        prop.perimetro_url      ? 'Perímetro: '             + prop.perimetro_url                   : '',
-        prop.sobre_la_propiedad ? 'Notas: '                + prop.sobre_la_propiedad              : '',
-        de.comentarios        ? 'Comentarios del cliente: '+ de.comentarios                       : '',
-        urlPDF                ? 'PDF Referencias: '        + urlPDF                               : '',
-        carpetaUrl            ? 'Carpeta Drive: '          + carpetaUrl                           : '',
-        'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
+        prop.direccion   ? 'Dirección: '    + prop.direccion   : '',
+        mapsOk           ? 'Mapa: '         + mapsOk           : '',
+        prop.referencias ? 'Cómo llegar: '  + prop.referencias : '',
+        'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
       ].filter(Boolean).join('\n');
 
       var titulo = (folio || token) + ' IA ' + contrato.nombre_cliente + ' — ' + (prop.paquete || contrato.paquete_base || '');
@@ -602,10 +590,6 @@ function enviarCorreoEntrega(body) {
   );
 }
 
-function notificarContratoCreado(body) {
-  // Solo guardar referencia — Bruno ve el admin, no necesita correo por cada contrato.
-}
-
 function notificarResena(body) {
   var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Calificación: <strong>' + (body.calificacion || '?') + '/5 estrellas</strong></p>' +
     '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 20px;white-space:pre-wrap">' + (body.resenaTexto || 'Sin comentario escrito.') + '</p>' +
@@ -618,6 +602,36 @@ function notificarResena(body) {
     CONFIG.EMAIL_BRUNO,
     'Nueva reseña — ' + (body.calificacion || '?') + '/5 estrellas',
     'Calificación: ' + (body.calificacion || '?') + '/5\n\n' + (body.resenaTexto || ''),
+    { htmlBody: html }
+  );
+}
+
+function notificarRevision(body) {
+  var filas = '';
+  var revisiones = body.revisiones || [];
+  revisiones.forEach(function(r, i) {
+    var minuto = (r.minuto_segundo || '—').trim();
+    var desc   = (r.descripcion_ajuste || '').trim();
+    if (!desc) return;
+    filas += '<tr style="border-bottom:1px solid #E5E3DE">' +
+      '<td style="padding:10px 12px;font-size:13px;color:#9B9B9F;white-space:nowrap;vertical-align:top">' + minuto + '</td>' +
+      '<td style="padding:10px 12px;font-size:13px;color:#1C1C1E;line-height:1.5;vertical-align:top">' + desc + '</td></tr>';
+  });
+  var tabla = revisiones.length
+    ? '<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E3DE;border-radius:8px;border-collapse:collapse;overflow:hidden;margin-bottom:20px">' +
+      '<thead><tr style="background:#F9F7F4"><th align="left" style="padding:10px 12px;font-size:12px;color:#9B9B9F;font-weight:600">TIMECODE</th>' +
+      '<th align="left" style="padding:10px 12px;font-size:12px;color:#9B9B9F;font-weight:600">NOTA DE AJUSTE</th></tr></thead>' +
+      '<tbody>' + filas + '</tbody></table>'
+    : '<p style="color:#9B9B9F;font-size:13px">Sin notas enviadas.</p>';
+
+  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 4px"><strong>' + (body.nombreCliente || 'Cliente') + '</strong> envió notas de revisión</p>' +
+    '<p style="color:#9B9B9F;font-size:12px;margin:0 0 20px">Folio: ' + (body.folio || '—') + '</p>' +
+    tabla;
+  var html = htmlCorreo_('Revisión de video', cuerpo, '', '');
+  GmailApp.sendEmail(
+    CONFIG.EMAIL_BRUNO,
+    'Revisión de video — ' + (body.nombreCliente || '') + ' (' + (body.folio || '') + ')',
+    revisiones.map(function(r) { return (r.minuto_segundo || '—') + ': ' + (r.descripcion_ajuste || ''); }).join('\n'),
     { htmlBody: html }
   );
 }
@@ -754,18 +768,10 @@ function reagendarPropiedad(body) {
         var mapsOkR = limpiarLinkMaps_(propiedad.link_maps);
         var nuevaDescripcion = [
           (propiedad.tipo || '') + (propiedad.paquete ? ' — ' + propiedad.paquete : ''),
-          propiedad.direccion          ? 'Dirección: '               + propiedad.direccion            : '',
-          mapsOkR                      ? 'Mapa: '                    + mapsOkR                        : '',
-          propiedad.orientacion        ? 'Orientación: '             + propiedad.orientacion          : '',
-          propiedad.entregables        ? 'Entregables: '             + propiedad.entregables          : '',
-          propiedad.referencias        ? 'Cómo llegar: '             + propiedad.referencias          : '',
-          propiedad.fachada_url        ? 'Foto de fachada: '         + propiedad.fachada_url          : '',
-          propiedad.perimetro_url      ? 'Perímetro: '               + propiedad.perimetro_url        : '',
-          propiedad.sobre_la_propiedad ? 'Notas: '                   + propiedad.sobre_la_propiedad   : '',
-          de.comentarios               ? 'Comentarios del cliente: ' + de.comentarios                 : '',
-          urlPDFNuevo                  ? 'PDF Referencias: '         + urlPDFNuevo                    : '',
-          propiedad.carpeta_control_id ? 'Carpeta Drive: '           + (function() { try { return DriveApp.getFolderById(propiedad.carpeta_control_id).getUrl(); } catch(e) { return ''; } })() : '',
-          'Checklist de rodaje: https://contratos.inmueblesaudiovisuales.com/checklist.html?token=' + token,
+          propiedad.direccion   ? 'Dirección: '    + propiedad.direccion   : '',
+          mapsOkR               ? 'Mapa: '         + mapsOkR               : '',
+          propiedad.referencias ? 'Cómo llegar: '  + propiedad.referencias : '',
+          'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
         ].filter(Boolean).join('\n');
         evento.setDescription(nuevaDescripcion);
       }
@@ -862,10 +868,22 @@ function syncBackup(body) {
   syncHoja('Propiedades4', data.propiedades, [
     'contrato_token','num_propiedad','tipo','paquete','fecha_sesion','hora_sesion','direccion'
   ]);
-  syncHoja('Paquetes4', data.paquetes, [
-    'clave','tipo','nombre','precio','es_adicional','activo','orden'
-  ]);
-}
+	  syncHoja('Paquetes4', data.paquetes, [
+	    'clave','tipo','nombre','precio','es_adicional','activo','orden'
+	  ]);
+	  syncHoja('Clientes4', data.clientes, [
+	    'id','nombre','telefono','correo','origen','notas_perfil','fecha_creacion','fecha_ultima_actividad',
+	    'trabajos_activos','num_contratos','ultimo_contrato','total_facturado'
+	  ]);
+	  syncHoja('Trabajos4', data.trabajos, [
+	    'id','cliente_id','estatus','interes','paquetes_cotizados_json','portafolio_links_json',
+	    'propiedades_interes_json','presupuesto_estimado','notas','contrato_token',
+	    'fecha_creacion','fecha_ultima_actividad'
+	  ]);
+	  syncHoja('Actividades4', data.actividades, [
+	    'id','cliente_id','trabajo_id','tipo','descripcion','fecha_actividad','hora','fecha_creacion'
+	  ]);
+	}
 
 // ── INSTALAR TRIGGERS ─────────────────────────────────────────────────────
 
@@ -996,6 +1014,56 @@ function limpiarLinkMaps_(url) {
   return url;
 }
 
+function formatearAccesoCalendar_(prop) {
+  if (!prop) return '';
+  var datos = {};
+  try {
+    datos = typeof prop.datos_especificos === 'string'
+      ? JSON.parse(prop.datos_especificos || '{}')
+      : (prop.datos_especificos || {});
+  } catch(e) {
+    datos = {};
+  }
+  var acceso = datos && datos.acceso ? datos.acceso : {};
+  var requiere = prop.requiere_acceso === 1 || prop.requiere_acceso === true || prop.requiere_acceso === '1';
+  var labels = {
+    qr: 'QR',
+    invitacion_digital: 'Invitación digital',
+    codigo: 'Código',
+    lista_acceso: 'Lista de acceso',
+    registro_previo: 'Registro previo',
+    llamada_al_llegar: 'Llamada al llegar',
+    otro: 'Otro'
+  };
+  var puntos = {
+    directo_departamento: 'Pasamos directo al departamento',
+    lobby: 'Nos vemos en lobby',
+    estacionamiento: 'Nos vemos en estacionamiento',
+    otro: 'Otro punto'
+  };
+  var lineas = [];
+  if (acceso.metodos && acceso.metodos.length) {
+    var metodos = [];
+    for (var i = 0; i < acceso.metodos.length; i++) metodos.push(labels[acceso.metodos[i]] || acceso.metodos[i]);
+    lineas.push('Método de acceso: ' + metodos.join(', '));
+  }
+  if (acceso.nombreRegistro) lineas.push('Registro: ' + acceso.nombreRegistro);
+  if (acceso.instruccionesCaseta) lineas.push('Caseta: ' + acceso.instruccionesCaseta);
+  if (acceso.contactoAccesoTipo === 'yo') lineas.push('Contacto acceso: Cliente');
+  if (acceso.contactoAccesoTipo === 'otro' && acceso.contactoAcceso) lineas.push('Contacto acceso: ' + acceso.contactoAcceso);
+  if (acceso.tipoEdificio) lineas.push('Tipo acceso: ' + acceso.tipoEdificio);
+  if (acceso.torre) lineas.push('Torre: ' + acceso.torre);
+  if (acceso.piso) lineas.push('Piso: ' + acceso.piso);
+  if (acceso.departamento) lineas.push('Departamento: ' + acceso.departamento);
+  if (acceso.estacionamiento) lineas.push('Estacionamiento: ' + acceso.estacionamiento);
+  if (acceso.puntoEncuentro) lineas.push('Punto de encuentro: ' + (puntos[acceso.puntoEncuentro] || acceso.puntoEncuentro));
+  if (acceso.puntoEncuentroDetalle) lineas.push('Detalle encuentro: ' + acceso.puntoEncuentroDetalle);
+  if (acceso.restricciones) lineas.push('Restricciones acceso: ' + acceso.restricciones);
+  if (acceso.comentarios) lineas.push('Comentarios acceso: ' + acceso.comentarios);
+  if (!lineas.length && requiere) lineas.push('Requiere acceso especial; sin instrucciones adicionales');
+  return lineas.length ? 'Acceso y caseta:\n' + lineas.join('\n') : '';
+}
+
 function obtenerOCrearCarpetaFirmas_() {
   var props = PropertiesService.getScriptProperties();
   var id = props.getProperty('CARPETA_FIRMAS_V4_ID');
@@ -1016,4 +1084,58 @@ function obtenerOCrearCarpetaContratosFirmados_() {
   var carpeta = DriveApp.getRootFolder().createFolder('IAV — Contratos Firmados v4');
   props.setProperty('CARPETA_CONTRATOS_V4_ID', carpeta.getId());
   return carpeta;
+}
+
+// ── PROSPECTOS — agenda llamada en Calendar ──────────────────────────────────
+
+function agendarLlamadaCliente(body) {
+  var nombre        = body.nombre || '';
+  var telefono      = body.telefono || '';
+  var interes       = body.interes || '';
+  var fechaLlamada  = body.fechaLlamada || '';
+  var horaLlamada   = body.horaLlamada || '09:00';
+  var notas         = body.notas || '';
+  var contratoToken = body.contratoToken || '';
+
+  if (!fechaLlamada) return { error: 'fechaLlamada requerida' };
+
+  var partesFecha = fechaLlamada.split('-');
+  var partesHora  = horaLlamada.split(':');
+  var inicio = new Date(
+    parseInt(partesFecha[0]),
+    parseInt(partesFecha[1]) - 1,
+    parseInt(partesFecha[2]),
+    parseInt(partesHora[0]),
+    parseInt(partesHora[1] || 0),
+    0
+  );
+  var fin = new Date(inicio.getTime() + 30 * 60 * 1000);
+
+  var interesLabels = {
+    'foto':  'Fotografía',
+    'video': 'Video + Drone',
+    '360':   'Recorrido 360°',
+    'combo': 'Paquete completo'
+  };
+  var interesLabel = interesLabels[interes] || interes || '';
+
+  var lineas = [
+    contratoToken ? 'Seguimiento de cliente — IAV Contratos' : 'Llamada con cliente — IAV Contratos',
+    '',
+    'Nombre: ' + nombre,
+    'Teléfono: ' + telefono,
+    interesLabel ? 'Le interesa: ' + interesLabel : '',
+    contratoToken ? 'Portal: ' + CONFIG.WORKER_URL + '/portal.html?token=' + contratoToken : '',
+    notas ? 'Notas: ' + notas : ''
+  ];
+
+  var descripcion = lineas.filter(Boolean).join('\n');
+  var titulo = (contratoToken ? 'Seguimiento — ' : 'Llamada — ') + nombre +
+               (interesLabel ? ' (' + interesLabel + ')' : '');
+
+  CalendarApp.getDefaultCalendar().createEvent(titulo, inicio, fin, {
+    description: descripcion
+  });
+
+  return { ok: true };
 }

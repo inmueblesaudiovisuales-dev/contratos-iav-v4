@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IAV Chat</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-bg: #111827;
+  --sidebar-hover: #1e2a3a;
+  --sidebar-active: #1e3a5f;
+  --sidebar-border: #1f2937;
+  --accent: #c9a84c;
+  --accent-dim: #a07c30;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --bot-bubble: #d1fae5;
+  --bot-text: #065f46;
+  --agent-bubble: #dbeafe;
+  --agent-text: #1e40af;
+  --client-bubble: #ffffff;
+  --client-text: #111827;
+  --chat-bg: #f0f2f5;
+  --compose-bg: #ffffff;
+  --header-bg: #ffffff;
+  --border: #e5e7eb;
+  --online: #22c55e;
+  --unread: #ef4444;
+  --shadow: 0 1px 3px rgba(0,0,0,.12);
+  --radius: 10px;
+  --sidebar-w: 340px;
+}
+
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+/* ── LAYOUT ─────────────────────────────────────── */
+.app {
+  display: flex;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--sidebar-bg);
+}
+
+/* ── SIDEBAR ─────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  transition: transform .25s ease;
+}
+
+.sidebar-top {
+  padding: 16px 16px 0;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.brand-logo {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; color: #111;
+}
+
+.brand-name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.brand-sub {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.agent-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--online);
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--online);
+}
+
+.search-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.search-wrap svg {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.search-input {
+  width: 100%;
+  padding: 9px 12px 9px 34px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus { border-color: var(--accent); }
+
+.filters {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.filters::-webkit-scrollbar { display: none; }
+
+.filter-btn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+  background: #1f2937;
+  color: var(--text-secondary);
+}
+
+.filter-btn.active {
+  background: var(--accent);
+  color: #111;
+}
+
+.filter-btn:hover:not(.active) {
+  background: #374151;
+  color: var(--text-primary);
+}
+
+.conv-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #374151 transparent;
+}
+
+.conv-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background .1s;
+  border-left: 3px solid transparent;
+  position: relative;
+}
+
+.conv-item:hover { background: var(--sidebar-hover); }
+.conv-item.active {
+  background: var(--sidebar-active);
+  border-left-color: var(--accent);
+}
+
+.conv-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 16px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.conv-avatar .avatar-badge {
+  position: absolute;
+  bottom: 1px; right: 1px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--sidebar-bg);
+  font-size: 7px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.badge-bot { background: #22c55e; }
+.badge-manual { background: var(--accent); }
+
+.conv-info { flex: 1; min-width: 0; }
+
+.conv-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.conv-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.conv-preview {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 3px;
+}
+
+.conv-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.tag-bot { background: #14532d; color: #86efac; }
+.tag-manual { background: #713f12; color: #fde68a; }
+.tag-prospecto { background: #1e1b4b; color: #a5b4fc; }
+.tag-contrato { background: #0c4a6e; color: #7dd3fc; }
+.tag-resuelto { background: #1f2937; color: #9ca3af; }
+
+.unread-badge {
+  background: var(--unread);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 2px 6px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ── CHAT MAIN ───────────────────────────────────── */
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--chat-bg);
+  min-width: 0;
+}
+
+/* Empty state */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  gap: 16px;
+}
+
+.empty-state svg { opacity: .3; }
+.empty-state p { font-size: 15px; }
+
+/* Chat window */
+.chat-window {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-window.visible { display: flex; }
+
+/* Chat header */
+.chat-header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow);
+}
+
+.back-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #374151;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.header-avatar {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px;
+  flex-shrink: 0;
+}
+
+.header-info { flex: 1; min-width: 0; }
+
+.header-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.header-phone {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bot-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.bot-toggle.bot-on {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.bot-toggle.bot-on:hover { background: #a7f3d0; }
+
+.bot-toggle.bot-off {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.bot-toggle.bot-off:hover { background: #fde68a; }
+
+.bot-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+
+.bot-on .bot-dot { background: #16a34a; }
+.bot-off .bot-dot { background: #d97706; }
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  color: #6b7280;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+
+.icon-btn:hover { background: #f3f4f6; color: #374151; }
+
+.contract-btn {
+  padding: 7px 14px;
+  background: #111827;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+
+.contract-btn:hover { background: #1f2937; }
+
+/* Messages */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 20px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.date-divider {
+  text-align: center;
+  margin: 12px 0;
+}
+
+.date-divider span {
+  background: #e5e7eb;
+  color: #6b7280;
+  font-size: 11.5px;
+  padding: 4px 12px;
+  border-radius: 10px;
+}
+
+.msg-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+  animation: fadeUp .2s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg-row.client { align-self: flex-start; }
+.msg-row.bot    { align-self: flex-end; }
+.msg-row.agent  { align-self: flex-end; }
+
+.msg-sender-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  margin-bottom: 3px;
+  padding: 0 4px;
+}
+
+.bot .msg-sender-label { color: #16a34a; text-align: right; }
+.agent .msg-sender-label { color: #2563eb; text-align: right; }
+
+.msg-bubble {
+  padding: 9px 13px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  word-break: break-word;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  position: relative;
+}
+
+.client .msg-bubble {
+  background: var(--client-bubble);
+  color: var(--client-text);
+  border-bottom-left-radius: 3px;
+}
+
+.bot .msg-bubble {
+  background: var(--bot-bubble);
+  color: var(--bot-text);
+  border-bottom-right-radius: 3px;
+}
+
+.agent .msg-bubble {
+  background: var(--agent-bubble);
+  color: var(--agent-text);
+  border-bottom-right-radius: 3px;
+}
+
+.msg-footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  padding: 0 4px;
+}
+
+.client .msg-footer { justify-content: flex-start; }
+.bot .msg-footer, .agent .msg-footer { justify-content: flex-end; }
+
+.msg-time {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.msg-status { color: #60a5fa; font-size: 12px; }
+
+.typing-indicator {
+  align-self: flex-start;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  background: white;
+  border-radius: 12px;
+  border-bottom-left-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+
+.typing-indicator.visible { display: flex; }
+
+.typing-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: typingBounce 1.2s infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: .2s; }
+.typing-dot:nth-child(3) { animation-delay: .4s; }
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-5px); }
+}
+
+/* Compose */
+.chat-compose {
+  background: var(--compose-bg);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.compose-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 22px;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  max-height: 120px;
+  line-height: 1.5;
+  font-family: inherit;
+  transition: border-color .15s;
+  scrollbar-width: thin;
+}
+
+.compose-input:focus { border-color: #9ca3af; }
+.compose-input::placeholder { color: #9ca3af; }
+
+.send-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: var(--sidebar-bg);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s, transform .1s;
+}
+
+.send-btn:hover { background: #374151; }
+.send-btn:active { transform: scale(.95); }
+
+.compose-manual-notice {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fefce8;
+  border-top: 1px solid #fef08a;
+  font-size: 12px;
+  color: #854d0e;
+  flex-shrink: 0;
+}
+
+.compose-manual-notice.visible { display: flex; }
+
+/* Notification dot on title */
+.notif-indicator {
+  display: inline-block;
+  width: 8px; height: 8px;
+  background: var(--unread);
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
+/* ── MOBILE ──────────────────────────────────────── */
+@media (max-width: 680px) {
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    transform: translateX(0);
+  }
+
+  .sidebar.hidden { transform: translateX(-100%); }
+
+  .chat-main {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 20;
+    transform: translateX(100%);
+    transition: transform .25s ease;
+  }
+
+  .chat-main.visible { transform: translateX(0); }
+
+  .back-btn { display: flex; }
+
+  .contract-btn span { display: none; }
+  .contract-btn { padding: 7px 10px; }
+
+  .msg-row { max-width: 85%; }
+
+  .bot-toggle span.label { display: none; }
+}
+
+/* ── FOCUS VISIBLE (navegación por teclado) ──────── */
+.conv-item:focus-visible,
+.filter-btn:focus-visible,
+.bot-toggle:focus-visible,
+.contract-btn:focus-visible,
+.icon-btn:focus-visible,
+.send-btn:focus-visible,
+.back-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.search-input:focus-visible,
+.compose-input:focus-visible { outline: none; }
+
+/* ── SCROLLBAR ───────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">
+        <div class="brand-logo">IAV</div>
+        <div>
+          <div class="brand-name">IAV Chat</div>
+          <div class="brand-sub">Inmuebles Audiovisuales</div>
+        </div>
+        <div class="agent-status">
+          <div class="status-dot"></div>
+          Bruno
+        </div>
+      </div>
+
+      <div class="search-wrap">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input class="search-input" id="searchInput" placeholder="Buscar conversación..." oninput="filterConvs()">
+      </div>
+
+      <div class="filters">
+        <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
+        <button class="filter-btn" onclick="setFilter('bot',this)">🤖 Bot activo</button>
+        <button class="filter-btn" onclick="setFilter('manual',this)">👤 Manual</button>
+        <button class="filter-btn" onclick="setFilter('resueltos',this)">✓ Resueltos</button>
+      </div>
+    </div>
+
+    <div class="conv-list" id="convList"></div>
+  </aside>
+
+  <!-- ── CHAT MAIN ── -->
+  <main class="chat-main" id="chatMain">
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <svg width="64" height="64" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <p>Selecciona una conversación</p>
+    </div>
+
+    <!-- Chat window -->
+    <div class="chat-window" id="chatWindow">
+
+      <!-- Header -->
+      <div class="chat-header">
+        <button class="back-btn" onclick="closeChatMobile()" aria-label="Volver a la lista de conversaciones">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div class="header-avatar" id="headerAvatar"></div>
+        <div class="header-info">
+          <div class="header-name" id="headerName"></div>
+          <div class="header-phone" id="headerPhone"></div>
+        </div>
+        <div class="header-actions">
+          <button class="bot-toggle bot-on" id="botToggle" onclick="toggleBot()" role="switch" aria-checked="true" aria-label="Bot automático">
+            <div class="bot-dot"></div>
+            <span class="label" id="botToggleLabel">Bot activo</span>
+          </button>
+          <button class="contract-btn" id="contractBtn" onclick="openContract()">
+            <span>Ver contrato</span> ↗
+          </button>
+          <button class="icon-btn" title="Más opciones" aria-label="Más opciones">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Mensajes de la conversación">
+        <div class="typing-indicator" id="typingIndicator">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+
+      <!-- Manual notice -->
+      <div class="compose-manual-notice" id="manualNotice">
+        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 15a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm1-4h-2V7h2v6z"/>
+        </svg>
+        Bot pausado — estás atendiendo manualmente. El bot no responderá hasta que lo reactives.
+      </div>
+
+      <!-- Compose -->
+      <div class="chat-compose">
+        <textarea
+          class="compose-input"
+          id="composeInput"
+          placeholder="Escribe un mensaje..."
+          rows="1"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <button class="send-btn" onclick="sendMessage()" aria-label="Enviar mensaje">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── DATOS DE EJEMPLO ──────────────────────────────────────────────────────────
+
+const COLORS = [
+  ['#fde68a','#78350f'], ['#bbf7d0','#14532d'], ['#bfdbfe','#1e3a8a'],
+  ['#fecaca','#7f1d1d'], ['#e9d5ff','#4c1d95'], ['#fed7aa','#7c2d12']
+];
+
+const conversations = [
+  {
+    id: 'c1',
+    name: 'María González',
+    phone: '+52 81 1234 5678',
+    colorIdx: 0,
+    botActive: true,
+    status: 'prospecto',
+    contractToken: null,
+    unread: 2,
+    lastTime: 'Hace 2 min',
+    lastMsg: 'Perfecto, el jueves me queda bien',
+    messages: [
+      { type: 'client', text: 'Hola buenas tardes, ¿cuánto cobran por fotografía y video para una casa?', time: '14:28' },
+      { type: 'bot', text: 'Buenas tardes. Con gusto te detallamos nuestros servicios. ¿La propiedad es residencial, departamento o terreno?', time: '14:28' },
+      { type: 'client', text: 'Es una casa en San Pedro Garza García', time: '14:29' },
+      { type: 'bot', text: 'Perfecto. Para propiedades residenciales en San Pedro tenemos el Paquete Residencial que incluye fotografía profesional, video cinemático, vuelo con drone, recorrido virtual 360° y amenidades. El costo es de $4,500 MXN con entrega en 5 días hábiles.\n\n¿Te gustaría conocer más detalles o revisar fechas disponibles?', time: '14:29' },
+      { type: 'client', text: 'Sí, ¿qué fechas tienen disponibles?', time: '14:31' },
+      { type: 'bot', text: 'Tenemos disponibilidad esta semana y la siguiente. Los días más próximos libres son:\n\n• Jueves 5 de junio — 10:00 AM\n• Viernes 6 de junio — 9:00 AM\n• Lunes 9 de junio — 11:00 AM\n\n¿Alguna de estas opciones te funciona?', time: '14:31' },
+      { type: 'client', text: 'Perfecto, el jueves me queda bien', time: '14:33' },
+    ]
+  },
+  {
+    id: 'c2',
+    name: 'Roberto Ramírez',
+    phone: '+52 81 8765 4321',
+    colorIdx: 2,
+    botActive: false,
+    status: 'contrato',
+    contractToken: 'abc123',
+    unread: 1,
+    lastTime: 'Hace 18 min',
+    lastMsg: '¿Ya está listo el video? Me urge para publicarlo',
+    messages: [
+      { type: 'client', text: 'Buenas tardes, ¿ya está listo mi material?', time: '13:45' },
+      { type: 'bot', text: 'Hola Roberto. Revisando tu proyecto IAV-2606.02-A — actualmente está en etapa de post-producción. En cuanto el equipo de edición lo tenga listo te notificamos de inmediato.', time: '13:45' },
+      { type: 'client', text: '¿Y cuándo sería eso aproximadamente?', time: '13:46' },
+      { type: 'bot', text: 'Tu entrega estimada es el martes 10 de junio. ¿Tienes alguna duda adicional?', time: '13:46' },
+      { type: 'client', text: '¿Ya está listo el video? Me urge para publicarlo', time: '14:17' },
+    ]
+  },
+  {
+    id: 'c3',
+    name: 'Ana Luisa Vega',
+    phone: '+52 81 2233 4455',
+    colorIdx: 4,
+    botActive: true,
+    status: 'prospecto',
+    contractToken: null,
+    unread: 0,
+    lastTime: '10:12',
+    lastMsg: 'Gracias, ahorita lo veo y te aviso',
+    messages: [
+      { type: 'client', text: 'Hola, tengo un terreno en Allende, ¿hacen producción ahí?', time: '09:55' },
+      { type: 'bot', text: 'Buenos días. Sí trabajamos en Allende. Para propiedades en esa zona el Paquete Terreno tiene un costo base de $4,000 MXN más un cargo de traslado de $500 MXN por la distancia desde Monterrey.\n\nEl paquete incluye video aéreo con drone, animación de perímetro con tracking 3D, fotografía aérea con perímetro marcado y recorrido virtual aéreo.', time: '09:56' },
+      { type: 'client', text: '¿Y cuántos días de entrega?', time: '10:03' },
+      { type: 'bot', text: '5 días hábiles. Si necesitas el material antes, contamos con la opción de Entrega Día Siguiente por $1,000 MXN adicionales.', time: '10:03' },
+      { type: 'client', text: 'Ok, ¿me puedes mandar la información completa?', time: '10:11' },
+      { type: 'bot', text: 'Por supuesto. Puedes ver nuestro portafolio completo y los detalles de cada paquete en inmueblesaudiovisuales.com. Si quieres proceder, te generamos el contrato en línea y el proceso toma solo unos minutos. ¿Tienes fecha en mente para la sesión?', time: '10:11' },
+      { type: 'client', text: 'Gracias, ahorita lo veo y te aviso', time: '10:12' },
+    ]
+  },
+  {
+    id: 'c4',
+    name: 'Carlos Mendoza',
+    phone: '+52 81 9988 7766',
+    colorIdx: 1,
+    botActive: true,
+    status: 'resuelto',
+    contractToken: 'def456',
+    unread: 0,
+    lastTime: 'Ayer',
+    lastMsg: 'Muchas gracias, excelente trabajo',
+    messages: [
+      { type: 'client', text: 'Ya vi el video, está increíble. ¿Cómo hago para pagar el resto?', time: 'Ayer 16:20' },
+      { type: 'bot', text: 'Qué gusto que te haya gustado. Te compartimos el enlace de pago por el saldo restante de $2,250 MXN:\n\nconekta.com/pago/xyz789\n\nUna vez confirmado el pago liberamos los archivos en alta resolución sin marca de agua.', time: 'Ayer 16:21' },
+      { type: 'client', text: 'Listo, ya pagué', time: 'Ayer 16:45' },
+      { type: 'bot', text: 'Confirmamos la recepción de tu pago. Aquí tienes el enlace a tu carpeta de Google Drive con todos los materiales en alta resolución:\n\ndrive.google.com/carpeta/abc\n\nA nombre de todo el equipo de Inmuebles Audiovisuales, te agradecemos tu confianza. ¡Mucho éxito con la promoción de la propiedad!', time: 'Ayer 16:45' },
+      { type: 'client', text: 'Muchas gracias, excelente trabajo', time: 'Ayer 16:50' },
+    ]
+  },
+  {
+    id: 'c5',
+    name: 'Sofía Torres',
+    phone: '+52 81 5544 3322',
+    colorIdx: 5,
+    botActive: true,
+    status: 'prospecto',
+    contractToken: null,
+    unread: 0,
+    lastTime: 'Lun',
+    lastMsg: 'Búscame en dos semanas, ahorita estoy ocupada',
+    messages: [
+      { type: 'client', text: 'Hola, quiero cotizar para un departamento en Cumbres', time: 'Lun 11:30' },
+      { type: 'bot', text: 'Hola. Para departamentos en Cumbres tenemos el Paquete Residencial completo por $4,500 MXN. Incluye fotografía, video cinemático, drone y recorrido virtual 360°.\n\n¿Te gustaría revisar fechas disponibles?', time: 'Lun 11:31' },
+      { type: 'client', text: 'Búscame en dos semanas, ahorita estoy ocupada', time: 'Lun 11:35' },
+      { type: 'bot', text: 'Perfecto, sin problema. Te contactamos el lunes 16 de junio para retomar. ¡Que tengas excelente semana!', time: 'Lun 11:35' },
+    ]
+  },
+];
+
+// ── ESTADO ────────────────────────────────────────────────────────────────────
+
+let activeConvId = null;
+let currentFilter = 'todos';
+let hasUnread = false;
+const originalTitle = 'IAV Chat';
+
+// ── RENDER LISTA DE CONVERSACIONES ────────────────────────────────────────────
+
+function getStatusLabel(conv) {
+  if (conv.status === 'resuelto') return '<span class="conv-tag tag-resuelto">Resuelto</span>';
+  if (conv.status === 'contrato') return '<span class="conv-tag tag-contrato">Contrato</span>';
+  return '<span class="conv-tag tag-prospecto">Prospecto</span>';
+}
+
+function getBotBadge(conv) {
+  if (conv.status === 'resuelto') return '';
+  return conv.botActive
+    ? '<span class="conv-tag tag-bot" style="font-size:10px">🤖 Bot</span>'
+    : '<span class="conv-tag tag-manual" style="font-size:10px">👤 Manual</span>';
+}
+
+function avatarColor(idx) {
+  return COLORS[idx % COLORS.length];
+}
+
+// Escapa HTML para evitar XSS (nombres y mensajes vienen del cliente en producción)
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Deriva la etiqueta de día desde el time string del mensaje ("Ayer 16:20" → "Ayer")
+const DIAS = ['Ayer','Lun','Mar','Mié','Mie','Jue','Vie','Sáb','Sab','Dom'];
+function dayLabel(time) {
+  const dia = DIAS.find(d => time.startsWith(d));
+  if (dia) return dia === 'Mie' ? 'Mié' : dia === 'Sab' ? 'Sáb' : dia;
+  return 'Hoy';
+}
+function stripDay(time) {
+  const dia = DIAS.find(d => time.startsWith(d));
+  return dia ? time.slice(dia.length).trim() : time;
+}
+
+function initials(name) {
+  return name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+}
+
+function renderConvList() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const list = document.getElementById('convList');
+  list.innerHTML = '';
+
+  conversations
+    .filter(c => {
+      if (q && !c.name.toLowerCase().includes(q) && !c.phone.includes(q)) return false;
+      if (currentFilter === 'bot')      return c.botActive && c.status !== 'resuelto';
+      if (currentFilter === 'manual')   return !c.botActive && c.status !== 'resuelto';
+      if (currentFilter === 'resueltos') return c.status === 'resuelto';
+      return true;
+    })
+    .forEach(conv => {
+      const [bg, fg] = avatarColor(conv.colorIdx);
+      const item = document.createElement('div');
+      item.className = 'conv-item' + (conv.id === activeConvId ? ' active' : '');
+      item.id = 'conv-' + conv.id;
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('aria-label',
+        `${conv.name}, ${conv.unread > 0 ? conv.unread + ' mensajes sin leer, ' : ''}${conv.lastMsg}`);
+      item.onclick = () => openConv(conv.id);
+      item.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openConv(conv.id); }
+      };
+      item.innerHTML = `
+        <div class="conv-avatar" style="background:${bg};color:${fg}">
+          ${esc(initials(conv.name))}
+          <div class="avatar-badge ${conv.botActive && conv.status !== 'resuelto' ? 'badge-bot' : 'badge-manual'}"
+               style="${conv.status === 'resuelto' ? 'display:none' : ''}"></div>
+        </div>
+        <div class="conv-info">
+          <div class="conv-name-row">
+            <div class="conv-name">${esc(conv.name)}</div>
+            <div class="conv-time">${esc(conv.lastTime)}</div>
+          </div>
+          <div class="conv-preview">${esc(conv.lastMsg)}</div>
+          <div class="conv-meta">
+            <div style="display:flex;gap:4px">${getStatusLabel(conv)} ${getBotBadge(conv)}</div>
+            ${conv.unread > 0 ? `<div class="unread-badge">${conv.unread}</div>` : ''}
+          </div>
+        </div>`;
+      list.appendChild(item);
+    });
+
+  updatePageTitle();
+}
+
+function updatePageTitle() {
+  const total = conversations.reduce((s,c) => s + c.unread, 0);
+  if (total > 0) {
+    document.title = `(${total}) IAV Chat`;
+    hasUnread = true;
+  } else {
+    document.title = originalTitle;
+    hasUnread = false;
+  }
+}
+
+// ── ABRIR CONVERSACIÓN ────────────────────────────────────────────────────────
+
+function openConv(id) {
+  const conv = conversations.find(c => c.id === id);
+  if (!conv) return;
+
+  activeConvId = id;
+  conv.unread = 0;
+
+  // Mobile: mostrar chat
+  document.getElementById('sidebar').classList.add('hidden');
+  document.getElementById('chatMain').classList.add('visible');
+
+  // Header
+  const [bg, fg] = avatarColor(conv.colorIdx);
+  const av = document.getElementById('headerAvatar');
+  av.style.background = bg;
+  av.style.color = fg;
+  av.textContent = initials(conv.name);
+
+  document.getElementById('headerName').textContent = conv.name;
+  document.getElementById('headerPhone').textContent = conv.phone;
+
+  // Bot toggle
+  updateBotToggleUI(conv);
+
+  // Contract button
+  const cb = document.getElementById('contractBtn');
+  cb.style.display = conv.contractToken ? '' : 'none';
+
+  // Empty state
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('chatWindow').classList.add('visible');
+
+  // Manual notice
+  document.getElementById('manualNotice').classList.toggle('visible', !conv.botActive && conv.status !== 'resuelto');
+
+  // Mensajes
+  renderMessages(conv);
+
+  renderConvList();
+}
+
+// Estado de render incremental: qué conversación y cuántos mensajes ya pintamos
+let renderedConvId = null;
+let renderedCount = 0;
+let lastDayShown = null;
+
+function buildDivider(label) {
+  const divider = document.createElement('div');
+  divider.className = 'date-divider';
+  divider.innerHTML = `<span>${esc(label)}</span>`;
+  return divider;
+}
+
+function buildMessageRow(msg) {
+  const row = document.createElement('div');
+  row.className = `msg-row ${msg.type}`;
+
+  let senderLabel = '';
+  if (msg.type === 'bot')   senderLabel = '<div class="msg-sender-label">🤖 Bot</div>';
+  if (msg.type === 'agent') senderLabel = '<div class="msg-sender-label">Bruno</div>';
+
+  // esc() neutraliza HTML; luego \n → <br> sobre el texto ya escapado
+  const safeText = esc(msg.text).replace(/\n/g, '<br>');
+
+  row.innerHTML = `
+    ${senderLabel}
+    <div class="msg-bubble">${safeText}</div>
+    <div class="msg-footer">
+      <span class="msg-time">${esc(stripDay(msg.time))}</span>
+      ${msg.type !== 'client' ? '<span class="msg-status" aria-label="Entregado">✓✓</span>' : ''}
+    </div>`;
+  return row;
+}
+
+function renderMessages(conv) {
+  const container = document.getElementById('chatMessages');
+  const typing = document.getElementById('typingIndicator');
+
+  // Append incremental: misma conversación y solo crecieron mensajes nuevos.
+  // Evita reconstruir todo (que volvía a disparar la animación en cada mensaje).
+  const incremental = conv.id === renderedConvId && conv.messages.length >= renderedCount;
+
+  if (!incremental) {
+    [...container.children].forEach(el => { if (el !== typing) el.remove(); });
+    renderedCount = 0;
+    lastDayShown = null;
+  }
+
+  const nearBottom = isNearBottom();
+
+  for (let i = renderedCount; i < conv.messages.length; i++) {
+    const msg = conv.messages[i];
+    const day = dayLabel(msg.time);
+    if (day !== lastDayShown) {
+      container.insertBefore(buildDivider(day), typing);
+      lastDayShown = day;
+    }
+    container.insertBefore(buildMessageRow(msg), typing);
+  }
+
+  renderedConvId = conv.id;
+  renderedCount = conv.messages.length;
+
+  // Scroll inteligente: solo bajar si ya estabas cerca del fondo o cambiaste de chat
+  if (!incremental || nearBottom) scrollBottom();
+}
+
+function isNearBottom() {
+  const c = document.getElementById('chatMessages');
+  return c.scrollHeight - c.scrollTop - c.clientHeight < 120;
+}
+
+function scrollBottom() {
+  const c = document.getElementById('chatMessages');
+  c.scrollTop = c.scrollHeight;
+}
+
+// ── BOT TOGGLE ────────────────────────────────────────────────────────────────
+
+function toggleBot() {
+  const conv = conversations.find(c => c.id === activeConvId);
+  if (!conv || conv.status === 'resuelto') return;
+  conv.botActive = !conv.botActive;
+  updateBotToggleUI(conv);
+  document.getElementById('manualNotice').classList.toggle('visible', !conv.botActive);
+  renderConvList();
+}
+
+function updateBotToggleUI(conv) {
+  const btn = document.getElementById('botToggle');
+  const label = document.getElementById('botToggleLabel');
+  if (conv.botActive) {
+    btn.className = 'bot-toggle bot-on';
+    btn.setAttribute('aria-checked', 'true');
+    label.textContent = 'Bot activo';
+  } else {
+    btn.className = 'bot-toggle bot-off';
+    btn.setAttribute('aria-checked', 'false');
+    label.textContent = 'Bot pausado';
+  }
+}
+
+// ── ENVIAR MENSAJE ────────────────────────────────────────────────────────────
+
+function sendMessage() {
+  const input = document.getElementById('composeInput');
+  const text = input.value.trim();
+  if (!text || !activeConvId) return;
+
+  const conv = conversations.find(c => c.id === activeConvId);
+  if (!conv) return;
+
+  // Si el bot estaba activo, pausarlo automáticamente al escribir
+  if (conv.botActive) {
+    conv.botActive = false;
+    updateBotToggleUI(conv);
+    document.getElementById('manualNotice').classList.add('visible');
+  }
+
+  const now = new Date();
+  const time = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+
+  conv.messages.push({ type: 'agent', text, time });
+  conv.lastMsg = text;
+  conv.lastTime = 'Ahora';
+
+  input.value = '';
+  input.style.height = '';
+
+  renderMessages(conv);
+  renderConvList();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = '';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── FILTROS ───────────────────────────────────────────────────────────────────
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderConvList();
+}
+
+let searchTimer = null;
+function filterConvs() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(renderConvList, 150);
+}
+
+// ── MOBILE ────────────────────────────────────────────────────────────────────
+
+function closeChatMobile() {
+  document.getElementById('sidebar').classList.remove('hidden');
+  document.getElementById('chatMain').classList.remove('visible');
+}
+
+// ── VER CONTRATO ──────────────────────────────────────────────────────────────
+
+function openContract() {
+  const conv = conversations.find(c => c.id === activeConvId);
+  if (conv?.contractToken) {
+    window.open(`/admin.html#${conv.contractToken}`, '_blank');
+  }
+}
+
+// ── SIMULACIÓN DE MENSAJE ENTRANTE ────────────────────────────────────────────
+
+function simulateIncoming() {
+  // Simula que María González confirma el jueves
+  const conv = conversations.find(c => c.id === 'c1');
+  if (!conv) return;
+
+  const now = new Date();
+  const time = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+
+  // Mostrar typing
+  if (activeConvId === 'c1') {
+    document.getElementById('typingIndicator').classList.add('visible');
+    scrollBottom();
+  }
+
+  setTimeout(() => {
+    if (activeConvId === 'c1') {
+      document.getElementById('typingIndicator').classList.remove('visible');
+    }
+
+    const newMsg = { type: 'client', text: '¿Y a qué hora sería la sesión el jueves?', time };
+    conv.messages.push(newMsg);
+    conv.lastMsg = newMsg.text;
+    conv.lastTime = 'Ahora';
+
+    if (activeConvId === 'c1') {
+      renderMessages(conv);
+    } else {
+      conv.unread++;
+    }
+
+    notificar(conv, newMsg.text);
+    renderConvList();
+
+    // Respuesta del bot después de 1.5s
+    if (conv.botActive) {
+      setTimeout(() => {
+        if (activeConvId === 'c1') {
+          document.getElementById('typingIndicator').classList.add('visible');
+          scrollBottom();
+        }
+        setTimeout(() => {
+          if (activeConvId === 'c1') {
+            document.getElementById('typingIndicator').classList.remove('visible');
+          }
+          const botReply = {
+            type: 'bot',
+            text: 'El bloque de producción es de 3 horas. Tenemos disponible a las 10:00 AM o a las 1:00 PM. ¿Cuál te conviene más?',
+            time: new Date().getHours() + ':' + String(new Date().getMinutes()).padStart(2,'0')
+          };
+          conv.messages.push(botReply);
+          conv.lastMsg = botReply.text;
+          conv.lastTime = 'Ahora';
+          if (activeConvId === 'c1') renderMessages(conv);
+          renderConvList();
+        }, 1800);
+      }, 1500);
+    }
+
+  }, 2000);
+}
+
+// ── NOTIFICACIONES DEL NAVEGADOR ──────────────────────────────────────────────
+
+function pedirPermisoNotif() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+// Notifica si la pestaña está en segundo plano o no estás viendo esa conversación
+function notificar(conv, texto) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (document.visibilityState === 'visible' && activeConvId === conv.id) return;
+  const n = new Notification(conv.name, {
+    body: texto,
+    tag: 'iav-chat-' + conv.id,
+    icon: '/favicon.ico'
+  });
+  n.onclick = () => { window.focus(); openConv(conv.id); n.close(); };
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+pedirPermisoNotif();
+renderConvList();
+
+// Simular mensaje entrante a los 4 segundos
+setTimeout(simulateIncoming, 4000);
+</script>
+</body>
+</html>

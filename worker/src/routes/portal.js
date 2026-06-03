@@ -1,7 +1,6 @@
-import { queryOne, query, run, parseFecha, now } from '../db.js';
+import { queryOne, query, run, batch, parseFecha, now } from '../db.js';
 import { ok, err } from '../auth.js';
 import { callAdapter, callAdapterSync } from '../google.js';
-import { generarFolio } from '../folios.js';
 
 function limpiarLinkMaps(url) {
   if (!url) return url;
@@ -27,16 +26,6 @@ export async function handlePortal(request, env, ctx, action) {
       if (tk.expira && new Date(tk.expira) < new Date()) return err('Token expirado', 403);
       contratoFinal = await queryOne(db, 'SELECT * FROM contratos WHERE token = ?', [tk.contrato_id]);
       if (!contratoFinal) return err('Contrato no encontrado', 404);
-    }
-
-    if (contratoFinal.estatus === 'Pendiente firma') {
-      const tkPortal = await queryOne(db,
-        "SELECT * FROM tokens WHERE contrato_id = ? AND tipo = 'contrato' AND usado = 0 ORDER BY rowid DESC LIMIT 1",
-        [contratoFinal.token]
-      );
-      if (tkPortal?.expira && new Date(tkPortal.expira) < new Date()) {
-        return err('El enlace ha expirado. Solicita un nuevo enlace a Bruno.', 403);
-      }
     }
 
     const { results: propiedades } = await query(db,
@@ -171,7 +160,10 @@ export async function handlePortal(request, env, ctx, action) {
         perimetroUrl: p.perimetro_url,
         datosEspecificos: JSON.parse(p.datos_especificos || '{}'),
         logoUrl: p.logo_url,
-        carpetaControlId: p.carpeta_control_id
+        carpetaControlId: p.carpeta_control_id,
+        formatoVideo: p.formato_video || 'vertical_nativo',
+        requiereAcceso: p.requiere_acceso ? 1 : 0,
+        ocultarFormatoVideo: p.ocultar_formato_video ? 1 : 0
       })),
       paquetesDisponibles,
       extrasAcordados,
@@ -197,6 +189,14 @@ export async function handlePortal(request, env, ctx, action) {
     if (!contrato) return err('Contrato no encontrado', 404);
     if (contrato.estatus !== 'Pendiente firma') return err('El contrato ya fue firmado');
 
+    const tkPortal = await queryOne(db,
+      "SELECT * FROM tokens WHERE contrato_id = ? AND tipo = 'contrato' AND usado = 0 ORDER BY rowid DESC LIMIT 1",
+      [contrato.token]
+    );
+    if (tkPortal?.expira && new Date(tkPortal.expira) < new Date()) {
+      return err('El enlace de firma ha expirado. Solicita un nuevo enlace a Bruno.', 403);
+    }
+
     const adicionalesExistentes = JSON.parse(contrato.adicionales_json || '[]');
     const acordados = adicionalesExistentes.filter(i => typeof i === 'object');
 
@@ -204,12 +204,21 @@ export async function handlePortal(request, env, ctx, action) {
     let precioTotal = contrato.precio_total;
     const adicionalesAceptados = [];
 
-    if (adicionalesSeleccionados?.length) {
-      for (const item of adicionalesSeleccionados) {
+    const clavesSeen = new Set();
+    const adicionalesDedup = (adicionalesSeleccionados || []).filter(item => {
+      const clave = typeof item === 'string' ? item : item.clave;
+      if (!clave || clavesSeen.has(clave)) return false;
+      clavesSeen.add(clave);
+      return true;
+    });
+
+    if (adicionalesDedup.length) {
+      for (const item of adicionalesDedup) {
         const clave = typeof item === 'string' ? item : item.clave;
         if (!clave) continue;
         if (typeof item === 'object' && item.precio && item.ofrecido) {
           // Custom offered add-on — use its own precio
+          if (item.precio < 0) continue;
           precioTotal += item.precio;
           adicionalesAceptados.push(item);
         } else {
@@ -227,30 +236,36 @@ export async function handlePortal(request, env, ctx, action) {
     const nuevoEstatus = saldoPendiente === 0 ? 'En produccion' : 'Firmado';
     const nuevoAdicionales = [...acordados, ...adicionalesAceptados];
 
-    const result = await run(db,
-      `UPDATE contratos SET estatus=?, fecha_firma=?, precio_total=?, saldo_pendiente=?,
-       adicionales_json=?, firma_base64_url='pending',
-       correo_cliente=COALESCE(NULLIF(?, ''), correo_cliente),
-       telefono_cliente=COALESCE(NULLIF(?, ''), telefono_cliente)
-       WHERE token=? AND estatus='Pendiente firma'`,
-      [nuevoEstatus, now(), precioTotal, saldoPendiente,
-       JSON.stringify(nuevoAdicionales), correoCliente || '', telefonoCliente || '', token]
-    );
-
-    if (!result.meta?.changes) return err('El contrato ya fue firmado', 409);
-
+    const firmaNow = now();
+    const statements = [
+      {
+        sql: `UPDATE contratos SET estatus=?, fecha_firma=?, precio_total=?, saldo_pendiente=?,
+              adicionales_json=?, firma_base64_url='pending',
+              correo_cliente=COALESCE(NULLIF(?, ''), correo_cliente),
+              telefono_cliente=COALESCE(NULLIF(?, ''), telefono_cliente)
+              WHERE token=? AND estatus='Pendiente firma'`,
+        params: [nuevoEstatus, firmaNow, precioTotal, saldoPendiente,
+                 JSON.stringify(nuevoAdicionales), correoCliente || '', telefonoCliente || '', token]
+      }
+    ];
     if (propsCliente?.length) {
       for (const p of propsCliente) {
-        await run(db,
-           `UPDATE propiedades SET direccion=?, link_maps=?, orientacion=?, sobre_la_propiedad=?,
-            referencias=?, fachada_url=?, perimetro_url=?, datos_especificos=?, logo_url=?
-            WHERE contrato_token=? AND num_propiedad=?`,
-           [p.direccion || '', limpiarLinkMaps(p.linkMaps || ''), p.orientacion || '', p.sobreLaPropiedad || '',
-           p.referencias || '', p.fachadaUrl || '', p.perimetroUrl || '',
-           JSON.stringify(p.datosEspecificos || {}), p.logoUrl || '', token, p.numPropiedad]
-        );
+        statements.push({
+          sql: `UPDATE propiedades SET direccion=?, link_maps=?, orientacion=?, sobre_la_propiedad=?,
+                referencias=?, fachada_url=?, perimetro_url=?, datos_especificos=?, logo_url=?,
+                formato_video=?, requiere_acceso=?
+                WHERE contrato_token=? AND num_propiedad=?
+                  AND EXISTS (SELECT 1 FROM contratos WHERE token=? AND fecha_firma=?)`,
+          params: [p.direccion || '', limpiarLinkMaps(p.linkMaps || ''), p.orientacion || '', p.sobreLaPropiedad || '',
+                   p.referencias || '', p.fachadaUrl || '', p.perimetroUrl || '',
+                   JSON.stringify(p.datosEspecificos || {}), p.logoUrl || '',
+                   p.formatoVideo || 'vertical_nativo', p.requiereAcceso || 0,
+                   token, p.numPropiedad, token, firmaNow]
+        });
       }
     }
+    const results = await batch(db, statements);
+    if (!results[0]?.meta?.changes) return err('El contrato ya fue firmado', 409);
 
     const { results: propiedadesFirma } = await query(db,
       'SELECT * FROM propiedades WHERE contrato_token = ? ORDER BY num_propiedad', [token]

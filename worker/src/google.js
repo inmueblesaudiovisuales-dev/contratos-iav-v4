@@ -5,6 +5,11 @@ export function callAdapter(ctx, env, action, payload) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, ...payload })
+  }).then(async res => {
+    const body = await res.json().catch(() => null);
+    if (!res.ok || body?.error || body?.ok === false) {
+      console.error('Google adapter error:', action, body?.error || body?.message || ('HTTP ' + res.status));
+    }
   }).catch(e => console.error('Google adapter error:', action, e.message));
   ctx.waitUntil(promise);
 }

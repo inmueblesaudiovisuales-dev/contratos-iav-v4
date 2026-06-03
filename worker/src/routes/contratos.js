@@ -1,8 +1,7 @@
 import { query, queryOne, run, batch, uuid, now } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter } from '../google.js';
-import { generarFolio } from '../folios.js';
-import { crearTokenPortal } from '../tokens.js';
+import { generarFolio, asignarFolio } from '../folios.js';
 
 export async function handleContratos(request, env, ctx, action) {
   const db = env.DB;
@@ -31,21 +30,9 @@ export async function handleContratos(request, env, ctx, action) {
        WHERE c.oculto = 0
        ORDER BY c.fecha_creacion DESC`
     );
-    const estatusAbiertos = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado'];
+    const estatusAbiertos = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado','Completado'];
     const lista = periodo === 'abiertos' ? results.filter(c => estatusAbiertos.includes(c.estatus)) : results;
     return ok({ ok: true, contratos: lista });
-  }
-
-  if (action === 'listarClientes') {
-    const { results } = await query(db,
-      `SELECT nombre_cliente, correo_cliente,
-              MAX(telefono_cliente) as telefono_cliente,
-              COUNT(*) as num_contratos, MAX(fecha_creacion) as ultimo_contrato,
-              SUM(precio_total) as total_facturado
-       FROM contratos WHERE oculto = 0 AND correo_cliente != ''
-       GROUP BY correo_cliente ORDER BY ultimo_contrato DESC`
-    );
-    return ok({ ok: true, clientes: results });
   }
 
   if (action === 'obtenerContrato') {
@@ -99,7 +86,7 @@ export async function handleContratos(request, env, ctx, action) {
     const { nombreCliente, correoCliente, telefonoCliente,
             tipoPaquete, paqueteBase, adicionales, extrasAcordados,
             precioTotal, anticipo, notasContrato, numPropiedades,
-            propiedades: propsData } = body;
+            propiedades: propsData, clienteId, trabajoId } = body;
 
     if (!nombreCliente) return err('Nombre del cliente requerido');
     if (!propsData || !propsData.length) return err('Al menos una propiedad es requerida');
@@ -107,10 +94,10 @@ export async function handleContratos(request, env, ctx, action) {
 
     const totalNum = parseFloat(precioTotal) || 0;
     if (totalNum <= 0) return err('El precio total debe ser mayor a $0');
-    const anticNum = Math.min(
-      anticipo !== undefined && anticipo !== '' ? parseFloat(anticipo) || 0 : 0,
-      totalNum
-    );
+    const anticipoProvisto = anticipo !== undefined && anticipo !== '';
+    const anticipoRaw = anticipoProvisto ? parseFloat(anticipo) : 0;
+    if (!Number.isFinite(anticipoRaw) || anticipoRaw < 0) return err('El anticipo no puede ser negativo');
+    const anticNum = Math.min(anticipoRaw, totalNum);
 
     // Validar propiedades
     const prop1 = propsData[0];
@@ -138,36 +125,87 @@ export async function handleContratos(request, env, ctx, action) {
     );
     const adicionalesJSON = JSON.stringify([...adicionalesOfrecidos, ...extrasObjs]);
 
-    // Siempre generar folio desde propiedad 1
-    const folio = prop1.fechaSesion ? generarFolio(prop1.fechaSesion) : null;
+	    let clienteIdFinal = clienteId || '';
+	    let trabajoOrigen = null;
+	    if (trabajoId) {
+	      trabajoOrigen = await queryOne(db, 'SELECT id, cliente_id, estatus, contrato_token FROM trabajos WHERE id=?', [trabajoId]);
+	      if (!trabajoOrigen) return err('Trabajo no encontrado', 404);
+	      if (trabajoOrigen.estatus === 'convertido' && trabajoOrigen.contrato_token) {
+	        return err('Trabajo ya convertido', 409);
+	      }
+	      if (clienteIdFinal && clienteIdFinal !== trabajoOrigen.cliente_id) {
+	        return err('El trabajo pertenece a otro cliente', 409);
+	      }
+	      clienteIdFinal = trabajoOrigen.cliente_id;
+	    }
+	    if (clienteIdFinal) {
+	      const clienteExiste = await queryOne(db, 'SELECT id FROM clientes WHERE id=?', [clienteIdFinal]);
+	      if (!clienteExiste) return err('Cliente no encontrado', 404);
+	    }
 
-    await run(db,
-      `INSERT INTO contratos (token, folio, nombre_cliente, correo_cliente, telefono_cliente,
-       tipo_contrato, tipo_paquete, paquete_base, adicionales_json, precio_base, precio_total,
-       anticipo, saldo_pendiente, estatus, fecha_creacion, num_propiedades, notas_contrato)
-       VALUES (?, ?, ?, ?, ?, 'estandar', ?, ?, ?, ?, ?, ?, ?, 'Pendiente firma', ?, ?, ?)`,
-      [token, folio, nombreCliente, correoCliente || '', telefonoCliente || '',
-       tipoPaqueteFinal, paqueteBaseFinal,
-       adicionalesJSON, precioBase, totalNum, anticNum, saldoPendiente,
-       now(), propsData.length, notasContrato || '']
-    );
+	    // Siempre generar folio desde propiedad 1
+	    const folio = prop1.fechaSesion ? await asignarFolio(db, prop1.fechaSesion) : null;
 
-    for (let i = 0; i < propsData.length; i++) {
-      const p = propsData[i];
-      await run(db,
-        `INSERT INTO propiedades (contrato_token, num_propiedad, tipo, paquete, entregables,
-         fecha_sesion, hora_sesion, direccion, link_maps, orientacion, sobre_la_propiedad,
-         referencias, fachada_url, perimetro_url, logo_url, datos_especificos)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [token, i + 1, p.tipo || tipoPaqueteFinal, p.paquete || paqueteBaseFinal,
-         p.entregables || '', p.fechaSesion || '', p.horaSesion || '',
-         p.direccion || '', p.linkMaps || '', p.orientacion || '',
-         p.sobreLaPropiedad || '', p.referencias || '', p.fachadaUrl || '',
-         p.perimetroUrl || '', p.logoUrl || '', JSON.stringify(p.datosEspecificos || {})]
-      );
-    }
+    const portalToken = uuid();
+    const portalExpira = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
+    const creacionNow = now();
 
-    await crearTokenPortal(db, token, 72);
+	    const statements = [
+	      {
+	        sql: `INSERT INTO contratos (token, folio, nombre_cliente, correo_cliente, telefono_cliente, cliente_id,
+	              tipo_contrato, tipo_paquete, paquete_base, adicionales_json, precio_base, precio_total,
+	              anticipo, saldo_pendiente, estatus, fecha_creacion, num_propiedades, notas_contrato)
+	              VALUES (?, ?, ?, ?, ?, ?, 'estandar', ?, ?, ?, ?, ?, ?, ?, 'Pendiente firma', ?, ?, ?)`,
+	        params: [token, folio, nombreCliente, correoCliente || '', telefonoCliente || '',
+	                 clienteIdFinal,
+	                 tipoPaqueteFinal, paqueteBaseFinal,
+	                 adicionalesJSON, precioBase, totalNum, anticNum, saldoPendiente,
+	                 creacionNow, propsData.length, notasContrato || '']
+      },
+      ...propsData.map((p, i) => ({
+        sql: `INSERT INTO propiedades (contrato_token, num_propiedad, tipo, paquete, entregables,
+              fecha_sesion, hora_sesion, direccion, link_maps, orientacion, sobre_la_propiedad,
+              referencias, fachada_url, perimetro_url, logo_url, datos_especificos,
+              formato_video, ocultar_formato_video)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [token, i + 1, p.tipo || tipoPaqueteFinal, p.paquete || paqueteBaseFinal,
+                 p.entregables || '', p.fechaSesion || '', p.horaSesion || '',
+                 p.direccion || '', p.linkMaps || '', p.orientacion || '',
+                 p.sobreLaPropiedad || '', p.referencias || '', p.fachadaUrl || '',
+                 p.perimetroUrl || '', p.logoUrl || '', JSON.stringify(p.datosEspecificos || {}),
+                 p.formatoVideo || 'vertical_nativo', p.ocultarFormatoVideo ?? 1]
+      })),
+	      {
+	        sql: 'INSERT INTO tokens (token, contrato_id, tipo, expira, usado) VALUES (?, ?, ?, ?, 0)',
+	        params: [portalToken, token, 'contrato', portalExpira]
+	      }
+	    ];
+
+	    if (trabajoOrigen) {
+	      const tsConv = now();
+	      statements.push(
+	        {
+	          sql: `UPDATE trabajos SET estatus='convertido', contrato_token=?, fecha_ultima_actividad=? WHERE id=?`,
+	          params: [token, tsConv, trabajoId]
+	        },
+	        {
+	          sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
+	          params: [tsConv, clienteIdFinal]
+	        },
+	        {
+	          sql: `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
+	                VALUES (?, ?, ?, 'contrato_generado', ?, ?, '', ?)`,
+	          params: [uuid(), clienteIdFinal, trabajoId, 'Contrato generado: ' + token, tsConv.substring(0, 10), tsConv]
+	        }
+	      );
+	    } else if (clienteIdFinal) {
+	      statements.push({
+	        sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`,
+	        params: [creacionNow, clienteIdFinal]
+	      });
+	    }
+
+	    await batch(db, statements);
 
     const linkPortal = `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`;
     return ok({ ok: true, token, folio, url: linkPortal, linkPortal });
@@ -180,6 +218,8 @@ export async function handleContratos(request, env, ctx, action) {
     const c = await queryOne(db, 'SELECT estatus FROM contratos WHERE token=?', [token]);
     if (!c) return err('Contrato no encontrado', 404);
     const TRANSICIONES_BLOQUEADAS = {
+      'Pendiente firma'  : ['En produccion','Entregado','Liquidado','Completado'],
+      'Firmado'          : ['Entregado','Liquidado','Completado'],
       'Entregado'        : ['Pendiente firma','Firmado','Anticipo recibido'],
       'Liquidado'        : ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado'],
       'Completado'       : ['Pendiente firma','Firmado','Anticipo recibido','En produccion'],
@@ -318,10 +358,10 @@ export async function handleContratos(request, env, ctx, action) {
   }
 
   if (action === 'guardarProduccion') {
-    const { token, fotografiaLista, videoListo, recorridoListo, recorridoUrl } = await request.json();
+    const { token, fotografiaLista, videoListo, recorridoListo, recorridoUrl, tieneRecorrido } = await request.json();
     await run(db,
-      'UPDATE contratos SET fotografia_lista=?, video_listo=?, recorrido_listo=?, recorrido_url=? WHERE token=?',
-      [fotografiaLista ?? null, videoListo ?? null, recorridoListo ?? null, recorridoUrl || '', token]
+      'UPDATE contratos SET fotografia_lista=?, video_listo=?, recorrido_listo=?, recorrido_url=?, tiene_recorrido=? WHERE token=?',
+      [fotografiaLista ?? null, videoListo ?? null, recorridoListo ?? null, recorridoUrl || '', tieneRecorrido === false ? 0 : 1, token]
     );
     return ok({ ok: true });
   }
@@ -335,11 +375,13 @@ export async function handleContratos(request, env, ctx, action) {
       `UPDATE contratos SET entrega_drive_link=?, entrega_links_extra=?, estatus=?, fecha_entrega=? WHERE token=?`,
       [entregaDriveLink, entregaLinksExtra || '', estatusEntrega, now(), token]
     );
-    callAdapter(ctx, env, 'enviarCorreoEntrega', {
-      token, nombreCliente: c.nombre_cliente, correoCliente: c.correo_cliente,
-      folio: c.folio,
-      linkPortal: `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`
-    });
+    if (c.correo_cliente) {
+      callAdapter(ctx, env, 'enviarCorreoEntrega', {
+        token, nombreCliente: c.nombre_cliente, correoCliente: c.correo_cliente,
+        folio: c.folio,
+        linkPortal: `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`
+      });
+    }
     return ok({ ok: true });
   }
 
@@ -347,14 +389,16 @@ export async function handleContratos(request, env, ctx, action) {
     const { token, revocar } = await request.json();
     if (revocar) {
       const cr = await queryOne(db, 'SELECT estatus, saldo_pendiente FROM contratos WHERE token=?', [token]);
-      const estatusRevocado = (cr?.saldo_pendiente <= 0) ? 'Liquidado' : 'En produccion';
+      if (!cr) return err('Contrato no encontrado', 404);
+      const estatusRevocado = (cr.saldo_pendiente <= 0) ? 'Liquidado' : 'En produccion';
       await run(db,
         `UPDATE contratos SET entrega_revocada=?, estatus=? WHERE token=?`,
         [now(), estatusRevocado, token]
       );
     } else {
       const cr = await queryOne(db, 'SELECT saldo_pendiente FROM contratos WHERE token=?', [token]);
-      const estatusRestaurado = (cr?.saldo_pendiente <= 0) ? 'Completado' : 'Entregado';
+      if (!cr) return err('Contrato no encontrado', 404);
+      const estatusRestaurado = (cr.saldo_pendiente <= 0) ? 'Completado' : 'Entregado';
       await run(db,
         `UPDATE contratos SET entrega_revocada=NULL, estatus=? WHERE token=?`,
         [estatusRestaurado, token]
@@ -383,6 +427,15 @@ export async function handleContratos(request, env, ctx, action) {
     return ok({ ok: true });
   }
 
+  if (action === 'guardarFormatoPropiedad') {
+    const { token, numPropiedad, formatoVideo, ocultarFormatoVideo } = await request.json();
+    await run(db,
+      'UPDATE propiedades SET formato_video=?, ocultar_formato_video=? WHERE contrato_token=? AND num_propiedad=?',
+      [formatoVideo || 'vertical_nativo', ocultarFormatoVideo ? 1 : 0, token, numPropiedad]
+    );
+    return ok({ ok: true });
+  }
+
   if (action === 'ocultarContrato') {
     const { token } = await request.json();
     await run(db, 'UPDATE contratos SET oculto=1 WHERE token=?', [token]);
@@ -392,7 +445,10 @@ export async function handleContratos(request, env, ctx, action) {
   if (action === 'eliminarContrato') {
     const { token } = await request.json();
     // D1 no respeta FOREIGN KEYS — cascada manual en orden correcto
+    const ts = now();
     await batch(db, [
+      { sql: `UPDATE trabajos SET estatus='cotizado', contrato_token='', fecha_ultima_actividad=? WHERE contrato_token=?`, params: [ts, token] },
+      { sql: 'DELETE FROM revisiones_video WHERE contrato_id=?', params: [token] },
       { sql: 'DELETE FROM checklist WHERE contrato_token=?', params: [token] },
       { sql: 'DELETE FROM propiedades WHERE contrato_token=?', params: [token] },
       { sql: 'DELETE FROM abonos WHERE contrato_token=?', params: [token] },
@@ -405,26 +461,34 @@ export async function handleContratos(request, env, ctx, action) {
   if (action === 'reagendarPropiedad') {
     const { token, numPropiedad, fecha, hora } = await request.json();
     if (!token || !numPropiedad || !fecha) return err('Faltan campos requeridos');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return err('Formato de fecha inválido (esperado YYYY-MM-DD)');
     const c = await queryOne(db, 'SELECT * FROM contratos WHERE token=?', [token]);
     if (!c) return err('Contrato no encontrado', 404);
     const p = await queryOne(db,
       'SELECT * FROM propiedades WHERE contrato_token=? AND num_propiedad=?', [token, numPropiedad]
     );
     if (!p) return err('Propiedad no encontrada', 404);
-    await run(db,
-      'UPDATE propiedades SET fecha_sesion=?, hora_sesion=? WHERE contrato_token=? AND num_propiedad=?',
-      [fecha, hora || p.hora_sesion, token, numPropiedad]
-    );
-    const folioAnterior = c.folio;
-    let folioNuevo = folioAnterior;
-    if (parseInt(numPropiedad) === 1) {
-      folioNuevo = generarFolio(fecha);
-      await run(db, 'UPDATE contratos SET folio=? WHERE token=?', [folioNuevo, token]);
-    }
-    const { results: paquetesRe } = await query(db, 'SELECT clave, nombre FROM paquetes');
-    const pkMapRe = Object.fromEntries(paquetesRe.map(r => [r.clave, r.nombre]));
-    callAdapter(ctx, env, 'reagendarPropiedad', {
-      token, numPropiedad, fecha, hora,
+	    const folioAnterior = c.folio;
+	    let folioNuevo = folioAnterior;
+	    if (parseInt(numPropiedad) === 1) {
+	      folioNuevo = await asignarFolio(db, fecha);
+	    }
+	    const horaFinal = hora || p.hora_sesion;
+	    const statements = [{
+	      sql: 'UPDATE propiedades SET fecha_sesion=?, hora_sesion=? WHERE contrato_token=? AND num_propiedad=?',
+	      params: [fecha, horaFinal, token, numPropiedad]
+	    }];
+	    if (parseInt(numPropiedad) === 1) {
+	      statements.push({
+	        sql: 'UPDATE contratos SET folio=? WHERE token=?',
+	        params: [folioNuevo, token]
+	      });
+	    }
+	    await batch(db, statements);
+	    const { results: paquetesRe } = await query(db, 'SELECT clave, nombre FROM paquetes');
+	    const pkMapRe = Object.fromEntries(paquetesRe.map(r => [r.clave, r.nombre]));
+	    callAdapter(ctx, env, 'reagendarPropiedad', {
+	      token, numPropiedad, fecha, hora: horaFinal,
       folioAnterior,
       folioNuevo,
       contrato: { ...c, folio: folioNuevo, paquete_base: pkMapRe[c.paquete_base] || c.paquete_base },
@@ -447,12 +511,17 @@ export async function handleContratos(request, env, ctx, action) {
 
   if (action === 'actualizarCarpeta') {
     const { token, numPropiedad, carpetaControlId, carpetaEntregablesId } = await request.json();
-    const sets = ['carpeta_control_id=?'];
-    const params = [carpetaControlId];
+    const sets = [];
+    const params = [];
+    if (carpetaControlId) {
+      sets.push('carpeta_control_id=?');
+      params.push(carpetaControlId);
+    }
     if (carpetaEntregablesId) {
       sets.push('carpeta_entregables_id=?');
       params.push(carpetaEntregablesId);
     }
+    if (!sets.length) return err('Nada que actualizar');
     params.push(token, numPropiedad);
     await run(db,
       `UPDATE propiedades SET ${sets.join(', ')} WHERE contrato_token=? AND num_propiedad=?`,
@@ -473,6 +542,14 @@ export async function handleContratos(request, env, ctx, action) {
   if (action === 'actualizarPdfUrl') {
     const { token, pdfUrl } = await request.json();
     await run(db, 'UPDATE contratos SET pdf_contrato_url=?, firma_base64_url=NULL WHERE token=?', [pdfUrl, token]);
+    return ok({ ok: true });
+  }
+
+  if (action === 'actualizarExpress') {
+    const { token, express } = await request.json();
+    if (!token) return err('Token requerido');
+    const result = await run(db, 'UPDATE contratos SET entrega_express=? WHERE token=?', [express ? 1 : 0, token]);
+    if (!result.meta?.changes) return err('Contrato no encontrado', 404);
     return ok({ ok: true });
   }
 
