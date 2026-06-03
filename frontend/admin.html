@@ -604,20 +604,41 @@
 
     /* ── STATS BAR (mobile linea compacta) ────────────── */
     .stats-linea {
-      display: flex; gap: 6px; flex-wrap: wrap;
-      padding: 10px 0 8px; margin-bottom: 8px; align-items: center;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 16px;
+      height: 36px;
+      background: #F9F9F8;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      font-size: 12px;
     }
-    .stats-item { font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
-    .stats-item strong { color: var(--ink-1); }
-    .stats-sep { display: none; }
-    .alerta-item {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 4px 10px; border-radius: 20px;
-      background: var(--bg-page); border: 1px solid var(--border-2);
-      font-size: 12px; font-weight: 600; white-space: nowrap;
+    .stats-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--ink-2);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .stats-chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
       flex-shrink: 0;
     }
-    .alerta-item i { font-size: 13px; opacity: 0.85; }
+    .stats-chip-sep {
+      color: var(--border);
+    }
+    .stats-chip-sesiones {
+      margin-left: auto;
+      color: #92400E;
+      background: #FEF3C7;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
 
     /* ── TOOLBAR MENU ─────────────────────────────────── */
     .toolbar-menu-wrap { position: relative; }
@@ -965,8 +986,7 @@
       .td-saldo { font-size: 12px; font-weight: 700; margin-left: auto; }
       .td-fecha { font-size: 11px; color: var(--ink-3); width: 100%; margin-top: 4px; }
       .td-check { padding-left: 0 !important; }
-      .stats-linea { padding: 8px 12px; gap: 8px; }
-      .stats-item { font-size: 12px; }
+      .stats-linea { padding: 0 12px; gap: 12px; }
       .met-cards-grid { grid-template-columns: repeat(2,1fr); }
       .met-bottom-grid { grid-template-columns: 1fr; }
       .prop-card-acciones { flex-direction: column !important; }
@@ -2465,7 +2485,7 @@ async function cargarContratos(tokenInicial) {
     return;
   }
   _cargandoContratos = false;
-  renderAlertas();
+  loadStatsBar();
 }
 
 function setCiclo(ciclo) {
@@ -2485,40 +2505,33 @@ function setCiclo(ciclo) {
 function renderAlertas() {
   const bar = document.getElementById('stats-bar');
   if (!bar) return;
-
-  const tzOff  = new Date().getTimezoneOffset() * 60000;
-  const ahora  = Date.now();
-  const hoy    = new Date(ahora - tzOff).toISOString().substring(0, 10);
-
-  const activos = todosContratos.filter(c => !['Completado', 'Cancelado'].includes(c.Estatus));
-
-  const sesHoy    = activos.filter(c => c.FechaSesion && String(c.FechaSesion).substring(0, 10) === hoy).length;
-  const pendFirma = activos.filter(c => c.Estatus === 'Pendiente firma').length;
-  const expirando = activos.filter(c =>
-    c.Estatus === 'Pendiente firma' &&
-    c.FechaCreacion &&
-    (ahora - new Date(c.FechaCreacion).getTime()) / (1000 * 60 * 60) > 60
-  ).length;
-  const cobros = activos.filter(c =>
-    (c.SaldoPendiente ?? 0) > 0 &&
-    ['Firmado', 'Anticipo recibido', 'En produccion', 'Entregado'].includes(c.Estatus)
-  ).length;
-
-  const items = [];
-  if (sesHoy)    items.push(`<span class="alerta-item" style="color:var(--gold)"><i class="ti ti-camera"></i>${sesHoy === 1 ? '1 sesión hoy' : sesHoy + ' sesiones hoy'}</span>`);
-  if (pendFirma) items.push(`<span class="alerta-item" style="color:var(--ink-1)"><i class="ti ti-signature"></i>${pendFirma} pendiente${pendFirma > 1 ? 's' : ''} de firma${expirando ? ` <span style="color:var(--warn)">(${expirando} por expirar)</span>` : ''}</span>`);
-  if (cobros)    items.push(`<span class="alerta-item" style="color:var(--ink-2)"><i class="ti ti-cash"></i>${cobros} cobro${cobros > 1 ? 's' : ''} pendiente${cobros > 1 ? 's' : ''}</span>`);
-
-  if (!items.length) {
-    bar.innerHTML = '';
-    bar.style.display = 'none';
-    actualizarBadgesTabs();
-    return;
+  const c = window._statsGrupo || { prospectos: 0, por_firmar: 0, confirmados: 0 };
+  const sesHoy = window._statsSesionesHoy || 0;
+  const chip = (dot, label, count) =>
+    `<span class="stats-chip">
+       <span class="stats-chip-dot" style="background:${dot}"></span>
+       ${esc(label)} <strong>${count}</strong>
+     </span>`;
+  let html = chip('#9CA3AF', 'Prospectos', c.prospectos) +
+    `<span class="stats-chip-sep">·</span>` +
+    chip('#3B82F6', 'Por firmar', c.por_firmar) +
+    `<span class="stats-chip-sep">·</span>` +
+    chip('#14B8A6', 'Confirmados', c.confirmados);
+  if (sesHoy > 0) {
+    html += `<span class="stats-chip-sesiones"><i class="ti ti-camera" style="font-size:11px"></i> ${sesHoy} sesión${sesHoy > 1 ? 'es' : ''} hoy</span>`;
   }
+  bar.innerHTML = `<div class="stats-linea">${html}</div>`;
+}
 
-  bar.style.display = '';
-  bar.innerHTML = `<div class="stats-linea">${items.join('')}</div>`;
-  actualizarBadgesTabs();
+async function loadStatsBar() {
+  try {
+    const s = await apiGet({ action: 'listarStats', periodo: 'mes' });
+    window._statsGrupo = s.contadoresGrupo || { prospectos: 0, por_firmar: 0, confirmados: 0 };
+    window._statsSesionesHoy = s.sesionesHoy || 0;
+    renderAlertas();
+  } catch(e) {
+    console.warn('Stats bar error:', e);
+  }
 }
 
 
