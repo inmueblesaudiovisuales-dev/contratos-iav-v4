@@ -1012,36 +1012,23 @@
       <!-- Stats — línea compacta (JS la llena) -->
       <div id="stats-bar"></div>
 
-      <!-- Stats ribbon desktop -->
-      <div class="stats-ribbon" id="statsRibbon">
-        <div class="stat-card">
-          <div class="stat-head">
-            <span class="stat-label">Sesiones hoy</span>
-            <div class="stat-icon gold"><i class="ti ti-camera"></i></div>
-          </div>
-          <div class="stat-value" id="statSesionesHoy">—</div>
+      <!-- KPI grid (desktop only — shown via CSS media query) -->
+      <div class="kpi-grid" id="statsRibbon">
+        <div class="kpi-card">
+          <div class="kpi-label">Sesiones hoy</div>
+          <div class="kpi-value amber" id="statSesionesHoy">—</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-head">
-            <span class="stat-label">Pendientes firma</span>
-            <div class="stat-icon blue"><i class="ti ti-signature"></i></div>
-          </div>
-          <div class="stat-value" id="statPendientesFirma">—</div>
+        <div class="kpi-card">
+          <div class="kpi-label">Pendientes firma</div>
+          <div class="kpi-value" id="statPendientesFirma">—</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-head">
-            <span class="stat-label">En producción</span>
-            <div class="stat-icon purple"><i class="ti ti-video"></i></div>
-          </div>
-          <div class="stat-value" id="statEnProduccion">—</div>
+        <div class="kpi-card">
+          <div class="kpi-label">En produccion</div>
+          <div class="kpi-value" id="statEnProduccion">—</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-head">
-            <span class="stat-label">Cobrado este mes</span>
-            <div class="stat-icon green"><i class="ti ti-trending-up"></i></div>
-          </div>
-          <div class="stat-value" id="statCobradoMes">—</div>
-          <div class="stat-delta" id="statDeltaCobrado" style="display:none"></div>
+        <div class="kpi-card">
+          <div class="kpi-label">Cobrado este mes</div>
+          <div class="kpi-value green" id="statCobradoMes">—</div>
         </div>
       </div>
 
@@ -1058,8 +1045,6 @@
         </button>
       </div>
 
-      <!-- Radar de sesiones próximas (solo en Abiertos/Todos) -->
-      <div id="radar-sesiones" class="radar-strip" style="display:none"></div>
 
       <!-- Toolbar -->
       <div class="barra">
@@ -1113,13 +1098,6 @@
             <i class="ti ti-x"></i> Limpiar
           </button>
         </div>
-      </div>
-
-      <!-- Hoy strip desktop -->
-      <div class="hoy-strip" id="hoyStrip" style="display:none">
-        <div class="hoy-header"><div class="hoy-title">Hoy</div><div class="hoy-date" id="hoyDate"></div></div>
-        <div class="hoy-divider"></div>
-        <div class="hoy-cards" id="hoyCards" style="display:flex;gap:10px"></div>
       </div>
 
       <!-- Tabla de contratos -->
