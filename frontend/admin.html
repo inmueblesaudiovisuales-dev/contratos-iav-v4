@@ -2742,9 +2742,9 @@ function renderAccesoCaseta(p) {
   if (!filas.length) {
     filas.push(['Estado', 'Requiere acceso especial; sin instrucciones adicionales']);
   }
-  return `<div class="prop-dato" style="background:var(--gold-pale);border:1px solid var(--gold-border);border-radius:6px;padding:8px 10px;margin-top:6px">
-    <div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);margin-bottom:5px">Acceso y caseta</div>
-    ${filas.map(([label, value]) => `<div style="font-size:12px;line-height:1.5;margin-top:3px"><span class="lbl">${esc(label)} </span><span style="white-space:pre-wrap">${esc(value)}</span></div>`).join('')}
+  return `<div style="background:var(--gold-pale);border:1px solid var(--gold-border);border-radius:6px;padding:8px 10px;margin-top:6px">
+    <div style="font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);margin-bottom:6px">Acceso y caseta</div>
+    ${filas.map(([label, value]) => `<div style="display:flex;gap:8px;font-size:12px;line-height:1.5;padding:3px 0;border-bottom:1px solid var(--gold-border)"><span style="font-size:10px;font-weight:700;color:var(--warn);min-width:80px;flex-shrink:0;padding-top:1px">${esc(label)}</span><span style="flex:1;white-space:pre-wrap;color:var(--ink-1)">${esc(value)}</span></div>`).join('')}
   </div>`;
 }
 
