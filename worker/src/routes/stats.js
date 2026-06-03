@@ -55,5 +55,46 @@ export async function handleStats(request, env, ctx) {
     if (m) m.total += c.precio_total || 0;
   });
 
-  return ok({ ok: true, periodo, numContratos: contratos.length, facturado, cobrado, porCobrar, ticketPromedio, porEstatus, topClientes, meses });
+  // Grupo counts for stats bar (always current, regardless of periodo)
+  const { results: todosTrabajos } = await query(db,
+    `SELECT t.estatus,
+            COALESCE(p1.fecha_sesion, '') AS fecha_sesion
+     FROM trabajos t
+     LEFT JOIN contratos ct ON ct.token = t.token
+     LEFT JOIN propiedades p1 ON p1.contrato_token = t.token AND p1.num_propiedad = 1
+     WHERE t.estatus != 'Cancelado'`
+  );
+
+  const hoy = new Date().toISOString().substring(0, 10);
+  const GRUPOS = {
+    prospectos: ['Nuevo', 'En cotizacion'],
+    por_firmar: ['Pendiente firma', 'Firmado'],
+    confirmados: ['Reservado', 'En produccion', 'Entregado', 'Completado']
+  };
+
+  const contadoresGrupo = {
+    prospectos: todosTrabajos.filter(t => GRUPOS.prospectos.includes(t.estatus)).length,
+    por_firmar: todosTrabajos.filter(t => GRUPOS.por_firmar.includes(t.estatus)).length,
+    confirmados: todosTrabajos.filter(t => GRUPOS.confirmados.includes(t.estatus)).length,
+  };
+
+  const sesionesHoy = todosTrabajos.filter(t =>
+    GRUPOS.confirmados.includes(t.estatus) &&
+    t.fecha_sesion && t.fecha_sesion.substring(0, 10) === hoy
+  ).length;
+
+  return ok({
+    ok: true,
+    periodo,
+    numContratos: contratos.length,
+    facturado,
+    cobrado,
+    porCobrar,
+    ticketPromedio,
+    porEstatus,
+    topClientes,
+    meses,
+    contadoresGrupo,
+    sesionesHoy
+  });
 }
