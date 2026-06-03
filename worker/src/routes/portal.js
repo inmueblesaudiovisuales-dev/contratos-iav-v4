@@ -233,7 +233,7 @@ export async function handlePortal(request, env, ctx, action) {
 
     const anticipo = contrato.anticipo;
     const saldoPendiente = Math.max(0, precioTotal - anticipo);
-    const nuevoEstatus = saldoPendiente === 0 ? 'En produccion' : 'Firmado';
+    const nuevoEstatus = saldoPendiente === 0 ? 'Reservado' : 'Firmado';
     const nuevoAdicionales = [...acordados, ...adicionalesAceptados];
 
     const firmaNow = now();
@@ -266,6 +266,25 @@ export async function handlePortal(request, env, ctx, action) {
     }
     const results = await batch(db, statements);
     if (!results[0]?.meta?.changes) return err('El contrato ya fue firmado', 409);
+
+    // Sync estatus to trabajos and fire Reservado calendar event if needed
+    const trabajoFirma = await queryOne(db,
+      'SELECT id, cliente_id FROM trabajos WHERE token=?', [token]);
+    if (trabajoFirma) {
+      await run(db,
+        `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE id=?`,
+        [nuevoEstatus, firmaNow, trabajoFirma.id]
+      );
+      if (nuevoEstatus === 'Reservado') {
+        callAdapter(ctx, env, 'crearEventoReservado', {
+          trabajoId: trabajoFirma.id,
+          token,
+          nombreCliente: contrato.nombre_cliente,
+          telefono: contrato.telefono_cliente || '',
+          equipoUrl: `https://contratos.inmueblesaudiovisuales.com/equipo.html?token=${token}`
+        });
+      }
+    }
 
     const { results: propiedadesFirma } = await query(db,
       'SELECT * FROM propiedades WHERE contrato_token = ? ORDER BY num_propiedad', [token]
@@ -309,7 +328,7 @@ export async function handlePortal(request, env, ctx, action) {
     if (!token) return err('Token requerido');
     const contratoResena = await queryOne(db, 'SELECT estatus FROM contratos WHERE token = ?', [token]);
     if (!contratoResena) return err('Contrato no encontrado', 404);
-    if (!['Entregado', 'Liquidado', 'Completado'].includes(contratoResena.estatus)) return err('Solo puedes calificar después de recibir tu material', 403);
+    if (!['Entregado', 'Completado'].includes(contratoResena.estatus)) return err('Solo puedes calificar después de recibir tu material', 403);
     await run(db,
       'UPDATE contratos SET calificacion=?, resena_texto=? WHERE token=?',
       [calificacion, resenaTexto || '', token]
