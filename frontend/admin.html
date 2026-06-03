@@ -619,6 +619,38 @@
     }
     .alerta-item i { font-size: 13px; opacity: 0.85; }
 
+    /* ── TOOLBAR MENU ─────────────────────────────────── */
+    .toolbar-menu-wrap { position: relative; }
+    .toolbar-menu-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px;
+      background: none; border: 1.5px solid var(--border-2);
+      border-radius: var(--r); cursor: pointer; color: var(--ink-2);
+      font-size: 16px; font-family: inherit;
+    }
+    .toolbar-menu-btn:hover { background: var(--page); }
+    .toolbar-menu-btn.activo { border-color: var(--gold); color: var(--gold); background: var(--gold-pale); }
+    .toolbar-menu-dropdown {
+      display: none;
+      position: absolute; right: 0; top: calc(100% + 6px); z-index: 200;
+      background: var(--card); border: 1px solid var(--border-2);
+      border-radius: var(--r-lg); box-shadow: var(--shadow-md);
+      min-width: 180px; padding: 4px;
+    }
+    .toolbar-menu-dropdown.visible { display: block; }
+    .toolbar-menu-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 12px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; font-weight: 600; color: var(--ink-2);
+      background: none; border: none; width: 100%; text-align: left;
+      font-family: inherit;
+    }
+    .toolbar-menu-item:hover { background: var(--page); color: var(--ink-1); }
+    .toolbar-menu-item i { font-size: 15px; color: var(--ink-3); }
+    .toolbar-menu-item.activo { color: var(--gold); }
+    .toolbar-menu-item.activo i { color: var(--gold); }
+    .toolbar-menu-sep { border: none; border-top: 1px solid var(--border); margin: 3px 0; }
+
     /* ── AUTOCOMPLETE ─────────────────────────────────── */
     .ac-dropdown {
       position: absolute; z-index: 999;
@@ -701,8 +733,6 @@
     .badge-addon { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; background:var(--gold-pale); color:var(--gold); letter-spacing:.4px; }
 
     /* ── MODO SELECCION MASIVA ────────────────────────── */
-    .btn-seleccion { background: none; border: 1.5px solid var(--border-2); border-radius: var(--r); padding: 7px 12px; font-size: 12px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; font-family: inherit; }
-    .btn-seleccion.activo { border-color: var(--gold); color: var(--gold); }
     .bulk-bar {
       display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
       background: var(--black); color: white; border-radius: 50px;
@@ -1292,15 +1322,23 @@
           <button class="btn-primario gold" id="btn-nuevo-toolbar" onclick="irANuevo()">
             <i class="ti ti-plus"></i> Nuevo
           </button>
-          <button class="btn-secundario btn-sm" id="btn-refresh-tabla" onclick="cargarContratos()" title="Actualizar">
-            <i class="ti ti-refresh"></i>
-          </button>
-          <button class="btn-secundario btn-sm" id="btn-export-csv" onclick="descargarCSV()" title="Exportar CSV">
-            <i class="ti ti-table-export"></i>
-          </button>
-          <button class="btn-seleccion" id="btn-seleccion" onclick="toggleModoSeleccion()" title="Selección masiva">
-            <i class="ti ti-checkbox"></i>
-          </button>
+          <div class="toolbar-menu-wrap">
+            <button class="toolbar-menu-btn" id="btn-toolbar-menu" onclick="toggleToolbarMenu()" title="Más acciones">
+              <i class="ti ti-dots"></i>
+            </button>
+            <div class="toolbar-menu-dropdown" id="toolbar-menu-dropdown">
+              <button class="toolbar-menu-item" onclick="cargarContratos();cerrarToolbarMenu()">
+                <i class="ti ti-refresh"></i> Actualizar
+              </button>
+              <button class="toolbar-menu-item" onclick="descargarCSV();cerrarToolbarMenu()">
+                <i class="ti ti-table-export"></i> Exportar CSV
+              </button>
+              <hr class="toolbar-menu-sep">
+              <button class="toolbar-menu-item" id="menu-item-seleccion" onclick="toggleModoSeleccion();cerrarToolbarMenu()">
+                <i class="ti ti-checkbox"></i> Selección masiva
+              </button>
+            </div>
+          </div>
         </div>
         <!-- Filtros de fecha: colapsados por defecto -->
         <div class="barra-filtros" id="barra-filtros">
@@ -1791,10 +1829,26 @@ var _acSeleccionRecien = false; // flag para suprimir reapertura del dropdown tr
 let _clientesCache = [];  // cache para autocomplete
 let _cargandoContratos = false;
 
+function toggleToolbarMenu() {
+  var dd = document.getElementById('toolbar-menu-dropdown');
+  var btn = document.getElementById('btn-toolbar-menu');
+  if (!dd) return;
+  dd.classList.toggle('visible');
+  if (btn) btn.classList.toggle('activo', dd.classList.contains('visible'));
+}
+
+function cerrarToolbarMenu() {
+  var dd = document.getElementById('toolbar-menu-dropdown');
+  var btn = document.getElementById('btn-toolbar-menu');
+  if (dd) dd.classList.remove('visible');
+  if (btn) btn.classList.remove('activo');
+}
+
 function toggleModoSeleccion() {
   modoSeleccion = !modoSeleccion;
   seleccionados.clear();
-  document.getElementById('btn-seleccion').classList.toggle('activo', modoSeleccion);
+  var menuItem = document.getElementById('menu-item-seleccion');
+  if (menuItem) menuItem.classList.toggle('activo', modoSeleccion);
   document.getElementById('th-check').style.display = modoSeleccion ? '' : 'none';
   actualizarBulkBar();
   filtrarContratos();
@@ -1803,7 +1857,8 @@ function toggleModoSeleccion() {
 function salirModoSeleccion() {
   modoSeleccion = false;
   seleccionados.clear();
-  document.getElementById('btn-seleccion').classList.remove('activo');
+  var menuItemSel = document.getElementById('menu-item-seleccion');
+  if (menuItemSel) menuItemSel.classList.remove('activo');
   document.getElementById('th-check').style.display = 'none';
   actualizarBulkBar();
   filtrarContratos();
@@ -4186,6 +4241,8 @@ document.addEventListener('DOMContentLoaded', function() {
         e.target.id !== 'par-nombre') {
       cerrarDropdownAC();
     }
+    var wrap = document.querySelector('.toolbar-menu-wrap');
+    if (wrap && !wrap.contains(e.target)) cerrarToolbarMenu();
   });
 });
 
