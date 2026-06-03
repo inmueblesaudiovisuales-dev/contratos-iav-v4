@@ -5082,10 +5082,10 @@ function renderListaClientes(clientes) {
     var avCls = ['av-a','av-b','av-c','av-d','av-e','av-f'][(nombre||'').charCodeAt(0)%6];
     var origenStr = ORIGEN_LABELS[clienteOrigenVal(c)] || '';
     var waNum = normalizarTelWA(telefono||'');
-    var clickeable = id ? 'onclick="abrirPanelCliente('+jsArg(id)+')" style="cursor:pointer"' : '';
-    html += '<div class="cli-card" style="flex-wrap:wrap">';
-    html += '<div style="flex:1;min-width:0;display:flex;align-items:center;gap:12px" '+clickeable+'>';
-    html += '<div class="td-avatar '+avCls+'" style="width:36px;height:36px;border-radius:9px;flex-shrink:0">'+ini+'</div>';
+    var clickeable = id ? 'onclick="abrirPanelCliente('+jsArg(id)+')"' : '';
+    html += '<div class="cli-card" style="align-items:flex-start">';
+    html += '<div style="flex:1;min-width:0;display:flex;align-items:flex-start;gap:12px;cursor:'+(id?'pointer':'default')+'" '+clickeable+'>';
+    html += '<div class="td-avatar '+avCls+'" style="width:36px;height:36px;border-radius:9px;flex-shrink:0;margin-top:1px">'+ini+'</div>';
     html += '<div class="cli-card-body">';
     html += '<div class="cli-card-nombre">'+esc(nombre)+'</div>';
     html += '<div class="cli-card-meta">';
