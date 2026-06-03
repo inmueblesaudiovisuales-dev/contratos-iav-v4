@@ -2591,15 +2591,16 @@ function skeletonRows() {
 }
 
 const ESTATUS_MAP = {
-  'Pendiente firma':   { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151',  label:'Pendiente firma'   },
-  'Firmado':           { dot:'#3B82F6', bg:'#DBEAFE', color:'#1D4ED8',  label:'Firmado'            },
-  'Anticipo recibido': { dot:'#F59E0B', bg:'#FEF3C7', color:'#92400E',  label:'Anticipo recibido'  },
-  'En produccion':     { dot:'#8B5CF6', bg:'#F5F3FF', color:'#6D28D9',  label:'En producción'      },
-  'Entregado':         { dot:'#14B8A6', bg:'#E0F2FE', color:'#0369A1',  label:'Entregado'          },
-  'Liquidado':         { dot:'#10B981', bg:'#DCFCE7', color:'#065F46',  label:'Liquidado'          },
-  'Completado':        { dot:'#10B981', bg:'#FEF9ED', color:'#92400E',  label:'Completado'         },
+  'Nuevo':            { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label:'Nuevo'            },
+  'En cotizacion':    { dot:'#F59E0B', bg:'#FEF3C7', color:'#92400E', label:'En cotización'    },
+  'Pendiente firma':  { dot:'#3B82F6', bg:'#DBEAFE', color:'#1D4ED8', label:'Pendiente firma'  },
+  'Firmado':          { dot:'#60A5FA', bg:'#EFF6FF', color:'#1E40AF', label:'Firmado'          },
+  'Reservado':        { dot:'#14B8A6', bg:'#CCFBF1', color:'#0F766E', label:'Reservado'        },
+  'En produccion':    { dot:'#8B5CF6', bg:'#F5F3FF', color:'#6D28D9', label:'En producción'    },
+  'Entregado':        { dot:'#10B981', bg:'#DCFCE7', color:'#065F46', label:'Entregado'        },
+  'Completado':       { dot:'#059669', bg:'#D1FAE5', color:'#064E3B', label:'Completado'       },
+  'Cancelado':        { dot:'#DC2626', bg:'#FEE2E2', color:'#991B1B', label:'Cancelado'        },
 };
-// Alias backward-compat para renderPanel (usa ESTATUS_COLOR[x])
 const ESTATUS_COLOR = Object.fromEntries(Object.entries(ESTATUS_MAP).map(([k,v]) => [k, v.dot]));
 
 function renderContratosCards(lista) {
