@@ -2819,7 +2819,9 @@ async function cargarContratos(tokenInicial) {
   _cargandoContratos = true;
   document.getElementById('tabla-body').innerHTML = skeletonRows();
   try {
-    const dataC = await apiGet({ action: 'listarContratos' });
+    const dataC = await apiGet(_mostrarCancelados
+      ? { action: 'listarContratos', periodo: 'todos' }
+      : { action: 'listarContratos' });
     if (!dataC.ok) throw new Error(dataC.error || 'Error desconocido');
     todosContratos = dataC.contratos || [];
     filtrarContratos();
@@ -3037,9 +3039,7 @@ var _mostrarCancelados = false;
 
 function cambiarGrupoTrabajos(grupo, btn) {
   _grupoActual = grupo;
-  document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('activo'));
-  if (btn) btn.classList.add('activo');
-  cargarTrabajos();
+  cargarContratos();
 }
 
 function toggleCancelados() {
@@ -3050,25 +3050,15 @@ function toggleCancelados() {
       ? '<i class="ti ti-eye-off"></i> Ocultar cancelados'
       : '<i class="ti ti-eye"></i> Mostrar cancelados';
   }
-  cargarTrabajos();
+  // Re-carga sobre el modelo único de Contratos (los cancelados requieren periodo=todos)
+  cargarContratos();
 }
 
-async function cargarTrabajos(tokenInicial) {
-  try {
-    const params = { action: 'listarTrabajos', grupo: _grupoActual };
-    if (_mostrarCancelados) params.cancelados = '1';
-    const data = await apiGet(params);
-    const lista = data.trabajos || [];
-    window.todosTrabajos = lista;
-    renderTablaTrabajos(lista);
-    renderCardsTrabajos(lista);
-    if (tokenInicial) {
-      const t = lista.find(t => t.token === tokenInicial || t.id === tokenInicial);
-      if (t) seleccionarTrabajo(t);
-    }
-  } catch(e) {
-    console.error('cargarTrabajos error:', e);
-  }
+// RETIRADO: el modelo viejo de "trabajos" pintaba filas con otro formato en la tabla
+// unificada de Contratos (causa raíz de filas descuadradas al filtrar). Cualquier
+// llamada residual ahora delega al modelo único de Contratos.
+function cargarTrabajos(tokenInicial) {
+  return cargarContratos(tokenInicial);
 }
 
 function renderTablaTrabajos(lista) {
@@ -3317,7 +3307,11 @@ function filtrarContratos() {
   const hasta = document.getElementById('filtro-fecha-hasta').value;
   const hoy   = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 10);
   let lista = todosContratos.filter(c => {
-    if (filtroCiclo === 'abiertos' && !ESTATUS_ABIERTOS.includes(c.Estatus)) return false;
+    const esCancelado = c.Estatus === 'Cancelado';
+    // Cancelados: ocultos por defecto; visibles solo con "Mostrar cancelados" (y entonces
+    // pasan por alto el filtro de ciclo para que aparezcan).
+    if (esCancelado && !_mostrarCancelados) return false;
+    if (!esCancelado && filtroCiclo === 'abiertos' && !ESTATUS_ABIERTOS.includes(c.Estatus)) return false;
     if (filtroCiclo === 'sesiones' && (!c.FechaSesion || String(c.FechaSesion).substring(0, 10) < hoy)) return false;
     if (chipSt && !chipSt.includes(c.Estatus)) return false;
     if (!chipSt && st && c.Estatus !== st) return false;
