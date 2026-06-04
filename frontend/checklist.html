@@ -378,6 +378,47 @@
     .cuarto-row.active { border-color: var(--gold-leaf); box-shadow: inset 0 0 0 1px var(--gold-leaf); }
     .cuarto-done { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--green); }
     .cuarto-done i { font-size: 14px; }
+
+    /* ===== Topbar onyx + chip de lane ===== */
+    .topbar-onyx { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px;
+      background: var(--black); border-bottom: 1.5px solid var(--gold-leaf);
+      padding: max(12px, env(safe-area-inset-top)) 14px 11px; }
+    .ob-brand { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+    .ob-logo { font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: .02em;
+      color: var(--black); background: var(--gold-leaf); border-radius: 6px; padding: 3px 7px; line-height: 1; flex: none; }
+    .ob-prop { display: flex; flex-direction: column; min-width: 0; }
+    .ob-name { font-family: var(--font-display); font-weight: 500; font-size: 15px; color: #fff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42vw; }
+    .ob-folio { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,.5); }
+    .ob-spacer { flex: 1; }
+    .ob-lane { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; flex: none;
+      border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+      color: #fff; font-size: 13px; font-weight: 600; }
+    .ob-lane > i:first-child { font-size: 16px; color: var(--gold-leaf); }
+    .ob-chev { font-size: 15px; color: rgba(255,255,255,.5); }
+    .ob-sync { display: inline-flex; align-items: center; gap: 5px; color: rgba(255,255,255,.55); font-size: 10px; font-weight: 600; flex: none; }
+    .ob-sync .dot { width: 7px; height: 7px; }
+
+    /* ===== Pantalla de entrada (elegir lane) ===== */
+    .lane-entry { padding: 22px 16px 32px; max-width: 560px; margin: 0 auto; }
+    .lane-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 13px; font-weight: 500; }
+    .lane-entry-hd h1 { font-family: var(--font-display); font-weight: 500; font-size: 28px; line-height: 1.1; margin-top: 14px; }
+    .lane-entry-hd p { color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+    .lane-name { margin: 20px 0; }
+    .lane-name label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+    .lane-opts { display: grid; gap: 10px; }
+    .lane-opt { display: flex; align-items: center; gap: 13px; width: 100%; padding: 15px 14px; text-align: left;
+      border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .lane-opt-ic { width: 44px; height: 44px; flex: none; border-radius: 10px; background: var(--gold-soft);
+      display: flex; align-items: center; justify-content: center; }
+    .lane-opt-ic i { font-size: 24px; color: var(--gold); }
+    .lane-opt-copy { flex: 1; min-width: 0; }
+    .lane-opt-copy strong { display: block; font-size: 16px; font-weight: 600; }
+    .lane-opt-copy span { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
+    .lane-opt-chev { font-size: 20px; color: var(--ink-3); flex: none; }
+    .lane-opt.soon { opacity: .55; }
+    .lane-soon { font-size: 11px; font-weight: 600; color: var(--ink-3); background: var(--muted); border-radius: 999px; padding: 3px 9px; flex: none; }
+    .ob-lane i, .action-stack .btn i, .action-stack .primary i { font-size: 17px; }
   </style>
 </head>
 <body>
@@ -428,8 +469,27 @@ function esc(value) {
 
 function miNombre() {
   const input = document.getElementById('mi-nombre');
-  return (input && input.value.trim()) || 'Anonimo';
+  if (input && input.value.trim()) return input.value.trim();
+  return (localStorage.getItem('checklist_nombre') || '').trim() || 'Anonimo';
 }
+
+function laneKey() { return 'checklist_lane_' + (TOKEN || 'demo'); }
+function roomKey() { return 'checklist_room_' + (TOKEN || 'demo'); }
+function hasLane() { return !!localStorage.getItem(laneKey()); }
+function laneReady() {
+  if (new URLSearchParams(location.search).get('screen') === 'entry') return false;
+  return DEMO || hasLane();
+}
+function chooseLane(lane) {
+  state.modoActual = lane;
+  localStorage.setItem(laneKey(), lane);
+  ensureActiveMode();
+  cerrarModal();
+  render();
+  scheduleSave();
+}
+const LANE_ICON = { foto: 'camera', t360: 'rotate-360', video: 'video', drone: 'drone' };
+function laneIcon(lane) { return LANE_ICON[lane] || 'video'; }
 
 function activeServices() {
   return ['foto', 't360', 'video', 'drone'].filter((key) => state.servicios[key]);
@@ -540,6 +600,9 @@ async function cargar() {
     meta = { folio: data.folio || '', nombreCliente: data.nombreCliente || '' };
     const payload = data.cuartos && data.cuartos.version === 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     state = logic.normalizeChecklistData(payload);
+    const savedLane = localStorage.getItem(laneKey());
+    if (savedLane && state.servicios[savedLane]) state.modoActual = savedLane;
+    activeRoomId = localStorage.getItem(roomKey()) || null;
     ensureActiveMode();
     render();
     iniciarPolling();
@@ -556,6 +619,8 @@ async function poll() {
     if (data.error) return;
     const payload = data.cuartos && data.cuartos.version === 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     const next = logic.normalizeChecklistData(payload);
+    next.modoActual = state.modoActual;
+    next.activeCameraByMode = state.activeCameraByMode;
     if (JSON.stringify(next) !== JSON.stringify(state)) {
       state = next;
       ensureActiveMode();
@@ -585,40 +650,82 @@ function cargarDemo() {
 }
 
 function render() {
-  document.getElementById('app').innerHTML = `
+  const app = document.getElementById('app');
+  if (!laneReady()) {
+    app.innerHTML = renderLaneEntry();
+    bindNameInput();
+    return;
+  }
+  app.innerHTML = `
     ${renderHeader()}
-    ${state.espacios.length ? renderModeArea() : ''}
     ${state.espacios.length ? renderTabs() : ''}
     <main class="content">${state.espacios.length ? renderActiveView() : renderPrepareView()}</main>
   `;
-  const name = document.getElementById('mi-nombre');
-  if (name) {
-    name.value = localStorage.getItem('checklist_nombre') || '';
-    name.addEventListener('input', () => localStorage.setItem('checklist_nombre', name.value.trim()));
-  }
+  bindNameInput();
   const search = document.getElementById('space-search');
   if (search) {
     search.value = searchTerm;
     search.addEventListener('input', (event) => { searchTerm = event.target.value; render(); });
+    if (searchTerm) { search.focus(); const v = search.value; search.setSelectionRange(v.length, v.length); }
   }
   setSync(syncStatus);
 }
 
+function bindNameInput() {
+  const name = document.getElementById('mi-nombre');
+  if (!name) return;
+  if (!name.value) name.value = localStorage.getItem('checklist_nombre') || '';
+  name.oninput = () => localStorage.setItem('checklist_nombre', name.value.trim());
+}
+
 function renderHeader() {
-  return `<header class="topbar ${state.espacios.length ? 'compact' : ''}">
-    <div class="top-row">
-      <div class="job">
-        <div class="eyebrow">Bitacora de Produccion</div>
-        <h1>${esc(meta.nombreCliente || 'Sesion')}</h1>
-        <div class="folio">${esc(meta.folio || 'Sin folio')}</div>
-      </div>
-      <div class="sync"><span class="dot" id="sync-dot"></span><span id="sync-label">En vivo</span></div>
-    </div>
-    <div class="name-row">
-      <input class="field" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" autocomplete="off">
-      <button class="btn" onclick="abrirServicios()">Servicios</button>
-    </div>
+  const lane = SERVICE_UI[state.modoActual] ? SERVICE_UI[state.modoActual].short : 'Video';
+  return `<header class="topbar-onyx">
+    <span class="ob-brand"><span class="ob-logo">IAV</span>
+      <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span><span class="ob-folio">${esc(meta.folio || '')}</span></span>
+    </span>
+    <span class="ob-spacer"></span>
+    <button class="ob-lane" onclick="abrirLane()"><i class="ti ti-${laneIcon(state.modoActual)}"></i>${esc(lane)}<i class="ti ti-chevron-down ob-chev"></i></button>
+    <span class="ob-sync"><span class="dot" id="sync-dot"></span><span id="sync-label">en vivo</span></span>
   </header>`;
+}
+
+function renderLaneEntry() {
+  const lanes = [
+    ['foto', 'Foto', 'camera', 'Marca la cobertura de fotos por cuarto.'],
+    ['t360', '360', 'rotate-360', 'Marca los recorridos 360 por cuarto.'],
+    ['video', 'Video', 'video', 'Registra cada archivo con su cuarto y calidad.'],
+    ['drone', 'Drone', 'drone', 'Registra la secuencia de tomas aéreas.'],
+    ['asesor', 'Asesores', 'microphone-2', 'Grabación de asesores. Pronto.'],
+  ];
+  return `<div class="lane-entry">
+    <div class="lane-entry-hd">
+      <span class="lane-brand"><span class="ob-logo">IAV</span>bitácora</span>
+      <h1>¿Qué vas a hacer?</h1>
+      ${meta.nombreCliente ? `<p>${esc(meta.nombreCliente)}</p>` : ''}
+    </div>
+    <div class="lane-name">
+      <label for="mi-nombre">Tu nombre</label>
+      <input class="field" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" autocomplete="off">
+    </div>
+    <div class="lane-opts">${lanes.map((l) => `
+      <button class="lane-opt${l[0] === 'asesor' ? ' soon' : ''}" ${l[0] === 'asesor' ? 'disabled' : ''} onclick="chooseLane('${l[0]}')">
+        <span class="lane-opt-ic"><i class="ti ti-${l[2]}"></i></span>
+        <span class="lane-opt-copy"><strong>${l[1]}</strong><span>${l[3]}</span></span>
+        ${l[0] === 'asesor' ? '<span class="lane-soon">pronto</span>' : '<i class="ti ti-chevron-right lane-opt-chev"></i>'}
+      </button>`).join('')}</div>
+  </div>`;
+}
+
+function abrirLane() {
+  const lanes = [['foto', 'Foto'], ['t360', '360'], ['video', 'Video'], ['drone', 'Drone']];
+  abrirModal(`<div class="sheet-head"><h2>Cambiar de servicio</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="lane-name" style="margin-bottom:12px"><label for="mi-nombre">Tu nombre</label>
+      <input class="field" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" value="${esc(localStorage.getItem('checklist_nombre') || '')}" oninput="localStorage.setItem('checklist_nombre', this.value.trim())"></div>
+    <div class="action-stack">${lanes.map(([key, label]) => `
+      <button class="${state.modoActual === key ? 'primary' : 'btn'}" onclick="chooseLane('${key}')"><i class="ti ti-${laneIcon(key)}"></i> ${label}</button>`).join('')}
+      <button class="btn ghost" onclick="cerrarModal();abrirServicios()">Servicios contratados</button>
+    </div>`);
 }
 
 function renderModeArea() {
@@ -831,6 +938,7 @@ function cuartoRow(item, type) {
 
 function setActiveRoom(id) {
   activeRoomId = id;
+  localStorage.setItem(roomKey(), id);
   cerrarModal();
   render();
 }
