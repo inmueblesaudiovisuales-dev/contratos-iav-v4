@@ -2,6 +2,49 @@
 
 > Bitácora de ejecución. Para retomar: leer `design/SPEC_REDISENO_IAV.md` + `design/design-system.css` + `design/B-dossier.html` + este log + `MASTER_V4.md` (R58).
 
+## Sesión 2026-06-04 (R60) — Acabado + auditoría · rama `acabado-admin` (NO mergeada)
+Trabajo en rama `acabado-admin` (sin push). Verificado en navegador con Playwright
+sirviendo `frontend/` local contra el API de producción (CORS `*`, solo lecturas).
+Cero errores de consola en admin (Hoy/Contratos/panel/Clientes) y portal.
+
+- [x] **P1 — Lista de Contratos al patrón `.ledger`** (commit `41c8a4e`). Rehecha la
+  tabla recoloreada estilo Excel → ledger Dossier: filas `.lrow` en grid con folio
+  mono, nombre Fraunces, estatus como **estampa** (`seal` circular con inicial +
+  etiqueta), total/saldo en mono tabular, saldo con punto de color, canto izquierdo
+  dorado si la sesión es hoy (warn pronto / azul esta semana). **Tabs Abiertos/Todos**
+  (los `ctab-*` no existían en markup y rompían `setCiclo`; reescrito). Una sola lista
+  responsive (en móvil colapsa a nombre+saldo, folio/estatus plegados en el sub; se
+  retira la vista de cards duplicada). Modo selección por clase `.sel`. Verificado
+  desktop + móvil + apertura de panel + fila activa.
+- [x] **P2 (parcial) — Recibo de pago en el panel** (commit siguiente a 41c8a4e). El
+  `pane-pagos` pasa de 3 tarjetas KPI a un **recibo** editorial (líneas con guion +
+  Saldo grande en Fraunces + track), estilo mockup B. Solo presentación, mismos datos.
+- [x] **P3 — Portal: verificado, ya estaba cumplido.** El form ya tiene lenguaje humano,
+  placeholders con ejemplos, revelado progresivo (caseta Sí/No), bloque de acceso a 5
+  campos, y **precio en vivo** (`actualizarTotales()` cableado al toggle de adicionales,
+  actualiza `txt-total`/`txt-anticipo`). No requirió cambios.
+- [x] **P5 (parcial) — Limpieza** (commit `<cleanup>`): elimina CSS de `.subtab-strip`/
+  `.subtab-btn` y la función `cambiarGrupoTrabajos` + `_grupoActual`. **No quedan glifos
+  `✕`/`✓` de texto** en admin ni portal (ya eran íconos Tabler).
+- [~] **P4 — Auditoría (read-only).** Verificado sin errores de consola: Contratos→panel,
+  registrar abono (UI), Cobrar por WhatsApp (botón con CLABE), portal (carga + resumen),
+  Clientes→expediente (contratos, hilo de notas, Lo cotizado, Archivos, Recontratar).
+  **No se mutó data de producción** (no se registraron abonos/llamadas reales).
+
+### Falta para la siguiente sesión (rama `acabado-admin`)
+- **P4 E2E destructivo**: recorrer Anexo G creando 1 contrato de prueba → abono real →
+  agendar llamada (sin duplicar cliente) → recontratar → y **borrarlo** al final.
+- **P5 resto**: borrar el CSS muerto de `#sidebar`/`#side-menu`/`.sidebar-*`/`.sm-*`
+  (sin markup que lo use, en `:root`+media `min-width:1024px`) y las funciones muertas
+  del modelo viejo `trabajos` (`renderTablaTrabajos`/`renderCardsTrabajos`/
+  `seleccionarTrabajo` — no se invocan; `querySelectorAll` vacío no falla).
+- **P2 resto**: seguir adoptando componentes del design-system donde eleve (botones a
+  `.btn-primary`/`.btn-ghost`, chips de estatus, toolbar de Contratos más discreta — hoy
+  conserva chips+select+fechas+cancelados; funcional pero más cargada que el mockup).
+- **Nota Clientes**: las tarjetas aún muestran chip "N en pipeline" (el mandato pedía
+  directorio sin pipeline); revisar si se quita. En la fila de Contratos del expediente
+  el folio sale como "—" (revisar mapeo de datos).
+
 ## Estado (al cierre de la sesión nocturna 2026-06-04)
 - [x] **Fase 2 — Backend** (migración r58 APLICADA + config + dedupe + agendarLlamadaRapida + marcarActividad + archivos cliente + fix subida + adapter). **Desplegado y verificado en producción.**
 - [x] **Fase 0 — Cimientos** (sistema de diseño Dossier aplicado a admin + portal por remapeo de tokens; respaldos creados). **Desplegado y verificado.**
