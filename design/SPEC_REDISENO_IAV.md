@@ -359,6 +359,9 @@ CREATE TABLE IF NOT EXISTS config (
 
 **Seguridad de salida**
 - [ ] Respaldos creados; smoke test manual (crear contrato → abono → firmar en portal) OK; luego commit a `main`.
+- [ ] **Cero estilos viejos:** ninguna pantalla, modal o componente quedó con el look anterior (mayúsculas, `Courier`/`Montserrat`, emojis, bordes/sombras viejos). Todo hereda de `design-system.css`.
+- [ ] **Sin basura en producción:** si creaste contratos/clientes/abonos de prueba para verificar (clave admin `framedock`), elimínalos antes de cerrar. No dejar registros de prueba en la base real.
+- [ ] `design/BUILD_LOG.md` actualizado con el estado final y avisos para Bruno (migración D1, adapter).
 
 ---
 
