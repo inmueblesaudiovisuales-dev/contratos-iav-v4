@@ -917,7 +917,7 @@ function subirArchivo(body) {
   var blob = Utilities.newBlob(Utilities.base64Decode(body.base64), body.mimeType, body.nombre);
   var archivo = carpeta.createFile(blob);
   archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  return { url: archivo.getUrl() };
+  return { ok: true, url: archivo.getUrl() };
 }
 
 function subirArchivoAdmin(body) {
@@ -925,7 +925,7 @@ function subirArchivoAdmin(body) {
   var blob = Utilities.newBlob(Utilities.base64Decode(body.base64), body.mimeType, body.nombre);
   var archivo = carpeta.createFile(blob);
   archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  return { url: archivo.getUrl() };
+  return { ok: true, url: archivo.getUrl() };
 }
 
 // ── SYNC BACKUP — sobreescribe Sheets con snapshot de D1 ────────────────────
