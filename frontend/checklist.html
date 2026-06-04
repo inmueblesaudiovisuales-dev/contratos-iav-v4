@@ -419,6 +419,40 @@
     .lane-opt.soon { opacity: .55; }
     .lane-soon { font-size: 11px; font-weight: 600; color: var(--ink-3); background: var(--muted); border-radius: 999px; padding: 3px 9px; flex: none; }
     .ob-lane i, .action-stack .btn i, .action-stack .primary i { font-size: 17px; }
+    .action-stack .btn, .action-stack .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+    /* ===== Armar cuartos (setup) ===== */
+    .setup { padding: 18px 0 28px; max-width: 620px; margin: 0 auto; }
+    .setup-hd h2 { font-family: var(--font-display); font-weight: 500; font-size: 24px; }
+    .setup-hd p { color: var(--ink-2); font-size: 13px; margin-top: 4px; line-height: 1.45; }
+    .setup-block { margin-top: 20px; }
+    .setup-lbl { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; }
+    .setup-lbl b { color: var(--gold); font-weight: 600; }
+    .seg { display: flex; flex-wrap: wrap; gap: 7px; }
+    .seg-btn { height: 38px; padding: 0 14px; border: 1.5px solid var(--line-2, #D2C9B3); border-radius: 8px; background: var(--card); color: var(--ink-2); font-weight: 600; font-size: 13px; }
+    .seg-btn.active { border-color: var(--gold-leaf); background: var(--gold-soft); color: var(--ink-1); }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+    .chip { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 11px; border: 1px solid var(--line-2, #D2C9B3); border-radius: 999px; background: var(--card); color: var(--ink-1); font-size: 13px; font-weight: 600; }
+    .chip i { font-size: 15px; color: var(--ink-3); }
+    .chip.active { border-color: var(--gold-leaf); background: var(--gold-soft); }
+    .chip.active .chip-x { color: var(--gold); }
+    .chip.add { border-style: dashed; color: var(--ink-2); }
+    .chip.suggest, .chips.suggest .chip { font-weight: 500; }
+    .chips.suggest { margin-top: 10px; }
+    .chips.suggest .chip i { color: var(--gold); }
+    .setup-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .setup-add .field { width: 100%; height: 44px; padding: 0 12px; border: 1.5px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--card); font-size: 14px; }
+    .setup-add .btn { height: 44px; }
+    .setup-piso-group { margin-top: 12px; }
+    .setup-piso-name { font-size: 12px; font-weight: 600; color: var(--gold); margin-bottom: 5px; }
+    .setup-room { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); margin-bottom: 6px; box-shadow: var(--shadow); }
+    .setup-room.sub { margin-left: 18px; }
+    .setup-room.sub .setup-room-name::before { content: "– "; color: var(--ink-3); }
+    .setup-room-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 500; }
+    .setup-mini { display: inline-flex; align-items: center; gap: 3px; height: 30px; padding: 0 9px; border: 1px solid var(--line-2, #D2C9B3); border-radius: 8px; background: var(--page); color: var(--ink-2); font-size: 12px; font-weight: 600; flex: none; }
+    .setup-mini i { font-size: 14px; }
+    .setup-mini.del { color: var(--red); border-color: #E8C9C3; }
+    .primary.block { width: 100%; margin-top: 18px; min-height: 50px; border-radius: var(--radius); font-size: 15px; }
   </style>
 </head>
 <body>
@@ -445,6 +479,9 @@ let modalTab = 'plantillas';
 let selectedTemplate = 'casa';
 let selectedAction = null;
 let activeRoomId = null;
+let setupOpen = false;
+let setupTipo = 'casa';
+let setupPiso = null;
 let searchTerm = '';
 let saveTimer = null;
 let retryTimer = null;
@@ -656,10 +693,11 @@ function render() {
     bindNameInput();
     return;
   }
+  const showSetup = setupOpen || !state.espacios.length;
   app.innerHTML = `
     ${renderHeader()}
-    ${state.espacios.length ? renderTabs() : ''}
-    <main class="content">${state.espacios.length ? renderActiveView() : renderPrepareView()}</main>
+    ${state.espacios.length && !showSetup ? renderTabs() : ''}
+    <main class="content">${showSetup ? renderSetup() : renderActiveView()}</main>
   `;
   bindNameInput();
   const search = document.getElementById('space-search');
@@ -724,6 +762,7 @@ function abrirLane() {
       <input class="field" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" value="${esc(localStorage.getItem('checklist_nombre') || '')}" oninput="localStorage.setItem('checklist_nombre', this.value.trim())"></div>
     <div class="action-stack">${lanes.map(([key, label]) => `
       <button class="${state.modoActual === key ? 'primary' : 'btn'}" onclick="chooseLane('${key}')"><i class="ti ti-${laneIcon(key)}"></i> ${label}</button>`).join('')}
+      <button class="btn ghost" onclick="abrirSetup()"><i class="ti ti-home-cog"></i> Armar cuartos</button>
       <button class="btn ghost" onclick="cerrarModal();abrirServicios()">Servicios contratados</button>
     </div>`);
 }
@@ -770,16 +809,133 @@ function renderActiveView() {
   return renderCaptureView();
 }
 
-function renderPrepareView() {
-  return `<section class="prepare">
-    <div>
-      <h2>Que vamos a producir hoy?</h2>
-      <p>Empieza con la estructura mas parecida. Podras agregar o quitar espacios despues.</p>
+const TIPO_LABEL = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', quinta: 'Quinta' };
+
+function getFocusPiso() {
+  const pisos = state.pisos && state.pisos.length ? state.pisos : ['Piso 1'];
+  return setupPiso && pisos.includes(setupPiso) ? setupPiso : pisos[0];
+}
+
+function renderSetup() {
+  const pisos = state.pisos && state.pisos.length ? state.pisos : ['Piso 1'];
+  const focusP = getFocusPiso();
+  const added = new Set(state.espacios.map((e) => e.nombre.toLowerCase()));
+  const sugg = (logic.SPACE_SUGGESTIONS[setupTipo] || []).filter((row) => !added.has(row[0].toLowerCase()) && !row[3]);
+  return `<section class="setup">
+    <div class="setup-hd"><h2>Armar cuartos</h2><p>Agrega solo lo que aplica. Puedes volver a entrar cuando quieras.</p></div>
+    <div class="setup-block">
+      <label class="setup-lbl">Tipo de propiedad</label>
+      <div class="seg">${['casa', 'departamento', 'terreno', 'quinta'].map((t) => `<button class="seg-btn${setupTipo === t ? ' active' : ''}" onclick="setSetupTipo('${t}')">${TIPO_LABEL[t]}</button>`).join('')}</div>
     </div>
-    <div class="template-grid">${['amenidades', 'casa', 'departamento', 'terreno', 'exterior_drone'].map(renderTemplateCard).join('')}
-      <button class="template-card" onclick="abrirEspacios('lista')"><strong>Lista propia</strong><span>Pega tus espacios con subespacios usando sangria.</span></button>
+    <div class="setup-block">
+      <label class="setup-lbl">Pisos</label>
+      <div class="chips">${pisos.map((p) => `<button class="chip${p === focusP ? ' active' : ''}" onclick="setSetupPiso('${esc(p)}')">${esc(p)}<i class="ti ti-x chip-x" onclick="event.stopPropagation();quitarPiso('${esc(p)}')"></i></button>`).join('')}<button class="chip add" onclick="agregarPiso()"><i class="ti ti-plus"></i>piso</button></div>
     </div>
+    <div class="setup-block">
+      <label class="setup-lbl">Agregar a <b>${esc(focusP)}</b></label>
+      <div class="setup-add"><input class="field" id="setup-input" type="text" placeholder="Escribe un cuarto y Enter" autocomplete="off" onkeydown="if(event.key==='Enter')agregarCuartoEscrito()"><button class="btn" onclick="agregarCuartoEscrito()">Agregar</button></div>
+      <div class="chips suggest">${sugg.length ? sugg.slice(0, 18).map((row) => `<button class="chip" onclick="agregarCuartoSugerido('${esc(row[0])}','${row[1]}')"><i class="ti ti-plus"></i>${esc(row[0])}</button>`).join('') : '<span class="muted">Sin más sugerencias para este tipo.</span>'}</div>
+    </div>
+    ${state.espacios.length ? `<div class="setup-block"><label class="setup-lbl">Cuartos · ${state.espacios.length}</label>${renderSetupList()}</div>
+      <button class="primary block" onclick="cerrarSetup()">Listo, a capturar</button>` : ''}
   </section>`;
+}
+
+function renderSetupList() {
+  const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(state.espacios.map((e) => e.piso || 'Sin piso'))];
+  return pisos.map((p) => {
+    const rooms = state.espacios.filter((e) => (e.piso || 'Sin piso') === p && !e.parentId).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    if (!rooms.length) return '';
+    return `<div class="setup-piso-group"><div class="setup-piso-name">${esc(p)}</div>${rooms.map(setupRoomRow).join('')}</div>`;
+  }).join('');
+}
+
+function setupRoomRow(room) {
+  const subs = state.espacios.filter((e) => e.parentId === room.id);
+  return `<div class="setup-room"><span class="setup-room-name">${esc(room.nombre)}</span>
+    <button class="setup-mini" onclick="addSubSetup('${room.id}')"><i class="ti ti-plus"></i>sub</button>
+    <button class="setup-mini del" onclick="delSetup('${room.id}')" aria-label="Borrar"><i class="ti ti-trash"></i></button></div>
+    ${subs.map((s) => `<div class="setup-room sub"><span class="setup-room-name">${esc(s.nombre)}</span><button class="setup-mini del" onclick="delSetup('${s.id}')" aria-label="Borrar"><i class="ti ti-trash"></i></button></div>`).join('')}`;
+}
+
+function nuevoEspacio(nombre, piso, zona, parentId) {
+  state.espacios.push({
+    id: 'esp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    nombre: nombre.trim(), piso, zona: zona || 'interior', parentId: parentId || null,
+    clave: false, orden: state.espacios.length + 1,
+    estados: { foto: { estado: 'pendiente' }, t360: { estado: 'pendiente' }, video: { estado: 'pendiente' } },
+  });
+}
+
+function setSetupTipo(t) { setupTipo = t; render(); }
+function setSetupPiso(p) { setupPiso = p; render(); }
+function abrirSetup() { setupOpen = true; cerrarModal(); render(); }
+function cerrarSetup() { setupOpen = false; render(); }
+
+function agregarCuartoEscrito() {
+  const input = document.getElementById('setup-input');
+  const value = input && input.value.trim();
+  if (!value) return;
+  nuevoEspacio(value, getFocusPiso(), 'interior');
+  scheduleSave();
+  render();
+  const again = document.getElementById('setup-input');
+  if (again) again.focus();
+}
+
+function agregarCuartoSugerido(nombre, zona) {
+  nuevoEspacio(nombre, getFocusPiso(), zona);
+  scheduleSave();
+  render();
+}
+
+function agregarPiso() {
+  const sug = ['Sótano', 'Piso 1', 'Piso 2', 'Piso 3', 'Roof', 'Exterior', 'Amenidades', 'Casa principal'].filter((p) => !(state.pisos || []).includes(p));
+  abrirModal(`<div class="sheet-head"><h2>Agregar piso</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="chips" style="margin-bottom:12px">${sug.map((p) => `<button class="chip" onclick="confirmarPiso('${esc(p)}')"><i class="ti ti-plus"></i>${esc(p)}</button>`).join('')}</div>
+    <div class="setup-add"><input class="field" id="piso-input" type="text" placeholder="Otro piso" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarPisoInput()"><button class="btn" onclick="confirmarPisoInput()">Agregar</button></div>`);
+}
+
+function confirmarPiso(p) {
+  if (!state.pisos) state.pisos = [];
+  if (!state.pisos.includes(p)) state.pisos.push(p);
+  setupPiso = p;
+  cerrarModal(); scheduleSave(); render();
+}
+
+function confirmarPisoInput() {
+  const value = document.getElementById('piso-input').value.trim();
+  if (value) confirmarPiso(value);
+}
+
+function quitarPiso(p) {
+  if (state.espacios.some((e) => (e.piso || '') === p)) return showToast('Ese piso tiene cuartos');
+  state.pisos = (state.pisos || []).filter((x) => x !== p);
+  if (setupPiso === p) setupPiso = null;
+  scheduleSave(); render();
+}
+
+function addSubSetup(parentId) {
+  const parent = state.espacios.find((e) => e.id === parentId);
+  if (!parent) return;
+  abrirModal(`<div class="sheet-head"><h2>Sub-cuarto de ${esc(parent.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="setup-add"><input class="field" id="sub-input" type="text" placeholder="Baño, clóset…" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarSub('${parentId}')"><button class="btn" onclick="confirmarSub('${parentId}')">Agregar</button></div>`);
+}
+
+function confirmarSub(parentId) {
+  const value = document.getElementById('sub-input').value.trim();
+  if (!value) return;
+  const parent = state.espacios.find((e) => e.id === parentId);
+  if (!parent) return;
+  nuevoEspacio(value, parent.piso, parent.zona, parentId);
+  cerrarModal(); scheduleSave(); render();
+}
+
+function delSetup(id) {
+  const ids = new Set(logic.getDescendantIds(state, id));
+  if ((state.mediaFiles || []).some((f) => ids.has(f.targetId)) || state.bitacora.some((b) => ids.has(b.targetId))) return showToast('Tiene tomas registradas');
+  state.espacios = state.espacios.filter((e) => !ids.has(e.id));
+  scheduleSave(); render();
 }
 
 function renderTemplateCard(key) {
@@ -820,7 +976,7 @@ function renderCaptureView() {
   return `${renderSummary()}
     <div class="toolbar">
       <input class="field" id="space-search" type="search" placeholder="Buscar espacio...">
-      <button class="primary" onclick="abrirEspacios('plantillas')">Agregar espacios</button>
+      <button class="primary" onclick="abrirSetup()">Agregar espacios</button>
     </div>
     ${renderSpaceGroups()}`;
 }
@@ -851,7 +1007,7 @@ function discardShort(file) {
 function renderMediaCapture() {
   const target = activeTarget();
   if (!target) {
-    return `<div class="empty"><h2>Sin espacios todavía</h2><p>Agrega cuartos para empezar a registrar.</p><button class="primary" onclick="abrirEspacios('plantillas')" style="margin-top:12px">Armar cuartos</button></div>`;
+    return `<div class="empty"><h2>Sin espacios todavía</h2><p>Agrega cuartos para empezar a registrar.</p><button class="primary" onclick="abrirSetup()" style="margin-top:12px">Armar cuartos</button></div>`;
   }
   const isDrone = state.modoActual === 'drone';
   const camera = activeCamera();
