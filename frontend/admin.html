@@ -2175,10 +2175,6 @@ function irANuevo() {
     abrirModalCliente();
     return;
   }
-  if (secActiva && secActiva.id === 'sec-trabajos') {
-    abrirModalTrabajo();
-    return;
-  }
   if (window.innerWidth >= 1024) {
     abrirDrawerNuevo();
     return;
@@ -4298,28 +4294,43 @@ async function crearContrato() {
   var clienteIdFinal = (document.getElementById('contrato-cliente-id-hidden')||{}).value || _clienteOrigenId || '';
   var trabajoIdFinal = _trabajoOrigenId || '';
 
-  var body = {
-    action:          'crearContrato',
-    nombreCliente:   nombre,
-    correoCliente:   correo,
-    telefonoCliente: telefono,
-    tipoPaquete:     tipoPaquete,
-    paqueteBase:     paqueteBase,
-    adicionales:     adds,
-    extrasAcordados: extrasAcordados,
-    precioTotal:     ptotal,
-    anticipo:        anticipo,
-    numPropiedades:  numProps,
-    propiedades:     propiedades,
-    clienteId:       clienteIdFinal,
-    trabajoId:       trabajoIdFinal,
-  };
-
   btn.disabled    = true;
   btn.textContent = 'Creando...';
 
   try {
-    var data = await apiPost(body);
+    // Auto-crear cliente si no hay uno vinculado
+    if (!clienteIdFinal) {
+      setMsg(msgId, 'Creando cliente…', '');
+      var cliRes = await apiPost({ action: 'crearCliente', nombre: nombre, telefono: telefono, correo: correo, origen: 'directo' });
+      if (!cliRes.ok) throw new Error(cliRes.error || 'Error creando cliente');
+      clienteIdFinal = cliRes.id;
+    }
+
+    // Auto-crear trabajo si no hay uno vinculado
+    if (!trabajoIdFinal) {
+      setMsg(msgId, 'Creando trabajo…', '');
+      var trabRes = await apiPost({ action: 'crearTrabajo', clienteId: clienteIdFinal, interes: paqueteBase || '', notas: '' });
+      if (!trabRes.ok) throw new Error(trabRes.error || 'Error creando trabajo');
+      trabajoIdFinal = trabRes.id;
+    }
+
+    setMsg(msgId, 'Guardando contrato…', '');
+    var data = await apiPost({
+      action:          'crearContrato',
+      nombreCliente:   nombre,
+      correoCliente:   correo,
+      telefonoCliente: telefono,
+      tipoPaquete:     tipoPaquete,
+      paqueteBase:     paqueteBase,
+      adicionales:     adds,
+      extrasAcordados: extrasAcordados,
+      precioTotal:     ptotal,
+      anticipo:        anticipo,
+      numPropiedades:  numProps,
+      propiedades:     propiedades,
+      clienteId:       clienteIdFinal,
+      trabajoId:       trabajoIdFinal,
+    });
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
 
     var waTxt    = 'Hola, aquí está tu link para revisar y firmar tu contrato con Inmuebles Audiovisuales: ' + data.url;
