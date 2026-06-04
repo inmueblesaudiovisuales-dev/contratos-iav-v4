@@ -1922,14 +1922,15 @@
       <div id="apane-bancarios" class="ajustes-pane">
         <div class="form-card" style="max-width:560px">
           <h2>Datos bancarios</h2>
-          <p class="form-desc">Se usan al cobrar por WhatsApp y en el portal del cliente. El cliente ve la CLABE, banco y titular.</p>
-          <div class="campo"><label>CLABE</label><input type="text" id="cfg-banco-clabe" placeholder="18 dígitos" inputmode="numeric"></div>
+          <p class="form-desc">Se usan al cobrar por WhatsApp y en el portal del cliente. Cada dato tiene su uso: la <strong>CLABE</strong> para transferencias, la <strong>cuenta</strong> para depósito en cajero, y la <strong>tarjeta</strong> para depósito en OXXO / 7-Eleven.</p>
+          <div class="campo"><label>CLABE <span style="font-weight:400;color:var(--ink-3)">(transferencias)</span></label><input type="text" id="cfg-banco-clabe" placeholder="18 dígitos" inputmode="numeric"></div>
           <div class="fila-2">
-            <div class="campo"><label>Banco</label><input type="text" id="cfg-banco-nombre" placeholder="Ej. BBVA"></div>
+            <div class="campo"><label>Banco</label><input type="text" id="cfg-banco-nombre" placeholder="Ej. Banamex"></div>
             <div class="campo"><label>Titular de la cuenta</label><input type="text" id="cfg-banco-titular" placeholder="Nombre del titular"></div>
           </div>
-          <div class="campo"><label>Depósito en OXXO / 7-Eleven <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><input type="text" id="cfg-pago-oxxo" placeholder="Tarjeta o referencia para depósito en efectivo"></div>
-          <div class="campo"><label>Link de Clip (pago con tarjeta) <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><input type="url" id="cfg-pago-clip" placeholder="https://clip.mx/..."></div>
+          <div class="campo"><label>Número de cuenta <span style="font-weight:400;color:var(--ink-3)">(depósito en cajero)</span></label><input type="text" id="cfg-pago-cuenta" placeholder="Para depósito directo en ventanilla / cajero" inputmode="numeric"></div>
+          <div class="campo"><label>Número de tarjeta <span style="font-weight:400;color:var(--ink-3)">(depósito en OXXO / 7-Eleven)</span></label><input type="text" id="cfg-pago-tarjeta" placeholder="16 dígitos de la tarjeta" inputmode="numeric"></div>
+          <div class="campo"><label>Link de Clip (pago con tarjeta en línea) <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><input type="url" id="cfg-pago-clip" placeholder="https://clip.mx/..."></div>
           <button class="btn-primario gold" style="width:100%;margin-top:6px" onclick="guardarConfigBancario()"><i class="ti ti-device-floppy"></i> Guardar datos bancarios</button>
           <div id="cfg-banco-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
         </div>
@@ -2453,7 +2454,8 @@ async function cargarConfigBancario() {
     document.getElementById('cfg-banco-clabe').value   = _configCache.banco_clabe   || '';
     document.getElementById('cfg-banco-nombre').value  = _configCache.banco_nombre  || '';
     document.getElementById('cfg-banco-titular').value = _configCache.banco_titular || '';
-    document.getElementById('cfg-pago-oxxo').value     = _configCache.pago_oxxo      || '';
+    document.getElementById('cfg-pago-cuenta').value   = _configCache.pago_cuenta   || '';
+    document.getElementById('cfg-pago-tarjeta').value  = _configCache.pago_tarjeta  || '';
     document.getElementById('cfg-pago-clip').value     = _configCache.pago_clip_url  || '';
   } catch (e) {
     setMsg('cfg-banco-msg', 'No se pudo cargar (¿migración pendiente?).', 'msg-err');
@@ -2465,7 +2467,8 @@ async function guardarConfigBancario() {
     banco_clabe:   document.getElementById('cfg-banco-clabe').value.trim(),
     banco_nombre:  document.getElementById('cfg-banco-nombre').value.trim(),
     banco_titular: document.getElementById('cfg-banco-titular').value.trim(),
-    pago_oxxo:     document.getElementById('cfg-pago-oxxo').value.trim(),
+    pago_cuenta:   document.getElementById('cfg-pago-cuenta').value.trim(),
+    pago_tarjeta:  document.getElementById('cfg-pago-tarjeta').value.trim(),
     pago_clip_url: document.getElementById('cfg-pago-clip').value.trim()
   };
   try {
