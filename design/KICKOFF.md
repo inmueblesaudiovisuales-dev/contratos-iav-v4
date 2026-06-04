@@ -15,7 +15,10 @@ Vas a ejecutar el rediseño completo de `admin.html` y `portal.html` de Inmueble
 
 ## PASO 0 — PREFLIGHT OBLIGATORIO (no toques nada hasta cumplirlo)
 0. Entorno: corres LOCAL en la Mac, en `~/contratos-iav-v4`. `wrangler` está autenticado (puedes correr la migración D1). No estás en la web.
-1. Repo `inmueblesaudiovisuales-dev/contratos-iav-v4`, rama `main` = ÚNICA fuente de verdad. `cd ~/contratos-iav-v4 && git fetch origin && git pull origin main`. Anota el hash del último commit. No uses copias viejas ni `/tmp/...`.
+1. UBICACIÓN DE LOS ARCHIVOS (memorízala): el repo YA está clonado localmente en `/Users/brunogutierrez/contratos-iav-v4`. Es un clon de `https://github.com/inmueblesaudiovisuales-dev/contratos-iav-v4` (rama `main`), que es la ÚNICA fuente de verdad. TODOS los archivos que necesitas están dentro de esa carpeta; las rutas de este prompt son relativas a esa raíz.
+   - `cd /Users/brunogutierrez/contratos-iav-v4 && git fetch origin && git pull origin main` → anota el hash del último commit.
+   - Si por algún motivo la carpeta NO existe, clónala: `gh repo clone inmueblesaudiovisuales-dev/contratos-iav-v4 /Users/brunogutierrez/contratos-iav-v4`.
+   - No uses ninguna otra copia (ni `/tmp/...`, ni `~/Documents/...`, ni archivos de sesiones previas): pueden estar viejos.
 2. Confirma que tienes y son del repo: `frontend/admin.html` (~5,971 líneas), `frontend/portal.html` (~2,788), `worker/` completo (`src/index.js`, `src/routes/*`, `schema.sql`, `wrangler.toml`, `migrations/`), `adapter/AdapterScript4_v1.js`, `design/` (spec, design-system.css, B-dossier.html, BUILD_LOG.md). Si `admin.html` es mucho más corto que ~6k líneas, es versión vieja: NO la uses.
 3. Lee COMPLETOS: `design/SPEC_REDISENO_IAV.md` (Anexos A–I), `design/design-system.css`, `design/B-dossier.html`, `MASTER_V4.md` (contexto DB/flujos + número de ronda actual), `design/BUILD_LOG.md`.
 4. Si falta algo o no puedes confirmar que es lo más reciente: búscalo. Si no lo resuelves, DETENTE, deja el motivo en `BUILD_LOG.md` y termina. Bruno lo verá al despertar.
