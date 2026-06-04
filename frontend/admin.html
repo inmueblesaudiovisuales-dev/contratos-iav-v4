@@ -4111,7 +4111,9 @@ function renderPanel(data) {
       </div>
     </div>`;
 
-  const estadoAnticipo  = totalAbonado > 0 || ['Reservado','En produccion','Entregado','Completado'].includes(c.Estatus);
+  // "Anticipo abonado" = hubo pago real. (Con "reservar sin abono" un contrato puede
+  // estar Reservado sin abonos, así que NO inferimos pago desde el estatus.)
+  const estadoAnticipo  = totalAbonado > 0;
   const estadoLiquidado = c.Estatus === 'Completado';
   const prodFotoHecho      = !!(c.FotografiaLista && String(c.FotografiaLista).trim());
   const prodVideoHecho     = !!(c.VideoListo && String(c.VideoListo).trim());
