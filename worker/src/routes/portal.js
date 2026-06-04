@@ -105,9 +105,10 @@ export async function handlePortal(request, env, ctx, action) {
     let logoPrecargadoUrl = null;
     if (contratoFinal.correo_cliente) {
       try {
-        const logoData = await callAdapterSync(env, 'obtenerLogoCliente', {
-          correo: contratoFinal.correo_cliente
-        });
+        const logoData = await Promise.race([
+          callAdapterSync(env, 'obtenerLogoCliente', { correo: contratoFinal.correo_cliente }),
+          new Promise(resolve => setTimeout(() => resolve(null), 3000))
+        ]);
         logoPrecargadoUrl = logoData?.logoPrecargadoUrl || null;
       } catch (e) {
         console.error('Error obteniendo logo cliente:', e.message);

@@ -357,7 +357,6 @@
     .ses-row.st-anticipo   { border-left: 3px solid #10B981; }
     .ses-row.st-produccion { border-left: 3px solid #8B5CF6; }
     .ses-row.st-entregado  { border-left: 3px solid #0EA5E9; }
-    .ses-row.st-liquidado  { border-left: 3px solid #059669; }
     .ses-row.st-completado { border-left: 3px solid var(--gold); }
     .ses-fecha.es-manana { background: #FFFBEB; }
     .ses-fecha.es-manana .ses-dia-num { color: #D97706; }
@@ -376,7 +375,6 @@
     .badge-anticipo         { background: var(--success-bg); color: #065F46; }
     .badge-en-produccion    { background: var(--purple-bg); color: #5B21B6; }
     .badge-entregado        { background: #E0F2FE; color: #0369A1; }
-    .badge-liquidado        { background: var(--success-bg); color: #065F46; border: 1px solid #6EE7B7; }
     .badge-completado       { background: var(--gold-light); color: #92400E; border: 1px solid var(--gold-border); }
 
     /* ── KPI GRID (mobile: hidden, desktop: shown) ────── */
@@ -1510,10 +1508,8 @@
       <div class="sec-sublabel">Pipeline activo</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="pipeline-chips">
         <button class="filter-chip on" data-estatus="todos" onclick="filtrarPipeline(this)">Todos</button>
-        <button class="filter-chip" data-estatus="nuevo" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#7D3C98"></span>Nuevo</button>
-        <button class="filter-chip" data-estatus="intentando" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#C97B22"></span>Intentando</button>
-        <button class="filter-chip" data-estatus="en_seguimiento" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#2471A3"></span>Seguimiento</button>
-        <button class="filter-chip" data-estatus="cotizado" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#1A5276"></span>Cotizado</button>
+        <button class="filter-chip" data-estatus="Nuevo" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#7D3C98"></span>Nuevo</button>
+        <button class="filter-chip" data-estatus="En cotizacion" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#F59E0B"></span>En cotización</button>
       </div>
       <div id="pipeline-lista">
         <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
@@ -2205,7 +2201,7 @@ function actualizarNavBadges(contratos) {
 
 function actualizarBadgeClientes(trabajos) {
   var activos = (trabajos||[]).filter(function(t){
-    return ['nuevo','intentando','en_seguimiento','cotizado'].includes(t.estatus);
+    return ['Nuevo','En cotizacion'].includes(t.estatus);
   }).length;
   var bdg = document.getElementById('bnav-badge-clientes');
   if (bdg) {
@@ -2997,7 +2993,7 @@ function renderTabla(lista) {
     const barColor  = saldoVal <= 0 ? '#10B981' : pagadoPct >= 50 ? '#F59E0B' : '#DC2626';
     const saldoClass = saldoVal <= 0 ? 'green' : pagadoPct >= 50 ? 'amber' : 'red';
     const saldoText  = saldoVal <= 0
-      ? '<i class="ti ti-check"></i> Liquidado'
+      ? '<i class="ti ti-check"></i> Pagado'
       : fmxn(saldoVal);
     const saldoCell = `<td>
       <div class="td-saldo-wrap">
@@ -3248,7 +3244,7 @@ function renderPanelCliente(data) {
       html += '</div>';
       if (t.notas) html += '<div style="font-size:12px;color:var(--ink-2);white-space:pre-wrap;line-height:1.5;margin-bottom:8px">'+esc(t.notas)+'</div>';
       html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
-      if (!t.contrato_token && t.estatus !== 'descartado') {
+      if (!t.contrato_token && t.estatus !== 'Cancelado') {
         html += '<button onclick="crearContratoDesdeWork('+[t.id,c.nombre,c.id,c.telefono,c.correo].map(jsArg).join(',')+')" style="font-size:11px;background:var(--gold);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#1a1000;font-weight:600"><i class="ti ti-file-plus" style="font-size:10px"></i> Crear contrato</button>';
       }
       if (t.contrato_token) {
@@ -5319,9 +5315,9 @@ function renderLifecycle(estatus) {
 
 // ── CLIENTES + TRABAJOS ────────────────────────────────────────────────────────
 
-var TRAB_ESTATUS_COLORS = { nuevo:'#7D3C98', intentando:'#C97B22', en_seguimiento:'#2471A3', cotizado:'#1A5276', convertido:'#1E8449', descartado:'#909497' };
-var TRAB_ESTATUS_LABELS = { nuevo:'Nuevo', intentando:'Intentando contactar', en_seguimiento:'En seguimiento', cotizado:'Cotizado', convertido:'Convertido', descartado:'Descartado' };
-var TRAB_ESTATUS_ICONS  = { nuevo:'ti-user-plus', intentando:'ti-phone-off', en_seguimiento:'ti-messages', cotizado:'ti-file-invoice', convertido:'ti-circle-check', descartado:'ti-circle-x' };
+var TRAB_ESTATUS_COLORS = { 'Nuevo':'#7D3C98', 'En cotizacion':'#F59E0B', 'Cancelado':'#909497' };
+var TRAB_ESTATUS_LABELS = { 'Nuevo':'Nuevo', 'En cotizacion':'En cotización', 'Cancelado':'Cancelado' };
+var TRAB_ESTATUS_ICONS  = { 'Nuevo':'ti-user-plus', 'En cotizacion':'ti-file-invoice', 'Cancelado':'ti-circle-x' };
 var ORIGEN_LABELS = { whatsapp:'WhatsApp', instagram:'Instagram', referido:'Referido', facebook:'Facebook', google:'Google', llamada:'Llamada directa', otro:'Otro' };
 var INTERES_LABELS = { foto:'Fotografía', video:'Video + Drone', '360':'Recorrido 360°', combo:'Paquete completo' };
 var CATALOGO_PKG_LABELS = { 'RES-COMBO':'Residencial $4,500','TER-COMBO':'Terreno $4,000','IND-FOTO':'Fotografía $3,000','IND-VIDEO':'Video+Drone $3,000','IND-360':'360° $3,000','ADD-COMOLLEGAR':'+Cómo llegar $1,000','ADD-LANDING':'+Landing $1,200','ADD-FOLLETO':'+Folleto $800','ADD-ASESOR':'+Asesor $500','ADD-EXPRESS':'+Express $1,000' };
@@ -5381,7 +5377,7 @@ function renderPipeline(trabajos) {
   var el = document.getElementById('pipeline-lista');
   if (!el) return;
   var activos = trabajos.filter(function(t){
-    return ['nuevo','intentando','en_seguimiento','cotizado'].includes(t.estatus);
+    return ['Nuevo','En cotizacion'].includes(t.estatus);
   });
   var filtrados = _pipeline_estatus_filtro === 'todos' ? activos
     : activos.filter(function(t){ return t.estatus === _pipeline_estatus_filtro; });
@@ -5422,7 +5418,7 @@ function renderPipeline(trabajos) {
     html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">';
     html += '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'18;border-radius:20px;padding:3px 10px;white-space:nowrap;display:flex;align-items:center;gap:4px"><i class="ti '+icon+'" style="font-size:11px"></i>'+label+'</span>';
     html += '<select onchange="cambiarEstatusTrabajo(\''+t.id+'\',this.value,this)" style="font-size:11px;padding:4px 7px;border:1.5px solid var(--border-2);border-radius:6px;background:var(--page);color:var(--ink-2);cursor:pointer;outline:none">';
-    ['nuevo','intentando','en_seguimiento','cotizado','descartado'].forEach(function(s){
+    ['Nuevo','En cotizacion','Cancelado'].forEach(function(s){
       html += '<option value="'+s+'"'+(t.estatus===s?' selected':'')+'>'+TRAB_ESTATUS_LABELS[s]+'</option>';
     });
     html += '</select>';
@@ -5431,7 +5427,7 @@ function renderPipeline(trabajos) {
     html += '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">';
     html += '<button onclick="toggleDetalleTrabajo(\''+detalleId+'\')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-chevron-down" style="font-size:10px"></i> Detalles</button>';
     html += '<button onclick="abrirModalNotaTrabajo(\''+t.id+'\',\''+t.cliente_id+'\')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-note" style="font-size:10px"></i> Nota</button>';
-    if (t.estatus !== 'convertido' && t.estatus !== 'descartado') {
+    if (t.estatus !== 'Cancelado') {
       html += '<button onclick="crearContratoDesdeWork('+[t.id,t.cliente_nombre,t.cliente_id,t.cliente_telefono,t.cliente_correo].map(jsArg).join(',')+')" style="font-size:11px;background:var(--gold);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#1a1000;font-weight:600"><i class="ti ti-file-plus" style="font-size:10px"></i> Crear contrato</button>';
     }
     if (t.contrato_token) {

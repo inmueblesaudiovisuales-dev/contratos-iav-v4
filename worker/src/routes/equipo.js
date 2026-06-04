@@ -1,4 +1,4 @@
-import { queryOne, query, run, now } from '../db.js';
+import { queryOne, query, run, now, batch } from '../db.js';
 import { ok, err } from '../auth.js';
 
 export async function handleEquipo(request, env, ctx, action) {
@@ -121,6 +121,7 @@ export async function handleEquipo(request, env, ctx, action) {
 
     vals.push(token);
     await run(db, `UPDATE contratos SET ${sets.join(', ')} WHERE token=?`, vals);
+    await run(db, `UPDATE trabajos SET fecha_ultima_actividad=? WHERE token=?`, [now(), token]);
     return ok({ ok: true });
   }
 
