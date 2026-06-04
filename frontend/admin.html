@@ -236,7 +236,10 @@
     .barra-fila-principal { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .barra-fila-principal .campo-busqueda { flex: 1; min-width: 200px; }
     .barra-filtros { display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .barra-filtros.visible { display: flex; }
+    .barra-filtros.visible { display: flex; padding: 12px 14px; background: var(--paper-2); border: 1px solid var(--border); border-radius: var(--r); margin-top: 2px; }
+    /* dentro del panel de Filtros, chips y select siempre visibles (anula el ocultar de móvil) */
+    .barra-filtros .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .barra-filtros #filtro-estatus { display: inline-block; width: auto; }
     .filtro-fecha-label { font-size: 11px; font-weight: 700; color: var(--ink-3); white-space: nowrap; letter-spacing: 0.04em; }
     .btn-filtros-toggle {
       display: flex; align-items: center; gap: 6px;
@@ -1037,7 +1040,7 @@
       .fila-2 { grid-template-columns: 1fr; }
       .form-card { padding: 20px 14px; }
       .barra-fila-principal .campo-busqueda { width: 100%; min-width: 0; order: -1; flex: none; }
-      #filtro-estatus { flex: 1; min-width: 0; }
+      .barra-filtros #filtro-estatus { flex: 0 0 auto; width: auto; min-width: 150px; }
       #filtro-fecha-desde, #filtro-fecha-hasta { flex: 1; min-width: 0; }
       #btn-refresh-tabla, #btn-export-csv { display: none !important; }
       .td-sub.td-email { display: none !important; }
@@ -1422,32 +1425,9 @@
             <i class="ti ti-search search-icon"></i>
             <input type="text" id="busqueda" placeholder="Buscar nombre, teléfono, folio..." oninput="filtrarContratos()">
           </div>
-          <div class="toolbar-sep"></div>
-          <div class="filter-chips" id="filter-chips">
-            <button class="filter-chip" data-estatus="Pendiente firma" onclick="toggleChip(this)"><span class="chip-dot" style="background:#9CA3AF"></span>Pendiente</button>
-            <button class="filter-chip" data-estatus="Firmado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#3B82F6"></span>Firmado</button>
-            <button class="filter-chip" data-estatus="Reservado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Reservado</button>
-            <button class="filter-chip" data-estatus="En produccion" onclick="toggleChip(this)"><span class="chip-dot" style="background:#8B5CF6"></span>Producción</button>
-            <button class="filter-chip" data-estatus="Entregado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Entregado</button>
-          </div>
-          <select id="filtro-estatus" onchange="document.querySelectorAll('#filter-chips .filter-chip.on').forEach(c=>c.classList.remove('on'));filtrarContratos()" style="width:auto">
-            <option value="">Todos los estatus</option>
-            <option value="Nuevo">Nuevo</option>
-            <option value="En cotizacion">En cotización</option>
-            <option value="Pendiente firma">Pendiente firma</option>
-            <option value="Firmado">Firmado</option>
-            <option value="Reservado">Reservado</option>
-            <option value="En produccion">En producción</option>
-            <option value="Entregado">Entregado</option>
-            <option value="Completado">Completado</option>
-            <option value="Cancelado">Cancelado</option>
-          </select>
-          <button class="btn-filtros-toggle" id="btn-filtros-toggle" onclick="toggleFiltros()" title="Filtrar por fecha">
-            <i class="ti ti-calendar-search"></i> Fechas
+          <button class="btn-filtros-toggle" id="btn-filtros-toggle" onclick="toggleFiltros()" title="Filtros">
+            <i class="ti ti-filter"></i> Filtros
             <span id="badge-filtros" class="filtros-badge" style="display:none">1</span>
-          </button>
-          <button id="btn-cancelados" class="btn-filtros-toggle" onclick="toggleCancelados()">
-            <i class="ti ti-eye"></i> Mostrar cancelados
           </button>
           <button class="btn-primario gold" id="btn-nuevo-toolbar" onclick="irANuevo()">
             <i class="ti ti-plus"></i> Nuevo
@@ -1470,13 +1450,35 @@
             </div>
           </div>
         </div>
-        <!-- Filtros de fecha: colapsados por defecto -->
+        <!-- Filtros avanzados: colapsados por defecto -->
         <div class="barra-filtros" id="barra-filtros">
+          <div class="filter-chips" id="filter-chips">
+            <button class="filter-chip" data-estatus="Pendiente firma" onclick="toggleChip(this)"><span class="chip-dot" style="background:#9CA3AF"></span>Pendiente</button>
+            <button class="filter-chip" data-estatus="Firmado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#3B82F6"></span>Firmado</button>
+            <button class="filter-chip" data-estatus="Reservado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Reservado</button>
+            <button class="filter-chip" data-estatus="En produccion" onclick="toggleChip(this)"><span class="chip-dot" style="background:#8B5CF6"></span>Producción</button>
+            <button class="filter-chip" data-estatus="Entregado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Entregado</button>
+          </div>
+          <select id="filtro-estatus" onchange="document.querySelectorAll('#filter-chips .filter-chip.on').forEach(c=>c.classList.remove('on'));filtrarContratos()" style="width:auto">
+            <option value="">Todos los estatus</option>
+            <option value="Nuevo">Nuevo</option>
+            <option value="En cotizacion">En cotización</option>
+            <option value="Pendiente firma">Pendiente firma</option>
+            <option value="Firmado">Firmado</option>
+            <option value="Reservado">Reservado</option>
+            <option value="En produccion">En producción</option>
+            <option value="Entregado">Entregado</option>
+            <option value="Completado">Completado</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
           <span class="filtro-fecha-label">Fecha de creación:</span>
           <input type="date" id="filtro-fecha-desde" onchange="filtrarContratos();actualizarBadgeFiltros()" style="width:auto" title="Creado desde">
           <input type="date" id="filtro-fecha-hasta" onchange="filtrarContratos();actualizarBadgeFiltros()" style="width:auto" title="Creado hasta">
           <button type="button" class="btn-secundario btn-sm" onclick="limpiarFiltrosFecha()" title="Limpiar fechas" style="color:var(--warn);font-size:12px">
             <i class="ti ti-x"></i> Limpiar
+          </button>
+          <button id="btn-cancelados" class="btn-filtros-toggle" onclick="toggleCancelados()">
+            <i class="ti ti-eye"></i> Mostrar cancelados
           </button>
         </div>
       </div>
@@ -2961,55 +2963,10 @@ function toggleCancelados() {
   cargarContratos();
 }
 
-// RETIRADO: el modelo viejo de "trabajos" pintaba filas con otro formato en la tabla
-// unificada de Contratos (causa raíz de filas descuadradas al filtrar). Cualquier
-// llamada residual ahora delega al modelo único de Contratos.
-function cargarTrabajos(tokenInicial) {
-  return cargarContratos(tokenInicial);
-}
-
-function renderTablaTrabajos(lista) {
-  const tbody = document.getElementById('tabla-body');
-  if (!tbody) return;
-  if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-2)">Sin trabajos en esta vista.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = lista.map(function(t) {
-    var _em = ESTATUS_MAP[t.estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: t.estatus || '—' };
-    var folio = t.folio || '—';
-    var tid = jsArg(t.id || '');
-    return '<tr class="cont-row" onclick="seleccionarTrabajo(' + tid + ')">' +
-      '<td><span class="estatus-badge" style="background:' + _em.bg + ';color:' + _em.color + '">' +
-        '<span class="dot" style="background:' + _em.dot + '"></span>' + esc(_em.label) + '</span></td>' +
-      '<td>' + esc(t.cliente_nombre || '—') + '</td>' +
-      '<td>' + esc(t.interes ? t.interes.substring(0,60) : '—') + '</td>' +
-      '<td>' + esc(folio) + '</td>' +
-      '<td style="color:var(--ink-2);font-size:12px">' + fmtFecha(t.fecha_creacion) + '</td>' +
-    '</tr>';
-  }).join('');
-}
-
-function renderCardsTrabajos(lista) {
-  var cont = document.getElementById('contratos-cards');
-  if (!cont) return;
-  cont.innerHTML = lista.map(function(t) {
-    var _em = ESTATUS_MAP[t.estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: t.estatus || '—' };
-    var tid = jsArg(t.id || '');
-    return '<div class="cont-card" onclick="seleccionarTrabajo(' + tid + ')">' +
-      '<div class="cont-card-top">' +
-        '<span class="cont-card-folio">' + esc(t.folio || (t.id || '').substring(0,8)) + '</span>' +
-        '<span class="cont-card-pill" style="background:' + _em.bg + ';color:' + _em.color + '">' + esc(_em.label) + '</span>' +
-      '</div>' +
-      '<div class="cont-card-nombre">' + esc(t.cliente_nombre || '—') + '</div>' +
-      '<div class="cont-card-paquete">' + esc(t.interes ? t.interes.substring(0,50) : '—') + '</div>' +
-      '<div class="cont-card-bottom">' +
-        '<span>' + esc(fmtFecha(t.fecha_creacion)) + '</span>' +
-        '<span style="color:var(--ink-2)">' + esc(t.cliente_telefono || '') + '</span>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
+// RETIRADO (R60): el modelo viejo de "trabajos" (cargarTrabajos / renderTablaTrabajos /
+// renderCardsTrabajos) ya no se usa — Contratos es el modelo único. Se eliminaron esas
+// funciones por estar muertas. `seleccionarTrabajo` permanece sólo por referencias
+// guardadas residuales (nunca se ejecuta sin window._trabajoActivo).
 
 async function seleccionarTrabajo(idOrObj) {
   var t = typeof idOrObj === 'object' ? idOrObj
@@ -3645,13 +3602,19 @@ function renderPanelCliente(data) {
   } else {
     html2 += '<div style="display:flex;flex-direction:column;gap:8px">';
     contratos.forEach(function(ct) {
-      var _em2 = ESTATUS_MAP[ct.estatus] || { bg:'#F3F4F6', color:'#374151' };
+      // El API devuelve claves PascalCase; toleramos snake_case por si acaso.
+      var _folio   = ct.Folio || ct.folio || '—';
+      var _estatus = ct.Estatus || ct.estatus || '';
+      var _token   = ct.Token || ct.token || '';
+      var _saldo   = ct.SaldoPendiente != null ? ct.SaldoPendiente : ct.saldo_pendiente;
+      var _precio  = ct.PrecioTotal != null ? ct.PrecioTotal : ct.precio_total;
+      var _em2 = ESTATUS_MAP[_estatus] || { bg:'#F3F4F6', color:'#374151' };
       html2 += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">';
-      html2 += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:var(--font-mono,monospace);min-width:48px">'+(ct.folio||'—')+'</span>';
-      html2 += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+_em2.bg+';color:'+_em2.color+'">'+esc(ct.estatus)+'</span>';
-      if (ct.saldo_pendiente > 0) html2 += '<span style="font-size:11px;color:var(--warn);margin-left:auto">$'+Math.round(ct.saldo_pendiente).toLocaleString()+' pendiente</span>';
-      else html2 += '<span style="font-size:11px;color:var(--ink-3);margin-left:auto">$'+Math.round(ct.precio_total||0).toLocaleString()+'</span>';
-      html2 += '<button onclick="irAContratoDesdeCliente('+jsArg(ct.token)+')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
+      html2 += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:var(--font-mono,monospace);min-width:48px">'+esc(_folio)+'</span>';
+      html2 += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+_em2.bg+';color:'+_em2.color+'">'+esc(_estatus)+'</span>';
+      if (_saldo > 0) html2 += '<span style="font-size:11px;color:var(--warn);margin-left:auto">$'+Math.round(_saldo).toLocaleString()+' pendiente</span>';
+      else html2 += '<span style="font-size:11px;color:var(--ink-3);margin-left:auto">$'+Math.round(_precio||0).toLocaleString()+'</span>';
+      html2 += '<button onclick="irAContratoDesdeCliente('+jsArg(_token)+')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
       html2 += '</div>';
     });
     html2 += '</div>';
@@ -6080,12 +6043,15 @@ function toggleContratosCliente(id, btn) {
     }
     var html = '<div style="display:flex;flex-direction:column;gap:6px">';
     r.contratos.forEach(function(c) {
-      var _em3 = ESTATUS_MAP[c.estatus] || { bg:'#F3F4F6', color:'#374151' };
+      var _folio = c.Folio || c.folio || '—';
+      var _estatus = c.Estatus || c.estatus || '';
+      var _token = c.Token || c.token || '';
+      var _em3 = ESTATUS_MAP[_estatus] || { bg:'#F3F4F6', color:'#374151' };
       var bs = { bg: _em3.bg, color: _em3.color };
       html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">';
-      html += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:monospace">'+(c.folio||'—')+'</span>';
-      html += '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:'+bs.bg+';color:'+bs.color+'">'+esc(c.estatus)+'</span>';
-      html += '<button onclick="irAContratoDesdeCliente('+jsArg(c.token)+')" style="margin-left:auto;font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:2px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
+      html += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:monospace">'+esc(_folio)+'</span>';
+      html += '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:'+bs.bg+';color:'+bs.color+'">'+esc(_estatus)+'</span>';
+      html += '<button onclick="irAContratoDesdeCliente('+jsArg(_token)+')" style="margin-left:auto;font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:2px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
       html += '</div>';
     });
     html += '</div>';
