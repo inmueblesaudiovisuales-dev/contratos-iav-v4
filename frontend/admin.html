@@ -1598,7 +1598,7 @@
         <!-- Datos del cliente -->
         <div id="banner-desde-trabajo" style="display:none;background:rgba(30,132,73,0.08);border:1.5px solid rgba(30,132,73,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:var(--success-text);align-items:center;justify-content:space-between">
           <span><i class="ti ti-circle-check" style="margin-right:6px"></i>Contrato para: <strong id="banner-trabajo-nombre"></strong></span>
-          <button onclick="limpiarOrigenTrabajoContrato()" style="background:none;border:none;color:var(--success-text);cursor:pointer;font-size:16px;padding:0 4px">✕</button>
+          <button onclick="limpiarOrigenTrabajoContrato()" style="background:none;border:none;color:var(--success-text);cursor:pointer;font-size:16px;padding:0 4px"><i class="ti ti-x"></i></button>
         </div>
         <div class="campo" id="campo-cliente-search-contrato">
           <label>Cliente existente <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label>
@@ -1608,7 +1608,7 @@
           </div>
           <div id="contrato-cliente-seleccionado" style="display:none;margin-top:6px;font-size:12px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:6px;padding:6px 10px;align-items:center;justify-content:space-between">
             <span id="contrato-cliente-sel-nombre" style="color:var(--gold-text,#8a6a00);font-weight:600"></span>
-            <button onclick="limpiarClienteContrato()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:12px">✕ quitar</button>
+            <button onclick="limpiarClienteContrato()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:12px"><i class="ti ti-x"></i> quitar</button>
           </div>
         </div>
         <div class="campo">
@@ -1694,7 +1694,7 @@
     <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div style="font-size:16px;font-weight:700;color:var(--ink-1)">Nuevo cliente</div>
-        <button onclick="cerrarModalCliente()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)">✕</button>
+        <button onclick="cerrarModalCliente()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-x"></i></button>
       </div>
       <div class="campo"><label>Nombre *</label><input type="text" id="cli-nombre" placeholder="Nombre completo"></div>
       <div class="campo"><label>Teléfono</label><input type="tel" id="cli-telefono" placeholder="81 1234 5678"></div>
@@ -1772,7 +1772,7 @@
     <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div style="font-size:16px;font-weight:700;color:var(--ink-1)">Nuevo trabajo</div>
-        <button onclick="cerrarModalTrabajo()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)">✕</button>
+        <button onclick="cerrarModalTrabajo()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-x"></i></button>
       </div>
       <div id="trab-cliente-banner" style="display:none;background:rgba(201,168,76,0.1);border:1.5px solid rgba(201,168,76,0.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--gold-text,#8a6a00)">
         Cliente: <strong id="trab-cliente-nombre-banner"></strong>
@@ -3996,12 +3996,9 @@ function renderPanel(data) {
     }
   }
 
-  // "Crear contrato" button — visible only when trabajo has no contrato
+  // "Crear contrato" no aplica en el panel de un contrato (ya existe). Siempre oculto. (R59 fix)
   const _btnCrearContrato = document.getElementById('panel-btn-crear-contrato');
-  if (_btnCrearContrato) {
-    const _tieneContrato = !!(data._equipoData && data._equipoData.tieneContrato);
-    _btnCrearContrato.style.display = _tieneContrato ? 'none' : '';
-  }
+  if (_btnCrearContrato) _btnCrearContrato.style.display = 'none';
 
   // KPI cards + payment progress bar
   const _precioTotal  = parseFloat(c.PrecioTotal)   || 0;
