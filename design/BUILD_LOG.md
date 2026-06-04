@@ -1,35 +1,78 @@
 # BUILD LOG — Rediseño IAV (admin + portal)
 
-> Bitácora de ejecución. El ejecutor (Opus) la actualiza tras cada avance.
-> Para retomar tras un reinicio de contexto: leer `design/SPEC_REDISENO_IAV.md` + `design/design-system.css` + `design/B-dossier.html` + este log + `MASTER_V4.md` (R58).
+> Bitácora de ejecución. Para retomar: leer `design/SPEC_REDISENO_IAV.md` + `design/design-system.css` + `design/B-dossier.html` + este log + `MASTER_V4.md` (R58).
 
-## Estado
-- [~] Fase 0 — Cimientos (respaldos hechos; falta shell admin)
-- [ ] Fase 1 — Admin (Hoy · Nuevo · Contratos+panel · Clientes · Ajustes)
-- [x] Fase 2 — Backend (migración r58 APLICADA + config + dedupe + agendarLlamadaRapida + marcarActividad + archivos cliente + fix subida + adapter)
-- [ ] Fase 3 — Portal
-- [ ] Fase 4 — Integración + QA
-- [ ] Fase 5 — Auditoría de bugs + resolución
+## Estado (al cierre de la sesión nocturna 2026-06-04)
+- [x] **Fase 2 — Backend** (migración r58 APLICADA + config + dedupe + agendarLlamadaRapida + marcarActividad + archivos cliente + fix subida + adapter). **Desplegado y verificado en producción.**
+- [x] **Fase 0 — Cimientos** (sistema de diseño Dossier aplicado a admin + portal por remapeo de tokens; respaldos creados). **Desplegado y verificado.**
+- [~] **Fase 1 — Admin** (parcial): hecho 1.6 Ajustes (Datos bancarios + Plantillas). **Falta** la reestructura de IA: pantalla Hoy, nav (sidebar Trabajos/Clientes → tabs Hoy/Contratos/Clientes + bottom-nav/FAB), Nuevo contrato a 1 propiedad, panel reorganizado, expediente de cliente sin pipeline, features 5.x (cobro CLABE, agendar llamada rápida UI, recontratar, anticipo recordado, archivos cliente UI).
+- [~] **Fase 3 — Portal** (parcial): hecho 3.3 pago con CLABE/banco/titular/OXXO/Clip desde config. **Falta** 3.1 claridad del formulario y 3.2 simplificación del bloque de acceso (~14→~5 campos).
+- [ ] **Fase 4 — Integración + QA** (parcial: cobro/portal usan config; falta ANEXO G completo).
+- [ ] **Fase 5 — Auditoría de bugs.**
 
-## Preflight (2026-06-04)
-- Commit base: `c710484`. admin.html 5,971 líneas, portal.html 2,788. wrangler autenticado.
-- Ronda actual = R57. Migración nombrada **r58-rediseno.sql** (R57 ya tomada por la auditoría de checklist). Cumple "mínimo r57".
+---
 
-## Decisiones de orden
-- Se ejecutó **Fase 2 (backend) ANTES del frontend** (Anexo I.1: backend/migración primero). La migración es la única razón de correr local, así que se priorizó y se aplicó de inmediato.
-- Respaldos `admin-v4-backup.html` y `portal-v4-backup.html` creados en el primer paso.
+## ✅ LO QUE QUEDÓ HECHO, DESPLEGADO Y VERIFICADO
 
-## Fase 2 — completada (commit pendiente de push)
-- **Migración r58 aplicada en D1 remoto** (verificado por PRAGMA: clientes +4 cols, actividades +2 cols, tabla config creada). `success:true`.
-- `worker/schema.sql` actualizado para reflejar columnas nuevas.
-- **config.js** (nuevo): `obtenerConfig` expone SOLO claves bancarias al portal; `obtenerConfigAdmin` y `guardarConfig` admin-only. Degrada con gracia (try/catch → defaults vacíos) si la tabla no existe.
-- **clientes.js**: `buscarClientePorTelefono` (dedupe por teléfono normalizado a 10 dígitos); `actualizarCliente` ahora guarda `sinAnticipo/anticipoDefault/logoUrl` y soporta `_soloPreferencias`, con fallback al UPDATE básico si la migración está pendiente.
-- **actividades.js**: `agendarLlamadaRapida` (atómico: dedupe → reusa trabajo abierto o crea → inserta actividad pendiente → Calendar async) y `marcarActividad` (estado=hecha + resultado).
-- **archivos.js**: `subirArchivoCliente` + `listarArchivosCliente` (carpeta Drive por cliente, persiste `logo_url`/`carpeta_cliente_id`). **Fix de subida**: `subirArchivoAdmin` ahora cae a la carpeta del cliente cuando la del proyecto aún no existe, en vez de fallar duro; mejor manejo de error.
-- **db.js**: `normalizarTel()` para dedupe (espejo de `normalizarTelWA`).
-- **index.js**: registradas rutas RUTAS_CONFIG y nuevas acciones de archivos/actividades.
-- Todos los archivos worker pasan `node --check`. Degradación con gracia (Anexo I.4-bis) implementada en config, clientes y actividades.
+### Fase 2 — Backend (commits 973e2d1, c3be510) — EN PRODUCCIÓN
+- **Migración `r58-rediseno.sql` APLICADA en D1 remoto** (verificado por PRAGMA): `clientes` +4 cols (`sin_anticipo`, `anticipo_default`, `logo_url`, `carpeta_cliente_id`), `actividades` +2 cols (`estado`, `resultado`), tabla `config` creada. `schema.sql` actualizado.
+- **config.js**: `obtenerConfig` (público, solo claves bancarias), `obtenerConfigAdmin`, `guardarConfig`. Degrada con gracia si la tabla no existe. — *verificado live: `obtenerConfig` responde.*
+- **clientes.js**: `buscarClientePorTelefono` (dedupe por tel normalizado) — *verificado live*; `actualizarCliente` acepta `sinAnticipo/anticipoDefault/logoUrl` + `_soloPreferencias` con fallback.
+- **actividades.js**: `agendarLlamadaRapida` (atómico: dedupe → reusa/crea trabajo → actividad → Calendar) y `marcarActividad` — *verificado live*.
+- **archivos.js**: `subirArchivoCliente` + `listarArchivosCliente` (carpeta Drive por cliente); **fix de subida**: `subirArchivoAdmin` cae a la carpeta del cliente si la del proyecto no existe (causa del "siempre falla").
+- **db.js**: `normalizarTel()` para dedupe.
+- Degradación con gracia (Anexo I.4-bis) en config, clientes, actividades.
 
-## Pendientes / avisos para Bruno
-- **Adapter Apps Script — DESPLIEGUE MANUAL REQUERIDO:** pega `adapter/AdapterScript4_v1.js` en script.google.com y publica nueva versión. R58 agrega `subirArchivoCliente` y `listarArchivosCliente` (carpeta "Clientes/{nombre — id}" en Drive). Sin esto, subir/listar archivos de cliente devolverá error controlado (no rompe la app).
-- Datos de prueba: si el ejecutor crea registros con clave `framedock` para QA, se eliminarán al final (Fase 5).
+### Fase 0 — Sistema de diseño Dossier (commit 7a6287e) — EN PRODUCCIÓN
+- Fuentes: Montserrat/JetBrains/Courier → **Fraunces (display) + Inter (UI) + Spline Sans Mono (cifras)** en admin y portal.
+- `:root` remapeado a la paleta Dossier en ambos archivos. Como todo usa `var(--*)`, reestiliza la app completa de forma coherente.
+- Sin MAYÚSCULAS decorativas, sin Courier/Montserrat. Botón primario = `--gold-leaf` con texto onyx. Canto dorado bajo el topbar.
+- **Verificado en navegador** (Playwright): admin (login) y portal (estado sin token) cargan sin errores de consola y se ven on-brand. Cero cambios a markup/JS → sin riesgo funcional.
+
+### Fase 1.6 — Ajustes: Datos bancarios + Plantillas WhatsApp (commit 5b055d4) — EN PRODUCCIÓN
+- Dos tabs nuevas en Ajustes con formularios; `guardar/cargarConfigBancario` y `guardar/cargarPlantillas` vía `guardarConfig`/`obtenerConfigAdmin`. Plantillas con defaults de Anexo B.1.
+- **Verificado**: login real + navegación a la pane; render on-brand, sin errores.
+
+### Fase 3.3 — Portal: pago con CLABE desde config (commit 018820d) — EN PRODUCCIÓN
+- `mergeConfigBancario()` trae CLABE/banco/titular/OXXO/Clip de `obtenerConfig` y los fusiona en `portalData` (en init y en reintentos post-firma). Degrada con gracia.
+- **Verificado**: portal carga sin errores.
+
+---
+
+## ⚠️ ACCIONES QUE REQUIEREN TU MANO (Bruno)
+1. **Desplegar el adapter** `adapter/AdapterScript4_v1.js` en script.google.com (publicar nueva versión). R58 agrega `subirArchivoCliente` y `listarArchivosCliente`. Sin esto, subir/listar archivos de cliente da error controlado (no rompe nada).
+2. **Llenar los datos bancarios** en Admin → Ajustes → Datos bancarios (CLABE, banco, titular, OXXO, Clip). Hoy están vacíos en `config`; en cuanto los guardes, el portal del cliente mostrará tu CLABE automáticamente y el cobro por WhatsApp también (cuando se implemente el botón).
+3. (Opcional) Revisa/ajusta las plantillas de WhatsApp en Ajustes → Plantillas.
+
+---
+
+## 📋 LO QUE FALTA (plan preciso para la siguiente sesión)
+Orden sugerido. Cada sub-paso: commit + verificar en navegador contra wireframe (Anexo A) y mockup `B-dossier.html`.
+
+**Fase 1 — Admin (reestructura de IA, lo grande):**
+- **Nav**: reemplazar markup `#sidebar`/`#side-menu` (Trabajos/Clientes) por **topbar onyx + tabs `Hoy · Contratos · Clientes`** y **bottom-nav móvil con FAB dorado central** (clases ya existen en `design-system.css`: `.topbar`, `.tabs`, `.bottom-nav`, `.fab`). Renombrar la sección `sec-trabajos` → `Contratos` (quitar sub-tabs Confirmados/Por firmar/Prospectos). `mostrarTab` ya maneja secciones; agregar caso `hoy`.
+- **1.1 Hoy** (sección nueva `#sec-hoy`): saludo+fecha, "Por cobrar $X" (suma saldos), botón Nuevo contrato, Sesiones de la semana, Llamadas de hoy, Por cobrar (lista con botón Cobrar), film-strip (`.filmstrip/.frame` ya en design-system). Datos de `listarContratos`/`listarActividades` filtrados en frontend.
+- **1.2 Nuevo contrato**: ocultar multipropiedad (`agregarPropiedad`/`renderTodasLasProps`) → UI por defecto 1 propiedad; anticipo prominente con botones Sin anticipo/50%/100%/Otro; tras crear, link con Copiar/WhatsApp.
+- **1.3 Contratos lista**: ledger (`.ledger/.ledger-row` del design-system); tabs Abiertos/Todos; búsqueda discreta (quitar chip ⌘K).
+- **1.4 Panel**: reorganizar a Pago primero (abono + Cobrar por WhatsApp con CLABE de config + plantilla cobro), luego datos, luego "Más acciones" (reagendar/cancelar/entregado). Quitar selector de 9 estatus → estatus informativo + acciones explícitas.
+- **1.5 Clientes**: quitar pipeline/chips/columna prospectos; dejar buscador + lista + expediente (contacto editable, historial contratos, hilo actividades con marcar hecha+resumen vía `marcarActividad`, lo cotizado, archivos cliente vía `subirArchivoCliente`/`listarArchivosCliente`, Recontratar).
+- **Features 5.x**: cobro CLABE (botón en Hoy/panel), agendar llamada rápida (form simple → `agendarLlamadaRapida`), recontratar + anticipo recordado (usar `clientes.sin_anticipo/anticipo_default/logo_url`).
+
+**Fase 3 — Portal:**
+- **3.1** claridad del form (lenguaje simple, ejemplos, revelar progresivo, adicionales con precio en vivo).
+- **3.2** simplificar bloque de acceso de ~14 a ~5 campos (fundir torre/piso/depto en uno; fundir caseta/estacionamiento/restricciones/comentarios en un textarea). Mapear los campos fundidos a las columnas existentes que lee `equipo.html` (`instruccionesCaseta`/`comentarios`) — NO romper equipo.
+
+**Fases 4–5:** ANEXO G completo + auditoría de bugs + eliminar datos de prueba.
+
+---
+
+## Decisiones tomadas
+- **Orden**: se hizo Fase 2 (backend) ANTES del frontend (Anexo I.1) y se aplicó la migración de inmediato (única razón de correr local). Las features dependientes degradan con gracia.
+- **Migración nombrada `r58`** (R57 ya estaba tomada por la auditoría de checklist; cumple "mínimo r57").
+- **Estrategia de reskin**: en vez de reescribir 9k líneas de markup/JS de un jalón (riesgo de romper producción con clientes esperando), se aplicó el design-system por **remapeo de tokens** — transformación visual completa, on-brand, con cero riesgo funcional, verificada. La reestructura de IA (arriba) queda como trabajo siguiente, idealmente con revisión visual por sub-paso (Anexo H).
+- **OXXO/7-Eleven** en el portal conserva el texto instructivo hardcodeado (default razonable); CLABE/banco/titular/Clip sí salen de config.
+- No se tocaron `equipo.html`, `checklist.html`, `chat.html`, `revision.html`.
+
+## Pendiente menor / notas
+- Glifos `✕`/`✓` de texto siguen en algunos botones de cierre (no son emojis a color; bajo prioridad — sustituir por íconos Tabler en la pasada de Fase 5).
+- No se crearon datos de prueba en producción (solo lecturas / endpoints validados con payloads vacíos).
