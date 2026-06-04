@@ -1,0 +1,274 @@
+/* ============================================================================
+   IAV DESIGN SYSTEM — "Dossier" (Apple + editorial cálido)
+   Fuente única de verdad para admin.html y portal.html.
+   Reglas: sin MAYÚSCULAS en labels, sin emojis, dorado discreto, simetría/alineación al pixel.
+   Pega esto en un <style> al inicio (o como archivo) ANTES de los estilos específicos de cada pantalla.
+   ============================================================================ */
+
+/* ── Fuentes (en <head>) ──────────────────────────────────────────────────
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Superficies */
+  --paper-0:#F7F4EC; --paper-1:#FFFDF8; --paper-2:#EFEADF;
+  --line:#E2DBCB; --line-2:#D2C9B3;
+  --onyx:#1C1C1E; --onyx-soft:#2A2A2D;
+
+  /* Dorado */
+  --gold:#B08D2E;        /* texto/íconos dorados (AA en claro) */
+  --gold-leaf:#C9A84C;   /* superficies / botón primario */
+  --gold-leaf-hi:#D4B65C;
+  --gold-pale:#F3EAD0;
+  --gold-glow:rgba(176,141,46,.14);
+
+  /* Tinta */
+  --ink-1:#211E18; --ink-2:#5C564A; --ink-3:#918975; --ink-4:#B8B0A0;
+
+  /* Semánticos */
+  --ok:#2F7D55; --ok-bg:#E7F1EA;
+  --warn:#B0560E; --warn-bg:#FBEEE2;
+  --danger:#B23A2B; --danger-bg:#F8E7E4;
+  --info:#3F6FA8; --info-bg:#E8EFF6;
+
+  /* Escala de espaciado (4px) */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s12:48px;
+
+  /* Radios y sombras */
+  --r-sm:8px; --r:10px; --r-lg:14px; --r-pill:999px;
+  --shadow-1:0 1px 2px rgba(33,30,24,.04), 0 2px 8px rgba(33,30,24,.05);
+  --shadow-2:0 2px 6px rgba(33,30,24,.06), 0 12px 32px rgba(33,30,24,.10);
+
+  /* Tipografía */
+  --font-ui:'Inter', system-ui, sans-serif;
+  --font-display:'Fraunces', Georgia, serif;
+  --font-mono:'Spline Sans Mono', ui-monospace, monospace;
+
+  --dur:160ms; --ease:cubic-bezier(.2,.6,.2,1);
+}
+
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; }
+body{
+  font-family:var(--font-ui);
+  font-size:14px; line-height:1.5; color:var(--ink-1);
+  background:var(--paper-0);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+button,input,textarea,select{ font-family:inherit; font-size:inherit; color:inherit; }
+
+/* Utilidades tipográficas */
+.mono{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+.display{ font-family:var(--font-display); font-weight:500; letter-spacing:-.01em; }
+.amount{ font-family:var(--font-display); font-weight:500; font-variant-numeric:tabular-nums; }
+.label{ font-size:12px; font-weight:600; color:var(--ink-3); } /* sentence-case, NUNCA uppercase */
+.muted{ color:var(--ink-3); }
+
+/* ── BOTONES ──────────────────────────────────────────────────────────────
+   .btn base + variantes. Texto sentence-case. Íconos Tabler finos. */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:var(--s2);
+  height:42px; padding:0 var(--s5); border:1.5px solid transparent; border-radius:var(--r);
+  font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap;
+  transition:background var(--dur) var(--ease), border-color var(--dur), transform 80ms, box-shadow var(--dur);
+}
+.btn:active{ transform:translateY(.5px); }
+.btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+.btn i{ font-size:18px; }
+.btn-sm{ height:34px; padding:0 var(--s3); font-size:13px; border-radius:var(--r-sm); }
+.btn-lg{ height:50px; padding:0 var(--s6); font-size:15px; }
+.btn-block{ width:100%; }
+
+.btn-primary{ background:var(--gold-leaf); color:var(--onyx); box-shadow:0 1px 0 var(--gold); }
+.btn-primary:hover{ background:var(--gold-leaf-hi); }
+.btn-onyx{ background:var(--onyx); color:var(--paper-0); }
+.btn-onyx:hover{ background:var(--onyx-soft); }
+.btn-ghost{ background:var(--paper-1); border-color:var(--line-2); color:var(--ink-1); }
+.btn-ghost:hover{ border-color:var(--ink-3); background:var(--paper-2); }
+.btn-danger{ background:transparent; border-color:var(--danger); color:var(--danger); }
+.btn-danger:hover{ background:var(--danger-bg); }
+.btn-wa{ background:#1f9d55; color:#fff; }       /* WhatsApp */
+.btn-wa:hover{ filter:brightness(1.05); }
+.btn-icon{ width:38px; height:38px; padding:0; border-radius:var(--r-sm);
+  background:var(--paper-1); border:1px solid var(--line-2); color:var(--ink-2); }
+.btn-icon:hover{ border-color:var(--gold); color:var(--ink-1); }
+
+/* FAB (móvil, Nuevo) */
+.fab{
+  width:56px; height:56px; border-radius:50%; background:var(--gold-leaf); color:var(--onyx);
+  border:3px solid var(--paper-0); box-shadow:0 6px 20px var(--gold-glow);
+  display:flex; align-items:center; justify-content:center;
+}
+.fab i{ font-size:24px; }
+
+/* ── INPUTS ───────────────────────────────────────────────────────────────*/
+.field{ margin-bottom:var(--s4); }
+.field > label{ display:block; font-size:12px; font-weight:600; color:var(--ink-2); margin-bottom:6px; } /* sentence-case */
+.field .hint{ font-size:12px; color:var(--ink-3); margin-top:5px; line-height:1.45; }
+input[type=text],input[type=email],input[type=number],input[type=tel],input[type=url],
+input[type=date],input[type=time],input[type=password],select,textarea{
+  width:100%; height:42px; padding:0 var(--s3);
+  background:var(--paper-1); border:1.5px solid var(--line-2); border-radius:var(--r);
+  color:var(--ink-1); outline:none; -webkit-appearance:none; appearance:none;
+  transition:border-color var(--dur), box-shadow var(--dur);
+}
+textarea{ height:auto; min-height:84px; padding:var(--s3); resize:vertical; line-height:1.5; }
+input::placeholder,textarea::placeholder{ color:var(--ink-4); }
+input:focus,select:focus,textarea:focus{ border-color:var(--gold); box-shadow:0 0 0 3px var(--gold-glow); }
+input:disabled{ background:var(--paper-2); color:var(--ink-3); }
+.field-error{ color:var(--danger); font-size:12px; margin-top:5px; display:none; }
+.field.invalid .field-error{ display:block; }
+.field.invalid input,.field.invalid textarea{ border-color:var(--danger); }
+
+/* Toggle de segmentos (tipo propiedad, anticipo, etc.) */
+.seg{ display:inline-flex; gap:6px; flex-wrap:wrap; }
+.seg-btn{
+  height:38px; padding:0 var(--s4); border:1.5px solid var(--line-2); border-radius:var(--r-sm);
+  background:var(--paper-1); color:var(--ink-2); font-weight:600; cursor:pointer;
+  transition:all var(--dur);
+}
+.seg-btn:hover{ border-color:var(--gold); }
+.seg-btn.active{ border-color:var(--gold-leaf); background:var(--gold-pale); color:var(--ink-1); }
+
+/* ── TARJETAS ─────────────────────────────────────────────────────────────*/
+.card{ background:var(--paper-1); border:1px solid var(--line); border-radius:var(--r-lg);
+  box-shadow:var(--shadow-1); }
+.card-pad{ padding:var(--s5); }
+.card-hd{ padding:var(--s4) var(--s5); border-bottom:1px solid var(--line);
+  display:flex; align-items:center; justify-content:space-between; }
+.card-title{ font-family:var(--font-display); font-size:18px; font-weight:500; }
+
+/* ── CHIPS / BADGES DE ESTATUS ─────────────────────────────────────────────
+   Sentence-case, punto de color a la izquierda. NADA de mayúsculas. */
+.badge{ display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px;
+  border-radius:var(--r-pill); font-size:12px; font-weight:600; white-space:nowrap; }
+.badge::before{ content:''; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.9; }
+.badge-pendiente{ background:#F0EEE9; color:var(--ink-2); }
+.badge-firmado  { background:var(--info-bg); color:var(--info); }
+.badge-anticipo,
+.badge-reservado{ background:var(--ok-bg); color:var(--ok); }
+.badge-produccion{ background:#EFE9F6; color:#6B4FA0; }
+.badge-entregado{ background:var(--info-bg); color:var(--info); }
+.badge-liquidado,
+.badge-completado{ background:var(--gold-pale); color:var(--gold); }
+.badge-cancelado{ background:var(--danger-bg); color:var(--danger); }
+
+/* ── TABS (navegación principal admin) ─────────────────────────────────────*/
+.tabs{ display:flex; gap:var(--s5); border-bottom:1px solid var(--line); }
+.tab{ position:relative; height:46px; background:none; border:none; cursor:pointer;
+  font-size:14px; font-weight:600; color:var(--ink-3); padding:0 2px; }
+.tab:hover{ color:var(--ink-1); }
+.tab.active{ color:var(--ink-1); }
+.tab.active::after{ content:''; position:absolute; left:0; right:0; bottom:-1px; height:2.5px;
+  background:var(--gold-leaf); border-radius:2px; }
+
+/* ── TOPBAR ────────────────────────────────────────────────────────────────*/
+.topbar{ position:sticky; top:0; z-index:50; height:58px; padding:0 var(--s6);
+  background:var(--onyx); border-bottom:1px solid var(--gold-leaf);
+  display:flex; align-items:center; gap:var(--s4); }
+.topbar .brand{ font-family:var(--font-display); font-size:16px; font-weight:500; color:var(--paper-0); }
+.topbar .brand .mark{ color:var(--gold-leaf); }
+.topbar .spacer{ flex:1; }
+.topbar .topbar-btn{ height:34px; padding:0 var(--s3); background:none; border:1px solid rgba(255,255,255,.18);
+  border-radius:var(--r-sm); color:rgba(255,255,255,.75); font-weight:600; cursor:pointer; }
+.topbar .topbar-btn:hover{ color:#fff; border-color:rgba(255,255,255,.4); }
+
+/* ── BOTTOM NAV (móvil) ───────────────────────────────────────────────────*/
+.bottom-nav{ display:none; position:fixed; left:0; right:0; bottom:0; z-index:60;
+  background:var(--paper-1); border-top:1px solid var(--line);
+  padding:6px 0 calc(6px + env(safe-area-inset-bottom)); }
+.bottom-nav .row{ display:flex; align-items:center; justify-content:space-around; }
+.bnav{ display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:none;
+  color:var(--ink-3); font-size:11px; font-weight:600; cursor:pointer; padding:4px 12px; }
+.bnav i{ font-size:22px; }
+.bnav.active{ color:var(--gold); }
+
+/* ── LISTA / LEDGER (contratos) ───────────────────────────────────────────*/
+.ledger{ background:var(--paper-1); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; }
+.ledger-row{ display:grid; align-items:center; gap:var(--s4); padding:var(--s4) var(--s5);
+  border-bottom:1px solid var(--line); border-left:3px solid transparent; cursor:pointer;
+  transition:background var(--dur); }
+.ledger-row:last-child{ border-bottom:none; }
+.ledger-row:hover{ background:var(--paper-2); }
+.ledger-row.active{ background:var(--paper-2); border-left-color:var(--gold-leaf); }
+.ledger-row.ses-hoy{ border-left-color:var(--gold-leaf); }
+.ledger-row.ses-pronto{ border-left-color:var(--warn); }
+.cell-folio{ font-family:var(--font-mono); font-size:11px; color:var(--ink-3); }
+.cell-name{ font-family:var(--font-display); font-size:16px; font-weight:500; }
+.cell-sub{ font-size:12px; color:var(--ink-3); margin-top:2px; }
+.cell-amount{ font-family:var(--font-mono); font-variant-numeric:tabular-nums; text-align:right; }
+.cell-saldo{ font-family:var(--font-mono); font-weight:600; text-align:right; color:var(--warn); }
+.cell-saldo.pagado{ color:var(--ok); }
+
+/* ── PANEL / BOTTOM-SHEET (detalle de contrato) ───────────────────────────*/
+.panel{ position:fixed; top:0; right:0; height:100dvh; width:440px; z-index:100;
+  background:var(--paper-1); border-left:1px solid var(--line); box-shadow:var(--shadow-2);
+  display:flex; flex-direction:column; transform:translateX(100%);
+  transition:transform 280ms var(--ease); }
+.panel.open{ transform:translateX(0); }
+.panel-head{ padding:var(--s5); border-bottom:1px solid var(--line); position:relative; }
+.panel-head::after{ content:''; position:absolute; left:var(--s5); bottom:-1px; width:48px; height:2px; background:var(--gold-leaf); }
+.panel-folio{ font-family:var(--font-mono); font-size:11px; color:var(--gold); margin-bottom:5px; }
+.panel-name{ font-family:var(--font-display); font-size:22px; font-weight:500; line-height:1.1; }
+.panel-body{ flex:1; overflow-y:auto; padding:var(--s5); }
+.panel-foot{ padding:var(--s4) var(--s5); border-top:1px solid var(--line); background:var(--paper-1); }
+.overlay{ position:fixed; inset:0; background:rgba(33,30,24,.35); z-index:90; opacity:0; pointer-events:none;
+  transition:opacity var(--dur); }
+.overlay.open{ opacity:1; pointer-events:auto; }
+
+/* ── MODAL ─────────────────────────────────────────────────────────────────*/
+.modal{ position:fixed; inset:0; z-index:120; display:none; align-items:center; justify-content:center;
+  padding:var(--s4); background:rgba(33,30,24,.45); }
+.modal.open{ display:flex; }
+.modal-card{ background:var(--paper-1); border-radius:var(--r-lg); padding:var(--s6);
+  width:100%; max-width:460px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-2); }
+
+/* ── BARRA DE PAGO ─────────────────────────────────────────────────────────*/
+.pay-bar{ height:7px; background:var(--paper-2); border:1px solid var(--line); border-radius:var(--r-pill); overflow:hidden; }
+.pay-bar > span{ display:block; height:100%; background:var(--gold-leaf); border-radius:var(--r-pill);
+  transition:width 400ms var(--ease); }
+
+/* ── FILM-STRIP (radar de sesiones) + animación "respira" ─────────────────*/
+.filmstrip{ display:flex; gap:var(--s3); overflow-x:auto; padding-bottom:6px;
+  scrollbar-width:thin; scrollbar-color:var(--line-2) transparent; }
+.frame{ position:relative; flex:0 0 auto; min-width:148px; background:var(--paper-1);
+  border:1px solid var(--line); border-radius:var(--r); padding:var(--s4) var(--s3); cursor:pointer;
+  transition:transform var(--dur), border-color var(--dur); }
+.frame::before,.frame::after{ content:''; position:absolute; left:6px; right:6px; height:5px;
+  background-image:repeating-linear-gradient(90deg,var(--paper-0) 0 5px,transparent 5px 12px); }
+.frame::before{ top:4px; } .frame::after{ bottom:4px; }
+.frame:hover{ transform:translateY(-2px); border-color:var(--gold); }
+.frame-day{ font-family:var(--font-display); font-size:20px; font-weight:500; line-height:1; }
+.frame-dow{ font-size:11px; color:var(--ink-3); margin-bottom:6px; }
+.frame-name{ font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.frame-meta{ font-size:11px; color:var(--ink-3); margin-top:2px; }
+.frame.hoy{ border-color:var(--gold-leaf); box-shadow:0 0 0 1px var(--gold); }
+.frame.hoy .frame-day{ color:var(--gold); }
+.frame .pulse{ position:absolute; top:10px; right:10px; width:7px; height:7px; border-radius:50%;
+  background:var(--gold-leaf); animation:iav-breathe 3.5s ease-in-out infinite; }
+@keyframes iav-breathe{ 0%,100%{ box-shadow:0 0 0 0 rgba(201,168,76,.5);} 50%{ box-shadow:0 0 0 7px rgba(201,168,76,0);} }
+@media (prefers-reduced-motion:reduce){ .frame .pulse{ animation:none; } .panel{ transition:none; } }
+
+/* ── SKELETON / TOAST / VACÍO ─────────────────────────────────────────────*/
+@keyframes iav-pulse{ 0%,100%{opacity:1} 50%{opacity:.45} }
+.skel{ display:inline-block; border-radius:6px; background:var(--paper-2); animation:iav-pulse 1.4s ease infinite; }
+.empty{ text-align:center; color:var(--ink-3); padding:var(--s12) var(--s5); font-size:14px; }
+.toast{ font-size:12px; min-height:16px; margin-top:6px; }
+.toast.ok{ color:var(--ok); } .toast.error{ color:var(--danger); }
+
+/* ── ICONOS: finos, monocromáticos. Nunca emojis. ─────────────────────────*/
+.icon{ color:var(--ink-3); font-size:18px; }
+
+/* ── RESPONSIVE ────────────────────────────────────────────────────────────*/
+@media (max-width:760px){
+  .topbar{ padding:0 var(--s4); }
+  .bottom-nav{ display:block; }
+  .panel{ top:auto; bottom:0; right:0; left:0; width:100%; height:90dvh;
+    border-left:none; border-top:1px solid var(--line); border-radius:var(--r-lg) var(--r-lg) 0 0;
+    transform:translateY(100%); }
+  .panel.open{ transform:translateY(0); }
+  .ledger-row{ grid-template-columns:1fr auto; }
+}

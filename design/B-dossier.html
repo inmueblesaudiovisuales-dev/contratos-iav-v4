@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup B — Dossier · IAV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Libre+Franklin:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --paper-0:#F7F4EC; --paper-1:#FFFDF8; --paper-2:#EFEADF;
+  --line:#E2DBCB; --line-2:#D2C9B3;
+  --gold:#B08D2E; --gold-leaf:#C9A84C; --gold-pale:#F3EAD0;
+  --ink-1:#211E18; --ink-2:#5C564A; --ink-3:#918975;
+  --ok:#2F7D55; --warn:#B0560E; --danger:#B23A2B;
+  --r:10px; --r-lg:14px;
+}
+body{font-family:'Libre Franklin',system-ui,sans-serif;background:var(--paper-0);color:var(--ink-1);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;padding-bottom:60px}
+.mono{font-family:'Spline Sans Mono',monospace;font-variant-numeric:tabular-nums}
+.serif{font-family:'Fraunces',serif}
+
+.topbar{position:sticky;top:0;z-index:50;height:60px;padding:0 30px;background:var(--paper-1);border-bottom:1px solid var(--gold-leaf);display:flex;align-items:center;gap:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:30px;height:30px;border-radius:6px;border:1.5px solid var(--gold-leaf);display:flex;align-items:center;justify-content:center;font-family:'Fraunces';font-weight:600;color:var(--gold);font-size:14px}
+.brand-name{font-family:'Fraunces';font-size:16px;font-weight:600;letter-spacing:.01em}
+.brand-name small{display:block;font-family:'Libre Franklin';font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-top:-2px}
+.topbar-spacer{flex:1}
+.topbar-btn{background:none;border:1px solid var(--line-2);color:var(--ink-2);border-radius:8px;padding:8px 15px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.topbar-btn:hover{border-color:var(--gold);color:var(--ink-1)}
+
+.wrap{max-width:1180px;margin:0 auto;padding:30px}
+
+.page-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px}
+.page-title{font-family:'Fraunces';font-size:28px;font-weight:600}
+.page-sub{font-size:13px;color:var(--ink-3)}
+
+/* KPIs as ledger cards */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.kpi{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:var(--gold-leaf);opacity:.5}
+.kpi.accent::before{opacity:1}
+.kpi-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:9px}
+.kpi-val{font-family:'Fraunces';font-size:25px;font-weight:600}
+.kpi.accent .kpi-val{color:var(--gold)}
+.kpi-sub{font-size:11px;color:var(--ink-3);margin-top:3px}
+
+.tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:22px}
+.tab{padding:11px 4px;margin-right:24px;margin-bottom:-1px;background:none;border:none;border-bottom:2.5px solid transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-3);cursor:pointer;display:flex;align-items:center;gap:8px}
+.tab.active{color:var(--ink-1);border-bottom-color:var(--gold-leaf)}
+.tab-badge{font-family:'Spline Sans Mono';font-size:11px;background:var(--paper-2);color:var(--ink-2);border-radius:20px;padding:1px 8px}
+.tab.active .tab-badge{background:var(--gold-pale);color:var(--gold)}
+
+.strip-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:11px}
+.radar{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:26px}
+.pill{flex-shrink:0;display:flex;align-items:center;gap:11px;background:var(--paper-1);border:1px solid var(--line);border-radius:30px;padding:8px 16px 8px 8px;cursor:pointer}
+.pill:hover{border-color:var(--line-2)}
+.pill-date{width:38px;height:38px;border-radius:50%;background:var(--paper-2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.pill-day{font-family:'Fraunces';font-size:16px;font-weight:600;line-height:1}
+.pill-mo{font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
+.pill-name{font-size:12.5px;font-weight:600;white-space:nowrap}
+.pill-meta{font-size:10.5px;color:var(--ink-3)}
+.pill.hoy{border-color:var(--gold-leaf);background:var(--gold-pale)}
+.pill.hoy .pill-date{background:var(--gold-leaf)}
+.pill.hoy .pill-day{color:#fff}.pill.hoy .pill-mo{color:rgba(255,255,255,.85)}
+
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px}
+.search{flex:1;background:var(--paper-1);border:1px solid var(--line-2);border-radius:9px;padding:11px 15px;color:var(--ink-1);font-family:inherit;font-size:13px}
+.search:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(176,141,46,.12)}
+.btn-gold{background:var(--gold-leaf);color:var(--ink-1);border:none;border-radius:9px;padding:11px 20px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px}
+.btn-gold:hover{background:#bd9a3c}
+.btn-ghost{background:var(--paper-1);border:1px solid var(--line-2);color:var(--ink-2);border-radius:9px;padding:11px 14px;font-size:13px;cursor:pointer}
+
+/* LEDGER */
+.ledger{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.lhead{display:grid;grid-template-columns:130px 1fr 130px 110px 130px;gap:14px;padding:12px 22px;border-bottom:1px solid var(--line);background:var(--paper-2)}
+.th{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.th.r{text-align:right}
+.lrow{display:grid;grid-template-columns:130px 1fr 130px 110px 130px;gap:14px;align-items:center;padding:17px 22px;border-bottom:1px solid var(--line);border-left:3px solid transparent;cursor:pointer;transition:background .12s}
+.lrow:last-child{border-bottom:none}
+.lrow:hover{background:var(--paper-2)}
+.lrow.active{background:var(--paper-2);border-left-color:var(--gold-leaf)}
+.lrow.hoy{border-left-color:var(--gold-leaf)}
+.c-folio{font-family:'Spline Sans Mono';font-size:11px;font-weight:500;color:var(--ink-2);letter-spacing:.02em}
+.c-name{font-family:'Fraunces';font-size:16px;font-weight:500}
+.c-sub{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.c-amt{font-family:'Spline Sans Mono';font-size:13px;text-align:right;color:var(--ink-2)}
+.c-saldo{font-family:'Spline Sans Mono';font-size:14px;font-weight:600;text-align:right;color:var(--warn);display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.c-saldo::before{content:'●';font-size:8px;color:var(--warn)}
+.c-saldo.pagado{color:var(--ok)}.c-saldo.pagado::before{color:var(--ok)}
+/* estampa de estatus */
+.stamp{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--ink-2)}
+.seal{width:20px;height:20px;border-radius:50%;border:1.5px solid;display:flex;align-items:center;justify-content:center;font-family:'Fraunces';font-size:11px;font-weight:600}
+.s-anti{border-color:var(--ok);color:var(--ok)}
+.s-firm{border-color:#3F6FA8;color:#3F6FA8}
+.s-prod{border-color:#7A5BB0;color:#7A5BB0}
+.s-comp{border-color:var(--gold);color:var(--gold)}
+.s-pend{border-color:var(--warn);color:var(--warn)}
+
+/* PANEL */
+.panel{position:fixed;right:0;top:0;height:100vh;width:440px;background:var(--paper-1);border-left:1px solid var(--line);box-shadow:-14px 0 44px -22px rgba(33,30,24,.4);display:flex;flex-direction:column;z-index:100}
+.panel-head{padding:22px;border-bottom:1px solid var(--line);position:relative;background:var(--paper-1)}
+.panel-head::after{content:'';position:absolute;bottom:-1px;left:0;width:60px;height:2px;background:var(--gold-leaf)}
+.panel-close{position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:8px;background:var(--paper-2);border:1px solid var(--line);color:var(--ink-2);cursor:pointer;font-size:16px}
+.panel-exp{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+.panel-folio{font-family:'Spline Sans Mono';font-size:12px;color:var(--gold);margin-bottom:8px}
+.panel-name{font-family:'Fraunces';font-size:24px;font-weight:600;line-height:1.1;margin-bottom:12px}
+.panel-tabs{display:flex;margin-top:6px}
+.ptab{flex:1;padding:9px 0;background:none;border:none;border-bottom:2px solid var(--line);font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);cursor:pointer}
+.ptab.active{color:var(--ink-1);border-bottom-color:var(--gold-leaf)}
+.panel-body{flex:1;overflow-y:auto;padding:22px 22px 90px}
+
+/* recibo */
+.recibo{background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:20px}
+.recibo-rows{margin-bottom:12px}
+.recibo-r{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2);padding:4px 0;border-bottom:1px dashed var(--line-2)}
+.recibo-r:last-child{border-bottom:none}
+.recibo-r .mono{color:var(--ink-1)}
+.recibo-total{display:flex;justify-content:space-between;align-items:baseline;margin:10px 0 12px}
+.recibo-total-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.recibo-total-val{font-family:'Fraunces';font-size:28px;font-weight:600;color:var(--warn)}
+.track{height:7px;background:var(--paper-1);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.track-fill{height:100%;background:var(--gold-leaf)}
+
+.sec-lbl{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);margin:22px 0 11px}
+.info{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.info:last-child{border-bottom:none}
+.info .k{color:var(--ink-3)}.info .v{font-weight:500}
+.ficha{background:var(--paper-1);border:1px solid var(--line);border-radius:10px;padding:0;margin-bottom:10px;overflow:hidden}
+.ficha-h{background:var(--paper-2);padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);border-bottom:1px solid var(--line)}
+.ficha-b{padding:12px 14px}
+.ficha-row{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0}
+.ficha-row .k{color:var(--ink-3)}
+.linkbox{border:1px solid var(--gold-leaf);background:var(--gold-pale);border-radius:10px;padding:14px;margin-top:16px;position:relative}
+.linkbox-lbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.linkbox-url{font-family:'Spline Sans Mono';font-size:11px;color:var(--ink-2);word-break:break-all;margin-bottom:11px}
+.linkbox-btns{display:flex;gap:8px}
+.mini-btn{flex:1;padding:9px;border-radius:8px;border:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.mini-copy{background:var(--ink-1);color:var(--paper-0)}
+.mini-wa{background:#1f9d55;color:#fff}
+
+.panel-foot{padding:14px 22px;background:var(--paper-1);border-top:1px solid var(--line)}
+.btn-abono{width:100%;padding:13px;border-radius:10px;background:var(--gold-leaf);color:var(--ink-1);border:none;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.btn-abono:hover{background:#bd9a3c}
+
+.note{max-width:1180px;margin:0 auto;padding:2px 30px 30px;color:var(--ink-3);font-size:12px}
+@media(max-width:1000px){.panel{display:none}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><div class="brand-mark">IA</div><div class="brand-name">Inmuebles Audiovisuales<small>Contratos</small></div></div>
+  <div class="topbar-spacer"></div>
+  <button class="topbar-btn">Ajustes</button>
+  <button class="topbar-btn">Salir</button>
+</div>
+
+<div class="wrap">
+  <div class="page-head">
+    <div><div class="page-title">Contratos</div></div>
+    <div class="page-sub">Martes 3 de junio, 2026</div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-lbl">Facturado · Junio</div><div class="kpi-val">$184,500</div><div class="kpi-sub">12 contratos</div></div>
+    <div class="kpi"><div class="kpi-lbl">Cobrado</div><div class="kpi-val">$121,000</div><div class="kpi-sub">66% del total</div></div>
+    <div class="kpi accent"><div class="kpi-lbl">Por cobrar</div><div class="kpi-val">$63,500</div><div class="kpi-sub">7 con saldo vivo</div></div>
+    <div class="kpi"><div class="kpi-lbl">Sesiones · 7 días</div><div class="kpi-val">5</div><div class="kpi-sub">1 hoy</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active">Sesiones <span class="tab-badge">5</span></button>
+    <button class="tab">Abiertos <span class="tab-badge">9</span></button>
+    <button class="tab">Todos</button>
+  </div>
+
+  <div class="strip-lbl">Radar de sesiones · próximos 14 días</div>
+  <div class="radar">
+    <div class="pill hoy"><div class="pill-date"><span class="pill-day">03</span><span class="pill-mo">Jun</span></div><div><div class="pill-name">Casa Valle Alto</div><div class="pill-meta">Hoy · 10:00 · Residencial</div></div></div>
+    <div class="pill"><div class="pill-date"><span class="pill-day">04</span><span class="pill-mo">Jun</span></div><div><div class="pill-name">Depto. Cumbres</div><div class="pill-meta">13:00 · Foto + 360°</div></div></div>
+    <div class="pill"><div class="pill-date"><span class="pill-day">06</span><span class="pill-mo">Jun</span></div><div><div class="pill-name">Terreno San Pedro</div><div class="pill-meta">09:30 · Drone</div></div></div>
+    <div class="pill"><div class="pill-date"><span class="pill-day">09</span><span class="pill-mo">Jun</span></div><div><div class="pill-name">Penthouse Centrika</div><div class="pill-meta">11:00 · Combo</div></div></div>
+    <div class="pill"><div class="pill-date"><span class="pill-day">12</span><span class="pill-mo">Jun</span></div><div><div class="pill-name">Villa Carolco</div><div class="pill-meta">16:00 · Cinemático</div></div></div>
+  </div>
+
+  <div class="toolbar">
+    <input class="search" placeholder="Buscar por nombre, teléfono, correo o folio...">
+    <button class="btn-ghost">Fechas</button>
+    <button class="btn-gold">＋ Nuevo</button>
+  </div>
+
+  <div class="ledger">
+    <div class="lhead"><div class="th">Folio</div><div class="th">Cliente</div><div class="th">Estatus</div><div class="th r">Total</div><div class="th r">Saldo</div></div>
+    <div class="lrow active hoy">
+      <div class="c-folio">IAV-2606.03-A</div>
+      <div><div class="c-name">Roberto Garza M.</div><div class="c-sub">Residencial · Valle Alto · sesión hoy 10:00</div></div>
+      <div><span class="stamp"><span class="seal s-anti">A</span>Anticipo</span></div>
+      <div class="c-amt">$5,500</div>
+      <div class="c-saldo">$2,750</div>
+    </div>
+    <div class="lrow">
+      <div class="c-folio">IAV-2606.04-A</div>
+      <div><div class="c-name">Mariana Treviño</div><div class="c-sub">Foto + 360° · Cumbres · sesión 04 jun</div></div>
+      <div><span class="stamp"><span class="seal s-firm">F</span>Firmado</span></div>
+      <div class="c-amt">$3,000</div>
+      <div class="c-saldo">$3,000</div>
+    </div>
+    <div class="lrow">
+      <div class="c-folio">IAV-2606.06-B</div>
+      <div><div class="c-name">Grupo Inmobiliario SP</div><div class="c-sub">Drone · Terreno San Pedro · sesión 06 jun</div></div>
+      <div><span class="stamp"><span class="seal s-prod">P</span>Producción</span></div>
+      <div class="c-amt">$4,000</div>
+      <div class="c-saldo">$2,000</div>
+    </div>
+    <div class="lrow">
+      <div class="c-folio">IAV-2605.28-A</div>
+      <div><div class="c-name">Alejandra Sáenz</div><div class="c-sub">Combo Residencial · entregado 30 may</div></div>
+      <div><span class="stamp"><span class="seal s-comp">L</span>Completado</span></div>
+      <div class="c-amt">$6,700</div>
+      <div class="c-saldo pagado">Liquidado</div>
+    </div>
+    <div class="lrow">
+      <div class="c-folio">IAV-2605.22-A</div>
+      <div><div class="c-name">Fernando Lozano</div><div class="c-sub">Pendiente de firma · enviado 22 may</div></div>
+      <div><span class="stamp"><span class="seal s-pend">!</span>Pend. firma</span></div>
+      <div class="c-amt">$4,500</div>
+      <div class="c-saldo">$4,500</div>
+    </div>
+  </div>
+</div>
+
+<div class="note">Mockup B · <b>Dossier (Papel & Oro)</b> — editorial light cálido. Datos de ejemplo. El panel muestra un contrato abierto como "expediente".</div>
+
+<aside class="panel">
+  <div class="panel-head">
+    <button class="panel-close">✕</button>
+    <div class="panel-exp">Expediente</div>
+    <div class="panel-folio">IAV-2606.03-A</div>
+    <div class="panel-name">Roberto Garza M.</div>
+    <div><span class="stamp"><span class="seal s-anti">A</span>Anticipo recibido</span></div>
+    <div class="panel-tabs">
+      <button class="ptab active">General</button>
+      <button class="ptab">Producción</button>
+      <button class="ptab">Entrega</button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="recibo">
+      <div class="recibo-rows">
+        <div class="recibo-r"><span>Paquete Residencial</span><span class="mono">$4,500</span></div>
+        <div class="recibo-r"><span>Video cómo llegar</span><span class="mono">$1,000</span></div>
+        <div class="recibo-r"><span>Anticipo recibido</span><span class="mono">−$2,750</span></div>
+      </div>
+      <div class="recibo-total"><span class="recibo-total-lbl">Saldo pendiente</span><span class="recibo-total-val">$2,750</span></div>
+      <div class="track"><div class="track-fill" style="width:50%"></div></div>
+    </div>
+
+    <div class="sec-lbl">Cliente</div>
+    <div class="info"><span class="k">Teléfono</span><span class="v mono">81 1234 5678</span></div>
+    <div class="info"><span class="k">Correo</span><span class="v">roberto.garza@gmail.com</span></div>
+    <div class="info"><span class="k">Origen</span><span class="v">WhatsApp</span></div>
+
+    <div class="sec-lbl">Propiedades</div>
+    <div class="ficha">
+      <div class="ficha-h">Propiedad 1 · Casa Valle Alto</div>
+      <div class="ficha-b">
+        <div class="ficha-row"><span class="k">Paquete</span><span>Residencial Combo</span></div>
+        <div class="ficha-row"><span class="k">Sesión</span><span>03 jun 2026 · 10:00</span></div>
+        <div class="ficha-row"><span class="k">Entrega est.</span><span>08 jun 2026</span></div>
+      </div>
+    </div>
+
+    <div class="linkbox">
+      <div class="linkbox-lbl">Link del portal del cliente</div>
+      <div class="linkbox-url">contratos.inmueblesaudiovisuales.com/portal.html?token=a3f9…</div>
+      <div class="linkbox-btns"><button class="mini-btn mini-copy">Copiar</button><button class="mini-btn mini-wa">WhatsApp</button></div>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <button class="btn-abono">＋ Registrar abono</button>
+  </div>
+</aside>
+
+</body>
+</html>
