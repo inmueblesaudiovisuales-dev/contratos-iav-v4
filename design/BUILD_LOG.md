@@ -53,16 +53,22 @@ Cero errores de consola en admin (Hoy/Contratos/panel/Clientes) y portal.
   `#side-menu`, `.sm-*`, `.sidebar-*`; sin markup que los use). Quedan solo referencias
   en reglas agrupadas compartidas (inofensivas) y un `#side-menu{display:none}` residual.
 
-### Falta para la siguiente sesión (rama `acabado-admin`)
-- **P5 resto (menor)**: borrar las funciones muertas del modelo viejo `trabajos`
-  (`renderTablaTrabajos`/`renderCardsTrabajos`/`seleccionarTrabajo` — no se invocan;
-  `querySelectorAll` vacío no falla) y las referencias residuales en reglas CSS agrupadas.
-- **P2 resto**: seguir adoptando componentes del design-system donde eleve (botones a
-  `.btn-primary`/`.btn-ghost`, chips de estatus, toolbar de Contratos más discreta — hoy
-  conserva chips+select+fechas+cancelados; funcional pero más cargada que el mockup).
-- **Nota Clientes**: las tarjetas aún muestran chip "N en pipeline" (el mandato pedía
-  directorio sin pipeline); revisar si se quita. En la fila de Contratos del expediente
-  el folio sale como "—" (revisar mapeo de datos).
+### Detalles finales R60 (hechos)
+- [x] **Toolbar de Contratos más limpia**: fila principal = búsqueda + Filtros + Nuevo + ⋯;
+  los filtros avanzados (chips, select de estatus, fechas, cancelados) en un panel
+  desplegable "Filtros". Verificado desktop + móvil.
+- [x] **Fix de bug**: la fila de Contratos del expediente de cliente mostraba folio "—",
+  $0 y "Ver" roto — `renderPanelCliente`/`toggleContratosCliente` leían snake_case pero el
+  API devuelve PascalCase. Corregido (con fallback).
+- [x] **Dead code**: eliminadas `cargarTrabajos`/`renderTablaTrabajos`/`renderCardsTrabajos`.
+- **Decisión**: el chip "N en pipeline" en tarjetas de Clientes se **deja** (es info útil
+  del nº de trabajos activos; no estorba — decisión de Bruno).
+
+### Falta (opcional, menor) para la siguiente sesión
+- **P2 (gusto)**: seguir adoptando componentes del design-system donde eleve (botones a
+  `.btn-primary`/`.btn-ghost`, etc.). No bloquea nada.
+- `seleccionarTrabajo` permanece (referencias guardadas residuales, nunca se ejecuta) —
+  se puede retirar junto con `irANuevoDesdePanel`/`_trabajoActivo` en una pasada futura.
 
 ## Estado (al cierre de la sesión nocturna 2026-06-04)
 - [x] **Fase 2 — Backend** (migración r58 APLICADA + config + dedupe + agendarLlamadaRapida + marcarActividad + archivos cliente + fix subida + adapter). **Desplegado y verificado en producción.**
