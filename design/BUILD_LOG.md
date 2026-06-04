@@ -53,6 +53,28 @@ Cero errores de consola en admin (Hoy/Contratos/panel/Clientes) y portal.
   `#side-menu`, `.sm-*`, `.sidebar-*`; sin markup que los use). Quedan solo referencias
   en reglas agrupadas compartidas (inofensivas) y un `#side-menu{display:none}` residual.
 
+### Auditoría exhaustiva R60 — bugs + modelo de saldo + reservar
+- [x] **Auditoría completa** (admin + portal, todos los flujos, consola monitoreada):
+  cero errores de aplicación introducidos por el rediseño. Referencias huérfanas
+  tras las eliminaciones: todas inofensivas (guards / código muerto).
+- [x] **Bug ALTO encontrado y arreglado**: el portal no reconocía estatus "Reservado"
+  (el que el backend asigna tras el primer abono) → cliente veía "no se pudo cargar".
+  Ahora "Reservado" = etapa 3. Verificado.
+- [x] **Modelo de saldo corregido** (decisión de Bruno): el anticipo es el primer pago
+  *sugerido*, NO un pago hecho. `crearContrato` arrancaba `saldo = precio − anticipo`
+  (descontaba un anticipo no pagado) → admin y portal mostraban montos distintos.
+  Ahora `saldo = precio_total` al crear; solo baja con abonos reales. **Requiere deploy.**
+- [x] **Nueva función "Apartar fecha (reservar sin abono)"**: botón en Acciones (visible
+  en Firmado) → acción backend `reservarContrato` marca Reservado + crea evento de
+  calendario, sin pago. Portal: etapa 3 ya no afirma "Anticipo recibido" sin abono real
+  (muestra "Tu fecha está apartada"). **Requiere deploy.**
+- [x] **Datos de prueba borrados**: los 10 contratos de prueba eliminados (slate limpio,
+  autorizado). Backend `crearContrato`/`reservarContrato` se verifican al desplegar.
+- **PENDIENTE de confirmar con Bruno**: con esta implementación, "Apartar fecha" mueve el
+  contrato a Reservado, así que el portal del cliente SÍ cambia (de "paga tu anticipo" a
+  "fecha apartada, paga tu saldo") — honesto, no afirma pago. Bruno había pedido "que no
+  cambie el portal"; confirmar si el banner honesto basta o se prefiere no cambiar estatus.
+
 ### Detalles finales R60 (hechos)
 - [x] **Toolbar de Contratos más limpia**: fila principal = búsqueda + Filtros + Nuevo + ⋯;
   los filtros avanzados (chips, select de estatus, fechas, cancelados) en un panel
