@@ -506,8 +506,18 @@
     }
     .panel-tab-btn:hover { color: var(--ink-1); }
     .panel-tab-btn.activo { color: var(--ink-1); border-bottom-color: var(--ink-1); }
-    .panel-tab-pane { display: none; }
-    .panel-tab-pane.activo { display: block; flex: 1; overflow-y: auto; min-height: 0; padding: 14px 16px; }
+    /* R59: panel de scroll único (tabs ocultas, panes apilados) */
+    .panel-tabs { display: none !important; }
+    #panel-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+    .panel-tab-pane { display: block; padding: 0 16px; }
+    .panel-tab-pane:first-child { padding-top: 14px; }
+    .panel-tab-pane:empty { display: none; }
+    .panel-sec-head {
+      font-family: var(--font-display, 'Fraunces', serif); font-size: 17px; font-weight: 500;
+      color: var(--ink-1); margin: 20px 0 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-tab-pane:first-child .panel-sec-head { margin-top: 4px; }
     .panel-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
     .panel-section-label {
       font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
@@ -2019,10 +2029,13 @@
     <button class="panel-tab-btn" onclick="mostrarPanelTab('prod', this)">Producción</button>
     <button class="panel-tab-btn" onclick="mostrarPanelTab('llamada', this)">Llamada</button>
   </div>
-  <div id="pane-info"    class="panel-tab-pane activo"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-  <div id="pane-pagos"   class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-  <div id="pane-prod"    class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-  <div id="pane-llamada" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+  <!-- Panel de scroll único: orden Pago → Datos → Acciones → Llamada (R59) -->
+  <div id="panel-scroll">
+    <div id="pane-pagos"   class="panel-tab-pane activo"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+    <div id="pane-info"    class="panel-tab-pane activo"></div>
+    <div id="pane-prod"    class="panel-tab-pane activo"></div>
+    <div id="pane-llamada" class="panel-tab-pane activo"></div>
+  </div>
   <!-- Sticky action bar (populated by renderPanel) -->
   <div id="panel-action-bar"></div>
 </div>
@@ -4014,9 +4027,10 @@ function renderPanel(data) {
     </div>`;
   }).join('') : '';
 
-  // ── PANE INFO ──
+  // ── PANE INFO (Datos) ──
   document.getElementById('pane-info').innerHTML = `
-    <details class="panel-acord" open>
+    <div class="panel-sec-head">Datos</div>
+    <details class="panel-acord">
       <summary>Datos del cliente</summary>
       <div class="panel-acord-body">
         <div class="info-fila"><span class="etiq">Nombre</span><span class="val">${esc(c.NombreCliente)}</span></div>
@@ -4032,8 +4046,10 @@ function renderPanel(data) {
       <div class="panel-acord-body">${propInfoHtml}</div>
     </details>`;
 
-  // ── PANE PAGOS ──
+  // ── PANE PAGOS (Pago) ──
+  const _saldoVivo = saldo;
   document.getElementById('pane-pagos').innerHTML = `
+    <div class="panel-sec-head">Pago</div>
     <div class="panel-kpi-row" style="margin-bottom:12px">
       <div class="panel-kpi-card"><div class="panel-kpi-label">Total</div><div class="panel-kpi-val">${fmxn(precioTotal)}</div><div class="panel-kpi-sub">Contratado</div></div>
       <div class="panel-kpi-card"><div class="panel-kpi-label">Pagado</div><div class="panel-kpi-val green">${fmxn(totalAbonado)}</div><div class="panel-kpi-sub">${pct}% del total</div></div>
@@ -4058,7 +4074,22 @@ function renderPanel(data) {
     <button class="btn-primario gold" style="width:100%" id="btn-abono" onclick="registrarAbono()">
       <i class="ti ti-check"></i> Registrar abono
     </button>
-    <div class="form-msg" id="msg-abono"></div>`;
+    <div class="form-msg" id="msg-abono"></div>
+
+    <div class="panel-sec-head">Cobrar y compartir</div>
+    ${_saldoVivo > 0 ? `<button class="btn-primario gold" style="width:100%;margin-bottom:8px" onclick="cobrarWhatsAppPanel()">
+      <i class="ti ti-brand-whatsapp"></i> Cobrar por WhatsApp — ${fmxn(_saldoVivo)}
+    </button>` : `<div style="font-size:12px;color:var(--success-text,#1E8449);background:rgba(30,132,73,.08);border:1px solid rgba(30,132,73,.2);border-radius:8px;padding:8px 10px;margin-bottom:8px"><i class="ti ti-circle-check"></i> Contrato pagado por completo.</div>`}
+    <div class="link-portal-box">
+      <div class="link-portal-label">Portal del cliente</div>
+      <div class="link-portal-url">${esc(urlPortal)}</div>
+      <div class="link-portal-btns">
+        <button class="btn-copiar" data-url="${esc(urlPortal)}" onclick="copiarDesdeBtn(this)"><i class="ti ti-copy"></i> Copiar</button>
+        <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${waUrl}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+        <button class="btn-secundario btn-sm" onclick="enviarRecordatorio()"><i class="ti ti-bell"></i> Recordatorio</button>
+        <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${EQUIPO_BASE + '?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-camera"></i> Equipo</a>
+      </div>
+    </div>`;
 
   // ── PANE PRODUCCIÓN ──
   const prodFila = (hecho, etiqueta, fechaVal) => `
@@ -4112,20 +4143,11 @@ function renderPanel(data) {
     <div style="margin-top:8px;font-size:11px;color:var(--ink-3)">Solo editable desde equipo.html · <a href="${EQUIPO_BASE + '?token=' + esc(tok)}" target="_blank" style="color:var(--ink-2);text-decoration:underline">Abrir equipo</a></div>
   </div>`;
 
-  document.getElementById('pane-prod').innerHTML = prodEstadoHtml + `
-    <!-- Estado del contrato -->
+  document.getElementById('pane-prod').innerHTML = `<div class="panel-sec-head">Acciones</div>` + prodEstadoHtml + `
+    <!-- Estado del contrato (informativo — el estatus se infiere de firma/pagos/entrega) -->
     <details class="panel-acord" open>
-      <summary>Estado del contrato</summary>
+      <summary>Avance del contrato</summary>
       <div class="panel-acord-body">
-        <div class="estatus-fila" style="margin-bottom:8px">
-          <select id="panel-estatus">
-            ${['Pendiente firma','Firmado','Reservado','En produccion','Entregado','Completado','Cancelado'].map(s =>
-              `<option value="${s}" ${c.Estatus === s ? 'selected' : ''}>${s === 'En produccion' ? 'En producción' : esc(s)}</option>`
-            ).join('')}
-          </select>
-          <button class="btn-secundario btn-sm" onclick="cambiarEstatus()">Guardar</button>
-        </div>
-        <div class="form-msg" id="msg-estatus"></div>
         ${prodFila(true, 'Contrato enviado', c.FechaCreacion)}
         ${prodFila(!!c.FechaFirma, 'Contrato firmado', c.FechaFirma)}
         ${prodFila(estadoAnticipo, 'Anticipo abonado', c.FechaUltimoAbono)}
@@ -4199,24 +4221,6 @@ function renderPanel(data) {
       </div>
     </details>
 
-    <!-- Links y portales -->
-    <details class="panel-acord">
-      <summary>Links y portales</summary>
-      <div class="panel-acord-body">
-        <div class="link-portal-box">
-          <div class="link-portal-label">Portal del cliente</div>
-          <div class="link-portal-url">${esc(urlPortal)}</div>
-          <div class="link-portal-btns">
-            <button class="btn-copiar" data-url="${esc(urlPortal)}" onclick="copiarDesdeBtn(this)"><i class="ti ti-copy"></i> Copiar</button>
-            <button class="btn-secundario btn-sm" onclick="enviarRecordatorio()"><i class="ti ti-bell"></i> Recordatorio</button>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-          <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${EQUIPO_BASE + '?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-camera"></i> Equipo</a>
-        </div>
-      </div>
-    </details>
-
     <!-- Acciones por propiedad -->
     ${_props.length ? `<details class="panel-acord"><summary>Acciones por propiedad</summary><div class="panel-acord-body">
       ${propActionsHtml}
@@ -4242,6 +4246,10 @@ function renderPanel(data) {
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <button class="btn-secundario btn-sm" style="flex:1" onclick="abrirModalUpsell()"><i class="ti ti-plus"></i> Servicio extra</button>
         </div>
+        ${c.Estatus === 'Cancelado'
+          ? `<button class="btn-secundario btn-sm" style="width:100%;margin-bottom:8px" onclick="cancelarContrato(false)"><i class="ti ti-rotate"></i> Reactivar contrato</button>`
+          : `<button class="btn-secundario btn-sm" style="width:100%;margin-bottom:8px;color:var(--warn);border-color:var(--warn)" onclick="cancelarContrato(true)"><i class="ti ti-ban"></i> Cancelar contrato</button>`}
+        <div class="form-msg" id="msg-cancelar" style="margin-bottom:8px"></div>
         <div style="display:flex;gap:8px">
           <button class="btn-secundario btn-sm" style="flex:1;color:var(--warn);border-color:var(--warn)" onclick="archivarContrato()"><i class="ti ti-archive"></i> Archivar</button>
           <button class="btn-secundario btn-sm" style="flex:1;color:var(--error);border-color:var(--error)" onclick="eliminarContrato()"><i class="ti ti-trash"></i> Eliminar</button>
@@ -4252,6 +4260,7 @@ function renderPanel(data) {
 
   // ── PANE LLAMADA ──
   document.getElementById('pane-llamada').innerHTML = `
+    <div class="panel-sec-head">Agendar llamada</div>
     <p style="font-size:13px;color:var(--ink-2);margin-bottom:16px;line-height:1.6">Agenda una llamada de seguimiento con el cliente.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
       <div class="campo" style="margin:0"><label>Fecha</label><input type="date" id="contrato-llamada-fecha"></div>
@@ -4503,30 +4512,48 @@ async function guardarUpsell() {
 
 // ── CAMBIAR ESTATUS ──────────────────────────────────────────────────────────
 
-async function cambiarEstatus() {
-  const estatus = document.getElementById('panel-estatus').value;
+// Cancelar / reactivar contrato (acción explícita; reemplaza al viejo selector de 9 estatus)
+async function cancelarContrato(cancelar) {
   const t = tokenActivo;
-  setMsg('msg-estatus', '', '');
+  if (!t) return;
+  if (cancelar && !confirm('¿Cancelar este contrato? El cliente ya no podrá usar su portal hasta reactivarlo.')) return;
+  const estatus = cancelar ? 'Cancelado' : 'Pendiente firma';
+  setMsg('msg-cancelar', cancelar ? 'Cancelando…' : 'Reactivando…', '');
   try {
-    let data = await apiPost({ action: 'actualizarEstatus', token: t, estatus });
-    if (!data.ok && data.codigoError === 'TRANSICION_BLOQUEADA') {
-      const confirmar = confirm(
-        'Estás retrocediendo de "' + (data.estatusActual || '?') + '" a "' + estatus + '".\n\n' +
-        '¿Confirmas que es intencional?'
-      );
-      if (!confirmar) { setMsg('msg-estatus', 'Cambio cancelado.', ''); return; }
-      data = await apiPost({ action: 'actualizarEstatus', token: t, estatus, forzar: true });
-    }
+    let data = await apiPost({ action: 'actualizarEstatus', token: t, estatus, forzar: true });
     if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    if (t && t === tokenActivo) {
-      await abrirPanel(t);
-      mostrarPanelTab('prod', document.querySelectorAll('.panel-tab-btn')[2]);
-      setMsg('msg-estatus', 'Estatus actualizado.', 'ok');
-    }
     cargarContratos();
+    if (t && t === tokenActivo) await abrirPanel(t);
   } catch (e) {
-    setMsg('msg-estatus', 'Error: ' + e.message, 'error');
+    setMsg('msg-cancelar', 'Error: ' + e.message, 'error');
   }
+}
+
+// Cobrar por WhatsApp desde el panel (usa CLABE + plantilla de config)
+async function cobrarWhatsAppPanel() {
+  const ca = window._contratoActivo;
+  if (!ca || !ca.c) return;
+  const c = ca.c;
+  if (!_configCache || !_configCache.wa_cobro || !_configCache.banco_clabe) {
+    try {
+      const r = await apiGet({ action: 'obtenerConfigAdmin' });
+      if (r && r.config) _configCache = Object.assign({}, _configCache, r.config);
+    } catch (e) { /* degrada con defaults */ }
+  }
+  const plantilla = (_configCache && _configCache.wa_cobro) || WA_DEFAULTS.wa_cobro;
+  const saldo = fmxn(parseFloat(c.SaldoPendiente) || 0);
+  const link = PORTAL_BASE + '?token=' + encodeURIComponent(c.Token);
+  const primerNombre = (c.NombreCliente || '').split(' ')[0] || c.NombreCliente || '';
+  const msg = plantilla
+    .replace(/{nombre}/g, primerNombre)
+    .replace(/{saldo}/g, saldo)
+    .replace(/{clabe}/g, (_configCache && _configCache.banco_clabe) || '')
+    .replace(/{banco}/g, (_configCache && _configCache.banco_nombre) || '')
+    .replace(/{titular}/g, (_configCache && _configCache.banco_titular) || '')
+    .replace(/{link}/g, link);
+  const tel = normalizarTelWA(c.TelefonoCliente);
+  if (!tel) { alert('Este contrato no tiene teléfono para WhatsApp.'); return; }
+  window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 // ── GUARDAR ENTREGA ──────────────────────────────────────────────────────────
