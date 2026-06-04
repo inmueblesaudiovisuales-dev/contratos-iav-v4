@@ -1128,22 +1128,11 @@ function renderEtapa1() {
   html += renderUploadField('logo', 0, 'Logo de la agencia o cliente', 'Opcional. PNG con fondo transparente y buena resolución.');
   html += '</div>';
 
-  // --- Términos y condiciones (cerrados por defecto) ---
-  html += '<div class="card"><details style="margin:0">';
-  html += '<summary style="list-style:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0 16px">';
-  html += '<p class="section-title" style="margin:0">Términos y condiciones</p>';
-  html += '<span style="font-size:11px;color:var(--concrete);white-space:nowrap;margin-left:12px">Ver / ocultar</span>';
-  html += '</summary>';
-  html += _terminosPortal();
-  html += '</details></div>';
-
   // --- Firma ---
   html += '<div class="card"><p class="section-title">Firma digital</p>';
   html += '<p style="font-size:12px;color:var(--concrete);margin-bottom:16px;line-height:1.6">Dibuja tu firma con el dedo o el cursor para formalizar el contrato.</p>';
   html += '<div class="firma-wrap"><canvas id="firma-canvas"></canvas><div class="firma-overlay" id="firma-overlay"><div class="firma-overlay-linea"></div><span class="firma-overlay-texto">Firma aquí</span></div></div>';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><p class="firma-hint">Dibuja tu firma en el recuadro</p><button class="btn-limpiar" id="btn-limpiar">Limpiar</button></div>';
-  html += '<div style="height:1px;background:var(--border);margin:20px 0"></div>';
-  html += '<div class="terms-row"><input type="checkbox" id="chk-politicas"><label for="chk-politicas">Entiendo que el servicio contempla máximo 2 rondas de revisiones menores y no incluye cambios estructurales ni de música.</label></div>';
   html += '</div>';
   html += '<button class="btn-primary" id="btn-firmar" disabled>FIRMAR CONTRATO</button>';
   html += '<div class="progress-bar-wrap" id="firma-progress-wrap"><div class="progress-bar-fill" id="firma-progress-fill"></div></div>';
@@ -1184,8 +1173,6 @@ function renderEtapa1() {
     actualizarContactoAcceso(n);
     actualizarPuntoEncuentro(n);
   });
-  var chkPol = document.getElementById('chk-politicas');
-  if (chkPol) chkPol.addEventListener('change', actualizarBtnFirmar);
   hasStroke = false;
   initCanvas();
   document.getElementById('btn-limpiar').addEventListener('click', limpiarFirma);
@@ -1570,11 +1557,7 @@ function limpiarFirma() {
 function actualizarBtnFirmar() {
   var btn = document.getElementById('btn-firmar');
   if (!btn) return;
-  var chk = document.getElementById('chk-terminos');
-  var terminos = chk ? chk.checked : true;
-  var chkP = document.getElementById('chk-politicas');
-  var politicas = chkP ? chkP.checked : true;
-  btn.disabled = !hasStroke || !terminos || !politicas;
+  btn.disabled = !hasStroke;
 }
 
 /* ── ENVIAR FIRMA ───────────────────────────────────────────────────────────── */
@@ -2006,25 +1989,12 @@ function renderRevision() {
   html += '<p style="font-size:12px;color:var(--charcoal);line-height:1.7">Al firmar confirmas que los datos de este contrato son correctos. Inmuebles Audiovisuales no se hace responsable por errores en la información que proporcionaste.</p>';
   html += '</div>';
 
-  // --- Términos y condiciones ---
-  html += '<div class="card">';
-  html += '<details style="margin:0">';
-  html += '<summary style="list-style:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0 16px">' +
-    '<p class="section-title" style="margin:0">Términos y condiciones</p>' +
-    '<span style="font-size:11px;color:var(--concrete);white-space:nowrap;margin-left:12px">Ver / ocultar</span>' +
-  '</summary>';
-  html += _terminosPortal();
-  html += '</details>';
-  html += '</div>';
-
   // --- Firma ---
   html += '<div class="card"><p class="section-title">Firma digital</p>';
   html += '<p style="font-size:12px;color:var(--concrete);margin-bottom:16px;line-height:1.6">Dibuja tu firma con el dedo o el cursor para formalizar el contrato.</p>';
   html += '<div class="firma-wrap"><canvas id="firma-canvas"></canvas><div class="firma-overlay" id="firma-overlay"><div class="firma-overlay-linea"></div><span class="firma-overlay-texto">Firma aquí</span></div></div>';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><p class="firma-hint">Dibuja tu firma en el recuadro</p><button class="btn-limpiar" id="btn-limpiar">Limpiar</button></div>';
-  html += '<div style="height:1px;background:var(--border);margin:20px 0"></div>';
-  html += '<div class="terms-row"><input type="checkbox" id="chk-terminos"><label for="chk-terminos">He revisado los detalles del servicio y acepto los términos y condiciones de Inmuebles Audiovisuales.</label></div>';
-  html += '<button class="btn-primary" id="btn-firmar" disabled>FIRMAR CONTRATO</button>';
+  html += '<button class="btn-primary" id="btn-firmar" style="margin-top:20px" disabled>FIRMAR CONTRATO</button>';
   html += '<div class="progress-bar-wrap" id="firma-progress-wrap"><div class="progress-bar-fill" id="firma-progress-fill"></div></div>';
   html += '<div class="error-inline" id="error-firma"></div>';
   html += '<p style="font-size:11px;color:var(--concrete);text-align:center;margin-top:12px;line-height:1.6">Recibirás una copia del contrato en tu correo electrónico.</p>';
@@ -2078,7 +2048,6 @@ function renderRevision() {
     });
   });
 
-  document.getElementById('chk-terminos').addEventListener('change', actualizarBtnFirmar);
   document.getElementById('btn-limpiar').addEventListener('click', limpiarFirma);
   document.getElementById('btn-firmar').addEventListener('click', enviarFirma);
   hasStroke = false;
