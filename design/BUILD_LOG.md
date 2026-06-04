@@ -2,6 +2,25 @@
 
 > Bitácora de ejecución. Para retomar: leer `design/SPEC_REDISENO_IAV.md` + `design/design-system.css` + `design/B-dossier.html` + este log + `MASTER_V4.md` (R58).
 
+## Auditoría exhaustiva 3 (2026-06-04) — seguridad/robustez. Sistema sólido.
+Revisión de auth, validación, escaping/XSS, concurrencia, cron y backend no leído antes.
+**Sin bugs nuevos.** Verificado OK: cobertura de `requireAdmin` en todos los endpoints
+sensibles; endpoints públicos del portal validan token+scope; doble-firma bloqueada;
+escaping consistente (`esc()`/`safeHref`) — sin XSS; subida de archivos validada por token;
+cron con try/catch; modelo de saldo consistente.
+
+### ⚠️ Hallazgo documentado (NO se arregla — riesgo aceptado por Bruno, baja prioridad)
+**Fuga de datos internos vía `equipo.html`.** El portal del cliente y `equipo.html`
+comparten el MISMO token de contrato. `obtenerEquipo` es público (sin `requireAdmin`) y
+devuelve `actividades` (notas internas de llamadas), datos del cliente e IDs de Drive.
+Un cliente podría cambiar `portal.html?token=X` → `equipo.html?token=X` y ver la vista
+interna. **Confirmado en vivo** (curl sin admin key devolvió actividades + cliente).
+- **Decisión de Bruno (2026-06-04)**: dejarlo documentado, NO es prioridad — es poco
+  probable (el cliente tendría que copiar su token y conocer la página `equipo.html`
+  específica; los tokens son UUIDs no adivinables).
+- **Fix recomendado cuando se rediseñe equipo/checklist**: darle a `equipo.html` un token
+  separado del portal (o quitar `actividades`/notas internas de `obtenerEquipo`).
+
 ## Auditoría exhaustiva 2 (2026-06-04, post-merge a main) — DESPLEGADA
 Revisión profunda de todo el backend + E2E en producción tras el cambio de modelo de saldo.
 - [x] **[CRÍTICO] Fix**: `firmaCliente` (portal.js) re-restaba el anticipo del saldo al firmar
