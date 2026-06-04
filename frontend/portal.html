@@ -5,33 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Tu contrato · Inmuebles Audiovisuales</title>
 <meta name="robots" content="noindex">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Sistema "Dossier" — R58. Tokens remapeados a la paleta Dossier (mismo sistema que admin). */
   :root {
-    --gold        : #C9A84C;
-    --gold-dim    : rgba(201,168,76,0.12);
-    --charcoal    : #1C1C1E;
-    --concrete    : #9B9B9F;
-    --surface     : #F9F7F4;
-    --white       : #FAFAFA;
-    --bg-chip     : #F1F0ED;
-    --border      : rgba(28,28,30,0.10);
-    --border-strong: rgba(28,28,30,0.20);
-    --error       : #E05252;
-    --success     : #2D7A4F;
-    --success-bg  : #E8F5EE;
-    --success-border: rgba(45,122,79,0.25);
-    --warn-bg     : #FFFBEB;
-    --warn-border : rgba(217,119,6,0.25);
-    --warn        : #B45309;
-    --blue-bg     : #EFF6FF;
-    --blue-border : rgba(37,99,235,0.20);
-    --blue        : #1D4ED8;
-    --r           : 8px;
+    --font-ui:'Inter', system-ui, sans-serif;
+    --font-display:'Fraunces', Georgia, serif;
+    --font-mono:'Spline Sans Mono', ui-monospace, monospace;
+    --gold        : #B08D2E;            /* texto/íconos dorados (AA) */
+    --gold-leaf   : #C9A84C;            /* superficie / botón primario */
+    --gold-leaf-hi: #D4B65C;
+    --gold-dim    : rgba(176,141,46,0.12);
+    --charcoal    : #211E18;
+    --onyx        : #1C1C1E;
+    --concrete    : #918975;
+    --surface     : #F7F4EC;            /* paper-0 */
+    --white       : #FFFDF8;            /* paper-1 marfil */
+    --bg-chip     : #EFEADF;            /* paper-2 */
+    --border      : #E2DBCB;
+    --border-strong: #D2C9B3;
+    --error       : #B23A2B;
+    --success     : #2F7D55;
+    --success-bg  : #E7F1EA;
+    --success-border: rgba(47,125,85,0.25);
+    --warn-bg     : #FBEEE2;
+    --warn-border : rgba(176,86,14,0.25);
+    --warn        : #B0560E;
+    --blue-bg     : #E8EFF6;
+    --blue-border : rgba(63,111,168,0.20);
+    --blue        : #3F6FA8;
+    --r           : 10px;
   }
   html { scroll-behavior: smooth; }
-  body { font-family: 'Montserrat', sans-serif; background: var(--surface); color: var(--charcoal); -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  body { font-family: var(--font-ui); background: var(--surface); color: var(--charcoal); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; min-height: 100vh; }
+
+  /* ── Dossier: neutraliza fuentes y mayúsculas hardcodeadas en reglas viejas ──
+     !important vence a las declaraciones inline-en-regla de 'Montserrat'/'Courier New'. */
+  body, h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea, select, a, label, li, td, th, strong, small {
+    font-family: var(--font-ui) !important;
+  }
+  .tarjeta-chip, .comp-num-val, .mono, [class*="-chip"] { font-family: var(--font-mono) !important; font-variant-numeric: tabular-nums; }
+  h1, h2, h3, .resumen-precio-total, .precio-grande, .monto-grande { font-family: var(--font-display) !important; font-weight: 500; letter-spacing: -.01em; }
+  /* Sin MAYÚSCULAS decorativas */
+  .step-label, .btn-primary, .btn-secondary, .btn-wa, .btn-copy, .btn-limpiar,
+  .btn-wa-small, .btn-upload, .label, .seccion-label, .campo-label {
+    text-transform: none !important; letter-spacing: 0 !important;
+  }
+  /* Botón primario: superficie gold-leaf + texto onyx */
+  .btn-primary { background: var(--gold-leaf) !important; color: var(--onyx) !important; }
+  .btn-primary:hover { background: var(--gold-leaf-hi) !important; }
 
   /* Header */
   header { background: var(--charcoal); padding: 16px 24px; display: flex; align-items: center; justify-content: center; }

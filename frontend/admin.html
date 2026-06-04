@@ -6,62 +6,123 @@
   <title>Panel Admin — Inmuebles Audiovisuales</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
   
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
-      font-family: 'Montserrat', system-ui, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px; line-height: 1.5;
-      color: #111; background: #F8F5F1;
-      -webkit-font-smoothing: antialiased;
+      color: #211E18; background: #F7F4EC;
+      -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
     }
     button, input, textarea, select { font-family: inherit; font-size: inherit; }
 
+    /* ════════════════════════════════════════════════════════════════════
+       SISTEMA "DOSSIER" (Apple + editorial cálido) — R58
+       Los tokens existentes se remapean a la paleta Dossier; como todo el
+       admin usa var(--*), esto reestiliza la app entera de forma coherente.
+       ════════════════════════════════════════════════════════════════════ */
     :root {
-      --black:        #111111;
-      --page:         #F8F5F1;
-      --card:         #FFFEFB;
-      --border:       #E6DFD4;
-      --border-2:     #D9D0C3;
-      --ink-1:        #1A1714;
-      --ink-2:        #4A4440;
-      --ink-3:        #7A7068;
-      --ink-4:        #B8AFA4;
-      --gold:         #C9A84C;
-      --gold-light:   #FEF9ED;
+      /* Fuentes */
+      --font-ui:'Inter', system-ui, sans-serif;
+      --font-display:'Fraunces', Georgia, serif;
+      --font-mono:'Spline Sans Mono', ui-monospace, monospace;
+
+      /* Superficies (papel cálido, marfil — nunca #FFF puro) */
+      --page:         #F7F4EC;   /* paper-0, canvas */
+      --paper-0:      #F7F4EC;
+      --card:         #FFFDF8;   /* paper-1, tarjetas */
+      --paper-1:      #FFFDF8;
+      --paper-2:      #EFEADF;
+      --border:       #E2DBCB;   /* hairline */
+      --border-2:     #D2C9B3;   /* borde de inputs */
+
+      /* Onyx */
+      --black:        #1C1C1E;
+      --onyx:         #1C1C1E;
+      --onyx-soft:    #2A2A2D;
+
+      /* Tinta cálida */
+      --ink-1:        #211E18;
+      --ink-2:        #5C564A;
+      --ink-3:        #918975;
+      --ink-4:        #B8B0A0;
+
+      /* Dorado — texto/íconos vs superficies */
+      --gold:         #B08D2E;   /* dorado de TEXTO/íconos (AA en claro) */
+      --gold-leaf:    #C9A84C;   /* dorado de SUPERFICIE / botón primario */
+      --gold-leaf-hi: #D4B65C;
+      --gold-light:   #F3EAD0;
       --gold-border:  #E8D89A;
-      --gold-pale:    #FEF9ED;
+      --gold-pale:    #F3EAD0;
       --gold-text:    #8A6A00;
-      --gold-dim:     rgba(201,168,76,0.14);
+      --gold-dim:     rgba(176,141,46,0.14);
+      --gold-glow:    rgba(176,141,46,0.14);
       --gold-dark:    #9A7A2F;
-      --onyx:         #1A1714;
-      --success:      #16A34A;
-      --success-bg:   #DCFCE7;
-      --warn:         #D97706;
-      --warn-bg:      #FEF3C7;
-      --warn-border:  #F0C040;
-      --danger:       #DC2626;
-      --danger-bg:    #FEE2E2;
-      --error:        #DC2626;
-      --red:          #C0392B;
-      --purple:       #6D28D9;
-      --purple-bg:    #F5F3FF;
-      --blue:         #1D4ED8;
-      --blue-bg:      #DBEAFE;
-      --r:            8px;
-      --r-lg:         12px;
+
+      /* Semánticos Dossier */
+      --success:      #2F7D55;
+      --success-bg:   #E7F1EA;
+      --success-text: #2F7D55;
+      --warn:         #B0560E;
+      --warn-bg:      #FBEEE2;
+      --warn-border:  #E8C9A0;
+      --danger:       #B23A2B;
+      --danger-bg:    #F8E7E4;
+      --error:        #B23A2B;
+      --red:          #B23A2B;
+      --purple:       #6B4FA0;
+      --purple-bg:    #EFE9F6;
+      --blue:         #3F6FA8;
+      --blue-bg:      #E8EFF6;
+
+      --r:            10px;
+      --r-lg:         14px;
       --sidebar-w:    200px;
-      --panel-w:      340px;
-      --shadow-sm:    0 1px 4px rgba(0,0,0,0.06);
-      --shadow-md:    0 4px 16px rgba(0,0,0,0.10);
-      --shadow-lg:    0 8px 32px rgba(0,0,0,0.14);
-      --success-text:   #1E8449;
-      --express-bg:     #DC2626;
+      --panel-w:      360px;
+      --shadow-sm:    0 1px 2px rgba(33,30,24,.04), 0 2px 8px rgba(33,30,24,.05);
+      --shadow-md:    0 2px 6px rgba(33,30,24,.06), 0 12px 32px rgba(33,30,24,.10);
+      --shadow-lg:    0 2px 6px rgba(33,30,24,.06), 0 18px 48px rgba(33,30,24,.16);
+      --express-bg:     #B23A2B;
       --express-color:  #FFFFFF;
     }
+
+    /* ── Dossier: tipografía híbrida y limpieza de estilos prohibidos ────────
+       Fraunces (serif) solo en montos/nombres/títulos; mono en cifras;
+       sin MAYÚSCULAS decorativas (sentence-case). */
+    .td-folio, .td-monto, .td-saldo, .ses-folio, .panel-folio, .link-portal-url,
+    .resultado-url, .add-item-precio, .cont-card-folio, .panel-kpi-val,
+    .abono-monto, .kpi-value {
+      font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    }
+    .login-box h1, .form-card h2, .panel-nombre, .sec-clientes-titulo,
+    .td-nombre, .cli-card-nombre, .modal-box h3, .section-title, .ses-nombre,
+    .resultado-titulo, .cont-card-nombre {
+      font-family: var(--font-display); font-weight: 500; letter-spacing: -.01em;
+    }
+    /* Quitar MAYÚSCULAS decorativas (regla del dueño) */
+    .login-marca, .tabla-card th, .ses-mes, .ses-dow, .kpi-label, .panel-section-label,
+    .campo label, .sec-label, .paq-tabla th, .sec-sublabel, .prop-card-titulo,
+    .link-portal-label, .panel-kpi-label, .sidebar-section-label, .cont-card-folio,
+    .panel-acord > summary, .td-folio, .lc-label {
+      text-transform: none !important; letter-spacing: 0 !important;
+    }
+    /* Superficies doradas → gold-leaf (brillante); el texto/íconos quedan en --gold */
+    .panel-pay-bar-fill, .pago-barra-fill, .lc-step.done .lc-dot,
+    .sidebar-item.activo .sidebar-indicator, .sm-nav-item.activo .sm-indicator,
+    .sidebar-badge, .sm-nav-badge { background: var(--gold-leaf); }
+    .lc-step.done .lc-dot { border-color: var(--gold-leaf); }
+    .panel-action-btn.primary { background: var(--gold-leaf); border-color: var(--gold-leaf); color: var(--onyx); }
+    .contratos-tab.activo-ctab, .tabla-card tbody tr.activo,
+    .tabla-card tbody tr.tr-ses-hoy { border-color: var(--gold-leaf); }
+    .contratos-tab.activo-ctab .ctab-badge { background: var(--gold-leaf); color: var(--onyx); }
+    .filter-chip.on { background: var(--onyx); border-color: var(--onyx); }
+    .login-marca { color: var(--gold); font-weight: 600; }
+    /* Canto dorado bajo el topbar (firma sutil de marca) */
+    .mobile-topbar { border-bottom: 1px solid var(--gold-leaf); }
 
     /* ── LOGIN ────────────────────────────────────────── */
     #pantalla-login {
@@ -526,8 +587,8 @@
       font-family: inherit; font-size: 13px; font-weight: 700;
       cursor: pointer; transition: all 120ms; text-decoration: none;
     }
-    .btn-primario.gold { background: var(--black); color: white; }
-    .btn-primario.gold:hover { opacity: 0.85; }
+    .btn-primario.gold { background: var(--gold-leaf); color: var(--onyx); box-shadow: 0 1px 0 var(--gold); }
+    .btn-primario.gold:hover { background: var(--gold-leaf-hi); opacity: 1; }
     .btn-secundario {
       display: inline-flex; align-items: center; gap: 7px;
       padding: 8px 14px; border-radius: var(--r);
