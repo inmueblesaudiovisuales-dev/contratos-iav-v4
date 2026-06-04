@@ -1,6 +1,11 @@
 # KICKOFF — Prompt de arranque para Opus (rediseño IAV)
 
-Ejecuta esto en una sesión **LOCAL de Claude Code en la Mac de Bruno** (NO en la web/nube): la migración D1 necesita `wrangler` local. La Mac ya tiene wrangler 4.88 autenticado (cuenta inmueblesaudiovisuales@gmail.com) y el repo clonado en `~/contratos-iav-v4`. Abre Claude Code en esa carpeta y pega lo de abajo como primer mensaje.
+Ejecuta esto en una sesión **LOCAL de Claude Code en la Mac de Bruno** (NO en la web/nube): la migración D1 necesita `wrangler` local. La Mac ya tiene wrangler 4.88 autenticado (cuenta inmueblesaudiovisuales@gmail.com) y el repo clonado en `~/contratos-iav-v4`. Lánzalo en modo desatendido para que no se detenga a pedir permisos mientras Bruno duerme:
+```
+cd ~/contratos-iav-v4
+claude --dangerously-skip-permissions
+```
+Usa el modelo **Opus**. Pega lo de abajo como primer mensaje.
 
 ---
 
@@ -33,5 +38,11 @@ Modifica sin límites lo que el objetivo requiera (refactoriza, reescribe, agreg
 - Backend/migración antes que el frontend que los usa (Anexo I.1).
 - Tras cada fase: abrir en navegador, revisar consola, regresión; no avanzar si quedó roto.
 - Datos de prueba (clave admin `framedock`): elimínalos al final.
+
+## Continuidad (clave para correr toda la noche)
+- Trabaja sin parar; no pidas confirmación (corres en modo --dangerously-skip-permissions).
+- **Commitea seguido** (por sub-paso, no solo por fase) y **actualiza `design/BUILD_LOG.md`** tras cada avance, para que el progreso quede guardado aunque la sesión se corte.
+- **Si esta es una sesión de continuación** (Bruno escribió "continúa"): primero lee `design/BUILD_LOG.md` y `git pull`, identifica la última fase/sub-paso completado, y retoma desde ahí. No rehagas lo ya hecho.
+- Si te quedas sin contexto, deja en `BUILD_LOG.md` exactamente en qué punto vas y qué sigue, antes de terminar.
 
 Empieza por el PREFLIGHT. Si pasa, ejecuta todo en automático hasta la Fase 5 y deja el reporte matutino en BUILD_LOG.
