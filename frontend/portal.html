@@ -49,8 +49,9 @@
   h1, h2, h3, .resumen-precio-total, .precio-grande, .monto-grande { font-family: var(--font-display) !important; font-weight: 500; letter-spacing: -.01em; }
   /* Sin MAYÚSCULAS decorativas */
   .step-label, .btn-primary, .btn-secondary, .btn-wa, .btn-copy, .btn-limpiar,
-  .btn-wa-small, .btn-upload, .label, .seccion-label, .campo-label {
-    text-transform: none !important; letter-spacing: 0 !important;
+  .btn-wa-small, .btn-upload, .label, .seccion-label, .campo-label,
+  .section-title, .field label, .acceso-btn, .acceso-chip {
+    text-transform: none !important; letter-spacing: 0.01em !important;
   }
   /* Botón primario: superficie gold-leaf + texto onyx */
   .btn-primary { background: var(--gold-leaf) !important; color: var(--onyx) !important; }
@@ -1482,6 +1483,20 @@ function leerAccesoPropiedad(n) {
     acceso.departamento = valorCampo('inp-acceso-depa-' + n);
     acceso.estacionamiento = valorCampo('inp-acceso-estacionamiento-' + n);
   }
+  // ── Compatibilidad con equipo.html (R59) ──
+  // equipo lee metodoAcceso / contactoAccesoNombre / comentariosAcceso, distintos a los
+  // que escribe este formulario. Sin esto, el equipo en campo NO ve método de acceso,
+  // contacto, indicaciones de caseta ni comentarios. Escritura aditiva: no rompe lectores.
+  if (metodos.length) acceso.metodoAcceso = metodos.map(function(m) { return ACCESO_METODO_LABELS[m] || m; }).join(', ');
+  if (acceso.contactoAcceso) acceso.contactoAccesoNombre = acceso.contactoAcceso;
+  var _ubicacion = [acceso.torre && ('Torre ' + acceso.torre), acceso.piso && ('Piso ' + acceso.piso), acceso.departamento && ('Depto ' + acceso.departamento)].filter(Boolean).join(' · ');
+  var _comsTeam = [
+    _ubicacion,
+    acceso.nombreRegistro && ('Registro a nombre de: ' + acceso.nombreRegistro),
+    acceso.instruccionesCaseta && ('Caseta: ' + acceso.instruccionesCaseta),
+    acceso.comentarios
+  ].filter(Boolean).join('\n');
+  if (_comsTeam) acceso.comentariosAcceso = _comsTeam;
   Object.keys(acceso).forEach(function(k) {
     if (Array.isArray(acceso[k])) {
       if (!acceso[k].length) delete acceso[k];
