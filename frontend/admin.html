@@ -1709,6 +1709,12 @@
         <button id="atab-paquetes" class="ajustes-tab" onclick="setAjustesTab('paquetes')">
           <i class="ti ti-package"></i> Paquetes
         </button>
+        <button id="atab-bancarios" class="ajustes-tab" onclick="setAjustesTab('bancarios')">
+          <i class="ti ti-building-bank"></i> Datos bancarios
+        </button>
+        <button id="atab-plantillas" class="ajustes-tab" onclick="setAjustesTab('plantillas')">
+          <i class="ti ti-message-2"></i> Plantillas
+        </button>
       </div>
 
       <!-- Pane: Métricas -->
@@ -1734,6 +1740,38 @@
         </div>
         <div id="lista-paquetes-admin">
           <p style="color:var(--ink-3);font-style:italic;font-size:13px">Cargando...</p>
+        </div>
+      </div>
+
+      <!-- Pane: Datos bancarios -->
+      <div id="apane-bancarios" class="ajustes-pane">
+        <div class="form-card" style="max-width:560px">
+          <h2>Datos bancarios</h2>
+          <p class="form-desc">Se usan al cobrar por WhatsApp y en el portal del cliente. El cliente ve la CLABE, banco y titular.</p>
+          <div class="campo"><label>CLABE</label><input type="text" id="cfg-banco-clabe" placeholder="18 dígitos" inputmode="numeric"></div>
+          <div class="fila-2">
+            <div class="campo"><label>Banco</label><input type="text" id="cfg-banco-nombre" placeholder="Ej. BBVA"></div>
+            <div class="campo"><label>Titular de la cuenta</label><input type="text" id="cfg-banco-titular" placeholder="Nombre del titular"></div>
+          </div>
+          <div class="campo"><label>Depósito en OXXO / 7-Eleven <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><input type="text" id="cfg-pago-oxxo" placeholder="Tarjeta o referencia para depósito en efectivo"></div>
+          <div class="campo"><label>Link de Clip (pago con tarjeta) <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><input type="url" id="cfg-pago-clip" placeholder="https://clip.mx/..."></div>
+          <button class="btn-primario gold" style="width:100%;margin-top:6px" onclick="guardarConfigBancario()"><i class="ti ti-device-floppy"></i> Guardar datos bancarios</button>
+          <div id="cfg-banco-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+        </div>
+      </div>
+
+      <!-- Pane: Plantillas de WhatsApp -->
+      <div id="apane-plantillas" class="ajustes-pane">
+        <div class="form-card" style="max-width:640px">
+          <h2>Plantillas de WhatsApp</h2>
+          <p class="form-desc">Textos por situación. Variables disponibles: <span class="mono">{nombre}</span> <span class="mono">{saldo}</span> <span class="mono">{anticipo}</span> <span class="mono">{link}</span> <span class="mono">{clabe}</span> <span class="mono">{banco}</span> <span class="mono">{titular}</span> <span class="mono">{fecha}</span> <span class="mono">{hora}</span>.</p>
+          <div class="campo"><label>Contrato listo (pendiente de firma)</label><textarea id="cfg-wa-contrato" rows="2"></textarea></div>
+          <div class="campo"><label>Recordatorio de anticipo</label><textarea id="cfg-wa-anticipo" rows="2"></textarea></div>
+          <div class="campo"><label>Cobro con CLABE</label><textarea id="cfg-wa-cobro" rows="5"></textarea></div>
+          <div class="campo"><label>Material listo (entrega)</label><textarea id="cfg-wa-entrega" rows="2"></textarea></div>
+          <div class="campo"><label>Reagendar sesión</label><textarea id="cfg-wa-reagendar" rows="2"></textarea></div>
+          <button class="btn-primario gold" style="width:100%;margin-top:6px" onclick="guardarPlantillas()"><i class="ti ti-device-floppy"></i> Guardar plantillas</button>
+          <div id="cfg-wa-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
         </div>
       </div>
 
@@ -2194,6 +2232,76 @@ function setAjustesTab(pane) {
   document.getElementById('apane-' + pane).classList.add('activo-apane');
   if (pane === 'metricas') cargarMetricas();
   if (pane === 'paquetes') cargarPaquetesAdmin();
+  if (pane === 'bancarios') cargarConfigBancario();
+  if (pane === 'plantillas') cargarPlantillas();
+}
+
+// ── Configuración: datos bancarios y plantillas de WhatsApp (R58) ──
+const WA_DEFAULTS = {
+  wa_contrato:  'Hola {nombre}, aquí está tu contrato con Inmuebles Audiovisuales para revisar y firmar: {link}',
+  wa_anticipo:  'Hola {nombre}, te recuerdo el anticipo de {anticipo} para apartar tu sesión. Puedes ver el detalle aquí: {link}',
+  wa_cobro:     'Hola {nombre}, tu saldo pendiente es {saldo}. Puedes transferir a:\n\nCLABE: {clabe}\nBanco: {banco}\nA nombre de: {titular}\n\nTambién puedes depositar en OXXO/7-Eleven. Cuando hagas el pago, mándame tu comprobante por aquí. Ver detalle: {link}',
+  wa_entrega:   'Hola {nombre}, tu material ya está listo para descargar: {link}',
+  wa_reagendar: 'Hola {nombre}, reagendamos tu sesión para {fecha} a las {hora}. Cualquier cosa me dices.'
+};
+let _configCache = {};
+
+async function cargarConfigBancario() {
+  try {
+    const r = await apiGet({ action: 'obtenerConfigAdmin' });
+    _configCache = (r && r.config) ? r.config : {};
+    document.getElementById('cfg-banco-clabe').value   = _configCache.banco_clabe   || '';
+    document.getElementById('cfg-banco-nombre').value  = _configCache.banco_nombre  || '';
+    document.getElementById('cfg-banco-titular').value = _configCache.banco_titular || '';
+    document.getElementById('cfg-pago-oxxo').value     = _configCache.pago_oxxo      || '';
+    document.getElementById('cfg-pago-clip').value     = _configCache.pago_clip_url  || '';
+  } catch (e) {
+    setMsg('cfg-banco-msg', 'No se pudo cargar (¿migración pendiente?).', 'msg-err');
+  }
+}
+
+async function guardarConfigBancario() {
+  const config = {
+    banco_clabe:   document.getElementById('cfg-banco-clabe').value.trim(),
+    banco_nombre:  document.getElementById('cfg-banco-nombre').value.trim(),
+    banco_titular: document.getElementById('cfg-banco-titular').value.trim(),
+    pago_oxxo:     document.getElementById('cfg-pago-oxxo').value.trim(),
+    pago_clip_url: document.getElementById('cfg-pago-clip').value.trim()
+  };
+  try {
+    const r = await apiPost({ action: 'guardarConfig', config });
+    if (r && r.ok) { Object.assign(_configCache, config); setMsg('cfg-banco-msg', 'Datos bancarios guardados.', 'msg-ok'); }
+    else setMsg('cfg-banco-msg', (r && r.error) || 'No se pudo guardar.', 'msg-err');
+  } catch (e) { setMsg('cfg-banco-msg', 'Error de red.', 'msg-err'); }
+}
+
+async function cargarPlantillas() {
+  let cfg = {};
+  try {
+    const r = await apiGet({ action: 'obtenerConfigAdmin' });
+    cfg = (r && r.config) ? r.config : {};
+    _configCache = Object.assign({}, _configCache, cfg);
+  } catch (e) {}
+  document.getElementById('cfg-wa-contrato').value  = cfg.wa_contrato  || WA_DEFAULTS.wa_contrato;
+  document.getElementById('cfg-wa-anticipo').value  = cfg.wa_anticipo  || WA_DEFAULTS.wa_anticipo;
+  document.getElementById('cfg-wa-cobro').value     = cfg.wa_cobro     || WA_DEFAULTS.wa_cobro;
+  document.getElementById('cfg-wa-entrega').value   = cfg.wa_entrega   || WA_DEFAULTS.wa_entrega;
+  document.getElementById('cfg-wa-reagendar').value = cfg.wa_reagendar || WA_DEFAULTS.wa_reagendar;
+}
+
+async function guardarPlantillas() {
+  const config = {
+    wa_contrato:  document.getElementById('cfg-wa-contrato').value,
+    wa_anticipo:  document.getElementById('cfg-wa-anticipo').value,
+    wa_cobro:     document.getElementById('cfg-wa-cobro').value,
+    wa_entrega:   document.getElementById('cfg-wa-entrega').value,
+    wa_reagendar: document.getElementById('cfg-wa-reagendar').value
+  };
+  try {
+    const r = await apiPost({ action: 'guardarConfig', config });
+    if (r && r.ok) { Object.assign(_configCache, config); setMsg('cfg-wa-msg', 'Plantillas guardadas.', 'msg-ok'); }
+    else setMsg('cfg-wa-msg', (r && r.error) || 'No se pudo guardar.', 'msg-err');
+  } catch (e) { setMsg('cfg-wa-msg', 'Error de red.', 'msg-err'); }
 }
 
 
