@@ -453,6 +453,9 @@
     .setup-mini i { font-size: 14px; }
     .setup-mini.del { color: var(--red); border-color: #E8C9C3; }
     .primary.block { width: 100%; margin-top: 18px; min-height: 50px; border-radius: var(--radius); font-size: 15px; }
+    .mono { font-family: var(--font-mono); }
+    .sheet-note { color: var(--ink-2); font-size: 13px; margin-bottom: 12px; line-height: 1.45; }
+    .cuarto-meta { font-size: 11px; color: var(--ink-3); }
   </style>
 </head>
 <body>
@@ -1093,10 +1096,36 @@ function cuartoRow(item, type) {
 }
 
 function setActiveRoom(id) {
+  const prev = activeTarget();
   activeRoomId = id;
   localStorage.setItem(roomKey(), id);
   cerrarModal();
   render();
+  if (prev && prev.id !== id) promptBuena(prev);
+}
+
+function promptBuena(target) {
+  if (!target || !isMediaMode()) return;
+  const files = mediaFilesForTarget(target.id).filter((f) => f.kind === 'take');
+  if (!files.length || files.some((f) => f.good)) return;
+  abrirPromptBuena(target.id);
+}
+
+function abrirPromptBuena(targetId) {
+  const target = state.espacios.find((e) => e.id === targetId) || state.droneItems.find((d) => d.id === targetId);
+  if (!target) return;
+  const files = mediaFilesForTarget(targetId).filter((f) => f.kind === 'take');
+  abrirModal(`<div class="sheet-head"><h2>¿Cuál fue la buena en ${esc(target.nombre)}?</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <p class="sheet-note">Marca una o dos. O cierra y la decides luego.</p>
+    <div class="cuarto-list">${files.map((f) => `<button class="cuarto-row${f.good ? ' active' : ''}" onclick="togglePromptBuena('${f.id}','${targetId}')"><span class="cuarto-name mono">${esc(f.fileToken)}</span>${f.good ? '<span class="cuarto-done"><i class="ti ti-star-filled"></i>buena</span>' : '<span class="cuarto-meta">tocar para marcar</span>'}</button>`).join('')}</div>
+    <button class="primary block" onclick="cerrarModal()" style="width:100%">Listo</button>`);
+}
+
+function togglePromptBuena(mediaId, targetId) {
+  state = logic.toggleMediaGood(state, mediaId);
+  scheduleSave();
+  render();
+  abrirPromptBuena(targetId);
 }
 
 function visibleSpaces() {
