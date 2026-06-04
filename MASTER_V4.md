@@ -335,6 +335,23 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
 
+### Ronda 57 — Segunda auditoria integral Bitacora (2026-06-04)
+
+**Cambio:** Segunda auditoria exhaustiva de integridad, estados `no_aplica`, jerarquias de espacios y claridad para Cierre/Edicion.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R57-01 | `frontend/checklist-logic.js` | Construye rutas completas para subespacios profundos, identifica descendientes recursivos, separa grupos Video/Drone y rescata archivos huerfanos como `Sin identificar`. |
+| R57-02 | `frontend/checklist-logic.js` | Impide registrar capturas sobre elementos `no_aplica` o inexistentes y evita falsos registros en operaciones rechazadas. |
+| R57-03 | `frontend/checklist-logic.test.js` | Sube cobertura a 30 pruebas con regresiones de jerarquia, archivos huerfanos, separacion Video/Drone y proteccion `no_aplica`. |
+| R57-04 | `frontend/checklist.html` | Protege borrado de arboles completos y reemplazo de plantillas con historial legacy; conserva correctamente el estado visible de sincronizacion. |
+| R57-05 | `frontend/checklist.html` | Agrega reactivacion clara de `no_aplica`, rutas padre visibles en tarjetas y separa escenas Video/Drone en Cierre y Edicion. |
+| R57-06 | Verificacion | Flujos revisados a 320px, 390px y desktop; sin desbordes, scripts validos y rutas de subespacios legibles. |
+
+R57 no cambia endpoints, adapter ni D1.
+
+---
+
 ### Ronda 56 — Auditoria integral Bitacora R55 (2026-06-03 19:37 CST)
 
 **Cambio:** Auditoria y correccion integral de bugs, integridad de datos, guardado concurrente, accesibilidad y UI/UX de `checklist.html`.

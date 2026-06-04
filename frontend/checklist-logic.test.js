@@ -336,3 +336,91 @@ test('normalization preserves video no aplica while repairing media states', () 
 
   assert.equal(normalized.espacios[1].estados.video.estado, 'no_aplica');
 });
+
+test('builds the complete scene path for deeply nested spaces', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Recamara principal > Vestidor > Closet');
+  const closet = state.espacios.find((space) => space.nombre === 'Closet');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: closet.id, kind: 'take' });
+
+  assert.equal(state.mediaFiles[0].scenePath, 'Recamara principal > Vestidor > Closet');
+});
+
+test('finds every nested descendant before deleting a space', () => {
+  const state = logic.addSpacesFromText(logic.createDefaultState(), 'Recamara principal > Vestidor > Closet');
+  const root = state.espacios.find((space) => space.nombre === 'Recamara principal');
+  const descendants = logic.getDescendantIds(state, root.id);
+
+  assert.deepEqual(new Set(descendants), new Set(state.espacios.map((space) => space.id)));
+});
+
+test('separates video and drone scenes with the same name for review', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Amenidades');
+  const videoTarget = state.espacios[0];
+  const droneTarget = state.droneItems.find((item) => item.nombre === 'Amenidades');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: videoTarget.id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: droneTarget.id, kind: 'take' });
+  state = logic.toggleMediaGood(state, state.mediaFiles[0].id);
+
+  const groups = logic.getMediaSceneGroups(state);
+
+  assert.equal(groups.length, 2);
+  assert.equal(groups.find((group) => group.mode === 'video').hasGood, true);
+  assert.equal(groups.find((group) => group.mode === 'drone').hasGood, false);
+});
+
+test('normalization preserves an orphaned file as unidentified instead of a false take', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+  state.espacios = [];
+
+  const normalized = logic.normalizeChecklistData(state);
+
+  assert.equal(normalized.mediaFiles[0].kind, 'omitted');
+  assert.equal(normalized.mediaFiles[0].targetId, null);
+  assert.equal(normalized.mediaFiles[0].scenePath, 'Sin identificar');
+  assert.equal(normalized.mediaFiles[0].good, false);
+});
+
+test('normalization preserves a file from an unknown camera as unidentified', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+  state.mediaFiles[0].cameraId = 'camera-missing';
+
+  const normalized = logic.normalizeChecklistData(state);
+
+  assert.equal(normalized.mediaFiles[0].kind, 'omitted');
+  assert.equal(normalized.mediaFiles[0].targetId, null);
+  assert.equal(normalized.mediaFiles[0].scenePath, 'Sin identificar');
+});
+
+test('does not register media files for targets marked no aplica', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Bodega');
+  state.espacios[0].estados.video = { estado: 'no_aplica' };
+  state.droneItems[0].noAplica = true;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
+
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: state.droneItems[0].id, kind: 'take' });
+
+  assert.equal(state.mediaFiles.length, 0);
+  assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB2819');
+  assert.equal(logic.getCameraSequence(state, 'drone-dji').nextToken, '0246');
+});
+
+test('does not register legacy captures for targets marked no aplica', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Bodega');
+  state.espacios[0].estados.foto = { estado: 'no_aplica' };
+  state.droneItems[0].noAplica = true;
+
+  state = logic.registerCapture(state, { tipo: 'foto', targetId: state.espacios[0].id, autor: 'Ana' });
+  state = logic.registerCapture(state, { tipo: 'drone', targetId: state.droneItems[0].id, autor: 'Bruno' });
+
+  assert.equal(state.bitacora.length, 0);
+});

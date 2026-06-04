@@ -55,7 +55,7 @@
     .job { min-width: 0; flex: 1; }
     .eyebrow {
       color: var(--gold); font-size: 10px; font-weight: 900;
-      letter-spacing: .12em; text-transform: uppercase;
+      letter-spacing: 0; text-transform: uppercase;
     }
     .job h1 { font-size: 18px; line-height: 1.12; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .folio { color: var(--ink-3); font-size: 11px; font-weight: 800; margin-top: 2px; }
@@ -159,7 +159,7 @@
     .zone-title {
       display: flex; justify-content: space-between; align-items: center;
       margin: 2px 2px 8px; color: var(--ink-3);
-      font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+      font-size: 11px; font-weight: 900; letter-spacing: 0; text-transform: uppercase;
     }
     .cards { display: grid; gap: 8px; }
     .capture-card {
@@ -172,7 +172,7 @@
     .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
     .card-name { min-width: 0; }
     .card-name strong { display: block; font-size: 15px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .card-name span { display: block; margin-top: 3px; color: var(--ink-3); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+    .card-name span { display: block; margin-top: 3px; color: var(--ink-3); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0; line-height: 1.35; }
     .child .card-name strong::before { content: "- "; color: var(--ink-3); }
     .state-list { display: flex; flex-wrap: wrap; gap: 6px; }
     .state {
@@ -311,6 +311,7 @@ let saving = false;
 let dirty = false;
 let retryCount = 0;
 let toastTimer = null;
+let syncStatus = 'ok';
 
 const SERVICE_UI = {
   foto: { label: 'Foto normal', short: 'Foto', verb: 'foto', help: 'Marca cobertura fotografica.' },
@@ -338,6 +339,7 @@ function ensureActiveMode() {
 }
 
 function setSync(status) {
+  syncStatus = status;
   const dot = document.getElementById('sync-dot');
   const label = document.getElementById('sync-label');
   if (!dot || !label) return;
@@ -482,7 +484,7 @@ function render() {
     search.value = searchTerm;
     search.addEventListener('input', (event) => { searchTerm = event.target.value; render(); });
   }
-  setSync('ok');
+  setSync(syncStatus);
 }
 
 function renderHeader() {
@@ -636,15 +638,17 @@ function renderDroneCards() {
 function renderSpaceCard(space) {
   if (state.modoActual === 'video') return renderMediaTargetCard(space, 'space');
   const current = (space.estados[state.modoActual] || {}).estado || 'pendiente';
+  const noAplica = current === 'no_aplica';
   const managing = current === 'hecho';
-  const label = space.zona === 'amenidades' ? `Amenidad${space.clave ? ' clave' : ''}` : space.clave ? 'Clave' : ZONE_LABELS[space.zona || 'interior'];
+  const parentPath = space.parentId ? logic.getScenePath(state, space.id, 'video').split(' > ').slice(0, -1).join(' > ') : '';
+  const label = parentPath || (space.zona === 'amenidades' ? `Amenidad${space.clave ? ' clave' : ''}` : space.clave ? 'Clave' : ZONE_LABELS[space.zona || 'interior']);
   return `<article class="capture-card ${space.parentId ? 'child' : ''} ${space.clave ? 'key' : ''} ${space.zona === 'amenidades' ? 'amenity' : ''}">
     <div class="card-head">
       <div class="card-name"><strong>${esc(space.nombre)}</strong><span>${label}</span></div>
       <button class="icon-btn" aria-label="Opciones de ${esc(space.nombre)}" onclick="abrirAcciones('space','${space.id}')">...</button>
     </div>
     <div class="state-list">${['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => renderStateToken(key, space.estados[key])).join('')}</div>
-    <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${space.id}')">${captureActionLabel(state.modoActual, space.id, managing)}</button>
+    <button class="primary-action ${managing || noAplica ? 'manage' : ''}" onclick="${noAplica ? `reactivarTarget('space','${space.id}','${state.modoActual}')` : `capturar('${space.id}')`}">${noAplica ? `Reactivar ${SERVICE_UI[state.modoActual].short}` : captureActionLabel(state.modoActual, space.id, managing)}</button>
   </article>`;
 }
 
@@ -672,19 +676,36 @@ function renderMediaTargetCard(target, type) {
   const files = mediaFilesForTarget(target.id);
   const takes = files.filter((file) => file.kind === 'take');
   const good = takes.filter((file) => file.good);
-  const label = type === 'drone' ? 'Drone' : target.zona === 'amenidades' ? `Amenidad${target.clave ? ' clave' : ''}` : target.clave ? 'Clave' : ZONE_LABELS[target.zona || 'interior'];
+  const noAplica = type === 'drone' ? target.noAplica : (target.estados.video || {}).estado === 'no_aplica';
+  const parentPath = type === 'space' && target.parentId ? logic.getScenePath(state, target.id, 'video').split(' > ').slice(0, -1).join(' > ') : '';
+  const label = parentPath || (type === 'drone' ? 'Drone' : target.zona === 'amenidades' ? `Amenidad${target.clave ? ' clave' : ''}` : target.clave ? 'Clave' : ZONE_LABELS[target.zona || 'interior']);
   return `<article class="capture-card ${target.parentId ? 'child' : ''} ${target.clave ? 'key' : ''} ${target.zona === 'amenidades' ? 'amenity' : ''}">
     <div class="card-head">
       <div class="card-name"><strong>${esc(target.nombre)}</strong><span>${label}</span></div>
       <button class="icon-btn" aria-label="Opciones de ${esc(target.nombre)}" onclick="abrirAcciones('${type}','${target.id}')">...</button>
     </div>
-    <div class="file-summary">${files.length} ${files.length === 1 ? 'archivo' : 'archivos'} · ${good.length} ${good.length === 1 ? 'buena' : 'buenas'}</div>
-    ${renderRecentFiles(files, target.id)}
-    <div class="file-actions">
-      <button class="primary-action" onclick="registrarArchivo('${target.id}','take')">Registrar toma</button>
-      <button class="discard-action" onclick="abrirDescarte('${target.id}')">Descarte</button>
-    </div>
+    ${noAplica ? `<div class="file-summary">Este elemento no aplica</div>
+      <button class="primary-action manage" onclick="reactivarTarget('${type}','${target.id}','${type === 'drone' ? 'drone' : 'video'}')">Reactivar ${type === 'drone' ? 'Drone' : 'Video'}</button>` : `
+      <div class="file-summary">${files.length} ${files.length === 1 ? 'archivo' : 'archivos'} · ${good.length} ${good.length === 1 ? 'buena' : 'buenas'}</div>
+      ${renderRecentFiles(files, target.id)}
+      <div class="file-actions">
+        <button class="primary-action" onclick="registrarArchivo('${target.id}','take')">Registrar toma</button>
+        <button class="discard-action" onclick="abrirDescarte('${target.id}')">Descarte</button>
+      </div>`}
   </article>`;
+}
+
+function reactivarTarget(type, targetId, service) {
+  if (type === 'drone') {
+    const item = state.droneItems.find((entry) => entry.id === targetId);
+    if (item) item.noAplica = false;
+  } else {
+    const space = state.espacios.find((entry) => entry.id === targetId);
+    if (space) space.estados[service] = { estado: 'pendiente' };
+  }
+  cerrarModal();
+  render();
+  scheduleSave();
 }
 
 function renderRecentFiles(files, targetId) {
@@ -765,7 +786,9 @@ function iniciarSecuencia() {
 function registrarArchivo(targetId, kind, discardReason) {
   const camera = activeCamera();
   if (!camera || !logic.getCameraSequence(state, camera.id).nextToken) return abrirSecuencia();
+  const previous = state;
   state = logic.registerMediaFile(state, { cameraId: camera.id, targetId, kind, discardReason, autor: miNombre(), now: new Date() });
+  if (state === previous) return showToast('Reactiva este elemento antes de registrar');
   render(); scheduleSave();
   const file = state.mediaFiles[state.mediaFiles.length - 1];
   showToast(`${file.fileToken} registrado`);
@@ -970,13 +993,10 @@ function renderCloseView() {
 function renderMediaClosePanels() {
   const files = state.mediaFiles || [];
   const unidentified = files.filter((file) => file.kind === 'omitted' || file.scene === 'Sin identificar');
-  const sceneGroups = {};
-  files.filter((file) => file.kind === 'take').forEach((file) => {
-    if (!sceneGroups[file.scenePath]) sceneGroups[file.scenePath] = [];
-    sceneGroups[file.scenePath].push(file);
-  });
-  const withoutGood = Object.entries(sceneGroups).filter(([, items]) => !items.some((file) => file.good)).map(([scene]) => scene);
-  const tooManyGood = Object.entries(sceneGroups).filter(([, items]) => items.filter((file) => file.good).length >= 3).map(([scene]) => scene);
+  const sceneGroups = logic.getMediaSceneGroups(state).filter((group) => group.hasTake);
+  const groupLabel = (group) => `${SERVICE_UI[group.mode]?.short || 'Archivo'} · ${group.scenePath}`;
+  const withoutGood = sceneGroups.filter((group) => !group.hasGood);
+  const tooManyGood = sceneGroups.filter((group) => group.goodCount >= 3);
   const discardCounts = files.filter((file) => file.kind === 'discard').reduce((counts, file) => {
     counts[file.discardReason] = (counts[file.discardReason] || 0) + 1;
     return counts;
@@ -992,8 +1012,8 @@ function renderMediaClosePanels() {
   }).join('');
   return `<section class="panel traffic yellow"><h3 class="traffic-title"><span></span>Reconciliar archivos</h3>${cameras || '<p class="line">Aun no hay secuencias iniciadas.</p>'}</section>
     <section class="panel"><h3>Seleccion para edicion</h3>
-      ${withoutGood.length ? withoutGood.map((scene) => renderReviewItem(`<strong>${esc(scene)}</strong>: ninguna toma buena`)).join('') : Object.keys(sceneGroups).length ? '<p class="line">Todas las escenas grabadas tienen una buena.</p>' : '<p class="line">Aun no hay tomas registradas.</p>'}
-      ${tooManyGood.map((scene) => renderReviewItem(`<strong>${esc(scene)}</strong>: tres o mas buenas`)).join('')}
+      ${withoutGood.length ? withoutGood.map((group) => renderReviewItem(`<strong>${esc(groupLabel(group))}</strong>: ninguna toma buena`)).join('') : sceneGroups.length ? '<p class="line">Todas las escenas grabadas tienen una buena.</p>' : '<p class="line">Aun no hay tomas registradas.</p>'}
+      ${tooManyGood.map((group) => renderReviewItem(`<strong>${esc(groupLabel(group))}</strong>: tres o mas buenas`)).join('')}
       ${unidentified.map((file) => `<div class="review-item"><strong>${esc(file.fileToken)}</strong><div>Sin identificar</div><button class="mini-btn" onclick="abrirArchivo('${file.id}')">Resolver</button></div>`).join('')}
       ${Object.keys(discardCounts).length ? `<p class="line">Descartes: ${Object.entries(discardCounts).map(([reason, count]) => `${mediaKindLabel({ kind: 'discard', discardReason: reason })} ${count}`).join(' · ')}</p>` : ''}
     </section>`;
@@ -1057,21 +1077,17 @@ function renderEditView() {
 
 function renderMediaEditView() {
   const files = state.mediaFiles || [];
-  const groups = {};
-  files.forEach((file) => {
-    const scene = file.scenePath || 'Sin identificar';
-    if (!groups[scene]) groups[scene] = [];
-    groups[scene].push(file);
-  });
+  const groups = logic.getMediaSceneGroups(state);
   const cameraLabel = (id) => ((state.cameras || []).find((camera) => camera.id === id) || {}).label || id;
   const legacy = state.bitacora.filter((entry) => entry.tipo === 'video' || entry.tipo === 'drone');
-  return `<div class="edit-list">${Object.entries(groups).map(([scene, items]) => {
+  return `<div class="edit-list">${groups.map((group) => {
+    const items = group.files;
     const good = items.filter((file) => file.kind === 'take' && file.good);
     const other = items.filter((file) => file.kind === 'take' && !file.good);
     const discards = items.filter((file) => file.kind === 'discard');
     const omitted = items.filter((file) => file.kind === 'omitted');
     return `<section class="panel">
-      <h3>${esc(scene)}</h3>
+      <h3>${esc(SERVICE_UI[group.mode]?.short || 'Archivo')} · ${esc(group.scenePath)}</h3>
       ${good.length ? `<p class="line"><strong>Buenas:</strong> ${good.map((file) => esc(file.fileToken)).join(', ')}</p>` : '<p class="line"><strong>Buenas:</strong> ninguna</p>'}
       ${other.length ? `<p class="line"><strong>Otras:</strong> ${other.map((file) => esc(file.fileToken)).join(', ')}</p>` : ''}
       ${discards.length ? `<p class="line"><strong>Descartes:</strong> ${discards.map((file) => `${esc(file.fileToken)} (${esc(mediaKindLabel(file))})`).join(', ')}</p>` : ''}
@@ -1159,7 +1175,7 @@ function renderListTab() {
 }
 
 function usarTemplate(mode) {
-  if (mode === 'replace' && ((state.mediaFiles || []).length || (state.sequenceSegments || []).length) && !confirm('Reemplazar todo eliminara la bitacora, secuencias y archivos registrados. Continuar?')) return;
+  if (mode === 'replace' && (state.bitacora.length || (state.mediaFiles || []).length || (state.sequenceSegments || []).length) && !confirm('Reemplazar todo eliminara la bitacora, secuencias y archivos registrados. Continuar?')) return;
   state = logic.applyTemplate(state, selectedTemplate, { mode });
   cerrarModal();
   render();
@@ -1194,8 +1210,11 @@ function abrirAcciones(type, id) {
   if (!item) return;
   const hasMedia = (state.mediaFiles || []).some((file) => file.targetId === id);
   const serviceActions = type === 'space'
-    ? ['foto', 't360', 'video'].filter((key) => state.servicios[key] && !(key === 'video' && hasMedia)).map((key) => `<button class="btn" onclick="markNoAplica('${key}')">${SERVICE_UI[key].label} no aplica</button>`).join('')
-    : hasMedia ? '' : '<button class="btn" onclick="markDroneNoAplica()">Drone no aplica</button>';
+    ? ['foto', 't360', 'video'].filter((key) => state.servicios[key] && !(key === 'video' && hasMedia)).map((key) => {
+      const noAplica = (item.estados[key] || {}).estado === 'no_aplica';
+      return `<button class="btn" onclick="${noAplica ? `reactivarTarget('space','${item.id}','${key}')` : `markNoAplica('${key}')`}">${noAplica ? 'Reactivar' : 'No aplica:'} ${SERVICE_UI[key].label}</button>`;
+    }).join('')
+    : hasMedia ? '' : `<button class="btn" onclick="${item.noAplica ? `reactivarTarget('drone','${item.id}','drone')` : 'markDroneNoAplica()'}">${item.noAplica ? 'Reactivar Drone' : 'Drone no aplica'}</button>`;
   abrirModal(`<div class="sheet-head"><h2>${esc(item.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
     <div class="action-stack">
       ${serviceActions}
@@ -1207,7 +1226,8 @@ function abrirAcciones(type, id) {
 
 function markNoAplica(service) {
   const space = state.espacios.find((entry) => entry.id === selectedAction.id);
-  if (space && (!space.clave || confirm(`Marcar ${space.nombre} como no aplica para ${SERVICE_UI[service].label}?`))) space.estados[service] = { estado: 'no_aplica' };
+  if (!space || (space.clave && !confirm(`Marcar ${space.nombre} como no aplica para ${SERVICE_UI[service].label}?`))) return;
+  space.estados[service] = { estado: 'no_aplica' };
   cerrarModal(); render(); scheduleSave();
 }
 
@@ -1250,15 +1270,13 @@ function syncMediaSceneNames() {
     const targets = camera && camera.mode === 'drone' ? state.droneItems : state.espacios;
     const target = targets.find((item) => item.id === file.targetId);
     if (!target) return;
-    const parent = target.parentId && state.espacios.find((item) => item.id === target.parentId);
     file.scene = target.nombre;
-    file.scenePath = parent ? `${parent.nombre} > ${target.nombre}` : target.nombre;
+    file.scenePath = logic.getScenePath(state, target.id, camera && camera.mode);
   });
 }
 
 function deleteTarget() {
-  const ids = new Set([selectedAction.id]);
-  if (selectedAction.type !== 'drone') state.espacios.forEach((entry) => { if (entry.parentId === selectedAction.id) ids.add(entry.id); });
+  const ids = new Set(selectedAction.type === 'drone' ? [selectedAction.id] : logic.getDescendantIds(state, selectedAction.id));
   if ((state.mediaFiles || []).some((file) => ids.has(file.targetId)) || state.bitacora.some((entry) => ids.has(entry.targetId))) {
     showToast('No se puede borrar: tiene capturas registradas');
     cerrarModal();
@@ -1275,7 +1293,7 @@ function deleteTarget() {
 
 function addTargetNote() {
   const note = prompt('Nota para edicion');
-  if (note === null) return;
+  if (!note || !note.trim()) return;
   const targetId = selectedAction.id;
   const tipo = selectedAction.service || state.modoActual;
   const name = tipo === 'drone' ? (state.droneItems.find((entry) => entry.id === targetId) || {}).nombre : (state.espacios.find((entry) => entry.id === targetId) || {}).nombre;

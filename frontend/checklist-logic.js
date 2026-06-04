@@ -208,6 +208,19 @@
       });
       normalized.sequenceSegments = normalized.sequenceSegments || [];
       normalized.mediaFiles = normalized.mediaFiles || [];
+      normalized.mediaFiles.forEach((file) => {
+        const camera = normalized.cameras.find((item) => item.id === file.cameraId);
+        const targets = camera && camera.mode === 'drone' ? normalized.droneItems : normalized.espacios;
+        if (!camera || (file.targetId && !targets.some((target) => target.id === file.targetId))) {
+          file.targetId = null;
+          file.scene = 'Sin identificar';
+          file.scenePath = 'Sin identificar';
+          file.kind = 'omitted';
+          file.discardReason = null;
+          file.good = false;
+          file.shotNumber = null;
+        }
+      });
       normalized.sequenceSegments.forEach((segment) => {
         const counters = normalized.mediaFiles.filter((file) => file.segmentId === segment.id).map((file) => file.fileCounter);
         if (counters.length) segment.counterNext = Math.max(segment.counterNext || 0, Math.max(...counters) + 1);
@@ -297,13 +310,68 @@
     return next;
   }
 
+  function getScenePath(state, targetId, mode) {
+    const list = mode === 'drone' ? state.droneItems : state.espacios;
+    const target = list.find((item) => item.id === targetId);
+    if (!target) return 'Sin identificar';
+    if (mode === 'drone') return target.nombre;
+    const names = [];
+    const visited = new Set();
+    let current = target;
+    while (current && !visited.has(current.id)) {
+      names.unshift(current.nombre);
+      visited.add(current.id);
+      current = current.parentId && state.espacios.find((item) => item.id === current.parentId);
+    }
+    return names.join(' > ');
+  }
+
+  function getDescendantIds(state, targetId) {
+    const ids = new Set([targetId]);
+    let found = true;
+    while (found) {
+      found = false;
+      state.espacios.forEach((space) => {
+        if (space.parentId && ids.has(space.parentId) && !ids.has(space.id)) {
+          ids.add(space.id);
+          found = true;
+        }
+      });
+    }
+    return [...ids];
+  }
+
   function getSceneData(state, camera, targetId) {
     const list = camera.mode === 'drone' ? state.droneItems : state.espacios;
     const target = list.find((item) => item.id === targetId);
     if (!target) return { scene: 'Sin identificar', scenePath: 'Sin identificar' };
-    if (camera.mode === 'drone') return { scene: target.nombre, scenePath: target.nombre };
-    const parent = target.parentId && state.espacios.find((item) => item.id === target.parentId);
-    return { scene: target.nombre, scenePath: parent ? `${parent.nombre} > ${target.nombre}` : target.nombre };
+    return { scene: target.nombre, scenePath: getScenePath(state, targetId, camera.mode) };
+  }
+
+  function getMediaSceneGroups(state) {
+    const groups = new Map();
+    (state.mediaFiles || []).forEach((file) => {
+      const camera = getCamera(state, file.cameraId);
+      const mode = camera ? camera.mode : 'unknown';
+      const scenePath = file.scenePath || 'Sin identificar';
+      const key = `${mode}:${scenePath}`;
+      if (!groups.has(key)) groups.set(key, { key, mode, scenePath, files: [] });
+      groups.get(key).files.push(file);
+    });
+    return [...groups.values()].map((group) => Object.assign(group, {
+      hasTake: group.files.some((file) => file.kind === 'take'),
+      hasGood: group.files.some((file) => file.kind === 'take' && file.good),
+      goodCount: group.files.filter((file) => file.kind === 'take' && file.good).length,
+    }));
+  }
+
+  function targetIsNoAplica(state, mode, targetId) {
+    if (mode === 'drone') {
+      const item = state.droneItems.find((entry) => entry.id === targetId);
+      return !item || item.noAplica;
+    }
+    const space = state.espacios.find((entry) => entry.id === targetId);
+    return !space || (space.estados.video || {}).estado === 'no_aplica';
   }
 
   function deriveMediaTargetState(state, camera, targetId) {
@@ -348,8 +416,9 @@
     const next = clone(state);
     const camera = getCamera(next, options.cameraId);
     const sequence = getCameraSequence(next, options.cameraId);
-    if (!camera || !sequence.segment) return next;
+    if (!camera || !sequence.segment) return state;
     const kind = options.kind || 'take';
+    if (options.discardReason !== 'unrelated' && targetIsNoAplica(next, camera.mode, options.targetId)) return state;
     const sceneData = options.discardReason === 'unrelated'
       ? { scene: 'Sin escena', scenePath: 'Sin escena' }
       : getSceneData(next, camera, options.targetId);
@@ -606,11 +675,13 @@
     if (tipo !== 'drone') {
       const existingSpace = next.espacios.find((entry) => entry.id === targetId);
       const existingState = existingSpace && existingSpace.estados[tipo];
-      if (existingState && existingState.estado === 'hecho' && (tipo === 'foto' || tipo === 't360')) return next;
-      if (existingState && existingState.estado === 'hecho' && tipo === 'video' && intencion === 'principal') return next;
+      if (!existingSpace || (existingState && existingState.estado === 'no_aplica')) return state;
+      if (existingState && existingState.estado === 'hecho' && (tipo === 'foto' || tipo === 't360')) return state;
+      if (existingState && existingState.estado === 'hecho' && tipo === 'video' && intencion === 'principal') return state;
     } else {
       const existingDrone = next.droneItems.find((entry) => entry.id === targetId);
-      if (existingDrone && existingDrone.estado === 'hecho' && intencion === 'principal') return next;
+      if (!existingDrone || existingDrone.noAplica) return state;
+      if (existingDrone && existingDrone.estado === 'hecho' && intencion === 'principal') return state;
     }
     const order = tipo === 'video' || tipo === 'drone' ? getNextOrder(next, tipo) : null;
     const hora = formatTime(options.now);
@@ -748,6 +819,9 @@
     parseFilenameSequence,
     getCameraSequence,
     initializeCameraSequence,
+    getScenePath,
+    getDescendantIds,
+    getMediaSceneGroups,
     registerMediaFile,
     toggleMediaGood,
     insertOmittedMediaFile,
