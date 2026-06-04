@@ -477,6 +477,16 @@
     .cov-tile.hecho .cov-state { color: var(--green); }
     .cov-tile.no_aplica { background: var(--muted); }
     .cov-tile.no_aplica .cov-name, .cov-tile.no_aplica .cov-state { color: var(--ink-3); }
+
+    /* ===== Cierre: línea de tiempo cronológica ===== */
+    .cron { display: flex; flex-direction: column; gap: 1px; margin-top: 6px; }
+    .cron-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 7px 4px; text-align: left; background: transparent; border: 0; border-top: 1px solid var(--muted); }
+    .cron-row:first-child { border-top: 0; }
+    .cron-tok { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink-1); flex: none; min-width: 64px; }
+    .cron-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .cron-scene { font-size: 13px; font-weight: 500; color: var(--ink-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cron-kind { font-size: 11px; color: var(--ink-3); }
+    .cron-chev { font-size: 18px; color: var(--ink-3); flex: none; }
   </style>
 </head>
 <body>
@@ -536,6 +546,7 @@ function miNombre() {
 
 function laneKey() { return 'checklist_lane_' + (TOKEN || 'demo'); }
 function roomKey() { return 'checklist_room_' + (TOKEN || 'demo'); }
+function stateKey() { return 'checklist_state_' + (TOKEN || 'demo'); }
 function hasLane() { return !!localStorage.getItem(laneKey()); }
 function laneReady() {
   if (new URLSearchParams(location.search).get('screen') === 'entry') return false;
@@ -609,6 +620,7 @@ async function apiPost(payload) {
 function scheduleSave() {
   if (DEMO) return;
   dirty = true;
+  try { localStorage.setItem(stateKey(), JSON.stringify({ meta, state })); } catch (_) {}
   retryCount = 0;
   clearTimeout(saveTimer);
   clearTimeout(retryTimer);
@@ -626,13 +638,8 @@ async function saveNow() {
     if (data.error) {
       dirty = true;
       setSync('error');
-      if (retryCount < 4) {
-        retryCount++;
-        showToast('Error al guardar. Reintentando...');
-        retryTimer = setTimeout(saveNow, 7000);
-      } else {
-        showToast('No se pudo guardar.');
-      }
+      retryCount++;
+      retryTimer = setTimeout(saveNow, Math.min(30000, 3000 * retryCount));
       return;
     }
     setSync('ok');
@@ -643,14 +650,10 @@ async function saveNow() {
   } catch (_) {
     saving = false;
     setSync('error');
-    if (retryCount < 4) {
-      retryCount++;
-      dirty = true;
-      showToast('Sin conexion. Reintentando...');
-      retryTimer = setTimeout(saveNow, 7000);
-    } else {
-      showToast('No se pudo guardar.');
-    }
+    dirty = true;
+    retryCount++;
+    if (retryCount === 1 || retryCount % 4 === 0) showToast('Sin conexión. Se guardará al volver la señal.');
+    retryTimer = setTimeout(saveNow, Math.min(30000, 3000 * retryCount));
   }
 }
 
@@ -668,6 +671,23 @@ async function cargar() {
     render();
     iniciarPolling();
   } catch (_) {
+    const local = localStorage.getItem(stateKey());
+    if (local) {
+      try {
+        const saved = JSON.parse(local);
+        meta = saved.meta || meta;
+        state = logic.normalizeChecklistData(saved.state || saved);
+        const savedLane = localStorage.getItem(laneKey());
+        if (savedLane && state.servicios[savedLane]) state.modoActual = savedLane;
+        activeRoomId = localStorage.getItem(roomKey()) || null;
+        ensureActiveMode();
+        dirty = true;
+        render();
+        iniciarPolling();
+        showToast('Sin conexión: trabajando con la copia local.');
+        return;
+      } catch (e) {}
+    }
     mostrarError('No se pudo cargar la bitacora.');
   }
 }
@@ -1327,7 +1347,7 @@ function setView(view) { activeView = view; render(); }
 
 function abrirCamaras() {
   const cameras = (state.cameras || []).filter((camera) => camera.mode === state.modoActual);
-  abrirModal(`<div class="sheet-head"><h2>Camara de ${SERVICE_UI[state.modoActual].short}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>Camara de ${SERVICE_UI[state.modoActual].short}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">${cameras.map((camera) => `<button class="${activeCamera() && activeCamera().id === camera.id ? 'primary' : 'btn'}" onclick="setCamera('${camera.id}')">${esc(camera.label)}</button>`).join('')}</div>`);
 }
 
@@ -1339,7 +1359,7 @@ function setCamera(cameraId) {
 function abrirSecuencia() {
   const camera = activeCamera();
   if (!camera) return;
-  abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-body">
       <div class="sequence-alert">Escribe el ultimo archivo que ya existe en la camara. Checklist comenzara con el siguiente consecutivo.</div>
       <input class="field" id="last-filename" type="text" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off" autofocus>
@@ -1375,7 +1395,7 @@ function registrarArchivo(targetId, kind, discardReason) {
 function abrirDescarte(targetId) {
   const camera = activeCamera();
   if (!camera || !logic.getCameraSequence(state, camera.id).nextToken) return abrirSecuencia();
-  abrirModal(`<div class="sheet-head"><h2>Registrar descarte</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>Registrar descarte</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">
       <button class="btn" onclick="confirmarDescarte('${targetId}','empty')">Vacio / accidental</button>
       <button class="btn" onclick="confirmarDescarte('${targetId}','failed')">Toma fallida</button>
@@ -1397,7 +1417,7 @@ function toggleBuena(mediaId) {
 function abrirArchivo(mediaId) {
   const file = (state.mediaFiles || []).find((item) => item.id === mediaId);
   if (!file) return;
-  abrirModal(`<div class="sheet-head"><h2>${esc(file.fileToken)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>${esc(file.fileToken)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">
       <button class="btn" onclick="insertarOmitido('${file.id}')">Insertar archivo olvidado antes</button>
       <button class="btn" onclick="abrirAsignacionArchivo('${file.id}')">${file.kind === 'omitted' ? 'Identificar archivo' : 'Cambiar escena'}</button>
@@ -1413,7 +1433,7 @@ function abrirArchivo(mediaId) {
 function abrirArchivosEscena(targetId) {
   const files = mediaFilesForTarget(targetId).slice().reverse();
   const target = state.espacios.find((item) => item.id === targetId) || state.droneItems.find((item) => item.id === targetId);
-  abrirModal(`<div class="sheet-head"><h2>${esc(target ? target.nombre : 'Archivos')}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>${esc(target ? target.nombre : 'Archivos')}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-body"><div class="recent-files">${files.map((file) => `<div class="file-row">
       <button class="file-token" onclick="abrirArchivo('${file.id}')">${esc(file.fileToken)}</button>
       <span class="file-kind">${esc(mediaKindLabel(file))} · ${esc(cameraLabel(file.cameraId))}</span>
@@ -1444,9 +1464,15 @@ function eliminarRegistroArchivo(mediaId) {
 function agregarNotaArchivo(mediaId) {
   const file = state.mediaFiles.find((item) => item.id === mediaId);
   if (!file) return;
-  const note = prompt('Nota para edicion', file.note || '');
-  if (note === null) return;
-  state = logic.updateMediaFile(state, mediaId, { note: note.trim() });
+  abrirModal(`<div class="sheet-head"><h2>Nota · ${esc(file.fileToken)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <textarea class="textarea" id="nota-input" placeholder="Nota para edición (se trabó, usar el inicio, etc.)">${esc(file.note || '')}</textarea>
+    <button class="primary block" style="width:100%;margin-top:10px" onclick="guardarNotaArchivo('${mediaId}')">Guardar nota</button>`);
+  setTimeout(() => { const t = document.getElementById('nota-input'); if (t) t.focus(); }, 50);
+}
+
+function guardarNotaArchivo(mediaId) {
+  const input = document.getElementById('nota-input');
+  state = logic.updateMediaFile(state, mediaId, { note: (input ? input.value : '').trim() });
   cerrarModal(); render(); scheduleSave();
 }
 
@@ -1455,7 +1481,7 @@ function abrirAsignacionArchivo(mediaId) {
   const camera = file && state.cameras.find((item) => item.id === file.cameraId);
   if (!file || !camera) return;
   const targets = camera.mode === 'drone' ? state.droneItems : state.espacios;
-  abrirModal(`<div class="sheet-head"><h2>Asignar ${esc(file.fileToken)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>Asignar ${esc(file.fileToken)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">${targets.map((target) => `<button class="btn" onclick="asignarArchivo('${file.id}','${target.id}')">${esc(target.nombre)}</button>`).join('')}</div>`);
 }
 
@@ -1475,7 +1501,7 @@ function convertirArchivoToma(mediaId) {
 }
 
 function abrirCambioDescarte(mediaId) {
-  abrirModal(`<div class="sheet-head"><h2>Convertir en descarte</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>Convertir en descarte</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">
       <button class="btn" onclick="convertirArchivoDescarte('${mediaId}','empty')">Vacio / accidental</button>
       <button class="btn" onclick="convertirArchivoDescarte('${mediaId}','failed')">Toma fallida</button>
@@ -1521,7 +1547,7 @@ function abrirGestionCaptura(tipo, targetId) {
   const target = tipo === 'drone' ? state.droneItems.find((entry) => entry.id === targetId) : state.espacios.find((entry) => entry.id === targetId);
   if (!target) return;
   if (tipo === 'video' || tipo === 'drone') {
-    abrirModal(`<div class="sheet-head"><h2>${esc(target.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    abrirModal(`<div class="sheet-head"><h2>${esc(target.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
       <div class="action-stack">
         <button class="primary" onclick="registrarIntencion('repetida')">Repetir toma</button>
         <button class="btn" onclick="registrarIntencion('extra')">Toma extra</button>
@@ -1531,7 +1557,7 @@ function abrirGestionCaptura(tipo, targetId) {
       </div>`);
     return;
   }
-  abrirModal(`<div class="sheet-head"><h2>${esc(target.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>${esc(target.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">
       <button class="btn" onclick="clearEstado('${tipo}')">Marcar pendiente</button>
       <button class="btn" onclick="markNoAplica('${tipo}')">Marcar no aplica</button>
@@ -1561,6 +1587,7 @@ function renderCloseView() {
   const ready = closeReadyItems(summary);
   return `<div class="close-list">
     ${renderMediaClosePanels()}
+    ${renderCronologia()}
     <section class="panel traffic red"><h3 class="traffic-title"><span></span>Falta antes de irnos</h3>${urgent.length ? urgent.slice(0, 12).map(renderReviewItem).join('') : '<p class="line">No hay faltantes prioritarios.</p>'}</section>
     <section class="panel traffic yellow"><h3 class="traffic-title"><span></span>Revisar</h3>${review.length ? review.slice(0, 12).map(renderReviewItem).join('') : '<p class="line">No hay excepciones que revisar.</p>'}</section>
     <section class="panel traffic green"><h3 class="traffic-title"><span></span>Listo</h3>${ready.map(renderReviewItem).join('') || '<p class="line">Completa los puntos prioritarios para cerrar.</p>'}</section>
@@ -1599,6 +1626,22 @@ function renderMediaClosePanels() {
 
 function renderReviewItem(item) {
   return `<div class="review-item"><span>—</span><div>${item}</div></div>`;
+}
+
+function renderCronologia() {
+  const cams = (state.cameras || []).filter((c) => (state.mediaFiles || []).some((f) => f.cameraId === c.id));
+  if (!cams.length) return '';
+  return cams.map((cam) => {
+    const files = (state.mediaFiles || []).filter((f) => f.cameraId === cam.id).sort((a, b) => a.fileCounter - b.fileCounter);
+    if (!files.length) return '';
+    return `<section class="panel"><h3>Secuencia · ${esc(cam.label)}</h3>
+      <p class="line">En el orden real de la tarjeta. Toca un archivo para insertar uno olvidado, reasignar o corregir.</p>
+      <div class="cron">${files.map((f) => `<button class="cron-row" onclick="abrirArchivo('${f.id}')">
+        <span class="cron-tok">${esc(f.fileToken)}</span>
+        <span class="cron-info"><span class="cron-scene">${esc(f.scenePath || 'Sin identificar')}</span><span class="cron-kind">${esc(mediaKindLabel(f))}${f.good ? ' · buena' : ''}</span></span>
+        <i class="ti ti-dots cron-chev"></i>
+      </button>`).join('')}</div></section>`;
+  }).join('');
 }
 
 function closeUrgentItems(summary) {
@@ -1717,7 +1760,7 @@ function abrirEspacios(tab) {
 
 function renderTemplateSheet() {
   const template = logic.TEMPLATE_DEFS[selectedTemplate] || logic.TEMPLATE_DEFS.casa;
-  const html = `<div class="sheet-head"><h2>Agregar espacios</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  const html = `<div class="sheet-head"><h2>Agregar espacios</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-tabs">
       <button class="sheet-tab ${modalTab === 'plantillas' ? 'active' : ''}" onclick="modalTab='plantillas';renderTemplateSheet()">Plantillas</button>
       <button class="sheet-tab ${modalTab === 'lista' ? 'active' : ''}" onclick="modalTab='lista';renderTemplateSheet()">Lista propia</button>
@@ -1770,7 +1813,7 @@ function confirmarLista() {
 }
 
 function abrirServicios() {
-  abrirModal(`<div class="sheet-head"><h2>Servicios activos</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>Servicios activos</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">${Object.keys(SERVICE_UI).map((key) => `<button class="btn" onclick="toggleServicio('${key}')">${state.servicios[key] ? 'Apagar' : 'Activar'} ${SERVICE_UI[key].label}</button>`).join('')}</div>`);
 }
 
@@ -1793,7 +1836,7 @@ function abrirAcciones(type, id) {
       return `<button class="btn" onclick="${noAplica ? `reactivarTarget('space','${item.id}','${key}')` : `markNoAplica('${key}')`}">${noAplica ? 'Reactivar' : 'No aplica:'} ${SERVICE_UI[key].label}</button>`;
     }).join('')
     : hasMedia ? '' : `<button class="btn" onclick="${item.noAplica ? `reactivarTarget('drone','${item.id}','drone')` : 'markDroneNoAplica()'}">${item.noAplica ? 'Reactivar Drone' : 'Drone no aplica'}</button>`;
-  abrirModal(`<div class="sheet-head"><h2>${esc(item.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+  abrirModal(`<div class="sheet-head"><h2>${esc(item.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">
       ${serviceActions}
       ${type === 'space' ? '<button class="btn" onclick="addSubspace()">Agregar subespacio</button>' : ''}
