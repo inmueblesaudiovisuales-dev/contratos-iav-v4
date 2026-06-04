@@ -43,7 +43,7 @@ export async function handleClientes(request, env, ctx, action) {
               c.correo AS correo_cliente,
               (SELECT COUNT(*) FROM trabajos t
                WHERE t.cliente_id = c.id
-               AND t.estatus IN ('nuevo','intentando','en_seguimiento','cotizado')) AS trabajos_activos,
+               AND t.estatus IN ('Nuevo','En cotizacion','Pendiente firma','Firmado')) AS trabajos_activos,
               CASE WHEN c.id = ''
                 THEN (SELECT COUNT(*) FROM contratos ct WHERE ct.correo_cliente = c.correo AND ct.oculto = 0)
                 ELSE (SELECT COUNT(*) FROM contratos ct
@@ -115,8 +115,8 @@ export async function handleClientes(request, env, ctx, action) {
     const { id } = body;
     if (!id) return err('id requerido');
     const conContrato = await queryOne(db,
-      `SELECT token FROM contratos WHERE cliente_id = ? AND oculto = 0 LIMIT 1`, [id]);
-    if (conContrato) return err('El cliente tiene contratos activos. Archiva los contratos primero.');
+      `SELECT token FROM contratos WHERE cliente_id = ? LIMIT 1`, [id]);
+    if (conContrato) return err('El cliente tiene contratos. Elimínalos primero.');
     await batch(db, [
       { sql: 'DELETE FROM trabajos WHERE cliente_id = ?', params: [id] },
       { sql: 'DELETE FROM actividades WHERE cliente_id = ?', params: [id] },

@@ -30,7 +30,7 @@ export async function handleContratos(request, env, ctx, action) {
        WHERE c.oculto = 0
        ORDER BY c.fecha_creacion DESC`
     );
-    const estatusAbiertos = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado','Completado'];
+    const estatusAbiertos = ['Pendiente firma','Firmado','Reservado','En produccion','Entregado','Completado'];
     const lista = periodo === 'abiertos' ? results.filter(c => estatusAbiertos.includes(c.estatus)) : results;
     return ok({ ok: true, contratos: lista });
   }
@@ -358,9 +358,14 @@ export async function handleContratos(request, env, ctx, action) {
     if (!['Firmado','Reservado','En produccion'].includes(c.estatus)) {
       return err('Estatus no permite esta acción');
     }
+    const ts = now();
     await run(db,
       "UPDATE contratos SET estatus='En produccion', sesion_completada=? WHERE token=?",
-      [now(), token]
+      [ts, token]
+    );
+    await run(db,
+      "UPDATE trabajos SET estatus='En produccion', fecha_ultima_actividad=? WHERE token=?",
+      [ts, token]
     );
     return ok({ ok: true });
   }
@@ -385,9 +390,14 @@ export async function handleContratos(request, env, ctx, action) {
     const c = await queryOne(db, 'SELECT * FROM contratos WHERE token=?', [token]);
     if (!c) return err('Contrato no encontrado', 404);
     const estatusEntrega = c.saldo_pendiente <= 0 ? 'Completado' : 'Entregado';
+    const tsEntrega = now();
     await run(db,
       `UPDATE contratos SET entrega_drive_link=?, entrega_links_extra=?, estatus=?, fecha_entrega=? WHERE token=?`,
-      [entregaDriveLink, entregaLinksExtra || '', estatusEntrega, now(), token]
+      [entregaDriveLink, entregaLinksExtra || '', estatusEntrega, tsEntrega, token]
+    );
+    await run(db,
+      `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE token=?`,
+      [estatusEntrega, tsEntrega, token]
     );
     if (c.correo_cliente) {
       callAdapter(ctx, env, 'enviarCorreoEntrega', {
@@ -405,17 +415,27 @@ export async function handleContratos(request, env, ctx, action) {
       const cr = await queryOne(db, 'SELECT estatus, saldo_pendiente FROM contratos WHERE token=?', [token]);
       if (!cr) return err('Contrato no encontrado', 404);
       const estatusRevocado = (cr.saldo_pendiente <= 0) ? 'Completado' : 'En produccion';
+      const tsRev = now();
       await run(db,
         `UPDATE contratos SET entrega_revocada=?, estatus=? WHERE token=?`,
-        [now(), estatusRevocado, token]
+        [tsRev, estatusRevocado, token]
+      );
+      await run(db,
+        `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE token=?`,
+        [estatusRevocado, tsRev, token]
       );
     } else {
       const cr = await queryOne(db, 'SELECT saldo_pendiente FROM contratos WHERE token=?', [token]);
       if (!cr) return err('Contrato no encontrado', 404);
       const estatusRestaurado = (cr.saldo_pendiente <= 0) ? 'Completado' : 'Entregado';
+      const tsRes = now();
       await run(db,
         `UPDATE contratos SET entrega_revocada=NULL, estatus=? WHERE token=?`,
         [estatusRestaurado, token]
+      );
+      await run(db,
+        `UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE token=?`,
+        [estatusRestaurado, tsRes, token]
       );
     }
     return ok({ ok: true });

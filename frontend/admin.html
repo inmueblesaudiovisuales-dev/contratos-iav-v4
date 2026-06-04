@@ -1337,7 +1337,7 @@
             <button class="filter-chip" data-estatus="En produccion" onclick="toggleChip(this)"><span class="chip-dot" style="background:#8B5CF6"></span>Producción</button>
             <button class="filter-chip" data-estatus="Entregado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Entregado</button>
           </div>
-          <select id="filtro-estatus" onchange="filtrarContratos()" style="width:auto">
+          <select id="filtro-estatus" onchange="document.querySelectorAll('#filter-chips .filter-chip.on').forEach(c=>c.classList.remove('on'));filtrarContratos()" style="width:auto">
             <option value="">Todos los estatus</option>
             <option value="Nuevo">Nuevo</option>
             <option value="En cotizacion">En cotización</option>
@@ -2790,6 +2790,10 @@ async function loadStatsBar() {
 
 function toggleChip(btn) {
   btn.classList.toggle('on');
+  // Cuando hay chips activos, el dropdown pierde sentido — lo reseteamos
+  if (document.querySelectorAll('#filter-chips .filter-chip.on').length > 0) {
+    document.getElementById('filtro-estatus').value = '';
+  }
   filtrarContratos();
 }
 
