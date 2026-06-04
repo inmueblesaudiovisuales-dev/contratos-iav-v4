@@ -802,17 +802,38 @@ function init() {
       var _ant  = parseFloat(data.anticipo) || 0;
       if (_base > 0) _pctAnticipo = _ant / _base;
       try { if (token) sessionStorage.setItem('iav_portal_token', token); } catch(e) {}
-      var estatus = data.estatus || '';
-      if      (estatus === 'Pendiente firma')   { actualizarStepper(1); renderEtapa1(); }
-      else if (estatus === 'Firmado')            { actualizarStepper(2); renderEtapa2(); }
-      else if (estatus === 'Anticipo recibido')  { actualizarStepper(3); renderEtapa3(); }
-      else if (estatus === 'En produccion')      { actualizarStepper(4); renderEtapa3(); }
-      else if (estatus === 'Entregado')          { actualizarStepper(5); renderEtapa4(); }
-      else if (estatus === 'Liquidado')          { actualizarStepper(5); renderEtapa4(); }
-      else if (estatus === 'Completado')         { actualizarStepper(5); renderEtapa4(); }
-      else { mostrarError('Estado del contrato no reconocido.'); }
+      // Datos bancarios desde config (Ajustes del admin). No bloquea el render si falla.
+      mergeConfigBancario().then(dispatchEtapa);
     })
     .catch(function() { mostrarError('Error de conexión. Verifica tu internet e intenta de nuevo.'); });
+}
+
+// Trae datos bancarios públicos (CLABE/banco/titular/OXXO/Clip) y los fusiona en portalData.
+function mergeConfigBancario() {
+  return apiGet({ action: 'obtenerConfig' })
+    .then(function(cfg) {
+      if (cfg && cfg.ok) {
+        if (cfg.banco_clabe)   portalData.clabe    = cfg.banco_clabe;
+        if (cfg.banco_nombre)  portalData.banco    = cfg.banco_nombre;
+        if (cfg.banco_titular) portalData.titular  = cfg.banco_titular;
+        if (cfg.pago_oxxo)     portalData.oxxo     = cfg.pago_oxxo;
+        if (cfg.pago_clip_url) portalData.clipLink = cfg.pago_clip_url;
+      }
+    })
+    .catch(function() {}); // sin config → usa lo que venga de obtenerPortal
+}
+
+function dispatchEtapa() {
+  var data = portalData;
+  var estatus = data.estatus || '';
+  if      (estatus === 'Pendiente firma')   { actualizarStepper(1); renderEtapa1(); }
+  else if (estatus === 'Firmado')            { actualizarStepper(2); renderEtapa2(); }
+  else if (estatus === 'Anticipo recibido')  { actualizarStepper(3); renderEtapa3(); }
+  else if (estatus === 'En produccion')      { actualizarStepper(4); renderEtapa3(); }
+  else if (estatus === 'Entregado')          { actualizarStepper(5); renderEtapa4(); }
+  else if (estatus === 'Liquidado')          { actualizarStepper(5); renderEtapa4(); }
+  else if (estatus === 'Completado')         { actualizarStepper(5); renderEtapa4(); }
+  else { mostrarError('Estado del contrato no reconocido.'); }
 }
 
 /* ── ETAPA 1 — FORMULARIO DE FIRMA ──────────────────────────────────────────── */
@@ -2163,8 +2184,7 @@ function enviarFirma() {
       apiGet({ action: 'obtenerPortal', token: token })
         .then(function(freshData) {
           if (freshData.ok) portalData = freshData;
-          actualizarStepper(2);
-          renderEtapa2();
+          mergeConfigBancario().then(function(){ actualizarStepper(2); renderEtapa2(); });
         })
         .catch(function() {
           actualizarStepper(2);
