@@ -807,6 +807,8 @@ function mergeConfigBancario() {
         if (cfg.banco_clabe)   portalData.clabe    = cfg.banco_clabe;
         if (cfg.banco_nombre)  portalData.banco    = cfg.banco_nombre;
         if (cfg.banco_titular) portalData.titular  = cfg.banco_titular;
+        if (cfg.pago_cuenta)   portalData.cuenta   = cfg.pago_cuenta;
+        if (cfg.pago_tarjeta)  portalData.tarjeta  = cfg.pago_tarjeta;
         if (cfg.pago_oxxo)     portalData.oxxo     = cfg.pago_oxxo;
         if (cfg.pago_clip_url) portalData.clipLink = cfg.pago_clip_url;
       }
@@ -819,7 +821,7 @@ function dispatchEtapa() {
   var estatus = data.estatus || '';
   if      (estatus === 'Pendiente firma')   { actualizarStepper(1); renderEtapa1(); }
   else if (estatus === 'Firmado')            { actualizarStepper(2); renderEtapa2(); }
-  else if (estatus === 'Anticipo recibido')  { actualizarStepper(3); renderEtapa3(); }
+  else if (estatus === 'Anticipo recibido' || estatus === 'Reservado')  { actualizarStepper(3); renderEtapa3(); }
   else if (estatus === 'En produccion')      { actualizarStepper(4); renderEtapa3(); }
   else if (estatus === 'Entregado')          { actualizarStepper(5); renderEtapa4(); }
   else if (estatus === 'Liquidado')          { actualizarStepper(5); renderEtapa4(); }
@@ -2243,14 +2245,14 @@ function renderEtapa2() {
     html += '<summary style="padding:14px 16px;cursor:pointer;font-size:13px;font-weight:700;color:var(--charcoal);list-style:none;display:flex;align-items:center;justify-content:space-between">Depósito en OXXO o 7-Eleven<span style="font-size:11px;color:var(--concrete);font-weight:500">Tarjeta Banamex</span></summary>';
     html += '<div style="padding:0 16px 16px">';
     html += '<div class="dato-fila"><span class="dato-label">Banco</span><span class="dato-valor">Banamex</span></div>';
-    html += '<div class="dato-fila"><span class="dato-label">Núm. de tarjeta</span><span class="dato-valor" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span id="tarjeta-oxxo-e2" class="tarjeta-chip">5544 9206 0686 5310</span><button class="btn-copy" id="btn-copy-oxxo-e2">Copiar</button></span></div>';
+    html += '<div class="dato-fila"><span class="dato-label">Núm. de tarjeta</span><span class="dato-valor" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span id="tarjeta-oxxo-e2" class="tarjeta-chip">' + esc(portalData.tarjeta || '5544 9206 0686 5310') + '</span><button class="btn-copy" id="btn-copy-oxxo-e2">Copiar</button></span></div>';
     html += '<div class="dato-fila"><span class="dato-label">Titular</span><span class="dato-valor">Bruno Gutierrez Salazar</span></div>';
     html += '<div class="dato-fila" style="border-bottom:none"><span class="dato-label">Importe</span><span class="dato-valor" style="color:var(--gold)">' + formatMXN(anticipo) + '</span></div>';
     html += '</div>';
     html += '<div style="padding:0 14px 14px;font-size:12px;color:var(--concrete);line-height:1.8"><ol style="padding-left:16px;margin:0">';
     html += '<li>Ve a cualquier tienda OXXO o 7-Eleven.</li>';
     html += '<li>Dile al cajero que quieres hacer un depósito con número de tarjeta Banamex.</li>';
-    html += '<li>Proporciona el número de tarjeta: <strong class="tarjeta-chip" style="display:inline-block;margin:0 2px">5544 9206 0686 5310</strong></li>';
+    html += '<li>Proporciona el número de tarjeta: <strong class="tarjeta-chip" style="display:inline-block;margin:0 2px">' + esc(portalData.tarjeta || '5544 9206 0686 5310') + '</strong></li>';
     html += '<li>Indica el monto: <strong style="color:var(--charcoal)">' + formatMXN(anticipo) + '</strong></li>';
     html += '<li>Guarda el ticket y envíanoslo por WhatsApp para confirmar tu pago.</li>';
     html += '</ol></div></details>';
@@ -2295,14 +2297,14 @@ function renderEtapa2() {
       html += '<summary style="padding:14px 16px;cursor:pointer;font-size:13px;font-weight:700;color:var(--charcoal);list-style:none;display:flex;align-items:center;justify-content:space-between">Depósito en OXXO o 7-Eleven<span style="font-size:11px;color:var(--concrete);font-weight:500">Tarjeta Banamex</span></summary>';
       html += '<div style="padding:0 16px 16px">';
       html += '<div class="dato-fila"><span class="dato-label">Banco</span><span class="dato-valor">Banamex</span></div>';
-      html += '<div class="dato-fila"><span class="dato-label">Núm. de tarjeta</span><span class="dato-valor" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span id="tarjeta-oxxo-e2-0" class="tarjeta-chip">5544 9206 0686 5310</span><button class="btn-copy" id="btn-copy-oxxo-e2-0">Copiar</button></span></div>';
+      html += '<div class="dato-fila"><span class="dato-label">Núm. de tarjeta</span><span class="dato-valor" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span id="tarjeta-oxxo-e2-0" class="tarjeta-chip">' + esc(portalData.tarjeta || '5544 9206 0686 5310') + '</span><button class="btn-copy" id="btn-copy-oxxo-e2-0">Copiar</button></span></div>';
       html += '<div class="dato-fila"><span class="dato-label">Titular</span><span class="dato-valor">Bruno Gutierrez Salazar</span></div>';
       html += '<div class="dato-fila" style="border-bottom:none"><span class="dato-label">Importe</span><span class="dato-valor" style="color:var(--gold)">' + formatMXN(total) + '</span></div>';
       html += '</div>';
       html += '<div style="padding:0 14px 14px;font-size:12px;color:var(--concrete);line-height:1.8"><ol style="padding-left:16px;margin:0">';
       html += '<li>Ve a cualquier tienda OXXO o 7-Eleven.</li>';
       html += '<li>Dile al cajero que quieres hacer un depósito con número de tarjeta Banamex.</li>';
-      html += '<li>Proporciona el número de tarjeta: <strong class="tarjeta-chip" style="display:inline-block;margin:0 2px">5544 9206 0686 5310</strong></li>';
+      html += '<li>Proporciona el número de tarjeta: <strong class="tarjeta-chip" style="display:inline-block;margin:0 2px">' + esc(portalData.tarjeta || '5544 9206 0686 5310') + '</strong></li>';
       html += '<li>Indica el monto: <strong style="color:var(--charcoal)">' + formatMXN(total) + '</strong></li>';
       html += '<li>Guarda el ticket y envíanoslo por WhatsApp para confirmar tu pago.</li>';
       html += '</ol></div></details>';
@@ -2398,9 +2400,13 @@ function renderEtapa3() {
   if (estatus === 'En produccion') {
     html += '<div class="banner info"><div class="banner-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>';
     html += '<div><div class="banner-title">En producción</div><div class="banner-desc">Tu proyecto está en producción. Te avisaremos cuando los materiales estén listos.</div></div></div>';
-  } else {
+  } else if (pagado > 0) {
     html += '<div class="banner success"><div class="banner-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
-    html += '<div><div class="banner-title">Anticipo recibido</div><div class="banner-desc">Hemos confirmado tu pago. Tu fecha está asegurada.</div></div></div>';
+    html += '<div><div class="banner-title">Pago recibido</div><div class="banner-desc">Hemos confirmado tu pago. Tu fecha está asegurada.</div></div></div>';
+  } else {
+    // Reservado sin abono aún: la fecha está apartada pero no hay pago — no afirmar que se recibió.
+    html += '<div class="banner info"><div class="banner-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>';
+    html += '<div><div class="banner-title">Tu fecha está apartada</div><div class="banner-desc">Realiza tu pago para confirmar tu sesión.</div></div></div>';
   }
 
   html += _renderComprobante(d);
@@ -2424,14 +2430,14 @@ function renderEtapa3() {
     html += '<summary style="padding:14px 16px;cursor:pointer;font-size:13px;font-weight:700;color:var(--charcoal);list-style:none;display:flex;align-items:center;justify-content:space-between">Depósito en OXXO o 7-Eleven<span style="font-size:11px;color:var(--concrete);font-weight:500">Tarjeta Banamex</span></summary>';
     html += '<div style="padding:0 16px 16px">';
     html += '<div class="dato-fila"><span class="dato-label">Banco</span><span class="dato-valor">Banamex</span></div>';
-    html += '<div class="dato-fila"><span class="dato-label">Núm. de tarjeta</span><span class="dato-valor" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span id="tarjeta-oxxo-e3" class="tarjeta-chip">5544 9206 0686 5310</span><button class="btn-copy" id="btn-copy-oxxo-e3">Copiar</button></span></div>';
+    html += '<div class="dato-fila"><span class="dato-label">Núm. de tarjeta</span><span class="dato-valor" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span id="tarjeta-oxxo-e3" class="tarjeta-chip">' + esc(portalData.tarjeta || '5544 9206 0686 5310') + '</span><button class="btn-copy" id="btn-copy-oxxo-e3">Copiar</button></span></div>';
     html += '<div class="dato-fila"><span class="dato-label">Titular</span><span class="dato-valor">Bruno Gutierrez Salazar</span></div>';
     html += '<div class="dato-fila" style="border-bottom:none"><span class="dato-label">Importe</span><span class="dato-valor" style="color:var(--gold)">' + formatMXN(saldo) + '</span></div>';
     html += '</div>';
     html += '<div style="padding:0 14px 14px;font-size:12px;color:var(--concrete);line-height:1.8"><ol style="padding-left:16px;margin:0">';
     html += '<li>Ve a cualquier tienda OXXO o 7-Eleven.</li>';
     html += '<li>Dile al cajero que quieres hacer un depósito con número de tarjeta Banamex.</li>';
-    html += '<li>Proporciona el número de tarjeta: <strong class="tarjeta-chip" style="display:inline-block;margin:0 2px">5544 9206 0686 5310</strong></li>';
+    html += '<li>Proporciona el número de tarjeta: <strong class="tarjeta-chip" style="display:inline-block;margin:0 2px">' + esc(portalData.tarjeta || '5544 9206 0686 5310') + '</strong></li>';
     html += '<li>Indica el monto: <strong style="color:var(--charcoal)">' + formatMXN(saldo) + '</strong></li>';
     html += '<li>Guarda el ticket y envíanoslo por WhatsApp para confirmar tu pago.</li>';
     html += '</ol></div></details>';
@@ -2594,13 +2600,13 @@ function renderEtapa4() {
     html += '<summary style="padding:14px 16px;cursor:pointer;font-size:13px;font-weight:700;color:var(--charcoal);list-style:none;display:flex;align-items:center;justify-content:space-between">Depósito en OXXO o 7-Eleven<span style="font-size:11px;color:var(--concrete);font-weight:500">Tarjeta Banamex</span></summary>';
     html += '<div style="padding:0 16px 16px">';
     html += '<div class="dato-fila"><span class="dato-label">Banco</span><span class="dato-valor">Banamex</span></div>';
-    html += '<div class="dato-fila"><span class="dato-label">Núm. de tarjeta</span><span class="dato-valor" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span id="tarjeta-oxxo-e4" class="tarjeta-chip">5544 9206 0686 5310</span><button class="btn-copy" id="btn-copy-oxxo-e4">Copiar</button></span></div>';
+    html += '<div class="dato-fila"><span class="dato-label">Núm. de tarjeta</span><span class="dato-valor" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span id="tarjeta-oxxo-e4" class="tarjeta-chip">' + esc(portalData.tarjeta || '5544 9206 0686 5310') + '</span><button class="btn-copy" id="btn-copy-oxxo-e4">Copiar</button></span></div>';
     html += '<div class="dato-fila"><span class="dato-label">Titular</span><span class="dato-valor">Bruno Gutierrez Salazar</span></div>';
     html += '<div class="dato-fila" style="border-bottom:none"><span class="dato-label">Importe</span><span class="dato-valor" style="color:var(--gold)">' + formatMXN(saldo) + '</span></div></div>';
     html += '<div style="padding:0 14px 14px;font-size:12px;color:var(--concrete);line-height:1.8"><ol style="padding-left:16px;margin:0">';
     html += '<li>Ve a cualquier tienda OXXO o 7-Eleven.</li>';
     html += '<li>Dile al cajero que quieres hacer un depósito con número de tarjeta Banamex.</li>';
-    html += '<li>Proporciona el número de tarjeta: <strong class="tarjeta-chip" style="display:inline-block;margin:0 2px">5544 9206 0686 5310</strong></li>';
+    html += '<li>Proporciona el número de tarjeta: <strong class="tarjeta-chip" style="display:inline-block;margin:0 2px">' + esc(portalData.tarjeta || '5544 9206 0686 5310') + '</strong></li>';
     html += '<li>Indica el monto: <strong style="color:var(--charcoal)">' + formatMXN(saldo) + '</strong></li>';
     html += '<li>Guarda el ticket y envíanoslo por WhatsApp para confirmar tu pago.</li>';
     html += '</ol></div></details>';
