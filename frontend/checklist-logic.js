@@ -7,7 +7,7 @@
   const SERVICE_LABELS = { foto: 'Foto', t360: '360', video: 'Video', drone: 'Drone' };
   const CAMERA_DEFAULTS = [
     { id: 'sony-main', label: 'Sony principal', mode: 'video', kind: 'sony' },
-    { id: 'osmo-pocket-3', label: 'Osmo Pocket 3', mode: 'video', kind: 'dji' },
+    { id: 'osmo-pocket-3', label: 'Osmo Pocket 3', mode: 'video', kind: 'dji', optional: true },
     { id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' },
   ];
   const DRONE_DEFAULTS = [
@@ -197,10 +197,22 @@
           noAplica: !!item.noAplica,
         }));
       normalized.bitacora = normalized.bitacora || [];
-      normalized.cameras = normalized.cameras && normalized.cameras.length ? normalized.cameras : clone(CAMERA_DEFAULTS);
+      const savedCameras = normalized.cameras || [];
+      normalized.cameras = CAMERA_DEFAULTS.map((camera) => Object.assign({}, camera, savedCameras.find((item) => item.id === camera.id) || {}))
+        .concat(savedCameras.filter((camera) => !CAMERA_DEFAULTS.some((item) => item.id === camera.id)));
       normalized.activeCameraByMode = Object.assign({ video: 'sony-main', drone: 'drone-dji' }, normalized.activeCameraByMode || {});
+      ['video', 'drone'].forEach((mode) => {
+        if (!normalized.cameras.some((camera) => camera.id === normalized.activeCameraByMode[mode] && camera.mode === mode)) {
+          normalized.activeCameraByMode[mode] = normalized.cameras.find((camera) => camera.mode === mode).id;
+        }
+      });
       normalized.sequenceSegments = normalized.sequenceSegments || [];
       normalized.mediaFiles = normalized.mediaFiles || [];
+      normalized.sequenceSegments.forEach((segment) => {
+        const counters = normalized.mediaFiles.filter((file) => file.segmentId === segment.id).map((file) => file.fileCounter);
+        if (counters.length) segment.counterNext = Math.max(segment.counterNext || 0, Math.max(...counters) + 1);
+      });
+      if (normalized.mediaFiles.length) repairDerivedMediaState(normalized);
       return normalized;
     }
 
@@ -295,14 +307,41 @@
   }
 
   function deriveMediaTargetState(state, camera, targetId) {
-    const files = state.mediaFiles.filter((file) => file.cameraId === camera.id && file.targetId === targetId && file.kind === 'take');
+    const cameraIds = new Set(state.cameras.filter((item) => item.mode === camera.mode).map((item) => item.id));
+    const files = state.mediaFiles.filter((file) => cameraIds.has(file.cameraId) && file.targetId === targetId && file.kind === 'take');
     if (camera.mode === 'drone') {
       const item = state.droneItems.find((entry) => entry.id === targetId);
       if (item) item.estado = files.length ? 'hecho' : 'pendiente';
       return;
     }
     const space = state.espacios.find((entry) => entry.id === targetId);
-    if (space) space.estados.video = files.length ? { estado: 'hecho' } : { estado: 'pendiente' };
+    if (space && files.length) space.estados.video = { estado: 'hecho' };
+    else if (space && (space.estados.video || {}).estado !== 'no_aplica') space.estados.video = { estado: 'pendiente' };
+  }
+
+  function renumberTargetShots(state, cameraId, targetId) {
+    let shotNumber = 0;
+    state.mediaFiles.forEach((file) => {
+      if (file.cameraId === cameraId && file.targetId === targetId && file.kind === 'take') {
+        shotNumber++;
+        file.shotNumber = shotNumber;
+      }
+    });
+  }
+
+  function repairDerivedMediaState(state) {
+    state.espacios.forEach((space) => {
+      const camera = state.cameras.find((item) => item.mode === 'video');
+      if (camera) deriveMediaTargetState(state, camera, space.id);
+    });
+    state.droneItems.forEach((item) => {
+      const camera = state.cameras.find((entry) => entry.mode === 'drone');
+      if (camera) deriveMediaTargetState(state, camera, item.id);
+    });
+    state.cameras.forEach((camera) => {
+      const targets = camera.mode === 'drone' ? state.droneItems : state.espacios;
+      targets.forEach((target) => renumberTargetShots(state, camera.id, target.id));
+    });
   }
 
   function registerMediaFile(state, options) {
@@ -409,8 +448,38 @@
       file.good = false;
       file.shotNumber = null;
     }
-    if (camera && previousTargetId) deriveMediaTargetState(next, camera, previousTargetId);
-    if (camera && file.targetId) deriveMediaTargetState(next, camera, file.targetId);
+    if (camera && previousTargetId) {
+      renumberTargetShots(next, camera.id, previousTargetId);
+      deriveMediaTargetState(next, camera, previousTargetId);
+    }
+    if (camera && file.targetId) {
+      renumberTargetShots(next, camera.id, file.targetId);
+      deriveMediaTargetState(next, camera, file.targetId);
+    }
+    return next;
+  }
+
+  function removeMediaFile(state, mediaId) {
+    const next = clone(state);
+    const index = next.mediaFiles.findIndex((item) => item.id === mediaId);
+    if (index < 0) return next;
+    const removed = next.mediaFiles[index];
+    const camera = getCamera(next, removed.cameraId);
+    const segment = next.sequenceSegments.find((item) => item.id === removed.segmentId);
+    next.mediaFiles.splice(index, 1);
+    if (segment) {
+      next.mediaFiles.forEach((file) => {
+        if (file.segmentId === segment.id && file.fileCounter > removed.fileCounter) {
+          file.fileCounter--;
+          file.fileToken = formatFileToken(segment, file.fileCounter);
+        }
+      });
+      segment.counterNext = Math.max(segment.counterStart || 0, segment.counterNext - 1);
+    }
+    if (camera && removed.targetId) {
+      renumberTargetShots(next, camera.id, removed.targetId);
+      deriveMediaTargetState(next, camera, removed.targetId);
+    }
     return next;
   }
 
@@ -683,6 +752,7 @@
     toggleMediaGood,
     insertOmittedMediaFile,
     updateMediaFile,
+    removeMediaFile,
     registerCapture,
     undoLastLog,
     getPendingSummary,

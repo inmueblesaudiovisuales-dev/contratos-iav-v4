@@ -72,7 +72,7 @@
     .topbar.compact .eyebrow { display: none; }
     .topbar.compact .job h1 { font-size: 15px; }
     .topbar.compact .name-row { margin-top: 6px; }
-    .topbar.compact .field, .topbar.compact .btn { min-height: 34px; height: 34px; font-size: 11px; }
+    .topbar.compact .field, .topbar.compact .btn { min-height: 38px; height: 38px; font-size: 11px; }
     .name-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
     .field {
       border: 1px solid var(--line); border-radius: var(--radius);
@@ -95,7 +95,7 @@
     .mode-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; padding: 3px; background: var(--muted); border-radius: var(--radius); }
     .mode-btn {
       border: 0; background: transparent; border-radius: 6px;
-      min-height: 38px; text-align: center; padding: 0 4px; color: var(--ink-2);
+      min-height: 42px; text-align: center; padding: 0 4px; color: var(--ink-2);
     }
     .mode-btn strong { display: block; font-size: 11px; font-weight: 900; }
     .mode-btn.active { background: var(--black); color: #fff; box-shadow: 0 2px 7px rgba(16,16,16,.16); }
@@ -113,12 +113,12 @@
     .camera-copy strong { display: block; font-size: 11px; font-weight: 900; }
     .camera-copy span { display: block; margin-top: 2px; color: var(--ink-3); font-size: 9px; font-weight: 800; }
     .camera-actions { display: flex; gap: 5px; flex: none; }
-    .mini-btn { min-height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 0 8px; color: var(--ink-2); font-size: 9px; font-weight: 900; }
+    .mini-btn { min-height: 34px; border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 0 8px; color: var(--ink-2); font-size: 9px; font-weight: 900; }
 
     .tabs { padding: 8px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
     .tab {
       border: 1px solid transparent; border-radius: var(--radius); background: transparent;
-      min-height: 34px; font-size: 11px; font-weight: 900; color: var(--ink-3);
+      min-height: 38px; font-size: 11px; font-weight: 900; color: var(--ink-3);
     }
     .tab.active { border-color: var(--line); background: var(--card); color: var(--ink-1); }
 
@@ -192,11 +192,12 @@
     .discard-action { min-height: 44px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: 0 10px; color: var(--ink-2); font-size: 10px; font-weight: 900; }
     .file-summary { color: var(--ink-3); font-size: 9px; font-weight: 900; text-transform: uppercase; }
     .recent-files { display: grid; border-top: 1px solid var(--muted); }
-    .file-row { display: grid; grid-template-columns: minmax(58px, auto) 1fr auto; gap: 7px; align-items: center; min-height: 34px; border-bottom: 1px solid var(--muted); }
+    .file-row { display: grid; grid-template-columns: minmax(58px, auto) 1fr auto; gap: 7px; align-items: center; min-height: 42px; border-bottom: 1px solid var(--muted); }
     .file-token { border: 0; background: transparent; padding: 0; text-align: left; color: var(--ink-1); font-size: 10px; font-weight: 900; font-variant-numeric: tabular-nums; }
     .file-kind { color: var(--ink-3); font-size: 9px; font-weight: 800; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .file-good { min-height: 26px; border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 0 7px; color: var(--ink-2); font-size: 8px; font-weight: 900; }
+    .file-good { min-height: 34px; border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 0 7px; color: var(--ink-2); font-size: 8px; font-weight: 900; }
     .file-good.active { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+    .all-files-btn { min-height: 30px; border: 1px solid var(--line); border-radius: 6px; background: var(--page); color: var(--ink-2); font-size: 9px; font-weight: 900; }
     .sequence-alert { border: 1px dashed var(--gold); border-radius: var(--radius); background: var(--gold-soft); padding: 10px; color: #71530A; font-size: 10px; font-weight: 800; line-height: 1.45; }
 
     .empty { border: 1px dashed var(--line); background: var(--card); border-radius: var(--radius); padding: 22px 16px; text-align: center; }
@@ -275,6 +276,9 @@
       .toast { left: 50%; right: auto; min-width: 360px; transform: translate(-50%, 120%); }
       .toast.visible { transform: translate(-50%, 0); }
     }
+    @media (max-width: 479px) {
+      .toolbar { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -283,7 +287,7 @@
   </div>
 
   <div id="overlay" class="overlay" onclick="cerrarModal(event)">
-    <div class="sheet" id="sheet" onclick="event.stopPropagation()"></div>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Opciones" onclick="event.stopPropagation()"></div>
   </div>
   <div class="toast" id="toast"></div>
 
@@ -394,8 +398,23 @@ async function saveNow() {
   try {
     const data = await apiPost({ action: 'guardarChecklist', cuartos: state, columnas: state.servicios });
     saving = false;
-    if (data.error) { setSync('error'); showToast('Error al guardar'); return; }
+    if (data.error) {
+      dirty = true;
+      setSync('error');
+      if (retryCount < 4) {
+        retryCount++;
+        showToast('Error al guardar. Reintentando...');
+        retryTimer = setTimeout(saveNow, 7000);
+      } else {
+        showToast('No se pudo guardar.');
+      }
+      return;
+    }
     setSync('ok');
+    if (dirty) {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveNow, 0);
+    }
   } catch (_) {
     saving = false;
     setSync('error');
@@ -429,6 +448,7 @@ async function poll() {
   if (dirty || saving) return;
   try {
     const data = await apiGet({ action: 'obtenerChecklist' });
+    if (dirty || saving) return;
     if (data.error) return;
     const payload = data.cuartos && data.cuartos.version === 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     const next = logic.normalizeChecklistData(payload);
@@ -485,7 +505,7 @@ function renderHeader() {
 function renderModeArea() {
   return `<section class="mode-area">
     <div class="mode-grid">${activeServices().map((key) => `
-      <button class="mode-btn ${state.modoActual === key ? 'active' : ''}" onclick="setMode('${key}')">
+      <button class="mode-btn ${state.modoActual === key ? 'active' : ''}" aria-pressed="${state.modoActual === key}" onclick="setMode('${key}')">
         <strong>${SERVICE_UI[key].short}</strong>
       </button>
     `).join('')}</div>
@@ -520,7 +540,7 @@ function renderCameraStrip() {
 
 function renderTabs() {
   const tabs = [['captura', 'Capturar'], ['cierre', 'Cierre'], ['edicion', 'Edicion']];
-  return `<nav class="tabs">${tabs.map(([key, label]) => `<button class="tab ${activeView === key ? 'active' : ''}" onclick="setView('${key}')">${label}</button>`).join('')}</nav>`;
+  return `<nav class="tabs" aria-label="Vista de bitacora">${tabs.map(([key, label]) => `<button class="tab ${activeView === key ? 'active' : ''}" aria-pressed="${activeView === key}" onclick="setView('${key}')">${label}</button>`).join('')}</nav>`;
 }
 
 function renderActiveView() {
@@ -577,8 +597,8 @@ function getPrimaryRisk(summary) {
 function renderCaptureView() {
   return `${renderSummary()}
     <div class="toolbar">
-      ${state.modoActual === 'drone' ? '<div></div>' : '<input class="field" id="space-search" type="search" placeholder="Buscar espacio...">'}
-      <button class="primary" onclick="abrirEspacios('plantillas')">Espacios / plantillas</button>
+      ${state.modoActual === 'drone' ? '' : '<input class="field" id="space-search" type="search" placeholder="Buscar espacio...">'}
+      <button class="primary" onclick="abrirEspacios('plantillas')">Agregar espacios</button>
     </div>
     ${state.modoActual === 'drone' ? renderDroneCards() : renderSpaceGroups()}`;
 }
@@ -621,7 +641,7 @@ function renderSpaceCard(space) {
   return `<article class="capture-card ${space.parentId ? 'child' : ''} ${space.clave ? 'key' : ''} ${space.zona === 'amenidades' ? 'amenity' : ''}">
     <div class="card-head">
       <div class="card-name"><strong>${esc(space.nombre)}</strong><span>${label}</span></div>
-      <button class="icon-btn" onclick="abrirAcciones('space','${space.id}')">...</button>
+      <button class="icon-btn" aria-label="Opciones de ${esc(space.nombre)}" onclick="abrirAcciones('space','${space.id}')">...</button>
     </div>
     <div class="state-list">${['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => renderStateToken(key, space.estados[key])).join('')}</div>
     <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${space.id}')">${captureActionLabel(state.modoActual, space.id, managing)}</button>
@@ -634,7 +654,7 @@ function renderDroneCard(item) {
   return `<article class="capture-card">
     <div class="card-head">
       <div class="card-name"><strong>${esc(item.nombre)}</strong><span>Drone${item.noAplica ? ' - No aplica' : ''}</span></div>
-      <button class="icon-btn" onclick="abrirAcciones('drone','${item.id}')">...</button>
+      <button class="icon-btn" aria-label="Opciones de ${esc(item.nombre)}" onclick="abrirAcciones('drone','${item.id}')">...</button>
     </div>
     <div class="state-list"><span class="state ${item.estado === 'hecho' ? 'done drone' : item.noAplica ? 'na' : ''}">${item.estado === 'hecho' ? 'Drone ' + String(item.ultimoOrden || '').padStart(2, '0') : item.noAplica ? 'No aplica' : 'Drone pendiente'}</span></div>
     <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${item.id}')">${captureActionLabel('drone', item.id, managing)}</button>
@@ -643,7 +663,9 @@ function renderDroneCard(item) {
 
 function mediaFilesForTarget(targetId) {
   const camera = activeCamera();
-  return camera ? (state.mediaFiles || []).filter((file) => file.cameraId === camera.id && file.targetId === targetId) : [];
+  if (!camera) return [];
+  const cameraIds = new Set((state.cameras || []).filter((item) => item.mode === camera.mode).map((item) => item.id));
+  return (state.mediaFiles || []).filter((file) => cameraIds.has(file.cameraId) && file.targetId === targetId);
 }
 
 function renderMediaTargetCard(target, type) {
@@ -654,10 +676,10 @@ function renderMediaTargetCard(target, type) {
   return `<article class="capture-card ${target.parentId ? 'child' : ''} ${target.clave ? 'key' : ''} ${target.zona === 'amenidades' ? 'amenity' : ''}">
     <div class="card-head">
       <div class="card-name"><strong>${esc(target.nombre)}</strong><span>${label}</span></div>
-      <button class="icon-btn" onclick="abrirAcciones('${type}','${target.id}')">...</button>
+      <button class="icon-btn" aria-label="Opciones de ${esc(target.nombre)}" onclick="abrirAcciones('${type}','${target.id}')">...</button>
     </div>
     <div class="file-summary">${files.length} ${files.length === 1 ? 'archivo' : 'archivos'} · ${good.length} ${good.length === 1 ? 'buena' : 'buenas'}</div>
-    ${renderRecentFiles(files)}
+    ${renderRecentFiles(files, target.id)}
     <div class="file-actions">
       <button class="primary-action" onclick="registrarArchivo('${target.id}','take')">Registrar toma</button>
       <button class="discard-action" onclick="abrirDescarte('${target.id}')">Descarte</button>
@@ -665,13 +687,17 @@ function renderMediaTargetCard(target, type) {
   </article>`;
 }
 
-function renderRecentFiles(files) {
+function renderRecentFiles(files, targetId) {
   if (!files.length) return '';
   return `<div class="recent-files">${files.slice(-3).reverse().map((file) => `<div class="file-row">
     <button class="file-token" onclick="abrirArchivo('${file.id}')">${esc(file.fileToken)}</button>
-    <span class="file-kind">${esc(mediaKindLabel(file))}</span>
+    <span class="file-kind">${esc(mediaKindLabel(file))} · ${esc(cameraLabel(file.cameraId))}</span>
     ${file.kind === 'take' ? `<button class="file-good ${file.good ? 'active' : ''}" onclick="toggleBuena('${file.id}')">${file.good ? 'BUENA' : 'Marcar buena'}</button>` : `<button class="file-good" onclick="abrirArchivo('${file.id}')">Opciones</button>`}
-  </div>`).join('')}</div>`;
+  </div>`).join('')}${files.length > 3 ? `<button class="all-files-btn" onclick="abrirArchivosEscena('${targetId}')">Ver los ${files.length} archivos</button>` : ''}</div>`;
+}
+
+function cameraLabel(cameraId) {
+  return ((state.cameras || []).find((camera) => camera.id === cameraId) || {}).label || 'Camara';
 }
 
 function mediaKindLabel(file) {
@@ -717,7 +743,7 @@ function abrirSecuencia() {
   abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
     <div class="sheet-body">
       <div class="sequence-alert">Escribe el ultimo archivo que ya existe en la camara. Checklist comenzara con el siguiente consecutivo.</div>
-      <input class="field" id="last-filename" type="text" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
+      <input class="field" id="last-filename" type="text" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off" autofocus>
       <button class="primary" onclick="iniciarSecuencia()">Iniciar nuevo tramo</button>
     </div>`);
 }
@@ -727,7 +753,11 @@ function iniciarSecuencia() {
   const input = document.getElementById('last-filename');
   if (!camera || !input || !input.value.trim()) return;
   if (!logic.parseFilenameSequence(input.value.trim(), camera.kind)) return showToast('No encontramos un consecutivo en ese nombre');
+  const current = logic.getCameraSequence(state, camera.id);
+  if (current.nextToken && !confirm(`Iniciar un nuevo tramo para ${camera.label}? El tramo actual termina antes de ${current.nextToken}.`)) return;
   const next = logic.initializeCameraSequence(state, { cameraId: camera.id, lastFilename: input.value.trim() });
+  const nextToken = logic.getCameraSequence(next, camera.id).nextToken;
+  if ((state.mediaFiles || []).some((file) => file.cameraId === camera.id && file.fileToken === nextToken)) return showToast(`El siguiente archivo ${nextToken} ya esta registrado`);
   state = next;
   cerrarModal(); render(); scheduleSave();
 }
@@ -772,14 +802,41 @@ function abrirArchivo(mediaId) {
       <button class="btn" onclick="abrirAsignacionArchivo('${file.id}')">${file.kind === 'omitted' ? 'Identificar archivo' : 'Cambiar escena'}</button>
       ${file.kind !== 'take' ? `<button class="btn" onclick="convertirArchivoToma('${file.id}')">Convertir en toma</button>` : ''}
       ${file.kind === 'take' ? `<button class="btn" onclick="abrirCambioDescarte('${file.id}')">Convertir en descarte</button>` : ''}
+      ${file.kind === 'discard' ? `<button class="btn" onclick="abrirCambioDescarte('${file.id}')">Cambiar motivo de descarte</button>` : ''}
       <button class="btn" onclick="agregarNotaArchivo('${file.id}')">Agregar nota</button>
+      <button class="danger btn" onclick="eliminarRegistroArchivo('${file.id}')">Eliminar registro: no se creo archivo</button>
       <button class="btn ghost" onclick="cerrarModal()">Cancelar</button>
     </div>`);
+}
+
+function abrirArchivosEscena(targetId) {
+  const files = mediaFilesForTarget(targetId).slice().reverse();
+  const target = state.espacios.find((item) => item.id === targetId) || state.droneItems.find((item) => item.id === targetId);
+  abrirModal(`<div class="sheet-head"><h2>${esc(target ? target.nombre : 'Archivos')}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
+    <div class="sheet-body"><div class="recent-files">${files.map((file) => `<div class="file-row">
+      <button class="file-token" onclick="abrirArchivo('${file.id}')">${esc(file.fileToken)}</button>
+      <span class="file-kind">${esc(mediaKindLabel(file))} · ${esc(cameraLabel(file.cameraId))}</span>
+      ${file.kind === 'take' ? `<button class="file-good ${file.good ? 'active' : ''}" onclick="toggleBuenaDesdeModal('${file.id}','${targetId}')">${file.good ? 'BUENA' : 'Marcar buena'}</button>` : `<button class="file-good" onclick="abrirArchivo('${file.id}')">Opciones</button>`}
+    </div>`).join('')}</div></div>`);
+}
+
+function toggleBuenaDesdeModal(mediaId, targetId) {
+  state = logic.toggleMediaGood(state, mediaId);
+  scheduleSave();
+  abrirArchivosEscena(targetId);
 }
 
 function insertarOmitido(mediaId) {
   if (!confirm('Insertar un archivo antes y recorrer los consecutivos posteriores de esta camara?')) return;
   state = logic.insertOmittedMediaFile(state, mediaId);
+  const inserted = state.mediaFiles.find((file, index) => state.mediaFiles[index + 1] && state.mediaFiles[index + 1].id === mediaId);
+  if (inserted) inserted.author = miNombre();
+  cerrarModal(); render(); scheduleSave();
+}
+
+function eliminarRegistroArchivo(mediaId) {
+  if (!confirm('Usa esto solamente si la camara NO creo un archivo. Se recorreran los consecutivos posteriores. Continuar?')) return;
+  state = logic.removeMediaFile(state, mediaId);
   cerrarModal(); render(); scheduleSave();
 }
 
@@ -927,13 +984,15 @@ function renderMediaClosePanels() {
   const cameras = (state.cameras || []).map((camera) => {
     const seq = logic.getCameraSequence(state, camera.id);
     const cameraFiles = files.filter((file) => file.cameraId === camera.id);
-    if (!seq.segment && !cameraFiles.length) return '';
+    if (!state.servicios[camera.mode]) return '';
+    if (camera.optional && !seq.segment && !cameraFiles.length) return '';
+    if (!seq.segment && !cameraFiles.length) return `<div class="review-item"><strong>${esc(camera.label)}</strong><div>Sin secuencia iniciada</div></div>`;
     const last = cameraFiles[cameraFiles.length - 1];
     return `<div class="review-item"><strong>${esc(camera.label)}</strong><div>${last ? `Checklist termina en ${esc(last.fileToken)} · confirma en camara` : 'Secuencia iniciada sin archivos'}</div></div>`;
   }).join('');
   return `<section class="panel traffic yellow"><h3 class="traffic-title"><span></span>Reconciliar archivos</h3>${cameras || '<p class="line">Aun no hay secuencias iniciadas.</p>'}</section>
     <section class="panel"><h3>Seleccion para edicion</h3>
-      ${withoutGood.length ? withoutGood.map((scene) => renderReviewItem(`<strong>${esc(scene)}</strong>: ninguna toma buena`)).join('') : '<p class="line">Todas las escenas grabadas tienen una buena.</p>'}
+      ${withoutGood.length ? withoutGood.map((scene) => renderReviewItem(`<strong>${esc(scene)}</strong>: ninguna toma buena`)).join('') : Object.keys(sceneGroups).length ? '<p class="line">Todas las escenas grabadas tienen una buena.</p>' : '<p class="line">Aun no hay tomas registradas.</p>'}
       ${tooManyGood.map((scene) => renderReviewItem(`<strong>${esc(scene)}</strong>: tres o mas buenas`)).join('')}
       ${unidentified.map((file) => `<div class="review-item"><strong>${esc(file.fileToken)}</strong><div>Sin identificar</div><button class="mini-btn" onclick="abrirArchivo('${file.id}')">Resolver</button></div>`).join('')}
       ${Object.keys(discardCounts).length ? `<p class="line">Descartes: ${Object.entries(discardCounts).map(([reason, count]) => `${mediaKindLabel({ kind: 'discard', discardReason: reason })} ${count}`).join(' · ')}</p>` : ''}
@@ -1005,19 +1064,24 @@ function renderMediaEditView() {
     groups[scene].push(file);
   });
   const cameraLabel = (id) => ((state.cameras || []).find((camera) => camera.id === id) || {}).label || id;
+  const legacy = state.bitacora.filter((entry) => entry.tipo === 'video' || entry.tipo === 'drone');
   return `<div class="edit-list">${Object.entries(groups).map(([scene, items]) => {
     const good = items.filter((file) => file.kind === 'take' && file.good);
     const other = items.filter((file) => file.kind === 'take' && !file.good);
-    const discards = items.filter((file) => file.kind !== 'take');
+    const discards = items.filter((file) => file.kind === 'discard');
+    const omitted = items.filter((file) => file.kind === 'omitted');
     return `<section class="panel">
       <h3>${esc(scene)}</h3>
       ${good.length ? `<p class="line"><strong>Buenas:</strong> ${good.map((file) => esc(file.fileToken)).join(', ')}</p>` : '<p class="line"><strong>Buenas:</strong> ninguna</p>'}
       ${other.length ? `<p class="line"><strong>Otras:</strong> ${other.map((file) => esc(file.fileToken)).join(', ')}</p>` : ''}
       ${discards.length ? `<p class="line"><strong>Descartes:</strong> ${discards.map((file) => `${esc(file.fileToken)} (${esc(mediaKindLabel(file))})`).join(', ')}</p>` : ''}
+      ${omitted.length ? `<p class="line"><strong>Sin identificar:</strong> ${omitted.map((file) => esc(file.fileToken)).join(', ')}</p>` : ''}
       <p class="sequence-meta">${[...new Set(items.map((file) => cameraLabel(file.cameraId)))].map(esc).join(' · ')}</p>
       ${items.filter((file) => file.note).map((file) => `<p class="line">${esc(file.fileToken)} · ${esc(file.note)}</p>`).join('')}
     </section>`;
-  }).join('')}</div>`;
+  }).join('')}
+    ${legacy.length ? `<section class="panel"><h3>Historial anterior</h3>${legacy.map((entry) => `<div class="review-item"><strong>${SERVICE_UI[entry.tipo].short} ${entry.orden || ''}</strong><div>${esc(entry.nombre)}${entry.intencion ? ' · ' + esc(entry.intencion) : ''}</div></div>`).join('')}</section>` : ''}
+  </div>`;
 }
 
 function primarySequence(tipo) {
@@ -1095,6 +1159,7 @@ function renderListTab() {
 }
 
 function usarTemplate(mode) {
+  if (mode === 'replace' && ((state.mediaFiles || []).length || (state.sequenceSegments || []).length) && !confirm('Reemplazar todo eliminara la bitacora, secuencias y archivos registrados. Continuar?')) return;
   state = logic.applyTemplate(state, selectedTemplate, { mode });
   cerrarModal();
   render();
@@ -1127,7 +1192,10 @@ function abrirAcciones(type, id) {
   selectedAction = { type, id };
   const item = type === 'drone' ? state.droneItems.find((entry) => entry.id === id) : state.espacios.find((entry) => entry.id === id);
   if (!item) return;
-  const serviceActions = type === 'space' ? ['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => `<button class="btn" onclick="markNoAplica('${key}')">${SERVICE_UI[key].label} no aplica</button>`).join('') : '<button class="btn" onclick="markDroneNoAplica()">Drone no aplica</button>';
+  const hasMedia = (state.mediaFiles || []).some((file) => file.targetId === id);
+  const serviceActions = type === 'space'
+    ? ['foto', 't360', 'video'].filter((key) => state.servicios[key] && !(key === 'video' && hasMedia)).map((key) => `<button class="btn" onclick="markNoAplica('${key}')">${SERVICE_UI[key].label} no aplica</button>`).join('')
+    : hasMedia ? '' : '<button class="btn" onclick="markDroneNoAplica()">Drone no aplica</button>';
   abrirModal(`<div class="sheet-head"><h2>${esc(item.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()">X</button></div>
     <div class="action-stack">
       ${serviceActions}
@@ -1171,16 +1239,35 @@ function renameTarget() {
   if (!nombre) return;
   item.nombre = nombre.trim();
   state.bitacora.forEach((entry) => { if (entry.targetId === item.id) entry.nombre = item.nombre; });
+  syncMediaSceneNames();
   cerrarModal(); render(); scheduleSave();
 }
 
+function syncMediaSceneNames() {
+  (state.mediaFiles || []).forEach((file) => {
+    if (!file.targetId || file.scene === 'Sin escena' || file.scene === 'Sin identificar') return;
+    const camera = state.cameras.find((item) => item.id === file.cameraId);
+    const targets = camera && camera.mode === 'drone' ? state.droneItems : state.espacios;
+    const target = targets.find((item) => item.id === file.targetId);
+    if (!target) return;
+    const parent = target.parentId && state.espacios.find((item) => item.id === target.parentId);
+    file.scene = target.nombre;
+    file.scenePath = parent ? `${parent.nombre} > ${target.nombre}` : target.nombre;
+  });
+}
+
 function deleteTarget() {
+  const ids = new Set([selectedAction.id]);
+  if (selectedAction.type !== 'drone') state.espacios.forEach((entry) => { if (entry.parentId === selectedAction.id) ids.add(entry.id); });
+  if ((state.mediaFiles || []).some((file) => ids.has(file.targetId)) || state.bitacora.some((entry) => ids.has(entry.targetId))) {
+    showToast('No se puede borrar: tiene capturas registradas');
+    cerrarModal();
+    return;
+  }
   if (!confirm('Borrar este elemento?')) return;
   if (selectedAction.type === 'drone') {
     state.droneItems = state.droneItems.filter((entry) => entry.id !== selectedAction.id);
   } else {
-    const ids = new Set([selectedAction.id]);
-    state.espacios.forEach((entry) => { if (entry.parentId === selectedAction.id) ids.add(entry.id); });
     state.espacios = state.espacios.filter((entry) => !ids.has(entry.id));
   }
   cerrarModal(); render(); scheduleSave();
@@ -1197,13 +1284,17 @@ function addTargetNote() {
 }
 
 function abrirModal(html) {
-  document.getElementById('sheet').innerHTML = html;
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = html;
   document.getElementById('overlay').classList.add('visible');
+  document.getElementById('app').inert = true;
+  requestAnimationFrame(() => (sheet.querySelector('[autofocus], button, input, textarea') || {}).focus?.());
 }
 
 function cerrarModal(event) {
   if (event && event.target && event.target.id !== 'overlay') return;
   document.getElementById('overlay').classList.remove('visible');
+  document.getElementById('app').inert = false;
   selectedAction = null;
 }
 
@@ -1219,6 +1310,10 @@ function showToast(message, undoHandler) {
 function mostrarError(message) {
   document.getElementById('app').innerHTML = `<div class="state-screen"><div><h2>Algo salio mal</h2><p>${esc(message)}</p></div></div>`;
 }
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && document.getElementById('overlay').classList.contains('visible')) cerrarModal();
+});
 
 if (!TOKEN) {
   mostrarError('Este enlace no tiene un token de contrato. Usa el boton Checklist desde el panel de administracion.');

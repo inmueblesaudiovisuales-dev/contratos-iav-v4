@@ -257,3 +257,82 @@ test('converts a take to unrelated discard without consuming another counter', (
   assert.equal(state.espacios[0].estados.video.estado, 'pendiente');
   assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB2820');
 });
+
+test('keeps video complete while another video camera still has a take', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.initializeCameraSequence(state, { cameraId: 'osmo-pocket-3', lastFilename: 'DJI_20260517111742_0245_D' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'osmo-pocket-3', targetId: salaId, kind: 'take' });
+
+  state = logic.updateMediaFile(state, state.mediaFiles[0].id, { kind: 'discard', discardReason: 'failed' });
+
+  assert.equal(state.espacios[0].estados.video.estado, 'hecho');
+});
+
+test('renumbers shots for both scenes after moving a take', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nCocina');
+  const [sala, cocina] = state.espacios;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: sala.id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: sala.id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: cocina.id, kind: 'take' });
+
+  state = logic.updateMediaFile(state, state.mediaFiles[0].id, { targetId: cocina.id });
+
+  assert.deepEqual(state.mediaFiles.filter((file) => file.targetId === sala.id).map((file) => file.shotNumber), [1]);
+  assert.deepEqual(state.mediaFiles.filter((file) => file.targetId === cocina.id).map((file) => file.shotNumber), [1, 2]);
+});
+
+test('normalization repairs derived video and drone states from media files', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+  state.espacios[0].estados.video = { estado: 'pendiente' };
+
+  const normalized = logic.normalizeChecklistData(state);
+
+  assert.equal(normalized.espacios[0].estados.video.estado, 'hecho');
+});
+
+test('normalization restores missing default cameras and repairs next counters', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+  state.cameras = state.cameras.filter((camera) => camera.id === 'sony-main');
+  state.sequenceSegments[0].counterNext = 1;
+
+  const normalized = logic.normalizeChecklistData(state);
+
+  assert.equal(normalized.cameras.some((camera) => camera.id === 'osmo-pocket-3'), true);
+  assert.equal(normalized.cameras.some((camera) => camera.id === 'drone-dji'), true);
+  assert.equal(logic.getCameraSequence(normalized, 'sony-main').nextToken, 'PIB2820');
+});
+
+test('removes a mistaken record when no file was created and closes the gap', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nCocina');
+  const [sala, cocina] = state.espacios;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: sala.id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: sala.id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: cocina.id, kind: 'take' });
+
+  state = logic.removeMediaFile(state, state.mediaFiles[1].id);
+
+  assert.deepEqual(state.mediaFiles.map((file) => file.fileToken), ['PIB2819', 'PIB2820']);
+  assert.equal(state.mediaFiles[0].shotNumber, 1);
+  assert.equal(state.mediaFiles[1].scene, 'Cocina');
+  assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB2821');
+});
+
+test('normalization preserves video no aplica while repairing media states', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nBodega');
+  state.espacios[1].estados.video = { estado: 'no_aplica' };
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+
+  const normalized = logic.normalizeChecklistData(state);
+
+  assert.equal(normalized.espacios[1].estados.video.estado, 'no_aplica');
+});

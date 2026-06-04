@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-03 19:19:03 CST (Ronda 55 — Registro de archivos y metadatos)
+> Última actualización: 2026-06-03 19:37:12 CST (Ronda 56 — Auditoria integral Bitacora R55)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -334,6 +334,22 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 56 — Auditoria integral Bitacora R55 (2026-06-03 19:37 CST)
+
+**Cambio:** Auditoria y correccion integral de bugs, integridad de datos, guardado concurrente, accesibilidad y UI/UX de `checklist.html`.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R56-01 | `frontend/checklist-logic.js` | Repara estados Video multi-camara, renumera tomas al mover archivos, restaura camaras/contadores incompletos, preserva `no_aplica` y permite eliminar registros fantasma cerrando el hueco. |
+| R56-02 | `frontend/checklist-logic.test.js` | Sube cobertura a 23 pruebas con regresiones multi-camara, normalizacion, `no_aplica`, renumeracion y eliminacion segura. |
+| R56-03 | `frontend/checklist.html` | Muestra archivos de todas las camaras, permite gestionar archivos antiguos, cambiar motivos, protege borrados/reemplazos, conserva historial legacy y mejora Cierre/Edicion. |
+| R56-04 | `frontend/checklist.html` | Corrige condiciones de carrera de autosave/polling, modales con fondo inerte, foco/Escape, controles tactiles y toolbar movil. |
+| R56-05 | Verificacion | Flujos probados a 320px, 390px y desktop; Sony/Osmo/Drone, guardados concurrentes, estados vacios, Cierre, Edicion y modales sin desbordes ni errores de consola. |
+
+R56 no cambia endpoints, adapter ni D1.
+
+---
 
 ### Ronda 55 — Registro de archivos y metadatos (2026-06-03 19:19 CST)
 
