@@ -5,6 +5,11 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
   const SERVICES_DEFAULT = { foto: true, t360: true, video: true, drone: true };
   const SERVICE_LABELS = { foto: 'Foto', t360: '360', video: 'Video', drone: 'Drone' };
+  const CAMERA_DEFAULTS = [
+    { id: 'sony-main', label: 'Sony principal', mode: 'video', kind: 'sony' },
+    { id: 'osmo-pocket-3', label: 'Osmo Pocket 3', mode: 'video', kind: 'dji' },
+    { id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' },
+  ];
   const DRONE_DEFAULTS = [
     'Fachada aerea',
     'Vista general de propiedad',
@@ -157,6 +162,10 @@
       espacios: [],
       droneItems: createDroneItems(),
       bitacora: [],
+      cameras: clone(CAMERA_DEFAULTS),
+      activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
+      sequenceSegments: [],
+      mediaFiles: [],
     };
   }
 
@@ -188,6 +197,10 @@
           noAplica: !!item.noAplica,
         }));
       normalized.bitacora = normalized.bitacora || [];
+      normalized.cameras = normalized.cameras && normalized.cameras.length ? normalized.cameras : clone(CAMERA_DEFAULTS);
+      normalized.activeCameraByMode = Object.assign({ video: 'sony-main', drone: 'drone-dji' }, normalized.activeCameraByMode || {});
+      normalized.sequenceSegments = normalized.sequenceSegments || [];
+      normalized.mediaFiles = normalized.mediaFiles || [];
       return normalized;
     }
 
@@ -214,6 +227,191 @@
       },
     }));
     return base;
+  }
+
+  function parseFilenameSequence(filename, cameraKind) {
+    const value = String(filename || '').trim();
+    const stem = value.replace(/\.[^.]+$/, '');
+    const matches = [...stem.matchAll(/\d+/g)];
+    if (!matches.length) return null;
+    const counterMatch = matches[matches.length - 1];
+    const counterText = counterMatch[0];
+    const before = stem.slice(0, counterMatch.index);
+    const after = stem.slice(counterMatch.index + counterText.length);
+    const letterPrefix = (before.match(/[A-Za-z]+$/) || [''])[0];
+    return {
+      counter: Number(counterText),
+      counterWidth: counterText.length,
+      prefixHint: cameraKind === 'dji' ? '' : letterPrefix,
+      suffixHint: after,
+      exampleFilename: value,
+    };
+  }
+
+  function formatFileToken(segment, counter) {
+    return (segment.prefixHint || '') + String(counter).padStart(segment.counterWidth || 1, '0');
+  }
+
+  function getCamera(state, cameraId) {
+    return (state.cameras || []).find((camera) => camera.id === cameraId);
+  }
+
+  function getCameraSequence(state, cameraId) {
+    const camera = getCamera(state, cameraId);
+    const segment = (state.sequenceSegments || []).find((item) => item.id === (camera && camera.activeSegmentId));
+    return {
+      camera,
+      segment,
+      nextToken: segment ? formatFileToken(segment, segment.counterNext) : '',
+    };
+  }
+
+  function initializeCameraSequence(state, options) {
+    const next = clone(state);
+    const camera = getCamera(next, options.cameraId);
+    if (!camera) return next;
+    const parsed = parseFilenameSequence(options.lastFilename, camera.kind);
+    if (!parsed) return next;
+    const segment = Object.assign({
+      id: makeId('segment'),
+      cameraId: camera.id,
+      counterStart: parsed.counter + 1,
+      counterNext: parsed.counter + 1,
+      createdAt: new Date().toISOString(),
+    }, parsed);
+    next.sequenceSegments.push(segment);
+    camera.activeSegmentId = segment.id;
+    next.activeCameraByMode[camera.mode] = camera.id;
+    return next;
+  }
+
+  function getSceneData(state, camera, targetId) {
+    const list = camera.mode === 'drone' ? state.droneItems : state.espacios;
+    const target = list.find((item) => item.id === targetId);
+    if (!target) return { scene: 'Sin identificar', scenePath: 'Sin identificar' };
+    if (camera.mode === 'drone') return { scene: target.nombre, scenePath: target.nombre };
+    const parent = target.parentId && state.espacios.find((item) => item.id === target.parentId);
+    return { scene: target.nombre, scenePath: parent ? `${parent.nombre} > ${target.nombre}` : target.nombre };
+  }
+
+  function deriveMediaTargetState(state, camera, targetId) {
+    const files = state.mediaFiles.filter((file) => file.cameraId === camera.id && file.targetId === targetId && file.kind === 'take');
+    if (camera.mode === 'drone') {
+      const item = state.droneItems.find((entry) => entry.id === targetId);
+      if (item) item.estado = files.length ? 'hecho' : 'pendiente';
+      return;
+    }
+    const space = state.espacios.find((entry) => entry.id === targetId);
+    if (space) space.estados.video = files.length ? { estado: 'hecho' } : { estado: 'pendiente' };
+  }
+
+  function registerMediaFile(state, options) {
+    const next = clone(state);
+    const camera = getCamera(next, options.cameraId);
+    const sequence = getCameraSequence(next, options.cameraId);
+    if (!camera || !sequence.segment) return next;
+    const kind = options.kind || 'take';
+    const sceneData = options.discardReason === 'unrelated'
+      ? { scene: 'Sin escena', scenePath: 'Sin escena' }
+      : getSceneData(next, camera, options.targetId);
+    const shotNumber = kind === 'take'
+      ? next.mediaFiles.filter((file) => file.cameraId === camera.id && file.targetId === options.targetId && file.kind === 'take').length + 1
+      : null;
+    next.mediaFiles.push({
+      id: makeId('media'),
+      cameraId: camera.id,
+      segmentId: sequence.segment.id,
+      fileCounter: sequence.segment.counterNext,
+      fileToken: formatFileToken(sequence.segment, sequence.segment.counterNext),
+      targetId: options.targetId || null,
+      scene: sceneData.scene,
+      scenePath: sceneData.scenePath,
+      shotNumber,
+      kind,
+      discardReason: options.discardReason || null,
+      good: false,
+      note: options.note || '',
+      author: options.autor || 'Anonimo',
+      createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
+    });
+    const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
+    activeSegment.counterNext++;
+    if (kind === 'take' && options.targetId) deriveMediaTargetState(next, camera, options.targetId);
+    return next;
+  }
+
+  function toggleMediaGood(state, mediaId) {
+    const next = clone(state);
+    const file = next.mediaFiles.find((item) => item.id === mediaId);
+    if (file && file.kind === 'take') file.good = !file.good;
+    return next;
+  }
+
+  function insertOmittedMediaFile(state, beforeMediaId) {
+    const next = clone(state);
+    const index = next.mediaFiles.findIndex((item) => item.id === beforeMediaId);
+    if (index < 0) return next;
+    const before = next.mediaFiles[index];
+    const segment = next.sequenceSegments.find((item) => item.id === before.segmentId);
+    if (!segment) return next;
+    const insertedCounter = before.fileCounter;
+    next.mediaFiles.forEach((file) => {
+      if (file.segmentId === segment.id && file.fileCounter >= insertedCounter) {
+        file.fileCounter++;
+        file.fileToken = formatFileToken(segment, file.fileCounter);
+      }
+    });
+    next.mediaFiles.splice(index, 0, {
+      id: makeId('media'),
+      cameraId: before.cameraId,
+      segmentId: before.segmentId,
+      fileCounter: insertedCounter,
+      fileToken: formatFileToken(segment, insertedCounter),
+      targetId: null,
+      scene: 'Sin identificar',
+      scenePath: 'Sin identificar',
+      shotNumber: null,
+      kind: 'omitted',
+      discardReason: null,
+      good: false,
+      note: '',
+      author: 'Anonimo',
+      createdAt: new Date().toISOString(),
+    });
+    segment.counterNext++;
+    return next;
+  }
+
+  function updateMediaFile(state, mediaId, changes) {
+    const next = clone(state);
+    const file = next.mediaFiles.find((item) => item.id === mediaId);
+    if (!file) return next;
+    const camera = getCamera(next, file.cameraId);
+    const previousTargetId = file.targetId;
+    if (changes.targetId !== undefined) {
+      file.targetId = changes.targetId;
+      const sceneData = getSceneData(next, camera, changes.targetId);
+      file.scene = sceneData.scene;
+      file.scenePath = sceneData.scenePath;
+    }
+    if (changes.kind) file.kind = changes.kind;
+    if (changes.discardReason !== undefined) file.discardReason = changes.discardReason;
+    if (changes.note !== undefined) file.note = changes.note;
+    if (file.kind === 'discard' && file.discardReason === 'unrelated') {
+      file.targetId = null;
+      file.scene = 'Sin escena';
+      file.scenePath = 'Sin escena';
+    }
+    if (file.kind === 'take') {
+      file.discardReason = null;
+      file.shotNumber = next.mediaFiles.filter((item) => item.id !== file.id && item.cameraId === file.cameraId && item.targetId === file.targetId && item.kind === 'take').length + 1;
+    } else {
+      file.good = false;
+      file.shotNumber = null;
+    }
+    if (camera && previousTargetId) deriveMediaTargetState(next, camera, previousTargetId);
+    if (camera && file.targetId) deriveMediaTargetState(next, camera, file.targetId);
+    return next;
   }
 
   function parseSpacesText(text) {
@@ -469,6 +667,7 @@
   return {
     SERVICES_DEFAULT,
     SERVICE_LABELS,
+    CAMERA_DEFAULTS,
     DRONE_DEFAULTS,
     TEMPLATE_DEFS,
     createDefaultState,
@@ -477,6 +676,13 @@
     addSpacesFromText,
     applyTemplate,
     setServiceActive,
+    parseFilenameSequence,
+    getCameraSequence,
+    initializeCameraSequence,
+    registerMediaFile,
+    toggleMediaGood,
+    insertOmittedMediaFile,
+    updateMediaFile,
     registerCapture,
     undoLastLog,
     getPendingSummary,

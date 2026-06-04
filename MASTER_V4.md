@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-03 18:11:58 CST (Ronda 54 — Bitacora de Produccion 2.1 UI Campo)
+> Última actualización: 2026-06-03 19:19:03 CST (Ronda 55 — Registro de archivos y metadatos)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -334,6 +334,22 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 55 — Registro de archivos y metadatos (2026-06-03 19:19 CST)
+
+**Cambio:** Video y Drone ahora registran exactamente un archivo por toque, con secuencias independientes por camara y datos preparados para un futuro programa de metadatos.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R55-01 | `docs/superpowers/specs/2026-06-03-bitacora-archivos-metadatos-design.md` | Spec de secuencias, buenas manuales, descartes, omitidos, reconciliacion y mapeo futuro a Premiere. |
+| R55-02 | `docs/superpowers/plans/2026-06-03-bitacora-archivos-metadatos.md` | Plan de implementacion R55. |
+| R55-03 | `frontend/checklist-logic.js` | Agrega camaras Sony/Osmo/Drone, tramos independientes, parser de nombres Sony/DJI, archivos, buenas, descartes, omitidos y correcciones. |
+| R55-04 | `frontend/checklist-logic.test.js` | Sube cobertura a 17 pruebas, incluyendo extensiones `.MP4`, contadores independientes, omitidos, asignacion posterior y conversion a descarte. |
+| R55-05 | `frontend/checklist.html` | Captura Video/Drone archivo-por-archivo, cambio de camara, inicio de tramo, buenas manuales, descartes, correcciones, reconciliacion en Cierre y agrupacion por escena en Edicion. |
+
+Foto y 360 conservan su comportamiento anterior. R55 guarda todo dentro del JSON existente; no cambia endpoints, adapter ni D1.
+
+---
 
 ### Ronda 54 — Bitacora de Produccion 2.1 UI Campo (2026-06-03 18:11 CST)
 

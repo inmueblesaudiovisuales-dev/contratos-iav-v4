@@ -146,3 +146,114 @@ test('pending summary groups active pending items by zone and key priority', () 
   assert.equal(summary.byZone.amenidades.video.pending.includes('Alberca'), true);
   assert.equal(summary.keyPending.some((item) => item.nombre === alberca.nombre && item.service === 'video'), true);
 });
+
+test('initializes independent Sony and DJI sequences from real filenames', () => {
+  let state = logic.createDefaultState();
+
+  state = logic.initializeCameraSequence(state, {
+    cameraId: 'sony-main',
+    lastFilename: '20260520_PIB2818.MP4',
+  });
+  state = logic.initializeCameraSequence(state, {
+    cameraId: 'drone-dji',
+    lastFilename: 'DJI_20260517111742_0245_D.MP4',
+  });
+
+  assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB2819');
+  assert.equal(logic.getCameraSequence(state, 'drone-dji').nextToken, '0246');
+  assert.equal(logic.getCameraSequence(state, 'sony-main').segment.counterWidth, 4);
+  assert.equal(logic.getCameraSequence(state, 'drone-dji').segment.counterWidth, 4);
+});
+
+test('registers every video file and keeps good selection manual', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'take', autor: 'Bruno' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'take', autor: 'Bruno' });
+
+  assert.deepEqual(state.mediaFiles.map((file) => file.fileToken), ['PIB2819', 'PIB2820']);
+  assert.deepEqual(state.mediaFiles.map((file) => file.shotNumber), [1, 2]);
+  assert.equal(state.mediaFiles.every((file) => file.good === false), true);
+  assert.equal(state.espacios[0].estados.video.estado, 'hecho');
+
+  state = logic.toggleMediaGood(state, state.mediaFiles[1].id);
+  assert.equal(state.mediaFiles[1].good, true);
+});
+
+test('registers discards and keeps camera counters independent', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
+
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'discard', discardReason: 'empty' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: state.droneItems[0].id, kind: 'take' });
+
+  assert.equal(state.mediaFiles[0].fileToken, 'PIB2819');
+  assert.equal(state.mediaFiles[0].good, false);
+  assert.equal(state.mediaFiles[0].discardReason, 'empty');
+  assert.equal(state.mediaFiles[1].fileToken, '0246');
+  assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB2820');
+  assert.equal(logic.getCameraSequence(state, 'drone-dji').nextToken, '0247');
+});
+
+test('inserts an omitted file and renumbers only later files in the same segment', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nCocina');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[1].id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: state.droneItems[0].id, kind: 'take' });
+
+  const cocinaFileId = state.mediaFiles.find((file) => file.targetId === state.espacios[1].id).id;
+  state = logic.insertOmittedMediaFile(state, cocinaFileId);
+
+  assert.deepEqual(state.mediaFiles.filter((file) => file.cameraId === 'sony-main').map((file) => file.fileToken), ['PIB2819', 'PIB2820', 'PIB2821']);
+  assert.equal(state.mediaFiles.find((file) => file.kind === 'omitted').scene, 'Sin identificar');
+  assert.equal(state.mediaFiles.find((file) => file.cameraId === 'drone-dji').fileToken, '0246');
+  assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB2822');
+});
+
+test('starts a new sequence segment without renumbering previous files', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB4100' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+
+  assert.deepEqual(state.mediaFiles.map((file) => file.fileToken), ['PIB2819', 'PIB4101']);
+  assert.equal(new Set(state.mediaFiles.map((file) => file.segmentId)).size, 2);
+});
+
+test('assigns an omitted file to a scene without changing its file token', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nCocina');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[1].id, kind: 'take' });
+  state = logic.insertOmittedMediaFile(state, state.mediaFiles[0].id);
+  const omitted = state.mediaFiles[0];
+
+  state = logic.updateMediaFile(state, omitted.id, { targetId: state.espacios[0].id, kind: 'take' });
+
+  assert.equal(state.mediaFiles[0].fileToken, 'PIB2819');
+  assert.equal(state.mediaFiles[0].scene, 'Sala');
+  assert.equal(state.mediaFiles[0].kind, 'take');
+  assert.equal(state.mediaFiles[0].shotNumber, 1);
+  assert.equal(state.espacios[0].estados.video.estado, 'hecho');
+});
+
+test('converts a take to unrelated discard without consuming another counter', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
+
+  state = logic.updateMediaFile(state, state.mediaFiles[0].id, { kind: 'discard', discardReason: 'unrelated' });
+
+  assert.equal(state.mediaFiles.length, 1);
+  assert.equal(state.mediaFiles[0].fileToken, 'PIB2819');
+  assert.equal(state.mediaFiles[0].scene, 'Sin escena');
+  assert.equal(state.mediaFiles[0].targetId, null);
+  assert.equal(state.espacios[0].estados.video.estado, 'pendiente');
+  assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB2820');
+});
