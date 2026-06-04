@@ -213,7 +213,10 @@ export async function handleContratos(request, env, ctx, action) {
       propiedades: propsData.map((p, i) => ({
         numPropiedad: i + 1,
         tipo: p.tipo || tipoPaqueteFinal,
-        paquete: pkMapNombres[p.paquete || paqueteBaseFinal] || p.paquete || paqueteBaseFinal
+        paquete: pkMapNombres[p.paquete || paqueteBaseFinal] || p.paquete || paqueteBaseFinal,
+        // El adapter usa la fecha de sesión para decidir la carpeta de año/mes.
+        // Sin esto caía a "hoy" y creaba la carpeta en otro mes que procesarFirma → duplicados.
+        fechaSesion: p.fechaSesion || ''
       }))
     });
 
