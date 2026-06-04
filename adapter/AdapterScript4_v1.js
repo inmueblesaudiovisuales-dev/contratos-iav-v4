@@ -1,7 +1,7 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-03 21:20:34 CST — R35: agendarLlamadaProspecto renombrado a agendarLlamadaCliente; soporta contratoToken y seguimiento de clientes existentes
+// Ultima modificacion: 2026-06-03 — crearCarpetas handler + subirArchivo usa carpetaId del Worker
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -29,6 +29,8 @@ function doPost(e) {
     var handlers = {
       procesarFirma: procesarFirma,
       primerAbono: primerAbono,
+      crearCarpetas: crearCarpetas,
+      crearEventoReservado: crearEventoReservado,
       enviarCorreoAbono: enviarCorreoAbono,
       enviarCorreoEntrega: enviarCorreoEntrega,
       reagendarPropiedad: reagendarPropiedad,
@@ -816,12 +818,82 @@ function reagendarPropiedad(body) {
   }
 }
 
+// ── CREAR CARPETAS (V5 — llamado al crear contrato) ──────────────────────────
+
+function crearCarpetas(body) {
+  var token = body.token;
+  var folio = body.folio || token;
+  var nombreCliente = body.nombreCliente || '';
+  var propiedades = body.propiedades || [];
+
+  var carpetaProyectos = DriveApp.getFolderById(CONFIG.CARPETA_PROYECTOS_ID);
+  var nombresMes = ['01. Enero','02. Febrero','03. Marzo','04. Abril','05. Mayo','06. Junio',
+                    '07. Julio','08. Agosto','09. Septiembre','10. Octubre','11. Noviembre','12. Diciembre'];
+  var fechaRef = (propiedades.length > 0 && propiedades[0].fechaSesion)
+    ? parseFecha_(propiedades[0].fechaSesion) : new Date();
+  var anioStr = fechaRef.getFullYear().toString();
+  var mesStr = nombresMes[fechaRef.getMonth()];
+
+  var iterAnio = carpetaProyectos.getFoldersByName(anioStr);
+  var carpetaAnio = iterAnio.hasNext() ? iterAnio.next() : carpetaProyectos.createFolder(anioStr);
+  var iterMes = carpetaAnio.getFoldersByName(mesStr);
+  var carpetaMes = iterMes.hasNext() ? iterMes.next() : carpetaAnio.createFolder(mesStr);
+
+  var carpetaProyecto = carpetaMes.createFolder(folio + ' — ' + nombreCliente);
+  var carpetaControl = carpetaProyecto.createFolder('Control Interno');
+  var carpetaEntregables = carpetaProyecto.createFolder('Entregables');
+  var carpetaControlId = carpetaControl.getId();
+  var carpetaEntregablesId = carpetaEntregables.getId();
+
+  var props = PropertiesService.getScriptProperties();
+  for (var i = 0; i < Math.max(propiedades.length, 1); i++) {
+    var numProp = (propiedades[i] && propiedades[i].numPropiedad) || (i + 1);
+    props.setProperty('carpeta_' + token + '_' + numProp, carpetaControlId);
+    try {
+      UrlFetchApp.fetch(CONFIG.WORKER_URL + '/api/actualizarCarpeta', {
+        method: 'post', contentType: 'application/json',
+        headers: { 'X-Admin-Key': CONFIG.ADMIN_KEY },
+        payload: JSON.stringify({ token: token, numPropiedad: numProp,
+          carpetaControlId: carpetaControlId, carpetaEntregablesId: carpetaEntregablesId })
+      });
+    } catch (e) { console.error('crearCarpetas: error actualizarCarpeta prop ' + numProp + ':', e.message); }
+  }
+
+  return { ok: true, carpetaControlId: carpetaControlId, carpetaEntregablesId: carpetaEntregablesId };
+}
+
+// ── CREAR EVENTO RESERVADO (V5 — primer abono o firma sin saldo) ─────────────
+
+function crearEventoReservado(body) {
+  var nombre = body.nombreCliente || '';
+  var telefono = body.telefono || '';
+  var equipoUrl = body.equipoUrl || '';
+  var hoy = new Date();
+  var fin = new Date(hoy.getTime() + 30 * 60 * 1000);
+  var titulo = 'Reservado — ' + nombre;
+  var descripcion = [
+    'Primer abono recibido. Sesión por agendar.',
+    telefono ? 'Tel: ' + telefono : '',
+    equipoUrl ? 'Equipo: ' + equipoUrl : ''
+  ].filter(Boolean).join('\n');
+  try {
+    CalendarApp.getDefaultCalendar().createEvent(titulo, hoy, fin, { description: descripcion });
+  } catch (e) {
+    console.error('crearEventoReservado error:', e.message);
+  }
+  return { ok: true };
+}
+
 // ── ARCHIVOS ─────────────────────────────────────────────────────────────────
 
 function subirArchivo(body) {
-  var props = PropertiesService.getScriptProperties();
-  var carpetaId = props.getProperty('carpeta_' + body.token + '_' + (body.numPropiedad || 1));
-  if (!carpetaId) return { error: 'Carpeta no encontrada. Registra el primer abono primero.' };
+  // Preferir carpetaId pasado desde el Worker (D1) sobre PropertiesService
+  var carpetaId = body.carpetaId || null;
+  if (!carpetaId) {
+    var props = PropertiesService.getScriptProperties();
+    carpetaId = props.getProperty('carpeta_' + body.token + '_' + (body.numPropiedad || 1));
+  }
+  if (!carpetaId) return { error: 'Carpeta no encontrada. Contacta a Inmuebles Audiovisuales por WhatsApp.' };
   var carpeta = DriveApp.getFolderById(carpetaId);
   var blob = Utilities.newBlob(Utilities.base64Decode(body.base64), body.mimeType, body.nombre);
   var archivo = carpeta.createFile(blob);
