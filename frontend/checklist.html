@@ -487,6 +487,10 @@
     .cron-scene { font-size: 13px; font-weight: 500; color: var(--ink-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cron-kind { font-size: 11px; color: var(--ink-3); }
     .cron-chev { font-size: 18px; color: var(--ink-3); flex: none; }
+
+    /* el toast oculto NO debe asomar al fondo ni interceptar toques */
+    .toast { transform: translateY(calc(100% + 32px)); visibility: hidden; pointer-events: none; }
+    .toast.visible { transform: translateY(0); visibility: visible; pointer-events: auto; }
   </style>
 </head>
 <body>
