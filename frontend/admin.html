@@ -741,7 +741,6 @@
     .cli-card { background:var(--card); border-radius:10px; border:1.5px solid var(--border); padding:12px 16px; display:flex; align-items:center; gap:12px; }
     .cli-card-body { flex:1; min-width:0; }
     .cli-card-nombre { font-size:14px; font-weight:700; color:var(--ink-1); }
-    .cli-card-meta { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:3px; }
     .cli-card-tel { font-size:12px; color:var(--ink-3); text-decoration:none; }
     .cli-card-correo { font-size:12px; color:var(--ink-3); }
     .cli-card-inmob { font-size:11px; color:var(--ink-3); margin-top:2px; }
@@ -1334,19 +1333,21 @@
           <div class="filter-chips" id="filter-chips">
             <button class="filter-chip" data-estatus="Pendiente firma" onclick="toggleChip(this)"><span class="chip-dot" style="background:#9CA3AF"></span>Pendiente</button>
             <button class="filter-chip" data-estatus="Firmado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#3B82F6"></span>Firmado</button>
-            <button class="filter-chip" data-estatus="Anticipo recibido" onclick="toggleChip(this)"><span class="chip-dot" style="background:#F59E0B"></span>Anticipo</button>
+            <button class="filter-chip" data-estatus="Reservado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Reservado</button>
             <button class="filter-chip" data-estatus="En produccion" onclick="toggleChip(this)"><span class="chip-dot" style="background:#8B5CF6"></span>Producción</button>
             <button class="filter-chip" data-estatus="Entregado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Entregado</button>
           </div>
           <select id="filtro-estatus" onchange="filtrarContratos()" style="width:auto">
             <option value="">Todos los estatus</option>
+            <option value="Nuevo">Nuevo</option>
+            <option value="En cotizacion">En cotización</option>
             <option value="Pendiente firma">Pendiente firma</option>
             <option value="Firmado">Firmado</option>
-            <option value="Anticipo recibido">Anticipo recibido</option>
+            <option value="Reservado">Reservado</option>
             <option value="En produccion">En producción</option>
             <option value="Entregado">Entregado</option>
-            <option value="Liquidado">Liquidado</option>
             <option value="Completado">Completado</option>
+            <option value="Cancelado">Cancelado</option>
           </select>
           <button class="btn-filtros-toggle" id="btn-filtros-toggle" onclick="toggleFiltros()" title="Filtrar por fecha">
             <i class="ti ti-calendar-search"></i> Fechas
@@ -2186,7 +2187,7 @@ function cerrarDrawerNuevo() {
 function actualizarNavBadges(contratos) {
   var abiertos = contratos.filter(function(c) {
     var e = c.Estatus || '';
-    return e !== 'Completado' && e !== 'Liquidado';
+    return e !== 'Completado' && e !== 'Cancelado';
   }).length;
   // Sidebar badge
   var bdgSidebar = document.getElementById('bnav-badge-contratos');
@@ -2831,8 +2832,8 @@ function diasEnEstatus(c) {
   const ahora = Date.now();
   let desde = c.FechaCreacion;
   if      (c.Estatus === 'Firmado')                                              desde = c.FechaFirma        || c.FechaCreacion;
-  else if (c.Estatus === 'Anticipo recibido' || c.Estatus === 'En produccion')   desde = c.FechaUltimoAbono  || c.FechaFirma || c.FechaCreacion;
-  else if (['Entregado','Liquidado','Completado'].includes(c.Estatus))            desde = c.FechaEntrega      || c.FechaUltimoAbono || c.FechaCreacion;
+  else if (c.Estatus === 'Reservado' || c.Estatus === 'En produccion')   desde = c.FechaUltimoAbono  || c.FechaFirma || c.FechaCreacion;
+  else if (['Entregado','Completado'].includes(c.Estatus))               desde = c.FechaEntrega      || c.FechaUltimoAbono || c.FechaCreacion;
   if (!desde) return 0;
   const d = new Date(desde);
   if (isNaN(d)) return 0;
@@ -2895,7 +2896,7 @@ function renderContratosCards(lista) {
     var precioVal = parseFloat(c.PrecioTotal) || 0;
     var pagadoPct = precioVal > 0 ? Math.min(100, Math.round((precioVal - saldoVal) / precioVal * 100)) : 0;
     var saldoCls  = saldoVal <= 0 ? 'green' : pagadoPct >= 50 ? 'amber' : 'red';
-    var saldoTxt  = saldoVal <= 0 ? '<i class="ti ti-check"></i> Liquidado' : fmxn(saldoVal);
+    var saldoTxt  = saldoVal <= 0 ? '<i class="ti ti-check"></i> Pagado' : fmxn(saldoVal);
 
     var fechaTxt = '';
     if (fs) {
@@ -3035,10 +3036,9 @@ function renderSesiones(lista) {
   const STRIPE = {
     'Pendiente firma' : 'st-pendiente',
     'Firmado'         : 'st-firmado',
-    'Anticipo recibido': 'st-anticipo',
+    'Reservado'       : 'st-anticipo',
     'En produccion'   : 'st-produccion',
     'Entregado'       : 'st-entregado',
-    'Liquidado'       : 'st-liquidado',
     'Completado'      : 'st-completado',
   };
   let ultimaFecha = null;
@@ -3406,7 +3406,7 @@ function renderPanel(data) {
       <div class="panel-kpi-card">
         <div class="panel-kpi-label">Saldo</div>
         <div class="panel-kpi-val${_saldo > 0 ? ' amber' : ' green'}">${fmxn(_saldo)}</div>
-        <div class="panel-kpi-sub">${_saldo > 0 ? 'Pendiente' : 'Liquidado'}</div>
+        <div class="panel-kpi-sub">${_saldo > 0 ? 'Pendiente' : 'Pagado'}</div>
       </div>
     </div>
     <div class="panel-pay-progress">
@@ -3450,8 +3450,8 @@ function renderPanel(data) {
     const st = c.Estatus || '';
     if (st === 'Pendiente firma') return 'Hola ' + nombre1wa + ', aquí está tu link para revisar y firmar tu contrato: ' + urlPortal;
     if (st === 'Firmado') return 'Hola ' + nombre1wa + ', te recuerdo que tienes pendiente el anticipo de ' + fmxn(parseFloat(c.Anticipo) || 0) + '. Puedes realizar el pago aquí: ' + urlPortal;
-    if (st === 'Anticipo recibido' || st === 'En produccion') return 'Hola ' + nombre1wa + ', estamos trabajando en la edición de tu material. Cualquier duda con gusto te ayudo.';
-    if (st === 'Entregado' || st === 'Liquidado') return 'Hola ' + nombre1wa + ', tu material ya está listo para descargar. Aquí encuentras tu link: ' + urlPortal;
+    if (st === 'Reservado' || st === 'En produccion') return 'Hola ' + nombre1wa + ', estamos trabajando en la edición de tu material. Cualquier duda con gusto te ayudo.';
+    if (st === 'Entregado' || st === 'Completado') return 'Hola ' + nombre1wa + ', tu material ya está listo para descargar. Aquí encuentras tu link: ' + urlPortal;
     return 'Hola ' + nombre1wa + ', te comparto el link de tu portal: ' + urlPortal;
   })();
   const waUrl = 'https://wa.me/' + waTelPortal + '?text=' + encodeURIComponent(waTexto);
@@ -3574,7 +3574,7 @@ function renderPanel(data) {
     <div class="panel-kpi-row" style="margin-bottom:12px">
       <div class="panel-kpi-card"><div class="panel-kpi-label">Total</div><div class="panel-kpi-val">${fmxn(precioTotal)}</div><div class="panel-kpi-sub">Contratado</div></div>
       <div class="panel-kpi-card"><div class="panel-kpi-label">Pagado</div><div class="panel-kpi-val green">${fmxn(totalAbonado)}</div><div class="panel-kpi-sub">${pct}% del total</div></div>
-      <div class="panel-kpi-card"><div class="panel-kpi-label">Saldo</div><div class="panel-kpi-val${saldo > 0 ? ' amber' : ' green'}">${fmxn(saldo)}</div><div class="panel-kpi-sub">${saldo > 0 ? 'Pendiente' : 'Liquidado'}</div></div>
+      <div class="panel-kpi-card"><div class="panel-kpi-label">Saldo</div><div class="panel-kpi-val${saldo > 0 ? ' amber' : ' green'}">${fmxn(saldo)}</div><div class="panel-kpi-sub">${saldo > 0 ? 'Pendiente' : 'Pagado'}</div></div>
     </div>
     <div class="pago-barra-track" style="margin-bottom:16px"><div class="pago-barra-fill" style="width:${pct}%"></div></div>
     <p class="sec-label">Historial de abonos</p>
@@ -3607,8 +3607,8 @@ function renderPanel(data) {
       </div>
     </div>`;
 
-  const estadoAnticipo  = totalAbonado > 0 || ['Anticipo recibido','En produccion','Entregado','Liquidado'].includes(c.Estatus);
-  const estadoLiquidado = c.Estatus === 'Liquidado';
+  const estadoAnticipo  = totalAbonado > 0 || ['Reservado','En produccion','Entregado','Completado'].includes(c.Estatus);
+  const estadoLiquidado = c.Estatus === 'Completado';
   const prodFotoHecho      = !!(c.FotografiaLista && String(c.FotografiaLista).trim());
   const prodVideoHecho     = !!(c.VideoListo && String(c.VideoListo).trim());
   const prodRecorridoHecho = !!(c.RecorridoListo && String(c.RecorridoListo).trim());
@@ -3666,7 +3666,7 @@ function renderPanel(data) {
         ${prodFila(true, 'Contrato enviado', c.FechaCreacion)}
         ${prodFila(!!c.FechaFirma, 'Contrato firmado', c.FechaFirma)}
         ${prodFila(estadoAnticipo, 'Anticipo abonado', c.FechaUltimoAbono)}
-        ${prodFila(estadoLiquidado, 'Liquidado', c.FechaEntrega)}
+        ${prodFila(estadoLiquidado, 'Completado', c.FechaEntrega)}
       </div>
     </details>
 
@@ -3674,7 +3674,7 @@ function renderPanel(data) {
     <details class="panel-acord">
       <summary>Producción del material</summary>
       <div class="panel-acord-body">
-        ${['Anticipo recibido','Firmado','En produccion'].includes(c.Estatus) ? `
+        ${['Reservado','Firmado','En produccion'].includes(c.Estatus) ? `
         <button class="btn-primario gold" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px" id="btn-sesion-completada" onclick="marcarSesionCompletada()">
           <i class="ti ti-camera-check"></i> Sesión completada — iniciar edición
         </button>
@@ -4187,21 +4187,6 @@ async function marcarSesionCompletada() {
   }
 }
 
-// ── NOTAS INTERNAS ────────────────────────────────────────────────────────────
-
-async function guardarNotasInternas() {
-  const t     = tokenActivo;
-  const notas = (document.getElementById('notas-internas-txt') || {}).value || '';
-  setMsg('msg-notas-internas', '', '');
-  try {
-    const data = await apiPost({ action: 'guardarNotasInternas', token: t, notas });
-    if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    setMsg('msg-notas-internas', 'Notas guardadas.', 'ok');
-  } catch (e) {
-    setMsg('msg-notas-internas', 'Error: ' + e.message, 'error');
-  }
-}
-
 // ── CREAR CONTRATO ────────────────────────────────────────────────────────────
 
 async function crearContrato() {
@@ -4595,18 +4580,9 @@ function safeHref(url) {
 }
 
 function badgeEstatus(estatus) {
-  const map = {
-    'Pendiente firma' : 'badge-pendiente-firma',
-    'Firmado'         : 'badge-firmado',
-    'Anticipo recibido': 'badge-anticipo',
-    'En produccion'   : 'badge-en-produccion',
-    'Entregado'       : 'badge-entregado',
-    'Liquidado'       : 'badge-liquidado',
-    'Completado'      : 'badge-completado',
-  };
-  const cls = map[estatus] || 'badge-pendiente-firma';
+  const _em = ESTATUS_MAP[estatus] || { bg:'#F3F4F6', color:'#374151' };
   const txt = estatus === 'En produccion' ? 'En producción' : (estatus || '—');
-  return `<span class="badge ${cls}">${esc(txt)}</span>`;
+  return `<span class="badge" style="background:${_em.bg};color:${_em.color}">${esc(txt)}</span>`;
 }
 
 function setMsg(id, text, tipo) {
@@ -5120,7 +5096,7 @@ function renderMetricas(s) {
   html += `<div class="met-bottom-grid">`;
 
   // Por estatus
-  const ORDEN_ESTATUS = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Liquidado'];
+  const ORDEN_ESTATUS = ['Nuevo','En cotizacion','Pendiente firma','Firmado','Reservado','En produccion','Entregado','Completado','Cancelado'];
   const maxEst = Math.max(1, ...Object.values(s.porEstatus));
   html += `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px">
     <p style="font-size:12px;font-weight:700;color:var(--ink-1);margin:0 0 14px">Por estatus</p>`;
@@ -5304,7 +5280,7 @@ function actualizarStatsRibbon(contratos) {
   // cobrado este mes (filtrado por fecha de creación del mes actual)
   function cobradoEnMes(mes) {
     return contratos
-      .filter(function(c){ return (c.FechaCreacion||'').startsWith(mes) && (c.Estatus === 'Completado' || c.Estatus === 'Liquidado' || c.Estatus === 'Entregado'); })
+      .filter(function(c){ return (c.FechaCreacion||'').startsWith(mes) && (c.Estatus === 'Completado' || c.Estatus === 'Entregado'); })
       .reduce(function(s,c){ return s + (Number(c.PrecioTotal||0) - Number(c.SaldoPendiente||0)); }, 0);
   }
   var cobradoActual = cobradoEnMes(mesActual);
@@ -5324,8 +5300,8 @@ function actualizarStatsRibbon(contratos) {
 }
 
 function renderLifecycle(estatus) {
-  var stages = ['Pendiente firma','Firmado','Anticipo recibido','En produccion','Entregado','Completado'];
-  var labels  = ['Pendiente','Firmado','Anticipo','Producción','Entregado','Completado'];
+  var stages = ['Pendiente firma','Firmado','Reservado','En produccion','Entregado','Completado'];
+  var labels  = ['Pendiente','Firmado','Reservado','Producción','Entregado','Completado'];
   var idx = stages.indexOf(estatus);
   if (idx < 0) idx = -1;
   var parts = [];
