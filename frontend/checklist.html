@@ -68,6 +68,11 @@
     .dot.error { background: var(--red); }
     @keyframes pulse { 50% { opacity: .35; } }
 
+    .topbar.compact { padding-bottom: 8px; }
+    .topbar.compact .eyebrow { display: none; }
+    .topbar.compact .job h1 { font-size: 15px; }
+    .topbar.compact .name-row { margin-top: 6px; }
+    .topbar.compact .field, .topbar.compact .btn { min-height: 34px; height: 34px; font-size: 11px; }
     .name-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; }
     .field {
       border: 1px solid var(--line); border-radius: var(--radius);
@@ -86,58 +91,59 @@
     .danger { border-color: #EDC2BC; background: var(--red-soft); color: var(--red); }
     .ghost { background: transparent; }
 
-    .mode-area { padding: 12px 14px 0; }
-    .mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .mode-area { padding: 9px 14px 0; }
+    .mode-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; padding: 3px; background: var(--muted); border-radius: var(--radius); }
     .mode-btn {
-      border: 1px solid var(--line); background: var(--card); border-radius: var(--radius);
-      min-height: 52px; text-align: left; padding: 10px 11px;
+      border: 0; background: transparent; border-radius: 6px;
+      min-height: 38px; text-align: center; padding: 0 4px; color: var(--ink-2);
     }
-    .mode-btn strong { display: block; font-size: 13px; font-weight: 900; }
-    .mode-btn span { display: block; margin-top: 2px; color: var(--ink-3); font-size: 10px; font-weight: 800; text-transform: uppercase; }
-    .mode-btn.active { background: var(--black); color: #fff; border-color: var(--black); }
-    .mode-btn.active span { color: rgba(255,255,255,.64); }
+    .mode-btn strong { display: block; font-size: 11px; font-weight: 900; }
+    .mode-btn.active { background: var(--black); color: #fff; box-shadow: 0 2px 7px rgba(16,16,16,.16); }
     .active-band {
-      margin-top: 10px; border-radius: var(--radius); background: var(--black); color: #fff;
-      padding: 12px; display: grid; gap: 3px;
+      margin-top: 6px; border-left: 3px solid var(--gold); background: var(--card);
+      padding: 7px 9px; display: flex; align-items: baseline; gap: 7px;
     }
-    .active-band strong { font-size: 15px; font-weight: 900; }
-    .active-band span { color: rgba(255,255,255,.68); font-size: 12px; font-weight: 700; line-height: 1.4; }
+    .active-band strong { flex: none; font-size: 11px; font-weight: 900; }
+    .active-band span { color: var(--ink-2); font-size: 10px; font-weight: 700; line-height: 1.35; }
 
-    .tabs { padding: 12px 14px 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .tabs { padding: 8px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
     .tab {
       border: 1px solid transparent; border-radius: var(--radius); background: transparent;
-      min-height: 40px; font-size: 12px; font-weight: 900; color: var(--ink-3);
+      min-height: 34px; font-size: 11px; font-weight: 900; color: var(--ink-3);
     }
     .tab.active { border-color: var(--line); background: var(--card); color: var(--ink-1); }
 
     .content { padding: 0 14px; }
     .summary-card {
       background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-      padding: 12px; margin-bottom: 12px;
+      padding: 11px 12px; margin-bottom: 9px;
     }
-    .progress-row { display: flex; align-items: center; gap: 10px; }
-    .track { flex: 1; height: 8px; background: var(--muted); border-radius: 99px; overflow: hidden; }
+    .summary-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .summary-title { font-size: 16px; font-weight: 900; line-height: 1.15; }
+    .summary-risk { margin-top: 3px; color: var(--red); font-size: 11px; font-weight: 800; line-height: 1.35; }
+    .summary-risk.ok { color: var(--green); }
+    .progress-block { flex: none; width: 78px; text-align: right; }
+    .track { width: 100%; height: 5px; margin-top: 5px; background: var(--muted); border-radius: 99px; overflow: hidden; }
     .fill { height: 100%; background: var(--gold); border-radius: 99px; }
-    .progress-num { font-size: 12px; font-weight: 900; }
-    .summary-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
-    .tag { border-radius: 999px; padding: 5px 8px; background: var(--muted); color: var(--ink-2); font-size: 10px; font-weight: 900; }
+    .progress-num { color: var(--ink-3); font-size: 10px; font-weight: 900; }
+    .summary-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .tag { border-radius: 999px; padding: 4px 7px; background: var(--muted); color: var(--ink-2); font-size: 9px; font-weight: 900; }
     .tag.ok { background: var(--green-soft); color: var(--green); }
     .tag.warn { background: var(--gold-soft); color: #8B6A13; }
     .tag.bad { background: var(--red-soft); color: var(--red); }
 
-    .prepare {
-      background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-      padding: 18px; display: grid; gap: 14px;
-    }
-    .prepare h2 { font-size: 22px; line-height: 1.15; }
+    .prepare { padding: 18px 0; display: grid; gap: 14px; }
+    .prepare h2 { font-size: 23px; line-height: 1.15; }
     .prepare p { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
-    .template-grid { display: grid; gap: 9px; }
+    .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .template-card {
-      width: 100%; border: 1px solid var(--line); background: var(--page); border-radius: var(--radius);
-      padding: 13px; text-align: left; display: grid; gap: 5px;
+      width: 100%; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius);
+      padding: 12px; text-align: left; display: grid; gap: 4px; min-height: 88px;
     }
-    .template-card strong { font-size: 15px; font-weight: 900; }
-    .template-card span { color: var(--ink-2); font-size: 12px; line-height: 1.4; font-weight: 700; }
+    .template-card strong { font-size: 13px; font-weight: 900; }
+    .template-card span { color: var(--ink-2); font-size: 10px; line-height: 1.35; font-weight: 700; }
+    .template-card.featured { grid-column: 1 / -1; min-height: 76px; border-color: var(--gold); background: var(--gold-soft); }
+    .template-card.selected { border-color: var(--black); box-shadow: inset 0 0 0 1px var(--black); }
 
     .toolbar { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-bottom: 10px; }
     .zone { margin-bottom: 15px; }
@@ -149,16 +155,19 @@
     .cards { display: grid; gap: 8px; }
     .capture-card {
       background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-      padding: 12px; display: grid; gap: 11px;
+      padding: 10px; display: grid; gap: 8px; position: relative; overflow: hidden;
     }
+    .capture-card.key { border-left: 4px solid var(--gold); padding-left: 9px; }
+    .capture-card.amenity { background: #FBF8EE; }
+    .capture-card.amenity::after { content: ""; position: absolute; top: 0; right: 0; width: 22px; height: 3px; background: var(--gold); }
     .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
     .card-name { min-width: 0; }
     .card-name strong { display: block; font-size: 15px; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .card-name span { display: block; margin-top: 3px; color: var(--ink-3); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+    .card-name span { display: block; margin-top: 3px; color: var(--ink-3); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
     .child .card-name strong::before { content: "- "; color: var(--ink-3); }
     .state-list { display: flex; flex-wrap: wrap; gap: 6px; }
     .state {
-      border-radius: 999px; padding: 5px 8px; font-size: 10px; font-weight: 900;
+      border-radius: 999px; padding: 4px 7px; font-size: 9px; font-weight: 900;
       color: var(--ink-2); background: var(--muted);
     }
     .state.done { color: var(--green); background: var(--green-soft); }
@@ -167,9 +176,9 @@
     .state.na { color: var(--red); background: var(--red-soft); }
     .primary-action {
       width: 100%; border: 0; border-radius: var(--radius); background: var(--black); color: #fff;
-      min-height: 48px; font-size: 14px; font-weight: 900;
+      min-height: 44px; font-size: 12px; font-weight: 900;
     }
-    .primary-action.manage { background: var(--gold); color: var(--black); }
+    .primary-action.manage { background: var(--gold-soft); color: var(--black); border: 1px solid var(--gold); }
 
     .empty { border: 1px dashed var(--line); background: var(--card); border-radius: var(--radius); padding: 22px 16px; text-align: center; }
     .empty h2 { font-size: 16px; margin-bottom: 6px; }
@@ -182,8 +191,23 @@
     }
     .panel h3 { font-size: 14px; font-weight: 900; margin-bottom: 8px; }
     .line { color: var(--ink-2); font-size: 12px; line-height: 1.48; margin-top: 5px; }
-    .sequence { display: grid; gap: 5px; }
-    .sequence div { color: var(--ink-2); font-size: 12px; line-height: 1.45; }
+    .traffic { border-left: 4px solid var(--line); }
+    .traffic.red { border-left-color: var(--red); }
+    .traffic.yellow { border-left-color: var(--gold); }
+    .traffic.green { border-left-color: var(--green); }
+    .traffic-title { display: flex; align-items: center; gap: 7px; }
+    .traffic-title span { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+    .traffic.red .traffic-title span { background: var(--red); }
+    .traffic.yellow .traffic-title span { background: var(--gold); }
+    .traffic.green .traffic-title span { background: var(--green); }
+    .review-item { display: flex; gap: 8px; padding: 7px 0; border-top: 1px solid var(--muted); color: var(--ink-2); font-size: 11px; font-weight: 700; line-height: 1.4; }
+    .review-item strong { color: var(--ink-1); }
+    .sequence { display: grid; }
+    .sequence-row { display: grid; grid-template-columns: 34px 1fr; gap: 9px; padding: 8px 0; border-top: 1px solid var(--muted); }
+    .sequence-row:first-child { border-top: 0; }
+    .sequence-num { color: var(--gold); font-size: 13px; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .sequence-name { color: var(--ink-1); font-size: 12px; font-weight: 900; }
+    .sequence-meta { margin-top: 2px; color: var(--ink-3); font-size: 9px; font-weight: 700; }
 
     .overlay {
       position: fixed; inset: 0; z-index: 100; background: rgba(16,16,16,.38);
@@ -226,7 +250,6 @@
     @media (min-width: 760px) {
       .app { padding-top: 16px; }
       .topbar { top: 14px; margin: 0 14px 12px; border: 1px solid var(--line); border-radius: 12px; }
-      .mode-grid { grid-template-columns: repeat(4, 1fr); }
       .template-grid { grid-template-columns: repeat(2, 1fr); }
       .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .sheet { max-width: 620px; margin: 0 auto; }
@@ -424,7 +447,7 @@ function render() {
 }
 
 function renderHeader() {
-  return `<header class="topbar">
+  return `<header class="topbar ${state.espacios.length ? 'compact' : ''}">
     <div class="top-row">
       <div class="job">
         <div class="eyebrow">Bitacora de Produccion</div>
@@ -444,12 +467,12 @@ function renderModeArea() {
   return `<section class="mode-area">
     <div class="mode-grid">${activeServices().map((key) => `
       <button class="mode-btn ${state.modoActual === key ? 'active' : ''}" onclick="setMode('${key}')">
-        <strong>${SERVICE_UI[key].label}</strong><span>${SERVICE_UI[key].help}</span>
+        <strong>${SERVICE_UI[key].short}</strong>
       </button>
     `).join('')}</div>
     <div class="active-band">
-      <strong>Modo activo: ${SERVICE_UI[state.modoActual].label}</strong>
-      <span>${state.modoActual === 'video' ? 'Registra los espacios conforme los grabas. Si ya existe video, eliges si es repetida, extra o reemplazo.' : state.modoActual === 'drone' ? 'Registra el orden real de las tomas aereas.' : 'Toca el boton grande de cada espacio para marcarlo sin duplicados accidentales.'}</span>
+      <strong>${SERVICE_UI[state.modoActual].short} activo</strong>
+      <span>${state.modoActual === 'video' ? 'Registra cada espacio en el orden real.' : state.modoActual === 'drone' ? 'Registra la secuencia aerea real.' : 'Registra cada espacio una sola vez.'}</span>
     </div>
   </section>`;
 }
@@ -468,10 +491,10 @@ function renderActiveView() {
 function renderPrepareView() {
   return `<section class="prepare">
     <div>
-      <h2>Prepara esta propiedad</h2>
-      <p>Elige una plantilla para empezar rapido. Amenidades tiene su propia plantilla para que no se pierdan las areas que venden el desarrollo.</p>
+      <h2>Que vamos a producir hoy?</h2>
+      <p>Empieza con la estructura mas parecida. Podras agregar o quitar espacios despues.</p>
     </div>
-    <div class="template-grid">${Object.keys(logic.TEMPLATE_DEFS).map(renderTemplateCard).join('')}
+    <div class="template-grid">${['amenidades', 'casa', 'departamento', 'terreno', 'exterior_drone'].map(renderTemplateCard).join('')}
       <button class="template-card" onclick="abrirEspacios('lista')"><strong>Lista propia</strong><span>Pega tus espacios con subespacios usando sangria.</span></button>
     </div>
   </section>`;
@@ -479,29 +502,42 @@ function renderPrepareView() {
 
 function renderTemplateCard(key) {
   const template = logic.TEMPLATE_DEFS[key];
-  return `<button class="template-card" onclick="abrirTemplate('${key}')">
+  return `<button class="template-card ${key === 'amenidades' ? 'featured' : ''}" onclick="abrirTemplate('${key}')">
     <strong>${esc(template.label)}</strong>
-    <span>${esc(template.description)} ${template.spaces.length} elementos.</span>
+    <span>${esc(template.description)}</span>
   </button>`;
 }
 
 function renderSummary() {
   const summary = logic.getPendingSummary(state);
   const pct = summary.totalRequired ? Math.round(summary.totalDone / summary.totalRequired * 100) : 0;
+  const risk = getPrimaryRisk(summary);
   return `<section class="summary-card">
-    <div class="progress-row"><div class="track"><div class="fill" style="width:${pct}%"></div></div><div class="progress-num">${summary.totalDone}/${summary.totalRequired}</div></div>
+    <div class="summary-top">
+      <div><div class="summary-title">${summary.keyPending.length ? `Faltan ${summary.keyPending.length} claves` : 'Claves listas'}</div><div class="summary-risk ${risk.ok ? 'ok' : ''}">${esc(risk.text)}</div></div>
+      <div class="progress-block"><div class="progress-num">${summary.totalDone}/${summary.totalRequired} listo</div><div class="track"><div class="fill" style="width:${pct}%"></div></div></div>
+    </div>
     <div class="summary-tags">
-      ${summary.keyPending.length ? `<span class="tag bad">${summary.keyPending.length} claves faltan</span>` : '<span class="tag ok">Claves listas</span>'}
-      ${Object.entries(summary.byService).map(([key, item]) => `<span class="tag ${item.pending.length ? '' : 'ok'}">${SERVICE_UI[key].short}: ${item.done}/${item.required}</span>`).join('')}
+      ${Object.entries(summary.byService).map(([key, item]) => `<span class="tag ${item.pending.length ? '' : 'ok'}">${SERVICE_UI[key].short} ${item.done}/${item.required}</span>`).join('')}
     </div>
   </section>`;
+}
+
+function getPrimaryRisk(summary) {
+  const amenities = summary.byZone.amenidades || {};
+  const amenityRisk = ['video', 't360', 'foto'].find((key) => amenities[key] && amenities[key].pending.length);
+  if (amenityRisk) return { text: `Riesgo principal: Amenidades sin ${SERVICE_UI[amenityRisk].short}`, ok: false };
+  if (summary.keyPending.length) return { text: `Riesgo principal: ${summary.keyPending[0].nombre} sin ${SERVICE_UI[summary.keyPending[0].service].short}`, ok: false };
+  if (summary.byService.drone && summary.byService.drone.pending.length) return { text: 'Riesgo principal: Drone incompleto', ok: false };
+  if (summary.totalPending) return { text: `${summary.totalPending} registros normales pendientes`, ok: false };
+  return { text: 'Sin riesgos pendientes', ok: true };
 }
 
 function renderCaptureView() {
   return `${renderSummary()}
     <div class="toolbar">
       ${state.modoActual === 'drone' ? '<div></div>' : '<input class="field" id="space-search" type="search" placeholder="Buscar espacio...">'}
-      <button class="primary" onclick="abrirEspacios('plantillas')">+ Espacios</button>
+      <button class="primary" onclick="abrirEspacios('plantillas')">Espacios / plantillas</button>
     </div>
     ${state.modoActual === 'drone' ? renderDroneCards() : renderSpaceGroups()}`;
 }
@@ -539,13 +575,14 @@ function renderDroneCards() {
 function renderSpaceCard(space) {
   const current = (space.estados[state.modoActual] || {}).estado || 'pendiente';
   const managing = current === 'hecho';
-  return `<article class="capture-card ${space.parentId ? 'child' : ''}">
+  const label = space.zona === 'amenidades' ? `Amenidad${space.clave ? ' clave' : ''}` : space.clave ? 'Clave' : ZONE_LABELS[space.zona || 'interior'];
+  return `<article class="capture-card ${space.parentId ? 'child' : ''} ${space.clave ? 'key' : ''} ${space.zona === 'amenidades' ? 'amenity' : ''}">
     <div class="card-head">
-      <div class="card-name"><strong>${esc(space.nombre)}</strong><span>${ZONE_LABELS[space.zona || 'interior']}${space.clave ? ' - Clave' : ''}</span></div>
+      <div class="card-name"><strong>${esc(space.nombre)}</strong><span>${label}</span></div>
       <button class="icon-btn" onclick="abrirAcciones('space','${space.id}')">...</button>
     </div>
     <div class="state-list">${['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => renderStateToken(key, space.estados[key])).join('')}</div>
-    <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${space.id}')">${managing ? 'Gestionar ' : 'Registrar '}${SERVICE_UI[state.modoActual].verb}</button>
+    <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${space.id}')">${captureActionLabel(state.modoActual, space.id, managing)}</button>
   </article>`;
 }
 
@@ -557,8 +594,17 @@ function renderDroneCard(item) {
       <button class="icon-btn" onclick="abrirAcciones('drone','${item.id}')">...</button>
     </div>
     <div class="state-list"><span class="state ${item.estado === 'hecho' ? 'done drone' : item.noAplica ? 'na' : ''}">${item.estado === 'hecho' ? 'Drone ' + String(item.ultimoOrden || '').padStart(2, '0') : item.noAplica ? 'No aplica' : 'Drone pendiente'}</span></div>
-    <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${item.id}')">${managing ? 'Gestionar toma drone' : 'Registrar toma drone'}</button>
+    <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${item.id}')">${captureActionLabel('drone', item.id, managing)}</button>
   </article>`;
+}
+
+function captureActionLabel(tipo, targetId, managing) {
+  if (!managing) return `Registrar ${SERVICE_UI[tipo].verb}`;
+  const count = state.bitacora.filter((entry) => entry.tipo === tipo && entry.targetId === targetId && entry.intencion !== 'nota').length;
+  if ((tipo === 'video' || tipo === 'drone') && count > 1) return `${count} tomas de ${SERVICE_UI[tipo].short.toLowerCase()} · revisar`;
+  if (tipo === 'foto') return 'Foto registrada · opciones';
+  if (tipo === 'drone') return 'Drone registrado · opciones';
+  return `${SERVICE_UI[tipo].label} registrado · opciones`;
 }
 
 function renderStateToken(key, stateValue) {
@@ -635,22 +681,59 @@ function renderCloseView() {
   const repeated = state.bitacora.filter((entry) => ['repetida', 'extra', 'reemplazo', 'problema'].includes(entry.intencion) || entry.bandera);
   const noAplica = getNoAplicaItems();
   const disabled = Object.entries(state.servicios).filter(([, active]) => !active).map(([key]) => SERVICE_UI[key].label);
+  const urgent = closeUrgentItems(summary);
+  const review = [
+    ...repeated.map((entry) => `<strong>${esc(entry.nombre)}</strong>: ${SERVICE_UI[entry.tipo].short} ${entry.orden || ''} marcada como ${esc(entry.intencion || entry.bandera)}`),
+    ...noAplica.map((item) => `<strong>No aplica:</strong> ${esc(item)}`),
+    ...disabled.map((item) => `<strong>Servicio apagado:</strong> ${esc(item)}`),
+  ];
+  const ready = closeReadyItems(summary);
   return `<div class="close-list">
-    <section class="panel"><h3>Faltantes clave</h3>${summary.keyPending.length ? summary.keyPending.slice(0, 10).map((item) => `<p class="line">Falta ${item.label} en ${esc(item.nombre)} (${ZONE_LABELS[item.zona] || item.zona})</p>`).join('') : '<p class="line">No faltan espacios clave.</p>'}</section>
-    ${renderZonePending(summary)}
-    <section class="panel"><h3>Tomas repetidas / extras</h3>${repeated.length ? repeated.map((entry) => `<p class="line">${SERVICE_UI[entry.tipo].short} ${entry.orden || ''} - ${esc(entry.nombre)} - ${esc(entry.intencion || entry.bandera)}</p>`).join('') : '<p class="line">Sin repetidas ni extras.</p>'}</section>
-    <section class="panel"><h3>No aplica</h3>${noAplica.length ? noAplica.map((item) => `<p class="line">${esc(item)}</p>`).join('') : '<p class="line">Nada marcado como no aplica.</p>'}</section>
-    <section class="panel"><h3>Servicios desactivados</h3><p class="line">${disabled.join(', ') || 'Ninguno'}</p></section>
+    <section class="panel traffic red"><h3 class="traffic-title"><span></span>Falta antes de irnos</h3>${urgent.length ? urgent.slice(0, 12).map(renderReviewItem).join('') : '<p class="line">No hay faltantes prioritarios.</p>'}</section>
+    <section class="panel traffic yellow"><h3 class="traffic-title"><span></span>Revisar</h3>${review.length ? review.slice(0, 12).map(renderReviewItem).join('') : '<p class="line">No hay excepciones que revisar.</p>'}</section>
+    <section class="panel traffic green"><h3 class="traffic-title"><span></span>Listo</h3>${ready.map(renderReviewItem).join('') || '<p class="line">Completa los puntos prioritarios para cerrar.</p>'}</section>
+    <section class="panel"><h3>Detalle normal pendiente</h3>${renderNormalPending(summary)}</section>
   </div>`;
 }
 
-function renderZonePending(summary) {
-  const zones = ['interior', 'exterior', 'amenidades'];
-  return zones.map((zone) => {
-    const data = summary.byZone[zone] || {};
-    const lines = Object.entries(data).flatMap(([service, item]) => item.pending.map((name) => `Falta ${SERVICE_UI[service].label} en ${name}`));
-    return `<section class="panel"><h3>${ZONE_LABELS[zone]}</h3>${lines.length ? lines.slice(0, 12).map((line) => `<p class="line">${esc(line)}</p>`).join('') : '<p class="line">Todo listo.</p>'}</section>`;
-  }).join('');
+function renderReviewItem(item) {
+  return `<div class="review-item"><span>—</span><div>${item}</div></div>`;
+}
+
+function closeUrgentItems(summary) {
+  const seen = new Set();
+  const items = [];
+  summary.keyPending.forEach((item) => {
+    const key = `${item.service}:${item.nombre}`;
+    if (!seen.has(key)) items.push(`<strong>${esc(item.nombre)}</strong>: falta ${SERVICE_UI[item.service].short}`);
+    seen.add(key);
+  });
+  Object.entries(summary.byZone.amenidades || {}).forEach(([service, data]) => data.pending.forEach((name) => {
+    const key = `${service}:${name}`;
+    if (!seen.has(key)) items.push(`<strong>${esc(name)}</strong>: falta ${SERVICE_UI[service].short} en amenidad`);
+    seen.add(key);
+  }));
+  if (summary.byService.drone) summary.byService.drone.pending.forEach((name) => items.push(`<strong>${esc(name)}</strong>: falta Drone`));
+  return items;
+}
+
+function closeReadyItems(summary) {
+  const items = [];
+  ['interior', 'exterior', 'amenidades'].forEach((zone) => {
+    const services = Object.values(summary.byZone[zone] || {});
+    if (services.length && services.every((item) => !item.pending.length)) items.push(`<strong>${ZONE_LABELS[zone]}</strong> completo`);
+  });
+  if (summary.byService.drone && !summary.byService.drone.pending.length) items.push('<strong>Drone</strong> completo');
+  if (!summary.keyPending.length) items.unshift('<strong>Espacios clave</strong> completos');
+  return items;
+}
+
+function renderNormalPending(summary) {
+  const keyNames = new Set(summary.keyPending.map((item) => `${item.service}:${item.nombre}`));
+  const lines = ['interior', 'exterior'].flatMap((zone) => Object.entries(summary.byZone[zone] || {}).flatMap(([service, item]) =>
+    item.pending.filter((name) => !keyNames.has(`${service}:${name}`)).map((name) => `${SERVICE_UI[service].short}: ${name}`)
+  ));
+  return lines.length ? lines.slice(0, 14).map((line) => `<p class="line">${esc(line)}</p>`).join('') : '<p class="line">Sin faltantes normales.</p>';
 }
 
 function renderEditView() {
@@ -662,9 +745,9 @@ function renderEditView() {
   return `<div class="edit-list">
     <section class="panel"><h3>Video principal</h3>${renderSequence(video, 'Sin video registrado.')}</section>
     <section class="panel"><h3>Drone principal</h3>${renderSequence(drone, 'Sin drone registrado.')}</section>
-    <section class="panel"><h3>Repetidas / extras</h3>${repeated.length ? repeated.map((entry) => `<p class="line">${SERVICE_UI[entry.tipo].short} ${entry.orden} ${esc(entry.nombre)} - ${esc(entry.intencion)}</p>`).join('') : '<p class="line">Sin repetidas ni extras.</p>'}</section>
-    <section class="panel"><h3>Notas</h3>${notes.length ? notes.map((entry) => `<p class="line">${esc(entry.nombre)} - ${esc(entry.nota || entry.bandera)}</p>`).join('') : '<p class="line">Sin notas.</p>'}</section>
-    <section class="panel"><h3>Amenidades</h3>${amenities.length ? amenities.map((space) => `<p class="line">${esc(space.nombre)} - ${amenityDone(space)}</p>`).join('') : '<p class="line">Sin amenidades cargadas.</p>'}</section>
+    <section class="panel"><h3>Repetidas / extras</h3>${repeated.length ? repeated.map((entry) => `<div class="review-item"><strong>${SERVICE_UI[entry.tipo].short} ${String(entry.orden || '').padStart(2, '0')}</strong><div>${esc(entry.nombre)} · ${esc(entry.intencion)}</div></div>`).join('') : '<p class="line">Sin repetidas ni extras.</p>'}</section>
+    <section class="panel"><h3>Notas para edicion</h3>${notes.length ? notes.map((entry) => `<div class="review-item"><strong>${esc(entry.nombre)}</strong><div>${esc(entry.nota || entry.bandera)}</div></div>`).join('') : '<p class="line">Sin notas.</p>'}</section>
+    <section class="panel"><h3>Amenidades capturadas</h3>${amenities.length ? amenities.map((space) => `<div class="review-item"><strong>${esc(space.nombre)}</strong><div>${amenityDone(space)}</div></div>`).join('') : '<p class="line">Sin amenidades cargadas.</p>'}</section>
   </div>`;
 }
 
@@ -676,7 +759,7 @@ function primarySequence(tipo) {
 
 function renderSequence(items, emptyText) {
   if (!items.length) return `<p class="line">${emptyText}</p>`;
-  return `<div class="sequence">${items.map((entry) => `<div>${String(entry.orden || '').padStart(2, '0')} - ${esc(entry.nombre)} - ${esc(entry.autor)}</div>`).join('')}</div>`;
+  return `<div class="sequence">${items.map((entry) => `<div class="sequence-row"><div class="sequence-num">${String(entry.orden || '').padStart(2, '0')}</div><div><div class="sequence-name">${esc(entry.nombre)}</div><div class="sequence-meta">${esc(entry.autor)}${entry.hora ? ' · ' + esc(entry.hora) : ''}</div></div></div>`).join('')}</div>`;
 }
 
 function amenityDone(space) {
@@ -718,7 +801,7 @@ function renderTemplateSheet() {
 
 function renderTemplateTab(template) {
   return `<div class="sheet-body">
-    <div class="template-grid">${Object.keys(logic.TEMPLATE_DEFS).map((key) => `<button class="template-card" onclick="selectedTemplate='${key}';renderTemplateSheet()"><strong>${esc(logic.TEMPLATE_DEFS[key].label)}</strong><span>${esc(logic.TEMPLATE_DEFS[key].description)}</span></button>`).join('')}</div>
+    <div class="template-grid">${Object.keys(logic.TEMPLATE_DEFS).map((key) => `<button class="template-card ${selectedTemplate === key ? 'selected' : ''}" onclick="selectedTemplate='${key}';renderTemplateSheet()"><strong>${esc(logic.TEMPLATE_DEFS[key].label)}</strong><span>${esc(logic.TEMPLATE_DEFS[key].description)}</span></button>`).join('')}</div>
     <div class="preview">${renderTemplatePreview(template)}</div>
     <button class="primary" onclick="usarTemplate('replace')">${state.espacios.length ? 'Reemplazar todo' : 'Usar plantilla'}</button>
     ${state.espacios.length ? '<button class="btn" onclick="usarTemplate(&quot;append&quot;)">Agregar a existente</button>' : ''}

@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-03 13:19:59 CST (Ronda 53 — Bitacora de Produccion 2.0)
+> Última actualización: 2026-06-03 18:11:58 CST (Ronda 54 — Bitacora de Produccion 2.1 UI Campo)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -334,6 +334,21 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 54 — Bitacora de Produccion 2.1 UI Campo (2026-06-03 18:11 CST)
+
+**Cambio:** Refinamiento completo de la interfaz R53 para reducir lectura y altura, hacer visibles los riesgos y convertir Cierre/Edicion en herramientas operativas.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R54-01 | `docs/superpowers/specs/2026-06-03-bitacora-produccion-2-1-ui-design.md` | Spec aprobada del refinamiento UI/UX de campo. |
+| R54-02 | `docs/superpowers/plans/2026-06-03-bitacora-produccion-2-1-ui.md` | Plan de implementacion R54. |
+| R54-03 | `frontend/checklist.html` | Header y modos compactos, resumen orientado a riesgo, jerarquia visual de claves/amenidades, acciones semanticas, Cierre tipo semaforo, Edicion tipo timeline y onboarding con Amenidades prominente. |
+| R54-04 | Verificacion | Sintaxis valida, 10 pruebas de logica aprobadas y smoke visual movil/escritorio sin desbordes ni errores de consola. |
+
+R54 no cambia endpoints, adapter, D1 ni reglas de captura.
+
+---
 
 ### Ronda 53 — Bitacora de Produccion 2.0 (2026-06-03 13:19 CST)
 
