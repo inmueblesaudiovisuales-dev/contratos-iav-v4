@@ -227,6 +227,34 @@ export async function handleActividades(request, env, ctx, action) {
 	    return ok({ ok: true, id });
 	  }
 
+  // ── Agenda global: llamadas/actividades pendientes de todos los clientes (para pantalla Hoy) ──
+  if (action === 'listarActividadesPendientes') {
+    try {
+      const { results } = await query(db,
+        `SELECT a.id, a.cliente_id, a.trabajo_id, a.tipo, a.descripcion, a.fecha_actividad, a.hora,
+                a.estado, a.resultado, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono
+         FROM actividades a
+         LEFT JOIN clientes c ON a.cliente_id = c.id
+         WHERE a.tipo LIKE 'llamada%' AND (a.estado IS NULL OR a.estado = 'pendiente')
+         ORDER BY a.fecha_actividad ASC, a.hora ASC LIMIT 100`);
+      return ok({ ok: true, actividades: results });
+    } catch (e) {
+      // Migración r58 (columna estado) pendiente: degradar sin filtrar por estado
+      try {
+        const { results } = await query(db,
+          `SELECT a.id, a.cliente_id, a.trabajo_id, a.tipo, a.descripcion, a.fecha_actividad, a.hora,
+                  c.nombre AS cliente_nombre, c.telefono AS cliente_telefono
+           FROM actividades a
+           LEFT JOIN clientes c ON a.cliente_id = c.id
+           WHERE a.tipo LIKE 'llamada%'
+           ORDER BY a.fecha_actividad ASC, a.hora ASC LIMIT 100`);
+        return ok({ ok: true, actividades: results, degradado: true });
+      } catch (e2) {
+        return ok({ ok: true, actividades: [] });
+      }
+    }
+  }
+
   if (action === 'listarActividades') {
     const url = new URL(request.url);
     let clienteId = url.searchParams.get('clienteId');

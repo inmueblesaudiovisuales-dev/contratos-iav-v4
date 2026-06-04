@@ -1187,8 +1187,8 @@
       }
       .sidebar-gear:hover { color: var(--ink-1); }
 
-      /* Main content offset */
-      .main-content { margin-left: var(--sidebar-w); }
+      /* Main content offset — sin sidebar; nav ahora es topbar superior */
+      .main-content { margin-left: 0; }
       .contenido { padding: 24px 28px 60px; }
 
       /* Show desktop-only elements */
@@ -1230,6 +1230,156 @@
       #sec-clientes { padding-top: 24px; }
       #sec-ajustes { padding-top: 24px; }
     }
+    /* ══════════════════════════════════════════════════════════════════════
+       SHELL NUEVO (R59): topbar onyx + tabs + bottom-nav + FAB + pantalla Hoy
+       ══════════════════════════════════════════════════════════════════════ */
+    .iav-topbar {
+      position: sticky; top: 0; z-index: 80; height: 58px; padding: 0 16px;
+      background: var(--onyx, #1C1C1E); border-bottom: 1px solid var(--gold-leaf, #C9A84C);
+      display: flex; align-items: center; gap: 18px;
+    }
+    .iav-brand {
+      font-family: var(--font-display, 'Fraunces', serif); font-size: 16px; font-weight: 500;
+      color: var(--paper-0, #F7F4EC); white-space: nowrap;
+    }
+    .iav-brand .mark { color: var(--gold-leaf, #C9A84C); }
+    .iav-tabs { display: none; align-items: center; gap: 22px; height: 100%; }
+    .iav-tab {
+      position: relative; height: 100%; background: none; border: none; cursor: pointer;
+      font-family: inherit; font-size: 14px; font-weight: 600; color: rgba(255,255,255,.62); padding: 0 2px;
+    }
+    .iav-tab:hover { color: rgba(255,255,255,.9); }
+    .iav-tab.activo { color: #fff; }
+    .iav-tab.activo::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2.5px;
+      background: var(--gold-leaf, #C9A84C); border-radius: 2px;
+    }
+    .iav-topbar-spacer { flex: 1; }
+    .iav-gear-wrap { position: relative; }
+    .iav-topbar-btn {
+      height: 36px; min-width: 36px; padding: 0 10px; background: none;
+      border: 1px solid rgba(255,255,255,.18); border-radius: 8px;
+      color: rgba(255,255,255,.78); font-family: inherit; font-weight: 600; font-size: 13px;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .iav-topbar-btn:hover { color: #fff; border-color: rgba(255,255,255,.4); }
+    .iav-topbar-btn i { font-size: 18px; }
+    .iav-gear-menu {
+      display: none; position: absolute; right: 0; top: calc(100% + 8px); z-index: 90;
+      background: var(--card, #FFFDF8); border: 1px solid var(--border, #E7E2D6); border-radius: 12px;
+      box-shadow: var(--shadow-lg, 0 12px 32px rgba(0,0,0,.14)); padding: 6px; min-width: 180px;
+    }
+    .iav-gear-menu.open { display: block; }
+    .iav-gear-menu button {
+      display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+      background: none; border: none; cursor: pointer; font-family: inherit;
+      font-size: 13px; font-weight: 600; color: var(--ink-2, #4A453B); padding: 9px 10px; border-radius: 8px;
+    }
+    .iav-gear-menu button:hover { background: var(--page, #F2EEE4); color: var(--ink-1, #1C1C1E); }
+    .iav-gear-menu button i { font-size: 17px; color: var(--ink-4, #A39C8C); }
+    .iav-gear-menu hr { border: none; border-top: 1px solid var(--border, #E7E2D6); margin: 5px 2px; }
+
+    /* Bottom-nav móvil + FAB */
+    .iav-bottomnav {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+      background: var(--card, #FFFDF8); border-top: 1px solid var(--border, #E7E2D6);
+      padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+      display: flex; align-items: center; justify-content: space-around;
+    }
+    .iav-bnav {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: none; border: none; cursor: pointer; font-family: inherit;
+      color: var(--ink-3, #6B6555); font-size: 11px; font-weight: 600; padding: 4px 18px;
+    }
+    .iav-bnav i { font-size: 22px; }
+    .iav-bnav.activo { color: var(--gold, #B08D2E); }
+    .iav-fab {
+      width: 54px; height: 54px; border-radius: 50%;
+      background: var(--gold-leaf, #C9A84C); color: var(--onyx, #1C1C1E);
+      border: 3px solid var(--card, #FFFDF8); box-shadow: 0 6px 18px rgba(176,141,46,.35);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      margin-top: -22px;
+    }
+    .iav-fab i { font-size: 26px; }
+
+    /* Por defecto (móvil): bottom-nav visible, tabs ocultas */
+    .iav-bottomnav { display: flex; }
+    .iav-tabs { display: none; }
+
+    /* ── Pantalla Hoy ── */
+    #sec-hoy .hoy-head {
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+      flex-wrap: wrap; margin-bottom: 18px;
+    }
+    .hoy-saludo { font-family: var(--font-display,'Fraunces',serif); font-size: 24px; font-weight: 500; color: var(--ink-1,#1C1C1E); }
+    .hoy-cobrar { text-align: right; }
+    .hoy-cobrar-label { font-size: 11px; color: var(--ink-3,#6B6555); }
+    .hoy-cobrar-val { font-family: var(--font-mono,'Spline Sans Mono',monospace); font-size: 20px; font-weight: 600; color: var(--gold,#B08D2E); }
+    .hoy-seccion-titulo { font-size: 13px; font-weight: 700; color: var(--ink-2,#4A453B); margin: 22px 0 10px; }
+    .hoy-card {
+      display: flex; align-items: center; gap: 12px; padding: 13px 16px;
+      background: var(--card,#FFFDF8); border: 1px solid var(--border,#E7E2D6); border-radius: 12px;
+      margin-bottom: 8px; cursor: pointer; transition: border-color .15s, background .15s;
+    }
+    .hoy-card:hover { border-color: var(--gold,#B08D2E); background: var(--page,#F7F4EC); }
+    .hoy-card-hora { font-family: var(--font-mono,monospace); font-size: 13px; font-weight: 600; color: var(--ink-1,#1C1C1E); min-width: 46px; }
+    .hoy-card-main { flex: 1; min-width: 0; }
+    .hoy-card-nombre { font-size: 14px; font-weight: 600; color: var(--ink-1,#1C1C1E); }
+    .hoy-card-sub { font-size: 12px; color: var(--ink-3,#6B6555); margin-top: 1px; }
+    .hoy-card-monto { font-family: var(--font-mono,monospace); font-size: 14px; font-weight: 600; color: var(--gold,#B08D2E); }
+    .hoy-card-chev { color: var(--ink-4,#A39C8C); font-size: 18px; }
+    .hoy-card .btn-mini {
+      background: var(--gold-leaf,#C9A84C); color: var(--onyx,#1C1C1E); border: none; cursor: pointer;
+      font-family: inherit; font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 8px;
+    }
+    .hoy-card .btn-mini:hover { filter: brightness(1.05); }
+    .hoy-card .btn-mini-ghost {
+      background: none; border: 1px solid var(--border,#E7E2D6); color: var(--ink-2,#4A453B);
+      cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px;
+    }
+    .hoy-card .btn-mini-ghost:hover { border-color: var(--gold,#B08D2E); color: var(--ink-1,#1C1C1E); }
+    .hoy-vacio { font-size: 13px; color: var(--ink-3,#6B6555); padding: 10px 2px; }
+    .hoy-nuevo-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+      background: var(--gold-leaf,#C9A84C); color: var(--onyx,#1C1C1E); border: none; cursor: pointer;
+      font-family: inherit; font-size: 15px; font-weight: 700; padding: 14px; border-radius: 12px;
+      box-shadow: 0 1px 0 var(--gold,#B08D2E);
+    }
+    .hoy-nuevo-btn:hover { filter: brightness(1.04); }
+    .hoy-nuevo-btn i { font-size: 20px; }
+
+    /* Film-strip (radar de sesiones) */
+    .hoy-filmstrip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+    .hoy-frame {
+      position: relative; flex: 0 0 auto; min-width: 132px; background: var(--card,#FFFDF8);
+      border: 1px solid var(--border,#E7E2D6); border-radius: 10px; padding: 14px 12px; cursor: pointer;
+      transition: transform .15s, border-color .15s;
+    }
+    .hoy-frame::before, .hoy-frame::after {
+      content: ''; position: absolute; left: 6px; right: 6px; height: 4px;
+      background-image: repeating-linear-gradient(90deg, var(--page,#F2EEE4) 0 4px, transparent 4px 10px);
+    }
+    .hoy-frame::before { top: 4px; } .hoy-frame::after { bottom: 4px; }
+    .hoy-frame:hover { transform: translateY(-2px); border-color: var(--gold,#B08D2E); }
+    .hoy-frame-dow { font-size: 11px; color: var(--ink-3,#6B6555); }
+    .hoy-frame-day { font-family: var(--font-display,'Fraunces',serif); font-size: 20px; font-weight: 500; line-height: 1; margin-bottom: 6px; }
+    .hoy-frame-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hoy-frame-meta { font-size: 11px; color: var(--ink-3,#6B6555); margin-top: 2px; }
+    .hoy-frame.hoy-frame-today { border-color: var(--gold-leaf,#C9A84C); box-shadow: 0 0 0 1px var(--gold,#B08D2E); }
+    .hoy-frame.hoy-frame-today .hoy-frame-day { color: var(--gold,#B08D2E); }
+    .hoy-frame .hoy-pulse {
+      position: absolute; top: 10px; right: 10px; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--gold-leaf,#C9A84C); animation: iav-breathe 3.5s ease-in-out infinite;
+    }
+    @keyframes iav-breathe { 0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,.5)} 50%{box-shadow:0 0 0 7px rgba(201,168,76,0)} }
+    @media (prefers-reduced-motion: reduce){ .hoy-frame .hoy-pulse { animation: none; } }
+
+    /* Desktop: muestra tabs en topbar, oculta bottom-nav */
+    @media (min-width: 1024px) {
+      .iav-tabs { display: flex; }
+      .iav-bottomnav { display: none; }
+      .main-content { padding-bottom: 0; }
+    }
   </style>
 </head>
 <body>
@@ -1260,103 +1410,36 @@
 <div id="pantalla-admin">
     <!-- Dropdown de autocomplete — se posiciona por JS -->
     <div id="ac-dropdown" class="ac-dropdown" style="display:none"></div>
-  <!-- Mobile topbar (hidden on desktop) -->
-  <div class="mobile-topbar">
-    <button class="hamburger-btn" id="btn-hamburger" onclick="abrirSideMenu()" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
-    <span class="topbar-title" id="topbar-section-title">Contratos</span>
-    <button class="btn-nuevo-mobile" onclick="irANuevo()" aria-label="Nuevo contrato">
-      <i class="ti ti-plus"></i>
-    </button>
-  </div>
-
-  <!-- Nav — bottom en mobile, sidebar izquierda en desktop -->
-  <!-- Desktop sidebar (hidden on mobile) -->
-  <nav id="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-icon"><span>IAV</span></div>
-      <div>
-        <div class="sidebar-logo-name">Inmuebles<br>Audiovisuales</div>
-      </div>
-    </div>
-    <div class="sidebar-section-label">Menu</div>
-    <button class="sidebar-item activo" data-tab="trabajos" onclick="mostrarTab('trabajos', this)">
-      <div class="sidebar-indicator"></div>
-      <i class="ti ti-file-text sidebar-icon"></i>
-      <span class="sidebar-label">Trabajos</span>
-      <span class="sidebar-badge" id="bnav-badge-trabajos" style="display:none"></span>
-    </button>
-    <button class="sidebar-item" data-tab="clientes" onclick="mostrarTab('clientes', this)">
-      <div class="sidebar-indicator"></div>
-      <i class="ti ti-users sidebar-icon"></i>
-      <span class="sidebar-label">Clientes</span>
-      <span class="sidebar-badge" id="bnav-badge-clientes" style="display:none"></span>
-    </button>
-    <div class="sidebar-section-label" style="margin-top:12px">Gestión</div>
-    <button class="sidebar-item" data-tab="metricas" onclick="irAMetricas(this)">
-      <div class="sidebar-indicator"></div>
-      <i class="ti ti-chart-bar sidebar-icon"></i>
-      <span class="sidebar-label">Métricas</span>
-    </button>
-    <button class="sidebar-item" data-tab="paquetes" onclick="irAPaquetes(this)">
-      <div class="sidebar-indicator"></div>
-      <i class="ti ti-package sidebar-icon"></i>
-      <span class="sidebar-label">Paquetes</span>
-    </button>
-    <div class="sidebar-footer">
-      <div class="sidebar-avatar"><span>IA</span></div>
-      <div>
-        <div class="sidebar-user-name">Admin IAV</div>
-        <div class="sidebar-user-role">Administrador</div>
-      </div>
-      <button class="sidebar-gear" onclick="cerrarSesion()" title="Cerrar sesión">
-        <i class="ti ti-logout"></i>
+  <!-- Topbar onyx: marca · tabs (desktop) · ajustes/salir -->
+  <header class="iav-topbar">
+    <span class="iav-brand">Inmuebles <span class="mark">Audiovisuales</span></span>
+    <nav class="iav-tabs" id="iav-tabs">
+      <button class="iav-tab activo" data-tab="hoy" onclick="mostrarTab('hoy', this)">Hoy</button>
+      <button class="iav-tab" data-tab="trabajos" onclick="mostrarTab('trabajos', this)">Contratos</button>
+      <button class="iav-tab" data-tab="clientes" onclick="mostrarTab('clientes', this)">Clientes</button>
+    </nav>
+    <span class="iav-topbar-spacer"></span>
+    <div class="iav-gear-wrap">
+      <button class="iav-topbar-btn" onclick="toggleGearMenu(event)" title="Más" aria-label="Más opciones">
+        <i class="ti ti-dots"></i>
       </button>
-    </div>
-  </nav>
-
-  <!-- Mobile side menu -->
-  <div id="side-menu">
-    <div class="sm-brand">
-      <div class="sm-brand-name">Inmuebles Audiovisuales</div>
-      <div class="sm-brand-sub">Panel de administracion</div>
-    </div>
-    <button class="sm-nav-item activo" data-tab="trabajos" onclick="cerrarSideMenu();mostrarTab('trabajos',this)">
-      <div class="sm-indicator"></div>
-      <i class="ti ti-file-text sm-nav-icon"></i>
-      <span class="sm-nav-label">Trabajos</span>
-      <span class="sm-nav-badge" id="sm-badge-trabajos" style="display:none"></span>
-    </button>
-    <button class="sm-nav-item" data-tab="clientes" onclick="cerrarSideMenu();mostrarTab('clientes',this)">
-      <div class="sm-indicator"></div>
-      <i class="ti ti-users sm-nav-icon"></i>
-      <span class="sm-nav-label">Clientes</span>
-    </button>
-    <button class="sm-nav-item" data-tab="metricas" onclick="cerrarSideMenu();irAMetricas(this)">
-      <div class="sm-indicator"></div>
-      <i class="ti ti-chart-bar sm-nav-icon"></i>
-      <span class="sm-nav-label">Métricas</span>
-    </button>
-    <button class="sm-nav-item" data-tab="paquetes" onclick="cerrarSideMenu();irAPaquetes(this)">
-      <div class="sm-indicator"></div>
-      <i class="ti ti-package sm-nav-icon"></i>
-      <span class="sm-nav-label">Paquetes</span>
-    </button>
-    <div class="sm-footer">
-      <div class="sm-user">
-        <div class="sm-user-avatar"><span>IA</span></div>
-        <div>
-          <div class="sm-user-name">Admin IAV</div>
-          <div class="sm-user-role">Administrador</div>
-        </div>
-        <button class="sm-logout-btn" onclick="cerrarSesion()" title="Salir">
-          <i class="ti ti-logout"></i>
-        </button>
+      <div class="iav-gear-menu" id="iav-gear-menu">
+        <button data-tab="clientes" onclick="cerrarGearMenu();mostrarTab('clientes')"><i class="ti ti-users"></i> Clientes</button>
+        <button onclick="cerrarGearMenu();irAMetricas()"><i class="ti ti-chart-bar"></i> Métricas</button>
+        <button onclick="cerrarGearMenu();irAPaquetes()"><i class="ti ti-package"></i> Paquetes</button>
+        <button onclick="cerrarGearMenu();irAAjustes()"><i class="ti ti-settings"></i> Ajustes</button>
+        <hr>
+        <button onclick="cerrarSesion()"><i class="ti ti-logout"></i> Salir</button>
       </div>
     </div>
-  </div>
-  <div id="side-menu-overlay" onclick="cerrarSideMenu()"></div>
+  </header>
+
+  <!-- Bottom-nav móvil: Hoy · (+ FAB) · Contratos -->
+  <nav class="iav-bottomnav">
+    <button class="iav-bnav activo" data-tab="hoy" onclick="mostrarTab('hoy', this)"><i class="ti ti-home-2"></i><span>Hoy</span></button>
+    <button class="iav-fab" onclick="irANuevo()" aria-label="Nuevo contrato"><i class="ti ti-plus"></i></button>
+    <button class="iav-bnav" data-tab="trabajos" onclick="mostrarTab('trabajos', this)"><i class="ti ti-file-text"></i><span>Contratos</span></button>
+  </nav>
 
 
   <!-- Barra flotante de selección masiva — TEMPORAL para pruebas -->
@@ -1369,15 +1452,33 @@
   <div class="main-content">
   <div class="contenido">
 
-    <!-- ── TRABAJOS ──────────────────────────────────── -->
-    <div id="sec-trabajos" class="seccion activa">
-
-      <!-- Sub-tabs de trabajos -->
-      <div class="subtab-strip" id="trabajos-subtabs">
-        <button class="subtab-btn activo" data-grupo="confirmados" onclick="cambiarGrupoTrabajos('confirmados',this)">Confirmados</button>
-        <button class="subtab-btn" data-grupo="por_firmar" onclick="cambiarGrupoTrabajos('por_firmar',this)">Por firmar</button>
-        <button class="subtab-btn" data-grupo="prospectos" onclick="cambiarGrupoTrabajos('prospectos',this)">Prospectos</button>
+    <!-- ── HOY ───────────────────────────────────────── -->
+    <div id="sec-hoy" class="seccion activa">
+      <div class="hoy-head">
+        <div class="hoy-saludo" id="hoy-saludo">Hoy</div>
+        <div class="hoy-cobrar">
+          <div class="hoy-cobrar-label">Por cobrar</div>
+          <div class="hoy-cobrar-val" id="hoy-cobrar-val">—</div>
+        </div>
       </div>
+
+      <button class="hoy-nuevo-btn" onclick="irANuevo()"><i class="ti ti-plus"></i> Nuevo contrato</button>
+
+      <div class="hoy-seccion-titulo">Sesiones de la semana</div>
+      <div id="hoy-sesiones"><div class="hoy-vacio">Cargando…</div></div>
+
+      <div class="hoy-seccion-titulo">Llamadas de hoy</div>
+      <div id="hoy-llamadas"><div class="hoy-vacio">Cargando…</div></div>
+
+      <div class="hoy-seccion-titulo">Por cobrar</div>
+      <div id="hoy-porcobrar"><div class="hoy-vacio">Cargando…</div></div>
+
+      <div class="hoy-seccion-titulo">Radar de sesiones</div>
+      <div class="hoy-filmstrip" id="hoy-filmstrip"></div>
+    </div>
+
+    <!-- ── CONTRATOS ─────────────────────────────────── -->
+    <div id="sec-trabajos" class="seccion">
 
 
       <!-- Toolbar -->
@@ -1423,7 +1524,7 @@
               <i class="ti ti-dots"></i>
             </button>
             <div class="toolbar-menu-dropdown" id="toolbar-menu-dropdown">
-              <button class="toolbar-menu-item" onclick="cargarTrabajos();cerrarToolbarMenu()">
+              <button class="toolbar-menu-item" onclick="cargarContratos();cerrarToolbarMenu()">
                 <i class="ti ti-refresh"></i> Actualizar
               </button>
               <button class="toolbar-menu-item" onclick="descargarCSV();cerrarToolbarMenu()">
@@ -2144,7 +2245,13 @@ function _entrarAdmin(tokenInicial) {
   document.getElementById('pantalla-admin').style.display = 'block';
   if (history.replaceState) history.replaceState({}, '', location.pathname);
   cargarPaquetes();
-  cargarTrabajos(tokenInicial);
+  if (tokenInicial) {
+    // Deep-link a un contrato: abre Contratos y el panel
+    mostrarTab('trabajos');
+    cargarContratos(tokenInicial);
+  } else {
+    mostrarTab('hoy');
+  }
   cargarClientesParaAutocomplete();
 }
 
@@ -2186,26 +2293,18 @@ document.getElementById('input-pw').addEventListener('keydown', e => { if (e.key
 
 function mostrarTab(id, btn) {
   document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
-  // Deactivate sidebar items
-  document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('activo'));
-  // Deactivate side menu items
-  document.querySelectorAll('.sm-nav-item').forEach(b => b.classList.remove('activo'));
   // Activate the target section
   var sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('activa');
-  // Mark caller active (sidebar or side menu item)
-  if (btn) btn.classList.add('activo');
-  // Sync the opposite nav element
-  var sidebarBtn = document.querySelector('#sidebar .sidebar-item[data-tab="' + id + '"]');
-  if (sidebarBtn) sidebarBtn.classList.add('activo');
-  var smBtn = document.querySelector('#side-menu .sm-nav-item[data-tab="' + id + '"]');
-  if (smBtn) smBtn.classList.add('activo');
-  // Update mobile topbar title
-  var titles = { trabajos: 'Trabajos', clientes: 'Clientes', ajustes: 'Ajustes', nuevo: 'Nuevo contrato', metricas: 'Métricas', paquetes: 'Paquetes' };
-  var titleEl = document.getElementById('topbar-section-title');
-  if (titleEl && titles[id]) titleEl.textContent = titles[id];
+  // Sincroniza estado activo de las tabs (topbar) y bottom-nav.
+  // 'nuevo'/'ajustes' no tienen entrada propia en el nav → resaltamos su contexto.
+  var navId = (id === 'nuevo') ? 'trabajos' : id;
+  document.querySelectorAll('.iav-tab, .iav-bnav').forEach(function(b) {
+    b.classList.toggle('activo', b.getAttribute('data-tab') === navId);
+  });
   // Trigger data loads
-  if (id === 'trabajos') cargarTrabajos();
+  if (id === 'hoy') cargarHoy();
+  if (id === 'trabajos') cargarContratos();
   if (id === 'clientes') cargarClientes();
   if (id === 'ajustes') {
     var paneActivo = document.querySelector('.ajustes-pane.activo-apane');
@@ -2213,16 +2312,38 @@ function mostrarTab(id, btn) {
     else cargarMetricas();
   }
   if (id === 'nuevo') cargarClientesParaAutocomplete();
+  // Cierra el menú de opciones del topbar si quedó abierto
+  cerrarGearMenu();
 }
 
+// ── Menú de opciones del topbar (⋯) ──
+function toggleGearMenu(ev) {
+  if (ev) ev.stopPropagation();
+  var menu = document.getElementById('iav-gear-menu');
+  if (menu) menu.classList.toggle('open');
+}
+function cerrarGearMenu() {
+  var menu = document.getElementById('iav-gear-menu');
+  if (menu) menu.classList.remove('open');
+}
+document.addEventListener('click', function(e) {
+  var wrap = document.querySelector('.iav-gear-wrap');
+  if (wrap && !wrap.contains(e.target)) cerrarGearMenu();
+});
+
 function irAMetricas(btn) {
-  mostrarTab('ajustes', btn || document.querySelector('.sidebar-item[data-tab="metricas"]'));
+  mostrarTab('ajustes');
   setAjustesTab('metricas');
 }
 
 function irAPaquetes(btn) {
-  mostrarTab('ajustes', btn || document.querySelector('.sidebar-item[data-tab="paquetes"]'));
+  mostrarTab('ajustes');
   setAjustesTab('paquetes');
+}
+
+function irAAjustes() {
+  mostrarTab('ajustes');
+  setAjustesTab('bancarios');
 }
 
 function setAjustesTab(pane) {
@@ -2666,6 +2787,179 @@ async function cargarContratos(tokenInicial) {
   }
   _cargandoContratos = false;
   loadStatsBar();
+}
+
+// ══ PANTALLA HOY (R59) ════════════════════════════════════════════════════════
+async function cargarHoy() {
+  var saludoEl = document.getElementById('hoy-saludo');
+  if (saludoEl) saludoEl.textContent = 'Hoy es ' + fmxnFechaLarga(fechaLocalISO());
+
+  // Asegura contratos cargados (sin pisar el skeleton de la tabla de Contratos)
+  var lista = todosContratos;
+  if (!lista || !lista.length) {
+    try {
+      var dataC = await apiGet({ action: 'listarContratos' });
+      if (dataC && dataC.ok) { todosContratos = dataC.contratos || []; }
+    } catch (e) { /* degrada */ }
+    lista = todosContratos || [];
+  }
+
+  var hoyStr = fechaLocalISO();
+  var en7Str = fechaLocalISO(new Date(Date.now() + 7 * 86400000));
+  var abiertos = lista.filter(function(c) { return ESTATUS_ABIERTOS.includes(c.Estatus); });
+
+  // Por cobrar (total)
+  var totalCobrar = abiertos.reduce(function(s, c) { return s + (parseFloat(c.SaldoPendiente) || 0); }, 0);
+  var cobrarEl = document.getElementById('hoy-cobrar-val');
+  if (cobrarEl) cobrarEl.textContent = fmxn(totalCobrar);
+
+  // Sesiones de la semana (hoy..+7)
+  var sesiones = lista.filter(function(c) {
+    var fs = c.FechaSesion ? String(c.FechaSesion).substring(0, 10) : '';
+    return fs && fs >= hoyStr && fs <= en7Str && c.Estatus !== 'Cancelado';
+  }).sort(function(a, b) {
+    return String(a.FechaSesion).localeCompare(String(b.FechaSesion)) ||
+           String(a.HoraSesion || '').localeCompare(String(b.HoraSesion || ''));
+  });
+  renderHoySesiones(sesiones, hoyStr);
+  renderHoyFilmstrip(sesiones, hoyStr);
+
+  // Por cobrar (lista)
+  var porCobrar = abiertos.filter(function(c) { return (parseFloat(c.SaldoPendiente) || 0) > 0; })
+    .sort(function(a, b) { return (parseFloat(b.SaldoPendiente) || 0) - (parseFloat(a.SaldoPendiente) || 0); });
+  renderHoyPorCobrar(porCobrar);
+
+  // Llamadas de hoy (backend, degrada con gracia)
+  cargarHoyLlamadas(hoyStr);
+}
+
+function renderHoySesiones(lista, hoyStr) {
+  var cont = document.getElementById('hoy-sesiones');
+  if (!cont) return;
+  if (!lista.length) { cont.innerHTML = '<div class="hoy-vacio">Sin sesiones en los próximos 7 días.</div>'; return; }
+  var DOW = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  cont.innerHTML = lista.map(function(c) {
+    var fs = String(c.FechaSesion).substring(0, 10);
+    var d = new Date(fs + 'T12:00:00');
+    var etiqueta = fs === hoyStr ? 'hoy' : (DOW[d.getDay()] + ' ' + d.getDate());
+    var hora = c.HoraSesion || '';
+    var sub = [etiqueta, c.PaqueteBase].filter(Boolean).join(' · ');
+    return '<div class="hoy-card" onclick="abrirPanel(' + jsArg(c.Token) + ')">' +
+      '<span class="hoy-card-hora">' + esc(hora || '—') + '</span>' +
+      '<div class="hoy-card-main">' +
+        '<div class="hoy-card-nombre">' + esc(c.NombreCliente || '—') + '</div>' +
+        '<div class="hoy-card-sub">' + esc(sub) + '</div>' +
+      '</div>' +
+      '<i class="ti ti-chevron-right hoy-card-chev"></i>' +
+    '</div>';
+  }).join('');
+}
+
+function renderHoyPorCobrar(lista) {
+  var cont = document.getElementById('hoy-porcobrar');
+  if (!cont) return;
+  if (!lista.length) { cont.innerHTML = '<div class="hoy-vacio">Nada por cobrar. Todo al corriente.</div>'; return; }
+  cont.innerHTML = lista.slice(0, 12).map(function(c) {
+    var saldo = parseFloat(c.SaldoPendiente) || 0;
+    return '<div class="hoy-card" onclick="abrirPanel(' + jsArg(c.Token) + ')">' +
+      '<div class="hoy-card-main">' +
+        '<div class="hoy-card-nombre">' + esc(c.NombreCliente || '—') + '</div>' +
+        '<div class="hoy-card-sub">' + esc(c.Folio || '') + '</div>' +
+      '</div>' +
+      '<span class="hoy-card-monto">' + fmxn(saldo) + '</span>' +
+      '<button class="btn-mini" onclick="cobrarWhatsApp(' + jsArg(c.Token) + ', event)">Cobrar</button>' +
+      '<i class="ti ti-chevron-right hoy-card-chev"></i>' +
+    '</div>';
+  }).join('');
+}
+
+function renderHoyFilmstrip(lista, hoyStr) {
+  var cont = document.getElementById('hoy-filmstrip');
+  if (!cont) return;
+  if (!lista.length) { cont.innerHTML = '<div class="hoy-vacio">Sin sesiones próximas.</div>'; return; }
+  var DOW = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  cont.innerHTML = lista.map(function(c) {
+    var fs = String(c.FechaSesion).substring(0, 10);
+    var d = new Date(fs + 'T12:00:00');
+    var esHoy = fs === hoyStr;
+    return '<div class="hoy-frame ' + (esHoy ? 'hoy-frame-today' : '') + '" onclick="abrirPanel(' + jsArg(c.Token) + ')">' +
+      (esHoy ? '<span class="hoy-pulse"></span>' : '') +
+      '<div class="hoy-frame-dow">' + (esHoy ? 'hoy' : DOW[d.getDay()]) + '</div>' +
+      '<div class="hoy-frame-day">' + d.getDate() + '</div>' +
+      '<div class="hoy-frame-name">' + esc((c.NombreCliente || '—').split(' ').slice(0, 2).join(' ')) + '</div>' +
+      '<div class="hoy-frame-meta">' + esc(c.HoraSesion || c.PaqueteBase || '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function cargarHoyLlamadas(hoyStr) {
+  var cont = document.getElementById('hoy-llamadas');
+  if (!cont) return;
+  try {
+    var r = await apiGet({ action: 'listarActividadesPendientes' });
+    var acts = (r && r.actividades) ? r.actividades : [];
+    // Solo hoy o atrasadas
+    var hoyActs = acts.filter(function(a) {
+      var f = a.fecha_actividad ? String(a.fecha_actividad).substring(0, 10) : '';
+      return f && f <= hoyStr;
+    });
+    if (!hoyActs.length) { cont.innerHTML = '<div class="hoy-vacio">Sin llamadas pendientes para hoy.</div>'; return; }
+    cont.innerHTML = hoyActs.map(function(a) {
+      var hora = a.hora || '';
+      var nombre = a.cliente_nombre || 'Cliente';
+      var nota = a.descripcion || '';
+      return '<div class="hoy-card" style="cursor:default">' +
+        '<span class="hoy-card-hora">' + esc(hora || '—') + '</span>' +
+        '<div class="hoy-card-main">' +
+          '<div class="hoy-card-nombre">' + esc(nombre) + '</div>' +
+          (nota ? '<div class="hoy-card-sub">' + esc(nota) + '</div>' : '') +
+        '</div>' +
+        (a.cliente_telefono ? '<a class="btn-mini-ghost" href="https://wa.me/' + esc(normalizarTelWA(a.cliente_telefono)) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="ti ti-brand-whatsapp"></i></a>' : '') +
+        '<button class="btn-mini" onclick="marcarLlamadaHecha(' + jsArg(a.id) + ', this)">Hecha</button>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    cont.innerHTML = '<div class="hoy-vacio">No se pudieron cargar las llamadas.</div>';
+  }
+}
+
+async function marcarLlamadaHecha(actividadId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    var r = await apiPost({ action: 'marcarActividad', actividadId: actividadId, estado: 'hecha', resultado: '' });
+    if (r && r.ok) {
+      var card = btn && btn.closest('.hoy-card');
+      if (card) card.remove();
+      var cont = document.getElementById('hoy-llamadas');
+      if (cont && !cont.querySelector('.hoy-card')) cont.innerHTML = '<div class="hoy-vacio">Sin llamadas pendientes para hoy.</div>';
+    } else if (btn) { btn.disabled = false; btn.textContent = 'Hecha'; }
+  } catch (e) { if (btn) { btn.disabled = false; btn.textContent = 'Hecha'; } }
+}
+
+async function cobrarWhatsApp(token, ev) {
+  if (ev) ev.stopPropagation();
+  var c = (todosContratos || []).find(function(x) { return x.Token === token; });
+  if (!c) return;
+  if (!_configCache || !_configCache.wa_cobro || !_configCache.banco_clabe) {
+    try {
+      var r = await apiGet({ action: 'obtenerConfigAdmin' });
+      if (r && r.config) _configCache = Object.assign({}, _configCache, r.config);
+    } catch (e) { /* degrada con defaults */ }
+  }
+  var plantilla = (_configCache && _configCache.wa_cobro) || WA_DEFAULTS.wa_cobro;
+  var saldo = fmxn(parseFloat(c.SaldoPendiente) || 0);
+  var link = PORTAL_BASE + '?token=' + encodeURIComponent(c.Token);
+  var primerNombre = (c.NombreCliente || '').split(' ')[0] || c.NombreCliente || '';
+  var msg = plantilla
+    .replace(/{nombre}/g, primerNombre)
+    .replace(/{saldo}/g, saldo)
+    .replace(/{clabe}/g, (_configCache && _configCache.banco_clabe) || '')
+    .replace(/{banco}/g, (_configCache && _configCache.banco_nombre) || '')
+    .replace(/{titular}/g, (_configCache && _configCache.banco_titular) || '')
+    .replace(/{link}/g, link);
+  var tel = normalizarTelWA(c.TelefonoCliente);
+  if (!tel) { abrirPanel(token); return; }
+  window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 function setCiclo(ciclo) {
@@ -5728,7 +6022,7 @@ function toggleContratosCliente(id, btn) {
 }
 
 function irAContratoDesdeCliente(token) {
-  mostrarTab('trabajos', document.querySelector('.sidebar-item[data-tab="trabajos"]'));
+  mostrarTab('trabajos');
   setTimeout(function() { abrirPanel(token); }, 120);
 }
 
