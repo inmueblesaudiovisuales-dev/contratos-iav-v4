@@ -1671,39 +1671,22 @@
   <div class="sec-clientes-header">
     <div>
       <div class="sec-clientes-titulo">Clientes</div>
-      <div class="sec-clientes-sub">Pipeline de ventas y seguimiento</div>
+      <div class="sec-clientes-sub">Directorio y seguimiento</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn-secundario btn-sm" onclick="cargarClientes()" title="Actualizar"><i class="ti ti-refresh"></i></button>
-      <button class="btn-secundario btn-sm" onclick="abrirModalTrabajo()"><i class="ti ti-plus"></i> Nuevo trabajo</button>
+      <button class="btn-secundario btn-sm" onclick="abrirModalLlamada()"><i class="ti ti-phone-plus"></i> Agendar llamada</button>
       <button class="btn-primario gold btn-sm" onclick="abrirModalCliente()"><i class="ti ti-user-plus"></i> Nuevo cliente</button>
     </div>
   </div>
 
-  <div class="clientes-grid">
-    <!-- Pipeline activo -->
-    <div class="clientes-col-pipeline">
-      <div class="sec-sublabel">Pipeline activo</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="pipeline-chips">
-        <button class="filter-chip on" data-estatus="todos" onclick="filtrarPipeline(this)">Todos</button>
-        <button class="filter-chip" data-estatus="Nuevo" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#7D3C98"></span>Nuevo</button>
-        <button class="filter-chip" data-estatus="En cotizacion" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#F59E0B"></span>En cotización</button>
-      </div>
-      <div id="pipeline-lista">
-        <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
-      </div>
+  <!-- Directorio único de clientes (sin pipeline separado: un lead es un cliente con trabajo abierto) -->
+  <div class="clientes-lista-wrap" style="max-width:720px">
+    <div style="position:relative;margin-bottom:12px">
+      <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:14px;pointer-events:none"></i>
+      <input type="text" id="clientes-search" placeholder="Buscar por nombre o teléfono…" oninput="filtrarListaClientes()" style="padding-left:34px;font-size:13px;width:100%">
     </div>
-
-    <!-- Todos los clientes -->
-    <div class="clientes-col-lista">
-      <div class="sec-sublabel">Todos los clientes</div>
-      <div style="position:relative;margin-bottom:12px">
-        <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:14px;pointer-events:none"></i>
-        <input type="text" id="clientes-search" placeholder="Buscar por nombre o teléfono…" oninput="filtrarListaClientes()" style="padding-left:34px;font-size:13px;width:100%">
-      </div>
-      <div id="clientes-lista">
-        <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
-      </div>
+    <div id="clientes-lista">
+      <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
     </div>
   </div>
 
@@ -1756,6 +1739,31 @@
       <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
         <button class="btn-primario gold" style="flex:1;justify-content:center" onclick="guardarNuevoCliente()"><i class="ti ti-user-plus"></i> Crear cliente</button>
         <span id="cli-msg" style="font-size:12px;line-height:1.3;max-width:120px"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Agendar llamada rápida (R59 · 5.x) -->
+  <div id="modal-llamada" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:900;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:700;color:var(--ink-1)">Agendar llamada</div>
+        <button onclick="cerrarModalLlamada()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="llamada-cliente-banner" style="display:none;background:rgba(201,168,76,0.1);border:1.5px solid rgba(201,168,76,0.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--gold-text,#8a6a00)">
+        Cliente: <strong id="llamada-cliente-nombre-banner"></strong>
+      </div>
+      <div class="campo" id="llamada-nombre-campo"><label>Nombre del cliente</label><input type="text" id="llamada-nombre" placeholder="Nombre o prospecto"></div>
+      <div class="campo" id="llamada-tel-campo"><label>Teléfono</label><input type="tel" id="llamada-telefono" placeholder="81 1234 5678"></div>
+      <div class="fila-2">
+        <div class="campo"><label>Fecha *</label><input type="date" id="llamada-fecha"></div>
+        <div class="campo"><label>Hora</label><input type="time" id="llamada-hora" value="10:00"></div>
+      </div>
+      <div class="campo"><label>Tema / nota</label><textarea id="llamada-nota" rows="2" placeholder="Ej: cerrar paquete residencial" style="resize:vertical;font-size:13px"></textarea></div>
+      <input type="hidden" id="llamada-cliente-id">
+      <div style="margin-top:8px;display:flex;gap:10px;align-items:center">
+        <button class="btn-primario gold" style="flex:1;justify-content:center" onclick="guardarLlamadaRapida()"><i class="ti ti-phone-plus"></i> Agendar</button>
+        <span id="llamada-msg" style="font-size:12px;line-height:1.3;max-width:120px"></span>
       </div>
     </div>
   </div>
@@ -3717,66 +3725,177 @@ function renderPanelCliente(data) {
   var _pab  = document.getElementById('panel-action-bar');
   if (_pab) _pab.innerHTML =
     '<div class="panel-action-bar" style="flex-direction:row;gap:8px">' +
-    '<button class="panel-action-btn primary" style="flex:1;justify-content:center" onclick="abrirModalTrabajo('+jsArg(c.id)+')">' +
-      '<i class="ti ti-calendar-plus"></i> Nuevo trabajo</button>' +
+    '<button class="panel-action-btn primary" style="flex:1;justify-content:center" onclick="recontratarCliente('+[c.id,c.nombre,c.telefono,c.correo].map(jsArg).join(',')+')">' +
+      '<i class="ti ti-file-plus"></i> Recontratar</button>' +
+    '<button class="panel-action-btn" style="flex:1;justify-content:center" onclick="abrirModalLlamada('+jsArg(c.id)+')">' +
+      '<i class="ti ti-phone-plus"></i> Llamada</button>' +
     (waNum ? '<a class="panel-action-btn wa" style="flex:1;justify-content:center;text-align:center" href="https://wa.me/'+esc(waNum)+'" target="_blank" rel="noopener">' +
       '<i class="ti ti-brand-whatsapp"></i> WhatsApp</a>' : '') +
     '</div>';
 
-  // Pane trabajos
-  var pInfo = document.getElementById('pane-info');
-  if (!trabajos.length) {
-    pInfo.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Sin trabajos registrados.</p>';
-  } else {
-    var html = '<div style="display:flex;flex-direction:column;gap:10px">';
-    trabajos.forEach(function(t) {
-      var color = TRAB_ESTATUS_COLORS[t.estatus] || '#aaa';
-      var label = TRAB_ESTATUS_LABELS[t.estatus] || t.estatus;
-      var intStr = INTERES_LABELS[t.interes] || '';
-      var fechaStr = t.fecha_creacion ? fmxnFecha(t.fecha_creacion.substring(0,10)) : '';
-      html += '<div style="border:1.5px solid var(--border);border-radius:8px;overflow:hidden">';
-      html += '<div style="height:3px;background:'+color+'"></div>';
-      html += '<div style="padding:10px 12px">';
-      html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">';
-      html += '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'18;border-radius:20px;padding:2px 9px">'+esc(label)+'</span>';
-      if (intStr) html += '<span style="font-size:11px;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00);border-radius:20px;padding:2px 9px">'+esc(intStr)+'</span>';
-      if (fechaStr) html += '<span style="font-size:11px;color:var(--ink-3)">'+esc(fechaStr)+'</span>';
-      html += '</div>';
-      if (t.notas) html += '<div style="font-size:12px;color:var(--ink-2);white-space:pre-wrap;line-height:1.5;margin-bottom:8px">'+esc(t.notas)+'</div>';
-      html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
-      if (!t.contrato_token && t.estatus !== 'Cancelado') {
-        html += '<button onclick="crearContratoDesdeWork('+[t.id,c.nombre,c.id,c.telefono,c.correo].map(jsArg).join(',')+')" style="font-size:11px;background:var(--gold);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#1a1000;font-weight:600"><i class="ti ti-file-plus" style="font-size:10px"></i> Crear contrato</button>';
-      }
-      if (t.contrato_token) {
-        html += '<button onclick="irAContratoDesdeCliente('+jsArg(t.contrato_token)+')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-2)"><i class="ti ti-external-link" style="font-size:10px"></i> Ver contrato</button>';
-      }
-      html += '</div>';
-      html += '</div></div>';
-    });
-    html += '</div>';
-    pInfo.innerHTML = html;
-  }
-
-  // Pane contratos
+  // ── PANE CONTRATOS (historial — primero por el orden de scroll) ──
   var pPagos = document.getElementById('pane-pagos');
+  var html2 = '<div class="panel-sec-head">Contratos</div>';
   if (!contratos.length) {
-    pPagos.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Sin contratos.</p>';
+    html2 += '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Sin contratos todavía.</p>';
   } else {
-    var html2 = '<div style="display:flex;flex-direction:column;gap:8px">';
+    html2 += '<div style="display:flex;flex-direction:column;gap:8px">';
     contratos.forEach(function(ct) {
       var _em2 = ESTATUS_MAP[ct.estatus] || { bg:'#F3F4F6', color:'#374151' };
-      var bs = { bg: _em2.bg, color: _em2.color };
       html2 += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">';
-      html2 += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:monospace;min-width:48px">'+(ct.folio||'—')+'</span>';
-      html2 += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+bs.bg+';color:'+bs.color+'">'+esc(ct.estatus)+'</span>';
-      if (ct.saldo_pendiente > 0) html2 += '<span style="font-size:11px;color:var(--red,#c0392b);margin-left:auto">$'+Math.round(ct.saldo_pendiente).toLocaleString()+' pendiente</span>';
+      html2 += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:var(--font-mono,monospace);min-width:48px">'+(ct.folio||'—')+'</span>';
+      html2 += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+_em2.bg+';color:'+_em2.color+'">'+esc(ct.estatus)+'</span>';
+      if (ct.saldo_pendiente > 0) html2 += '<span style="font-size:11px;color:var(--warn);margin-left:auto">$'+Math.round(ct.saldo_pendiente).toLocaleString()+' pendiente</span>';
       else html2 += '<span style="font-size:11px;color:var(--ink-3);margin-left:auto">$'+Math.round(ct.precio_total||0).toLocaleString()+'</span>';
       html2 += '<button onclick="irAContratoDesdeCliente('+jsArg(ct.token)+')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
       html2 += '</div>';
     });
     html2 += '</div>';
-    pPagos.innerHTML = html2;
   }
+  pPagos.innerHTML = html2;
+
+  // ── PANE INFO: Actividades + Lo cotizado + Archivos ──
+  var pInfo = document.getElementById('pane-info');
+  var cotizadoHtml = '';
+  if (trabajos.length) {
+    cotizadoHtml = '<details class="panel-acord"><summary>Lo cotizado</summary><div class="panel-acord-body"><div style="display:flex;flex-direction:column;gap:10px">';
+    trabajos.forEach(function(t) {
+      var color = TRAB_ESTATUS_COLORS[t.estatus] || '#aaa';
+      var label = TRAB_ESTATUS_LABELS[t.estatus] || t.estatus;
+      var intStr = INTERES_LABELS[t.interes] || '';
+      var fechaStr = t.fecha_creacion ? fmxnFecha(t.fecha_creacion.substring(0,10)) : '';
+      cotizadoHtml += '<div style="border:1.5px solid var(--border);border-radius:8px;overflow:hidden"><div style="height:3px;background:'+color+'"></div><div style="padding:10px 12px">';
+      cotizadoHtml += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">';
+      cotizadoHtml += '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'18;border-radius:20px;padding:2px 9px">'+esc(label)+'</span>';
+      if (intStr) cotizadoHtml += '<span style="font-size:11px;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00);border-radius:20px;padding:2px 9px">'+esc(intStr)+'</span>';
+      if (fechaStr) cotizadoHtml += '<span style="font-size:11px;color:var(--ink-3)">'+esc(fechaStr)+'</span>';
+      cotizadoHtml += '</div>';
+      if (t.notas) cotizadoHtml += '<div style="font-size:12px;color:var(--ink-2);white-space:pre-wrap;line-height:1.5;margin-bottom:8px">'+esc(t.notas)+'</div>';
+      if (!t.contrato_token && t.estatus !== 'Cancelado')
+        cotizadoHtml += '<button onclick="crearContratoDesdeWork('+[t.id,c.nombre,c.id,c.telefono,c.correo].map(jsArg).join(',')+')" style="font-size:11px;background:var(--gold-leaf,#C9A84C);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#1a1000;font-weight:600"><i class="ti ti-file-plus" style="font-size:10px"></i> Crear contrato</button>';
+      if (t.contrato_token)
+        cotizadoHtml += '<button onclick="irAContratoDesdeCliente('+jsArg(t.contrato_token)+')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-2)"><i class="ti ti-external-link" style="font-size:10px"></i> Ver contrato</button>';
+      cotizadoHtml += '</div></div>';
+    });
+    cotizadoHtml += '</div></div></details>';
+  }
+  pInfo.innerHTML =
+    '<div class="panel-sec-head">Llamadas y notas</div>' +
+    '<div id="cli-actividades-' + esc(c.id) + '"><p style="color:var(--ink-3);font-size:13px">Cargando…</p></div>' +
+    '<div style="display:flex;gap:6px;margin-top:8px">' +
+      '<input type="text" id="cli-nota-input" placeholder="Agregar nota…" style="flex:1;font-size:13px">' +
+      '<button class="btn-secundario btn-sm" onclick="agregarNotaCliente('+jsArg(c.id)+')"><i class="ti ti-plus"></i></button>' +
+    '</div>' +
+    '<div class="form-msg" id="cli-nota-msg"></div>' +
+    cotizadoHtml +
+    '<details class="panel-acord"><summary>Archivos del cliente</summary><div class="panel-acord-body">' +
+      '<input type="file" id="cli-file-input" multiple style="display:block;font-size:12px;margin-bottom:8px;width:100%">' +
+      '<button class="btn-secundario btn-sm" style="width:100%;justify-content:center" onclick="subirArchivosCliente('+jsArg(c.id)+')"><i class="ti ti-upload"></i> Subir a Drive</button>' +
+      '<div id="cli-archivos-lista" style="margin-top:10px"><p style="color:var(--ink-3);font-size:12px">Cargando…</p></div>' +
+      '<div class="form-msg" id="cli-archivos-msg" style="margin-top:6px"></div>' +
+    '</div></details>';
+
+  cargarActividadesCliente(c.id);
+  cargarArchivosCliente(c.id);
+}
+
+// ── Expediente: actividades, notas, archivos, recontratar (R59 · 1.5) ──
+async function cargarActividadesCliente(clienteId) {
+  var cont = document.getElementById('cli-actividades-' + clienteId);
+  if (!cont) return;
+  try {
+    var r = await apiGet({ action: 'listarActividades', clienteId: clienteId });
+    var acts = (r && r.actividades) ? r.actividades : [];
+    if (!acts.length) { cont.innerHTML = '<p style="color:var(--ink-3);font-size:13px">Sin llamadas ni notas.</p>'; return; }
+    cont.innerHTML = acts.map(function(a) {
+      var esLlamada = (a.tipo || '').indexOf('llamada') === 0;
+      var pendiente = esLlamada && (a.estado == null || a.estado === 'pendiente');
+      var fecha = a.fecha_actividad ? fmxnFecha(a.fecha_actividad) : (a.fecha_creacion ? fmxnFecha(a.fecha_creacion.substring(0,10)) : '');
+      var icono = esLlamada ? 'ti-phone' : 'ti-note';
+      return '<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">' +
+        '<i class="ti ' + icono + '" style="font-size:15px;color:var(--ink-3);margin-top:2px"></i>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:12px;color:var(--ink-3)">' + esc(fecha) + (a.hora ? ' · ' + esc(a.hora) : '') + (pendiente ? ' · <span style="color:var(--warn);font-weight:600">pendiente</span>' : '') + '</div>' +
+          (a.descripcion ? '<div style="font-size:13px;color:var(--ink-1);white-space:pre-wrap;line-height:1.45">' + esc(a.descripcion) + '</div>' : '') +
+          (a.resultado ? '<div style="font-size:12px;color:var(--ink-2);margin-top:2px"><i class="ti ti-corner-down-right" style="font-size:11px"></i> ' + esc(a.resultado) + '</div>' : '') +
+        '</div>' +
+        (pendiente ? '<button class="btn-secundario btn-sm" style="flex-shrink:0;font-size:11px;padding:3px 8px" onclick="marcarActividadCliente('+jsArg(a.id)+','+jsArg(clienteId)+')">Hecha</button>' : '') +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    cont.innerHTML = '<p style="color:var(--ink-3);font-size:13px">No se pudieron cargar las actividades.</p>';
+  }
+}
+
+async function marcarActividadCliente(actividadId, clienteId) {
+  var resumen = prompt('Resumen de la llamada (opcional):', '');
+  if (resumen === null) return;
+  try {
+    var r = await apiPost({ action: 'marcarActividad', actividadId: actividadId, estado: 'hecha', resultado: resumen || '' });
+    if (r && r.ok) cargarActividadesCliente(clienteId);
+  } catch (e) { /* noop */ }
+}
+
+async function agregarNotaCliente(clienteId) {
+  var input = document.getElementById('cli-nota-input');
+  var nota = (input && input.value || '').trim();
+  if (!nota) return;
+  setMsg('cli-nota-msg', 'Guardando…', '');
+  try {
+    var r = await apiPost({ action: 'agregarNota', clienteId: clienteId, descripcion: nota, tipo: 'nota' });
+    if (r && r.ok) { if (input) input.value = ''; setMsg('cli-nota-msg', '', ''); cargarActividadesCliente(clienteId); }
+    else setMsg('cli-nota-msg', (r && r.error) || 'No se pudo guardar.', 'error');
+  } catch (e) { setMsg('cli-nota-msg', 'Error de red.', 'error'); }
+}
+
+async function cargarArchivosCliente(clienteId) {
+  var cont = document.getElementById('cli-archivos-lista');
+  if (!cont) return;
+  try {
+    var r = await apiGet({ action: 'listarArchivosCliente', clienteId: clienteId });
+    var archivos = (r && r.archivos) ? r.archivos : [];
+    if (!archivos.length) { cont.innerHTML = '<p style="color:var(--ink-3);font-size:12px">Sin archivos.</p>'; return; }
+    cont.innerHTML = archivos.map(function(a) {
+      return '<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+        '<span style="word-break:break-all">' + esc(a.nombre || a.name || 'archivo') + '</span>' +
+        '<a href="' + esc(a.url || '#') + '" target="_blank" rel="noopener" style="color:var(--gold);white-space:nowrap;font-weight:600;flex-shrink:0">Ver</a>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    cont.innerHTML = '<p style="color:var(--ink-3);font-size:12px">No se pudieron cargar (¿adapter sin desplegar?).</p>';
+  }
+}
+
+async function subirArchivosCliente(clienteId) {
+  var input = document.getElementById('cli-file-input');
+  var msg = document.getElementById('cli-archivos-msg');
+  if (!input || !input.files.length) { if (msg) { msg.textContent = 'Selecciona un archivo.'; msg.style.color = 'var(--warn)'; } return; }
+  var archivos = Array.from(input.files);
+  var hayError = false;
+  for (var i = 0; i < archivos.length; i++) {
+    var archivo = archivos[i];
+    if (msg) { msg.textContent = 'Subiendo ' + (i + 1) + '/' + archivos.length + '…'; msg.style.color = ''; }
+    try {
+      var base64 = await new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function(e) { var res = e.target.result; resolve(res.substring(res.indexOf(',') + 1)); };
+        reader.onerror = reject;
+        reader.readAsDataURL(archivo);
+      });
+      var data = await apiPost({ action: 'subirArchivoCliente', clienteId: clienteId, nombre: archivo.name, mimeType: archivo.type || 'application/octet-stream', base64: base64 });
+      if (!data.ok) throw new Error(data.error || 'Error');
+    } catch (e) { hayError = true; if (msg) { msg.textContent = 'Error en ' + archivo.name + ': ' + e.message; msg.style.color = 'var(--danger)'; } }
+  }
+  input.value = '';
+  if (!hayError && msg) { msg.textContent = 'Listo.'; msg.style.color = 'var(--success)'; setTimeout(function(){ if (msg) msg.textContent = ''; }, 2000); }
+  cargarArchivosCliente(clienteId);
+}
+
+function recontratarCliente(id, nombre, telefono, correo) {
+  cerrarPanel();
+  if (window.innerWidth >= 1024) abrirDrawerNuevo();
+  else mostrarTab('nuevo');
+  setTimeout(function() { seleccionarClienteContrato(id, nombre || '', telefono || '', correo || ''); }, 90);
 }
 
 function renderAccesoCaseta(p) {
@@ -6025,7 +6144,7 @@ function renderListaClientes(clientes) {
     html += '</div>';
     html += '<div class="cli-card-acciones">';
     if (telefono && waNum) html += '<a href="https://wa.me/'+waNum+'" target="_blank" class="cli-card-action-btn wa" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>';
-    if (id) html += '<button onclick="abrirModalTrabajo('+jsArg(id)+')" class="cli-card-action-btn" title="Nuevo trabajo"><i class="ti ti-calendar-plus"></i></button>';
+    if (id) html += '<button onclick="abrirModalLlamada('+jsArg(id)+')" class="cli-card-action-btn" title="Agendar llamada"><i class="ti ti-phone-plus"></i></button>';
     if (id) html += '<button onclick="borrarCliente('+jsArg(id)+','+jsArg(nombre)+')" class="cli-card-action-btn danger" title="Borrar cliente"><i class="ti ti-trash"></i></button>';
     html += '</div>';
     html += '</div>';
@@ -6083,6 +6202,65 @@ function abrirModalCliente() {
   var modal = document.getElementById('modal-nuevo-cliente');
   if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
   if (modal) modal.style.display = 'flex';
+}
+
+// ── AGENDAR LLAMADA RÁPIDA (R59 · 5.x) ─────────────────────────────────────────
+function abrirModalLlamada(clienteId) {
+  var modal = document.getElementById('modal-llamada');
+  if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+  var banner = document.getElementById('llamada-cliente-banner');
+  var nomCampo = document.getElementById('llamada-nombre-campo');
+  var telCampo = document.getElementById('llamada-tel-campo');
+  document.getElementById('llamada-cliente-id').value = '';
+  document.getElementById('llamada-msg').textContent = '';
+  document.getElementById('llamada-fecha').value = fechaLocalISO();
+  document.getElementById('llamada-hora').value = '10:00';
+  document.getElementById('llamada-nota').value = '';
+  document.getElementById('llamada-nombre').value = '';
+  document.getElementById('llamada-telefono').value = '';
+  if (clienteId) {
+    var cli = (_clientesDataCache || []).find(function(c){ return clienteIdVal(c) === clienteId; });
+    document.getElementById('llamada-cliente-id').value = clienteId;
+    if (cli) {
+      document.getElementById('llamada-nombre').value = clienteNombreVal(cli);
+      document.getElementById('llamada-telefono').value = clienteTelefonoVal(cli);
+      if (document.getElementById('llamada-cliente-nombre-banner'))
+        document.getElementById('llamada-cliente-nombre-banner').textContent = clienteNombreVal(cli);
+    }
+    if (banner) banner.style.display = 'block';
+    if (nomCampo) nomCampo.style.display = 'none';
+    if (telCampo) telCampo.style.display = 'none';
+  } else {
+    if (banner) banner.style.display = 'none';
+    if (nomCampo) nomCampo.style.display = '';
+    if (telCampo) telCampo.style.display = '';
+  }
+  if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalLlamada() {
+  var modal = document.getElementById('modal-llamada');
+  if (modal) modal.style.display = 'none';
+}
+
+async function guardarLlamadaRapida() {
+  var nombre = (document.getElementById('llamada-nombre').value || '').trim();
+  var telefono = (document.getElementById('llamada-telefono').value || '').trim();
+  var fecha = document.getElementById('llamada-fecha').value;
+  var hora = document.getElementById('llamada-hora').value || '10:00';
+  var nota = (document.getElementById('llamada-nota').value || '').trim();
+  var msg = document.getElementById('llamada-msg');
+  if (!nombre && !telefono) { if (msg) msg.textContent = 'Nombre o teléfono.'; return; }
+  if (!fecha) { if (msg) msg.textContent = 'Fecha requerida.'; return; }
+  if (msg) msg.textContent = 'Agendando…';
+  try {
+    var r = await apiPost({ action: 'agendarLlamadaRapida', nombre: nombre, telefono: telefono, fecha: fecha, hora: hora, nota: nota });
+    if (r && r.ok) {
+      cerrarModalLlamada();
+      if (document.getElementById('sec-clientes').classList.contains('activa')) cargarClientes();
+      if (document.getElementById('sec-hoy').classList.contains('activa')) cargarHoy();
+    } else if (msg) { msg.textContent = (r && r.error) || 'No se pudo agendar.'; }
+  } catch (e) { if (msg) msg.textContent = 'Error de red.'; }
 }
 
 function cerrarModalCliente() {
