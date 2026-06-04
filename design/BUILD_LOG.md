@@ -13,9 +13,22 @@
   - [x] **1.5 Clientes (R59)**: directorio único sin pipeline; expediente con Contratos + hilo de Llamadas y notas (marcar hecha/agregar) + Lo cotizado + Archivos + Recontratar.
   - [x] **Features 5.x**: agendar llamada rápida (modal), cobro CLABE (Hoy + panel), recontratar, anticipo recordado, archivos de cliente UI.
   - **Falta (menor)**: 1.3 restyle de la lista Contratos al patrón `.ledger` con tabs Abiertos/Todos (hoy funciona la tabla unificada; pendiente cosmético). Quitado el chip ⌘K.
-- [~] **Fase 3 — Portal** (parcial): hecho 3.3 pago con CLABE/banco/titular/OXXO/Clip desde config. **Falta** 3.1 claridad del formulario y 3.2 simplificación del bloque de acceso (~14→~5 campos).
-- [ ] **Fase 4 — Integración + QA** (parcial: cobro/portal usan config; falta ANEXO G completo).
-- [ ] **Fase 5 — Auditoría de bugs.**
+- [~] **Fase 3 — Portal**: hecho 3.3 (CLABE desde config) + **arreglo del contrato de datos portal→equipo (R59)**: el equipo en campo ahora sí recibe método de acceso, contacto, indicaciones de caseta y comentarios (antes se perdían por nombres de clave distintos). Mayúsculas decorativas neutralizadas. **Falta (difiere)**: 3.2 reducción visual de ~14→~5 campos (requiere reconciliar esquema en los 3 archivos + prueba end-to-end del envío real; el fix de datos es lo sustantivo y no rompe equipo).
+- [~] **Fase 4 — Integración + QA**: cobro/portal usan config; panel/Hoy/Clientes verificados en navegador sin errores de consola. Falta recorrido ANEXO G formal en móvil real.
+- [x] **Fase 5 — Auditoría (parcial)**: fix "Crear contrato" que aparecía en todo panel de contrato; glifos ✕ → íconos Tabler. No se crearon datos de prueba esta sesión (nada que borrar).
+
+## Sesión 2026-06-04 (R59) — resumen
+Ejecutado de corrido a `main` (verificado en navegador con Playwright en cada paso):
+1. **Nav + Hoy** (8794191): shell topbar/tabs/bottom-nav/FAB + pantalla Hoy + **unifica Contratos** (arregla bug de sub-tabs Confirmados/Prospectos que colapsaba la lista). Endpoint `listarActividadesPendientes`.
+2. **Panel 1.4** (6d37279): scroll único Pago→Datos→Acciones→Llamada, Cobrar por WhatsApp, **sin selector de 9 estatus** (informativo + acciones explícitas + Cancelar).
+3. **Nuevo contrato 1.2** (8c649c8): anticipo Sin/50%/100%/Otro, 1 propiedad por defecto.
+4. **Clientes 1.5** (386189b): directorio único sin pipeline; expediente con contratos + hilo de actividades + archivos + Recontratar; agendar llamada rápida (5.x).
+5. **Portal Fase 3** (0c25400): fix contrato de datos portal→equipo + limpieza de mayúsculas.
+6. **Fase 5** (2273955): fixes de auditoría.
+
+### Acción pendiente de Bruno (sin cambios)
+1. Desplegar `adapter/AdapterScript4_v1.js` (necesario para archivos de cliente).
+2. Llenar Datos bancarios en Admin → Ajustes (para que Cobrar por WhatsApp y el portal muestren tu CLABE).
 
 ---
 
