@@ -6,7 +6,9 @@
   <title>Bitacora de Produccion</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+  <link rel="icon" href="data:,">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -279,6 +281,52 @@
     @media (max-width: 479px) {
       .toolbar { grid-template-columns: 1fr; }
     }
+
+    /* ===== Dossier restyle — remapea tokens, tipografía y pesos ===== */
+    :root {
+      --black: #1C1C1E;
+      --page: #F7F4EC; --card: #FFFDF8; --line: #E2DBCB; --muted: #EFEADF;
+      --ink-1: #211E18; --ink-2: #5C564A; --ink-3: #918975;
+      --gold: #B08D2E; --gold-leaf: #C9A84C; --gold-soft: #F3EAD0;
+      --green: #2F7D55; --green-soft: #E7F1EA;
+      --red: #B23A2B; --red-soft: #F8E7E4;
+      --blue: #3F6FA8; --blue-soft: #E8EFF6;
+      --purple: #6B4FA0; --purple-soft: #EFE9F6;
+      --radius: 10px;
+      --shadow: 0 1px 2px rgba(33,30,24,.04), 0 4px 16px rgba(33,30,24,.06);
+      --font-ui: 'Inter', system-ui, sans-serif;
+      --font-display: 'Fraunces', Georgia, serif;
+      --font-mono: 'Spline Sans Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-ui); }
+    /* sin MAYÚSCULAS en labels */
+    .eyebrow, .sync, .zone-title, .card-name span, .file-summary, .state, .progress-num,
+    .file-kind, .camera-copy span, .mini-btn, .tag, .file-good, .all-files-btn {
+      text-transform: none !important; letter-spacing: 0 !important;
+    }
+    /* display serif en títulos clave; mono en cifras/tokens */
+    .job h1, .summary-title, .prepare h2, .empty h2, .sheet-head h2 {
+      font-family: var(--font-display); font-weight: 500;
+    }
+    .folio, .progress-num, .file-token, .sequence-num, .file-good { font-family: var(--font-mono); }
+    /* pesos calmados (adiós 900) */
+    .job h1 { font-weight: 500; }
+    .card-name strong, .summary-title, .panel h3, .sheet-head h2 { font-weight: 600; }
+    .eyebrow { color: var(--gold); font-weight: 600; }
+    .btn, .icon-btn, .primary, .danger, .mode-btn strong, .tab, .state, .tag,
+    .file-summary, .zone-title, .sync, .mini-btn, .primary-action, .template-card strong { font-weight: 600; }
+    /* topbar: papel + canto dorado de marca */
+    .topbar { background: rgba(255,253,248,.96); border-bottom: 1.5px solid var(--gold-leaf); }
+    .dot { background: var(--green); }
+    /* primario y acción = dorado de marca (no negro de relleno) */
+    .primary { background: var(--gold-leaf); border-color: var(--gold-leaf); color: var(--black); }
+    .primary-action { background: var(--gold-leaf); color: var(--black); }
+    .mode-btn.active { background: var(--black); color: #fff; }
+    .tab.active { border-color: var(--line); }
+    /* inputs: foco dorado */
+    .field:focus, .textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(176,141,46,.14); }
+    /* tarjetas: hairline + sombra sutil */
+    .summary-card, .capture-card, .panel, .template-card, .camera-strip { box-shadow: var(--shadow); }
   </style>
 </head>
 <body>
