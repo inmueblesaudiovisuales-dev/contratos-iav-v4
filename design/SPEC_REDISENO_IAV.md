@@ -21,7 +21,7 @@
    - `design/SPEC_REDISENO_IAV.md` (este), `design/design-system.css`, `design/B-dossier.html`, `design/BUILD_LOG.md`
    - `MASTER_V4.md` (contexto de DB/flujos) — **léelo también**.
 4. **Verifica tamaños/coherencia:** `admin.html` debe rondar ~6,000 líneas y `portal.html` ~2,800. Si tienes un `admin.html` mucho más corto, es una versión vieja → NO la uses.
-5. **Si falta cualquier archivo o no estás 100% seguro de tener la versión más reciente y completa: BÚSCALO.** Si tras buscar sigues sin poder confirmarlo, **DETENTE y pregúntale a Bruno.** No improvises sobre datos incompletos.
+5. **Si falta cualquier archivo o no estás 100% seguro de tener la versión más reciente y completa: BÚSCALO.** Si tras buscar sigues sin poder confirmarlo, **DETENTE, deja el motivo claro en `BUILD_LOG.md` y termina** (Bruno está dormido y lo verá al despertar). No improvises sobre datos incompletos.
 6. **Repite el `git pull` al inicio de CADA fase** (commiteas por fase; evita trabajar sobre estado viejo).
 
 ### MODO AUTÓNOMO (Bruno está dormido — no esperes input)
@@ -643,7 +643,7 @@ Toda respuesta del worker: `{ ok:true, … }` o `{ ok:false, error:"texto" }`. E
 
 **Modo:** un hilo Opus principal que sostiene la visión (no fan-out en `admin.html`). Cada fase = commit a `main`. El contexto vive en: este spec + `design-system.css` + `design/B-dossier.html`. Si el contexto se reinicia, re-anclar con esos tres + el resumen de decisiones (sección 12).
 
-- **Fase -1 — Preflight (obligatoria).** Completar la verificación del inicio de la sección 0: repo `main` al día, todos los archivos presentes y en su versión más reciente (admin ~6k líneas, portal ~2.8k), leídos spec + design-system + mockup + `MASTER_V4.md` + `BUILD_LOG.md`. Si falta algo o hay duda → buscar; si no se resuelve → **detenerse y preguntar a Bruno**. No avanzar sin esto.
+- **Fase -1 — Preflight (obligatoria).** Completar la verificación del inicio de la sección 0: repo `main` al día, todos los archivos presentes y en su versión más reciente (admin ~6k líneas, portal ~2.8k), leídos spec + design-system + mockup + `MASTER_V4.md` + `BUILD_LOG.md`. Si falta algo o hay duda → buscar; si no se resuelve → **detenerse y dejar el motivo en `BUILD_LOG.md`** (Bruno lo verá al despertar). No avanzar sin esto.
 - **Fase 0 — Cimientos.** Incrustar `design-system.css` en `admin.html` (y luego portal). Construir el shell nuevo: topbar + tabs `Hoy/Contratos/Clientes`, quitar sidebar/side-menu, bottom-nav + FAB. Verificar que la app sigue cargando y autenticando. Commit.
 - **Fase 1 — Admin.** En sub-pasos commiteables: (1.1) Hoy · (1.2) Nuevo contrato (1 propiedad) · (1.3) Contratos lista · (1.4) Panel reorganizado · (1.5) Clientes/expediente · (1.6) Ajustes (bancario + plantillas). Tras cada sub-paso, abrir en navegador y comparar con wireframe + mockup. Commit por sub-paso.
 - **Fase 2 — Backend.** Migración `r57-rediseno.sql` (aplicar en D1 remoto) · rutas `config`, dedupe en `clientes`, `agendarLlamadaRapida`, `marcarActividad`, archivos de cliente + **fix de subida** · adapter (carpeta/logo por cliente). *Candidato a subagente dedicado* (archivos independientes). Entregar adapter para despliegue manual. Commit.
