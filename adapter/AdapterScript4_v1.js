@@ -1,7 +1,8 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-03 — crearCarpetas handler + subirArchivo usa carpetaId del Worker
+// Ultima modificacion: 2026-06-04 — fix carpetas duplicadas: getOrCreateFolder_ idempotente
+//   (crearCarpetas/procesarFirma/primerAbono reusan la carpeta del proyecto en vez de duplicarla)
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -61,6 +62,14 @@ function jsonResp(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// ── Helper: busca una subcarpeta por nombre, o la crea si no existe ─────────
+// Evita carpetas duplicadas cuando el flujo crea carpetas más de una vez
+// (crearCarpetas al crear el contrato + procesarFirma al firmar, etc.).
+function getOrCreateFolder_(parent, name) {
+  var it = parent.getFoldersByName(name);
+  return it.hasNext() ? it.next() : parent.createFolder(name);
+}
+
 // ── FIRMA — guarda PNG en Drive, genera PDF diferido ────────────────────────
 
 function procesarFirma(body) {
@@ -106,9 +115,9 @@ function procesarFirma(body) {
     var iterMes = carpetaAnio.getFoldersByName(mesStr);
     var carpetaMes = iterMes.hasNext() ? iterMes.next() : carpetaAnio.createFolder(mesStr);
 
-    var carpetaProyecto = carpetaMes.createFolder(folio + ' — ' + contrato.nombre_cliente);
-    var carpetaControl = carpetaProyecto.createFolder('Control Interno');
-    var carpetaEntregables = carpetaProyecto.createFolder('Entregables');
+    var carpetaProyecto = getOrCreateFolder_(carpetaMes, folio + ' — ' + contrato.nombre_cliente);
+    var carpetaControl = getOrCreateFolder_(carpetaProyecto, 'Control Interno');
+    var carpetaEntregables = getOrCreateFolder_(carpetaProyecto, 'Entregables');
     var carpetaEntregablesId = carpetaEntregables.getId();
     var carpetaUrl = carpetaControl.getUrl();
 
@@ -344,9 +353,9 @@ function primerAbono(body) {
   carpetaMes = iterMes.hasNext() ? iterMes.next() : carpetaAnio.createFolder(mesStr);
 
   var nombreCarpeta = (folio || token) + ' — ' + contrato.nombre_cliente;
-  var carpetaProyecto = carpetaMes.createFolder(nombreCarpeta);
-  var carpetaControl = carpetaProyecto.createFolder('Control Interno');
-  var carpetaEntregables = carpetaProyecto.createFolder('Entregables');
+  var carpetaProyecto = getOrCreateFolder_(carpetaMes, nombreCarpeta);
+  var carpetaControl = getOrCreateFolder_(carpetaProyecto, 'Control Interno');
+  var carpetaEntregables = getOrCreateFolder_(carpetaProyecto, 'Entregables');
   var carpetaEntregablesId = carpetaEntregables.getId();
 
   var props = PropertiesService.getScriptProperties();
@@ -841,9 +850,9 @@ function crearCarpetas(body) {
   var iterMes = carpetaAnio.getFoldersByName(mesStr);
   var carpetaMes = iterMes.hasNext() ? iterMes.next() : carpetaAnio.createFolder(mesStr);
 
-  var carpetaProyecto = carpetaMes.createFolder(folio + ' — ' + nombreCliente);
-  var carpetaControl = carpetaProyecto.createFolder('Control Interno');
-  var carpetaEntregables = carpetaProyecto.createFolder('Entregables');
+  var carpetaProyecto = getOrCreateFolder_(carpetaMes, folio + ' — ' + nombreCliente);
+  var carpetaControl = getOrCreateFolder_(carpetaProyecto, 'Control Interno');
+  var carpetaEntregables = getOrCreateFolder_(carpetaProyecto, 'Entregables');
   var carpetaControlId = carpetaControl.getId();
   var carpetaEntregablesId = carpetaEntregables.getId();
 
