@@ -2619,8 +2619,27 @@ async function seleccionarTrabajo(idOrObj) {
   document.querySelectorAll('#contratos-cards .cont-card').forEach(c => c.classList.remove('activo'));
   document.querySelectorAll('#tabla-body .cont-row').forEach(r => r.classList.remove('activo'));
 
-  // Abre el panel
-  document.getElementById('panel').classList.add('abierto');
+  // Inicializar y abrir panel lateral
+  tokenActivo = t.token || null;
+  clienteActivo = null;
+  document.querySelector('.panel-tabs').innerHTML =
+    '<button class="panel-tab-btn activo" onclick="mostrarPanelTab(\'info\',this)">Info</button>' +
+    '<button class="panel-tab-btn" onclick="mostrarPanelTab(\'pagos\',this)">Pagos</button>' +
+    '<button class="panel-tab-btn" onclick="mostrarPanelTab(\'prod\',this)">Producción</button>' +
+    '<button class="panel-tab-btn" onclick="mostrarPanelTab(\'llamada\',this)">Llamada</button>';
+  document.getElementById('panel-folio').textContent  = t.folio || '—';
+  document.getElementById('panel-nombre').textContent = t.cliente_nombre || 'Cargando...';
+  const _psp2 = document.getElementById('panel-status-pill'); if (_psp2) _psp2.innerHTML = '';
+  const _pc2  = document.getElementById('panel-contact');     if (_pc2)  { _pc2.innerHTML = ''; _pc2.style.display = 'none'; }
+  const _pk2  = document.getElementById('panel-kpis');        if (_pk2)  _pk2.innerHTML = '';
+  const _pab2 = document.getElementById('panel-action-bar');  if (_pab2) _pab2.innerHTML = '';
+  ['info','pagos','prod','llamada'].forEach(function(id, i) {
+    var el = document.getElementById('pane-' + id);
+    if (el) { el.classList.toggle('activo', i === 0); el.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:4px 0">Cargando...</p>'; }
+  });
+  document.getElementById('panel-lateral').classList.add('visible');
+  document.getElementById('overlay').classList.add('visible');
+  document.body.classList.add('panel-open');
 
   if (t.token) {
     try {
