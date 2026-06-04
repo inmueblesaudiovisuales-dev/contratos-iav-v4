@@ -8,7 +8,11 @@
 - [~] **Fase 1 — Admin** (en progreso):
   - [x] 1.6 Ajustes (Datos bancarios + Plantillas).
   - [x] **Nav + pantalla Hoy (R59, commit 8794191, DESPLEGADO)**: shell nuevo topbar onyx + tabs Hoy/Contratos/Clientes + canto dorado + bottom-nav móvil con FAB + menú (⋯) con Clientes/Métricas/Paquetes/Ajustes/Salir; se eliminó sidebar/side-menu/mobile-topbar. Pantalla `#sec-hoy` con saludo+fecha, total por cobrar, botón Nuevo contrato, Sesiones de la semana, Llamadas de hoy (endpoint `listarActividadesPendientes`), lista Por cobrar con botón **Cobrar** (WhatsApp con CLABE+plantilla de config), y film-strip "radar" con punto que respira. **Unificó Contratos** (un solo modelo `listarContratos`): esto arregló el bug donde alternar las sub-tabs Confirmados/Prospectos colapsaba la lista a 1 fila. Verificado en navegador.
-  - **Falta**: 1.2 Nuevo contrato a 1 propiedad, 1.4 panel reorganizado (Pago primero, quitar selector de 9 estatus), 1.5 expediente de cliente sin pipeline, features 5.x (agendar llamada rápida UI, recontratar, anticipo recordado, archivos cliente UI).
+  - [x] **1.4 Panel de contrato (R59)**: scroll único (sin tabs), orden Pago → Datos → Acciones → Llamada; Cobrar por WhatsApp; **selector de 9 estatus eliminado** → estatus informativo + acciones explícitas + Cancelar/Reactivar.
+  - [x] **1.2 Nuevo contrato (R59)**: anticipo prominente (Sin/50%/100%/Otro), 1 propiedad por defecto, anticipo recordado por cliente.
+  - [x] **1.5 Clientes (R59)**: directorio único sin pipeline; expediente con Contratos + hilo de Llamadas y notas (marcar hecha/agregar) + Lo cotizado + Archivos + Recontratar.
+  - [x] **Features 5.x**: agendar llamada rápida (modal), cobro CLABE (Hoy + panel), recontratar, anticipo recordado, archivos de cliente UI.
+  - **Falta (menor)**: 1.3 restyle de la lista Contratos al patrón `.ledger` con tabs Abiertos/Todos (hoy funciona la tabla unificada; pendiente cosmético). Quitado el chip ⌘K.
 - [~] **Fase 3 — Portal** (parcial): hecho 3.3 pago con CLABE/banco/titular/OXXO/Clip desde config. **Falta** 3.1 claridad del formulario y 3.2 simplificación del bloque de acceso (~14→~5 campos).
 - [ ] **Fase 4 — Integración + QA** (parcial: cobro/portal usan config; falta ANEXO G completo).
 - [ ] **Fase 5 — Auditoría de bugs.**
