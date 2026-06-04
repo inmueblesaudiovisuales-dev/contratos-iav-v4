@@ -2400,9 +2400,13 @@ function renderEtapa3() {
   if (estatus === 'En produccion') {
     html += '<div class="banner info"><div class="banner-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>';
     html += '<div><div class="banner-title">En producción</div><div class="banner-desc">Tu proyecto está en producción. Te avisaremos cuando los materiales estén listos.</div></div></div>';
-  } else {
+  } else if (pagado > 0) {
     html += '<div class="banner success"><div class="banner-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
-    html += '<div><div class="banner-title">Anticipo recibido</div><div class="banner-desc">Hemos confirmado tu pago. Tu fecha está asegurada.</div></div></div>';
+    html += '<div><div class="banner-title">Pago recibido</div><div class="banner-desc">Hemos confirmado tu pago. Tu fecha está asegurada.</div></div></div>';
+  } else {
+    // Reservado sin abono aún: la fecha está apartada pero no hay pago — no afirmar que se recibió.
+    html += '<div class="banner info"><div class="banner-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>';
+    html += '<div><div class="banner-title">Tu fecha está apartada</div><div class="banner-desc">Realiza tu pago para confirmar tu sesión.</div></div></div>';
   }
 
   html += _renderComprobante(d);

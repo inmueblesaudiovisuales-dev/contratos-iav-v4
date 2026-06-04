@@ -22,7 +22,7 @@ const CORS = {
 
 const RUTAS_CONTRATOS = [
   'listarContratos','obtenerContrato','crearContrato','actualizarEstatus',
-  'actualizarContratoUpsell','ocultarContrato','eliminarContrato','guardarNotasInternas',
+  'actualizarContratoUpsell','ocultarContrato','eliminarContrato','reservarContrato','guardarNotasInternas',
   'marcarSesionCompletada','guardarProduccion','guardarEntrega','revocarEntrega',
   'guardarCaracteristicas','reagendarPropiedad','exportarCSV','enviarRecordatorio',
   'guardarNotaPropiedad','actualizarCarpeta','actualizarPdfUrl','actualizarCalendarEvent',

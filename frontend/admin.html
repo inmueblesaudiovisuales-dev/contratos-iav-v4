@@ -4153,7 +4153,14 @@ function renderPanel(data) {
     <div style="margin-top:8px;font-size:11px;color:var(--ink-3)">Solo editable desde equipo.html · <a href="${EQUIPO_BASE + '?token=' + esc(tok)}" target="_blank" style="color:var(--ink-2);text-decoration:underline">Abrir equipo</a></div>
   </div>`;
 
-  document.getElementById('pane-prod').innerHTML = `<div class="panel-sec-head">Acciones</div>` + prodEstadoHtml + `
+  document.getElementById('pane-prod').innerHTML = `<div class="panel-sec-head">Acciones</div>`
+    + (c.Estatus === 'Firmado' ? `
+    <button class="btn-primario gold" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px" onclick="reservarSinAnticipo()">
+      <i class="ti ti-calendar-plus"></i> Apartar fecha (reservar sin abono)
+    </button>
+    <p style="font-size:11px;color:var(--ink-3);margin-bottom:10px;line-height:1.4">Crea el evento en tu calendario sin registrar pago. El cliente seguirá viendo su saldo completo.</p>
+    <div class="form-msg" id="msg-reservar" style="margin-bottom:8px"></div>` : '')
+    + prodEstadoHtml + `
     <!-- Estado del contrato (informativo — el estatus se infiere de firma/pagos/entrega) -->
     <details class="panel-acord" open>
       <summary>Avance del contrato</summary>
@@ -4521,6 +4528,23 @@ async function guardarUpsell() {
 }
 
 // ── CAMBIAR ESTATUS ──────────────────────────────────────────────────────────
+
+// Apartar fecha sin abono: marca Reservado y crea el evento de calendario, sin pago.
+async function reservarSinAnticipo() {
+  const t = tokenActivo;
+  if (!t) return;
+  if (!confirm('¿Apartar la fecha de este contrato sin registrar abono?\n\nSe creará el evento en tu calendario. El cliente seguirá viendo su saldo completo (no se marca ningún pago).')) return;
+  setMsg('msg-reservar', 'Apartando fecha…', '');
+  try {
+    const data = await apiPost({ action: 'reservarContrato', token: t });
+    if (!data.ok) throw new Error(data.error || 'No se pudo reservar');
+    setMsg('msg-reservar', 'Fecha apartada. Evento creado en tu calendario.', 'ok');
+    cargarContratos();
+    if (t && t === tokenActivo) await abrirPanel(t);
+  } catch (e) {
+    setMsg('msg-reservar', 'Error: ' + e.message, 'error');
+  }
+}
 
 // Cancelar / reactivar contrato (acción explícita; reemplaza al viejo selector de 9 estatus)
 async function cancelarContrato(cancelar) {
