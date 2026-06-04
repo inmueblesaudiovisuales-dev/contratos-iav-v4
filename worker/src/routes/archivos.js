@@ -1,4 +1,4 @@
-import { queryOne } from '../db.js';
+import { queryOne, query } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapterSync } from '../google.js';
 
@@ -23,7 +23,14 @@ export async function handleArchivos(request, env, ctx, action) {
       if (tk.expira && new Date(tk.expira) < new Date()) return err('Tu enlace ha expirado.', 403);
     }
 
-    const result = await callAdapterSync(env, 'subirArchivo', { token, base64, mimeType, nombre, numPropiedad });
+    const prop = await queryOne(db,
+      'SELECT carpeta_control_id FROM propiedades WHERE contrato_token = ? AND num_propiedad = ?',
+      [token, numPropiedad || 1]
+    );
+    const result = await callAdapterSync(env, 'subirArchivo', {
+      token, base64, mimeType, nombre, numPropiedad,
+      carpetaId: prop?.carpeta_control_id || null
+    });
     return ok(result);
   }
 
