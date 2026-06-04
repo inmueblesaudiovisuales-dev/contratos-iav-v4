@@ -2175,6 +2175,10 @@ function irANuevo() {
     abrirModalCliente();
     return;
   }
+  if (secActiva && secActiva.id === 'sec-trabajos') {
+    abrirModalTrabajo();
+    return;
+  }
   if (window.innerWidth >= 1024) {
     abrirDrawerNuevo();
     return;
@@ -2588,7 +2592,7 @@ async function cargarTrabajos(tokenInicial) {
 }
 
 function renderTablaTrabajos(lista) {
-  const tbody = document.getElementById('contratos-tbody');
+  const tbody = document.getElementById('tabla-body');
   if (!tbody) return;
   if (!lista.length) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-2)">Sin trabajos en esta vista.</td></tr>';
@@ -2640,7 +2644,7 @@ async function seleccionarTrabajo(idOrObj) {
 
   // Highlight selected card
   document.querySelectorAll('#contratos-cards .cont-card').forEach(c => c.classList.remove('activo'));
-  document.querySelectorAll('#contratos-tbody .cont-row').forEach(r => r.classList.remove('activo'));
+  document.querySelectorAll('#tabla-body .cont-row').forEach(r => r.classList.remove('activo'));
 
   // Abre el panel
   document.getElementById('panel').classList.add('abierto');
@@ -5798,7 +5802,6 @@ function guardarNuevoTrabajo() {
   var clienteId = document.getElementById('trab-cliente-id').value || _trabClienteIdSel;
   var fechaLlamada = document.getElementById('trab-fecha-llamada').value;
   if (!clienteId) { document.getElementById('trab-msg').textContent='Selecciona un cliente'; return; }
-  if (!fechaLlamada) { document.getElementById('trab-msg').textContent='Fecha requerida'; return; }
   var msg = document.getElementById('trab-msg');
   msg.style.color='var(--ink-3)'; msg.textContent='Creando…';
   var paquetes = Array.from(document.querySelectorAll('#trab-paquetes-checks .trab-paq-chip.activo-par')).map(function(btn){ return btn.dataset.clave; });
@@ -5806,17 +5809,20 @@ function guardarNuevoTrabajo() {
   var tipo = (document.getElementById('trab-prop-tipo').value||'').trim();
   var desc = (document.getElementById('trab-prop-desc').value||'').trim();
   var propiedadesInteres = (zona||tipo||desc) ? [{zona:zona,tipo:tipo,descripcion:desc}] : [];
-  apiPost({
+  var payload = {
     action:'crearTrabajo',
     clienteId: clienteId,
     interes: _trabInteresActivo,
     paquetesCotizados: paquetes,
     propiedadesInteres: propiedadesInteres,
     presupuestoEstimado: parseFloat(document.getElementById('trab-presupuesto').value)||0,
-    notas: (document.getElementById('trab-notas').value||'').trim(),
-    fechaLlamada: fechaLlamada,
-    horaLlamada: document.getElementById('trab-hora-llamada').value||'10:00'
-  }).then(function(r){
+    notas: (document.getElementById('trab-notas').value||'').trim()
+  };
+  if (fechaLlamada) {
+    payload.fechaLlamada = fechaLlamada;
+    payload.horaLlamada = document.getElementById('trab-hora-llamada').value||'10:00';
+  }
+  apiPost(payload).then(function(r){
     if (r.ok) { msg.style.color='var(--success-text)'; msg.textContent='¡Trabajo creado!'; setTimeout(function(){ cerrarModalTrabajo(); cargarClientes(); }, 800); }
     else { msg.style.color='var(--red,#c0392b)'; msg.textContent=r.error||'Error'; }
   });
