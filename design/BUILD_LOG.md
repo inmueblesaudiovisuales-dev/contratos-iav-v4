@@ -2,6 +2,25 @@
 
 > Bitácora de ejecución. Para retomar: leer `design/SPEC_REDISENO_IAV.md` + `design/design-system.css` + `design/B-dossier.html` + este log + `MASTER_V4.md` (R58).
 
+## Auditoría exhaustiva 2 (2026-06-04, post-merge a main) — DESPLEGADA
+Revisión profunda de todo el backend + E2E en producción tras el cambio de modelo de saldo.
+- [x] **[CRÍTICO] Fix**: `firmaCliente` (portal.js) re-restaba el anticipo del saldo al firmar
+  (`saldo = precio − anticipo`) y con 100% anticipo marcaba "Reservado" sin pago — deshacía el
+  fix de `crearContrato` justo en el paso de firma. Ahora firmar deja `saldo = precio_total` y
+  estatus 'Firmado'. **El modelo de saldo quedó consistente en TODO el backend.** Desplegado.
+- [x] **Auditoría del saldo system-wide**: revisados todos los escritores de saldo
+  (crear / firmar / upsell / abono / reservar / entrega) — ninguno resta el anticipo;
+  todos usan `saldo = precio − abonos reales`. Cero `precio − anticipo` restante.
+- [x] **Revisados sin bugs**: actualizarEstatus (guards de transición), actualizarContratoUpsell,
+  registrarAbono, reservarContrato, guardarEntrega/revocarEntrega (estatus por saldo), dedupe
+  (clientes/actividades por teléfono normalizado), stats (porCobrar = suma de saldos reales),
+  trabajos, archivos, equipo.
+- [x] **E2E en producción verificado** (creado y borrado): crear (saldo $4,500 completo) → firmar
+  (saldo SIGUE $4,500, Firmado) → abono $2,250 (saldo $2,250, Reservado) → cobrar WhatsApp (CLABE
+  + saldo correcto) → entrega (Entregado, saldo>0) → pago final (Completado, saldo $0). Y aparte:
+  reservar sin abono (Reservado, saldo intacto). Sin errores de producto en consola.
+- Nota: quedan ~14 clientes de prueba sin contratos (inofensivos); se pueden limpiar si se desea.
+
 ## Sesión 2026-06-04 (R60) — Acabado + auditoría · rama `acabado-admin` (NO mergeada)
 Trabajo en rama `acabado-admin` (sin push). Verificado en navegador con Playwright
 sirviendo `frontend/` local contra el API de producción (CORS `*`, solo lecturas).
