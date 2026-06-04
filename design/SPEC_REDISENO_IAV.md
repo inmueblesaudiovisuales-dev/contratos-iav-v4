@@ -23,12 +23,12 @@
 5. **Si falta cualquier archivo o no estás 100% seguro de tener la versión más reciente y completa: BÚSCALO.** Si tras buscar sigues sin poder confirmarlo, **DETENTE y pregúntale a Bruno.** No improvises sobre datos incompletos.
 6. **Repite el `git pull` al inicio de CADA fase** (commiteas por fase; evita trabajar sobre estado viejo).
 
-### Cuándo detenerte y preguntar (no adivines)
-- Falta un archivo o no puedes confirmar que es la versión más reciente (ver preflight).
-- El spec es ambiguo en algo **irreversible o que afecta dinero/datos del cliente**.
-- Un cambio te obligaría a romper el modelo de datos o `equipo.html`.
-- Encuentras una decisión de producto no cubierta aquí que cambia el comportamiento de cara al cliente.
-En esos casos: para, explica el dilema y pregunta. En lo demás (estética, microcopy, detalle de implementación), decide con buen criterio y avanza.
+### MODO AUTÓNOMO (Bruno está dormido — no esperes input)
+Una vez que el **preflight pasa**, ejecuta TODO de corrido (Fases 0→5) **sin pausar a preguntar**. Bruno no estará disponible. 
+- **Único punto de parada dura: el preflight.** Si no puedes confirmar que tienes todos los archivos en su versión más reciente, **detente y deja el motivo en `BUILD_LOG.md`** (no construyas sobre archivos dudosos aunque eso signifique no avanzar; es preferible a romper con datos viejos).
+- **De ahí en adelante, NO te detengas por dudas.** Toda ambigüedad (estética, microcopy, implementación, decisiones de producto no cubiertas) la resuelves con buen criterio siguiendo el espíritu del spec, y la **registras en `BUILD_LOG.md`**.
+- Sé conservador solo con lo verdaderamente destructivo: no borres datos reales, no elimines columnas/tablas, no rompas el modelo ni `equipo.html`. Si algo así fuera necesario, **no lo hagas**: déjalo anotado como pendiente para Bruno y sigue con el resto.
+- **Reporte matutino:** al terminar (o si te detienes), deja en `BUILD_LOG.md` un resumen claro para que Bruno lo lea al despertar: qué se hizo, decisiones tomadas, qué falta, y qué requiere su mano (desplegar el adapter; correr la migración si la saltaste; cualquier flag).
 
 ---
 
@@ -662,7 +662,10 @@ Como el push a `main` despliega al instante y el frontend nuevo llama endpoints 
 
 ### I.2 Quién corre qué
 - Frontend + worker: se despliegan con el push a `main` (GitHub Actions).
-- **Migración D1:** si el ejecutor tiene `wrangler` autenticado, la corre él (`wrangler d1 execute contratos-iav-v4 --remote --file=worker/migrations/r36-rediseno.sql`). Si **no** puede, debe dejar el `.sql` listo y **avisar a Bruno con el comando exacto** para que la corra. No asumir que ya está aplicada.
+- **Migración D1: intenta correrla tú** (`wrangler d1 execute contratos-iav-v4 --remote --file=worker/migrations/r36-rediseno.sql`). Reintenta varias veces si falla (auth, red). **Si tras varios intentos no puedes, sáltala** — NO bloquees el rediseño por esto: deja el `.sql` listo, anota en `BUILD_LOG.md` el comando exacto para que Bruno la corra, y **asegura que el worker degrada con gracia** (ver I.4-bis) para que la app no truene mientras la migración esté pendiente. Cada ALTER usa `DEFAULT`, así que aplicarla después no rompe datos.
+
+### I.4-bis Degradación con gracia si la migración no está aplicada (OBLIGATORIO)
+Como la migración puede quedar pendiente (Bruno la corre al despertar), el **worker debe tolerar que las columnas/tabla nuevas no existan todavía**: envuelve en try/catch las lecturas/escrituras a `config`, `clientes.sin_anticipo/anticipo_default/logo_url/carpeta_cliente_id` y `actividades.estado/resultado`; si fallan por columna/tabla inexistente, usa defaults (p. ej. `config` → datos bancarios vacíos; `sin_anticipo` → 0). El **frontend** oculta/no-opera las features dependientes si el dato no viene, en vez de romper. Así la app funciona aplique o no la migración; al correrla, las features se activan solas.
 - **Adapter Apps Script:** nunca se auto-despliega. Entregar el archivo y avisar a Bruno que lo pegue en script.google.com y publique nueva versión.
 
 ### I.3 Auth y seguridad de endpoints nuevos
