@@ -821,7 +821,7 @@ function dispatchEtapa() {
   var estatus = data.estatus || '';
   if      (estatus === 'Pendiente firma')   { actualizarStepper(1); renderEtapa1(); }
   else if (estatus === 'Firmado')            { actualizarStepper(2); renderEtapa2(); }
-  else if (estatus === 'Anticipo recibido')  { actualizarStepper(3); renderEtapa3(); }
+  else if (estatus === 'Anticipo recibido' || estatus === 'Reservado')  { actualizarStepper(3); renderEtapa3(); }
   else if (estatus === 'En produccion')      { actualizarStepper(4); renderEtapa3(); }
   else if (estatus === 'Entregado')          { actualizarStepper(5); renderEtapa4(); }
   else if (estatus === 'Liquidado')          { actualizarStepper(5); renderEtapa4(); }
