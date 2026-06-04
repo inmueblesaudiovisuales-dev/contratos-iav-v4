@@ -1,5 +1,16 @@
 # BUILD LOG — Rediseño IAV (admin + portal)
 
+## Fix carpetas duplicadas en Drive (2026-06-04) — VERIFICADO EN VIVO
+Cada contrato creaba 2+ carpetas de proyecto. Causa doble:
+1. `crearCarpetas` (al crear) y `procesarFirma` (al firmar) ambas hacían `createFolder`
+   sin checar si existía → **fix adapter**: helper `getOrCreateFolder_` idempotente.
+2. El worker NO enviaba `fechaSesion` a `crearCarpetas`, así que el adapter caía a "hoy"
+   y ponía la carpeta en un mes distinto al de `procesarFirma` (que sí usa la fecha de
+   sesión) → quedaban en meses distintos y el helper no las unía → **fix worker**: enviar
+   `fechaSesion` en el payload de `crearCarpetas`.
+Ambos desplegados. Verificado: un contrato nuevo crea **UNA** carpeta de proyecto con
+**una** "Control Interno" y **una** "Entregables".
+
 > Bitácora de ejecución. Para retomar: leer `design/SPEC_REDISENO_IAV.md` + `design/design-system.css` + `design/B-dossier.html` + este log + `MASTER_V4.md` (R58).
 
 ## Auditoría exhaustiva 3 (2026-06-04) — seguridad/robustez. Sistema sólido.
