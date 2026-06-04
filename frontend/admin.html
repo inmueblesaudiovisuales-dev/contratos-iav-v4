@@ -978,6 +978,19 @@
     }
     .panel-pay-bar-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width 400ms; }
 
+    /* ── RECIBO (bloque de pago estilo Dossier) ───────── */
+    .recibo { background: var(--paper-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+    .recibo-r { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; color: var(--ink-2); padding: 5px 0; border-bottom: 1px dashed var(--border-2); }
+    .recibo-r:last-of-type { border-bottom: none; }
+    .recibo-r .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-1); }
+    .recibo-r .mono.neg { color: var(--success); }
+    .recibo-total { display: flex; justify-content: space-between; align-items: baseline; margin: 11px 0 12px; }
+    .recibo-total-lbl { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+    .recibo-total-val { font-family: var(--font-display); font-size: 27px; font-weight: 500; color: var(--warn); line-height: 1; }
+    .recibo-total-val.pagado { color: var(--success); }
+    .recibo-track { height: 7px; background: var(--card); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+    .recibo-track-fill { height: 100%; background: var(--gold-leaf); border-radius: 5px; transition: width 400ms var(--ease, ease); }
+
     /* ── PANEL ACTION BAR ─────────────────────────────── */
     #panel-action-bar { padding: 10px 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
     .panel-action-bar { display: flex; flex-direction: column; gap: 6px; }
@@ -4215,12 +4228,15 @@ function renderPanel(data) {
   const _saldoVivo = saldo;
   document.getElementById('pane-pagos').innerHTML = `
     <div class="panel-sec-head">Pago</div>
-    <div class="panel-kpi-row" style="margin-bottom:12px">
-      <div class="panel-kpi-card"><div class="panel-kpi-label">Total</div><div class="panel-kpi-val">${fmxn(precioTotal)}</div><div class="panel-kpi-sub">Contratado</div></div>
-      <div class="panel-kpi-card"><div class="panel-kpi-label">Pagado</div><div class="panel-kpi-val green">${fmxn(totalAbonado)}</div><div class="panel-kpi-sub">${pct}% del total</div></div>
-      <div class="panel-kpi-card"><div class="panel-kpi-label">Saldo</div><div class="panel-kpi-val${saldo > 0 ? ' amber' : ' green'}">${fmxn(saldo)}</div><div class="panel-kpi-sub">${saldo > 0 ? 'Pendiente' : 'Pagado'}</div></div>
+    <div class="recibo">
+      <div class="recibo-r"><span>Total contratado</span><span class="mono">${fmxn(precioTotal)}</span></div>
+      <div class="recibo-r"><span>Pagado${totalAbonado > 0 ? ` · ${pct}%` : ''}</span><span class="mono neg">${totalAbonado > 0 ? '−' : ''}${fmxn(totalAbonado)}</span></div>
+      <div class="recibo-total">
+        <span class="recibo-total-lbl">${saldo > 0 ? 'Saldo pendiente' : 'Liquidado'}</span>
+        <span class="recibo-total-val${saldo > 0 ? '' : ' pagado'}">${fmxn(saldo)}</span>
+      </div>
+      <div class="recibo-track"><div class="recibo-track-fill" style="width:${pct}%"></div></div>
     </div>
-    <div class="pago-barra-track" style="margin-bottom:16px"><div class="pago-barra-fill" style="width:${pct}%"></div></div>
     <p class="sec-label">Historial de abonos</p>
     <div id="historial-abonos">${abonosHtml}</div>
     <p class="sec-label">Registrar abono</p>
