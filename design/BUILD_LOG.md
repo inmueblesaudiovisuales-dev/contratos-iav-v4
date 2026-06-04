@@ -5,7 +5,10 @@
 ## Estado (al cierre de la sesión nocturna 2026-06-04)
 - [x] **Fase 2 — Backend** (migración r58 APLICADA + config + dedupe + agendarLlamadaRapida + marcarActividad + archivos cliente + fix subida + adapter). **Desplegado y verificado en producción.**
 - [x] **Fase 0 — Cimientos** (sistema de diseño Dossier aplicado a admin + portal por remapeo de tokens; respaldos creados). **Desplegado y verificado.**
-- [~] **Fase 1 — Admin** (parcial): hecho 1.6 Ajustes (Datos bancarios + Plantillas). **Falta** la reestructura de IA: pantalla Hoy, nav (sidebar Trabajos/Clientes → tabs Hoy/Contratos/Clientes + bottom-nav/FAB), Nuevo contrato a 1 propiedad, panel reorganizado, expediente de cliente sin pipeline, features 5.x (cobro CLABE, agendar llamada rápida UI, recontratar, anticipo recordado, archivos cliente UI).
+- [~] **Fase 1 — Admin** (en progreso):
+  - [x] 1.6 Ajustes (Datos bancarios + Plantillas).
+  - [x] **Nav + pantalla Hoy (R59, commit 8794191, DESPLEGADO)**: shell nuevo topbar onyx + tabs Hoy/Contratos/Clientes + canto dorado + bottom-nav móvil con FAB + menú (⋯) con Clientes/Métricas/Paquetes/Ajustes/Salir; se eliminó sidebar/side-menu/mobile-topbar. Pantalla `#sec-hoy` con saludo+fecha, total por cobrar, botón Nuevo contrato, Sesiones de la semana, Llamadas de hoy (endpoint `listarActividadesPendientes`), lista Por cobrar con botón **Cobrar** (WhatsApp con CLABE+plantilla de config), y film-strip "radar" con punto que respira. **Unificó Contratos** (un solo modelo `listarContratos`): esto arregló el bug donde alternar las sub-tabs Confirmados/Prospectos colapsaba la lista a 1 fila. Verificado en navegador.
+  - **Falta**: 1.2 Nuevo contrato a 1 propiedad, 1.4 panel reorganizado (Pago primero, quitar selector de 9 estatus), 1.5 expediente de cliente sin pipeline, features 5.x (agendar llamada rápida UI, recontratar, anticipo recordado, archivos cliente UI).
 - [~] **Fase 3 — Portal** (parcial): hecho 3.3 pago con CLABE/banco/titular/OXXO/Clip desde config. **Falta** 3.1 claridad del formulario y 3.2 simplificación del bloque de acceso (~14→~5 campos).
 - [ ] **Fase 4 — Integración + QA** (parcial: cobro/portal usan config; falta ANEXO G completo).
 - [ ] **Fase 5 — Auditoría de bugs.**
