@@ -1,4 +1,4 @@
-import { query, queryOne, batch, uuid, now } from '../db.js';
+import { query, queryOne, batch, uuid, now, normalizarTel } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter } from '../google.js';
 
@@ -6,6 +6,103 @@ export async function handleActividades(request, env, ctx, action) {
   const db = env.DB;
   const deny = requireAdmin(request, env);
   if (deny) return deny;
+
+  // ── Agendar llamada rápida (atómico): dedupe por teléfono → reusa/crea trabajo → actividad → Calendar ──
+  if (action === 'agendarLlamadaRapida') {
+    const body = await request.json();
+    const { nombre, telefono, fecha, hora, nota, interes, paquetes, propiedadLink } = body;
+    if (!nombre && !telefono) return err('nombre o teléfono requerido');
+    if (!fecha) return err('fecha requerida');
+    const ts = now();
+
+    // 1. Dedupe por teléfono normalizado
+    let clienteId = null, clienteExistente = false, clienteNombre = nombre || '', clienteTel = telefono || '';
+    const norm = normalizarTel(telefono);
+    if (norm) {
+      const { results } = await query(db, `SELECT id, nombre, telefono FROM clientes WHERE telefono != ''`);
+      const match = results.find(c => normalizarTel(c.telefono) === norm);
+      if (match) {
+        clienteId = match.id; clienteExistente = true;
+        clienteNombre = match.nombre || clienteNombre;
+        clienteTel = match.telefono || clienteTel;
+      }
+    }
+    const statements = [];
+    if (!clienteId) {
+      clienteId = uuid();
+      statements.push({
+        sql: `INSERT INTO clientes (id, nombre, telefono, correo, origen, notas_perfil, fecha_creacion, fecha_ultima_actividad)
+              VALUES (?, ?, ?, '', 'llamada', '', ?, ?)`,
+        params: [clienteId, nombre || 'Sin nombre', telefono || '', ts, ts]
+      });
+    } else {
+      statements.push({ sql: `UPDATE clientes SET fecha_ultima_actividad=? WHERE id=?`, params: [ts, clienteId] });
+    }
+
+    // 2. Reusa trabajo abierto del cliente, o crea uno
+    let trabajoId = null;
+    if (clienteExistente) {
+      const trabajoAbierto = await queryOne(db,
+        `SELECT id FROM trabajos WHERE cliente_id=?
+         AND estatus IN ('nuevo','Nuevo','En cotizacion','Pendiente firma','Firmado')
+         ORDER BY fecha_creacion DESC LIMIT 1`, [clienteId]);
+      if (trabajoAbierto) trabajoId = trabajoAbierto.id;
+    }
+    if (!trabajoId) {
+      trabajoId = uuid();
+      statements.push({
+        sql: `INSERT INTO trabajos (id, cliente_id, estatus, interes, paquetes_cotizados_json, ubicacion, notas, fecha_creacion, fecha_ultima_actividad)
+              VALUES (?, ?, 'Nuevo', ?, ?, ?, ?, ?, ?)`,
+        params: [trabajoId, clienteId, interes || '', JSON.stringify(paquetes || []),
+                 propiedadLink || '', nota || '', ts, ts]
+      });
+    } else {
+      statements.push({ sql: `UPDATE trabajos SET fecha_ultima_actividad=? WHERE id=?`, params: [ts, trabajoId] });
+    }
+
+    // 3. Actividad de llamada agendada (pendiente)
+    const actividadId = uuid();
+    statements.push({
+      sql: `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion, estado, resultado)
+            VALUES (?, ?, ?, 'llamada_agendada', ?, ?, ?, ?, 'pendiente', '')`,
+      params: [actividadId, clienteId, trabajoId, nota || '', fecha, hora || '10:00', ts]
+    });
+
+    try {
+      await batch(db, statements);
+    } catch (e) {
+      // Si falla por columnas nuevas (estado/resultado) inexistentes, reintenta sin ellas
+      const fallback = statements.map(s => s.sql.includes("'llamada_agendada'")
+        ? { sql: `INSERT INTO actividades (id, cliente_id, trabajo_id, tipo, descripcion, fecha_actividad, hora, fecha_creacion)
+                  VALUES (?, ?, ?, 'llamada_agendada', ?, ?, ?, ?)`,
+            params: [actividadId, clienteId, trabajoId, nota || '', fecha, hora || '10:00', ts] }
+        : s);
+      await batch(db, fallback);
+    }
+
+    // 4. Calendar (background)
+    callAdapter(ctx, env, 'agendarLlamadaCliente', {
+      clienteId, nombre: clienteNombre, telefono: clienteTel,
+      interes: interes || '', fechaLlamada: fecha, horaLlamada: hora || '10:00',
+      notas: nota || '', contratoToken: '', trabajoId
+    });
+
+    return ok({ ok: true, clienteId, trabajoId, actividadId, clienteExistente });
+  }
+
+  // ── Marcar actividad hecha + resumen ──
+  if (action === 'marcarActividad') {
+    const body = await request.json();
+    const { actividadId, estado, resultado } = body;
+    if (!actividadId) return err('actividadId requerido');
+    try {
+      await query(db, `UPDATE actividades SET estado=?, resultado=? WHERE id=?`,
+        [estado || 'hecha', resultado || '', actividadId]);
+    } catch (e) {
+      return err('No se pudo marcar (¿migración r58 pendiente?). ' + e.message);
+    }
+    return ok({ ok: true });
+  }
 
 	  if (action === 'agendarLlamada') {
 	    const body = await request.json();

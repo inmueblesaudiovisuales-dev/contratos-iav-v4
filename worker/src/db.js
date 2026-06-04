@@ -39,3 +39,14 @@ export function parseFecha(str) {
   if (str.includes('T')) return new Date(str);
   return new Date(str + 'T12:00:00');
 }
+
+// Normaliza teléfono a 10 dígitos nacionales (MX) para dedupe.
+// Quita no-dígitos y prefijos 52 / 521 de larga distancia. Espejo de normalizarTelWA() del frontend.
+export function normalizarTel(tel) {
+  if (!tel) return '';
+  let d = String(tel).replace(/\D/g, '');
+  if (d.length === 13 && d.startsWith('521')) d = d.slice(3);
+  else if (d.length === 12 && d.startsWith('52')) d = d.slice(2);
+  else if (d.length === 11 && d.startsWith('1')) d = d.slice(1);
+  return d;
+}

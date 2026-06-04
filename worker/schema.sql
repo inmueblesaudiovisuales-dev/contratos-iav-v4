@@ -118,7 +118,11 @@ CREATE TABLE IF NOT EXISTS clientes (
   notas_perfil TEXT DEFAULT '',
   fecha_creacion TEXT NOT NULL,
   fecha_ultima_actividad TEXT DEFAULT '',
-  inmobiliaria TEXT DEFAULT ''
+  inmobiliaria TEXT DEFAULT '',
+  sin_anticipo INTEGER DEFAULT 0,
+  anticipo_default REAL DEFAULT NULL,
+  logo_url TEXT DEFAULT '',
+  carpeta_cliente_id TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS trabajos (
@@ -146,7 +150,16 @@ CREATE TABLE IF NOT EXISTS actividades (
   descripcion TEXT DEFAULT '',
   fecha_actividad TEXT NOT NULL,
   hora TEXT DEFAULT '',
-  fecha_creacion TEXT NOT NULL
+  fecha_creacion TEXT NOT NULL,
+  estado TEXT DEFAULT 'pendiente',
+  resultado TEXT DEFAULT ''
+);
+
+-- Configuración (datos bancarios, plantillas WhatsApp) — R58
+CREATE TABLE IF NOT EXISTS config (
+  clave TEXT PRIMARY KEY,
+  valor TEXT DEFAULT '',
+  actualizado TEXT
 );
 
 CREATE TABLE IF NOT EXISTS revisiones_video (

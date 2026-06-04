@@ -1,4 +1,4 @@
-import { query, queryOne, run, batch, uuid, now } from '../db.js';
+import { query, queryOne, run, batch, uuid, now, normalizarTel } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 
 export async function handleClientes(request, env, ctx, action) {
@@ -94,19 +94,65 @@ export async function handleClientes(request, env, ctx, action) {
     return ok({ ok: true, cliente, trabajos, contratos, actividades });
   }
 
+  if (action === 'buscarClientePorTelefono') {
+    // Dedupe: match exacto por teléfono normalizado a 10 dígitos.
+    const url = new URL(request.url);
+    let tel = url.searchParams.get('telefono');
+    if (!tel && request.method === 'POST') {
+      const body = await request.json();
+      tel = body.telefono;
+    }
+    const norm = normalizarTel(tel);
+    if (!norm) return ok({ ok: true, cliente: null }); // sin teléfono → no dedupe
+    // No hay columna normalizada en D1; normaliza en JS sobre el set de clientes.
+    const { results } = await query(db,
+      `SELECT id, nombre, telefono, correo, sin_anticipo, anticipo_default, logo_url
+       FROM clientes WHERE telefono != ''`);
+    const match = results.find(c => normalizarTel(c.telefono) === norm) || null;
+    return ok({ ok: true, cliente: match });
+  }
+
   if (action === 'actualizarCliente') {
     const body = await request.json();
-    const { id, nombre, telefono, correo, origen, notasPerfil, inmobiliaria, _soloInmobiliaria } = body;
+    const { id, nombre, telefono, correo, origen, notasPerfil, inmobiliaria,
+            _soloInmobiliaria, sinAnticipo, anticipoDefault, logoUrl } = body;
     if (!id) return err('id requerido');
     if (_soloInmobiliaria) {
       await run(db, `UPDATE clientes SET inmobiliaria=? WHERE id=?`, [inmobiliaria || '', id]);
       return ok({ ok: true });
     }
+    // Actualización parcial de preferencias (anticipo / logo) sin tocar contacto.
+    if (body._soloPreferencias) {
+      try {
+        const sets = [], params = [];
+        if (sinAnticipo !== undefined) { sets.push('sin_anticipo=?'); params.push(sinAnticipo ? 1 : 0); }
+        if (anticipoDefault !== undefined) { sets.push('anticipo_default=?'); params.push(anticipoDefault === null || anticipoDefault === '' ? null : Number(anticipoDefault)); }
+        if (logoUrl !== undefined) { sets.push('logo_url=?'); params.push(logoUrl || ''); }
+        if (!sets.length) return ok({ ok: true });
+        params.push(id);
+        await run(db, `UPDATE clientes SET ${sets.join(', ')} WHERE id=?`, params);
+      } catch (e) {
+        return err('No se pudo guardar preferencia (¿migración r58 pendiente?). ' + e.message);
+      }
+      return ok({ ok: true });
+    }
     if (!nombre) return err('Nombre requerido');
-    await run(db,
-      `UPDATE clientes SET nombre=?, telefono=?, correo=?, origen=?, notas_perfil=?, inmobiliaria=? WHERE id=?`,
-      [nombre, telefono || '', correo || '', origen || '', notasPerfil || '', inmobiliaria || '', id]
-    );
+    // Incluye preferencias si vienen; tolera migración pendiente cayendo al UPDATE básico.
+    try {
+      await run(db,
+        `UPDATE clientes SET nombre=?, telefono=?, correo=?, origen=?, notas_perfil=?, inmobiliaria=?,
+         sin_anticipo=?, anticipo_default=? WHERE id=?`,
+        [nombre, telefono || '', correo || '', origen || '', notasPerfil || '', inmobiliaria || '',
+         sinAnticipo ? 1 : 0,
+         anticipoDefault === undefined || anticipoDefault === null || anticipoDefault === '' ? null : Number(anticipoDefault),
+         id]
+      );
+    } catch (e) {
+      await run(db,
+        `UPDATE clientes SET nombre=?, telefono=?, correo=?, origen=?, notas_perfil=?, inmobiliaria=? WHERE id=?`,
+        [nombre, telefono || '', correo || '', origen || '', notasPerfil || '', inmobiliaria || '', id]
+      );
+    }
     return ok({ ok: true });
   }
 

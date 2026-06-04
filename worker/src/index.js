@@ -10,6 +10,7 @@ import { handleEquipo } from './routes/equipo.js';
 import { handleClientes } from './routes/clientes.js';
 import { handleTrabajos } from './routes/trabajos.js';
 import { handleActividades } from './routes/actividades.js';
+import { handleConfig } from './routes/config.js';
 import { syncToSheets } from './cron.js';
 import { err } from './auth.js';
 
@@ -32,12 +33,13 @@ const RUTAS_PORTAL = ['obtenerPortal','firmaCliente','guardarResena','guardarCon
 const RUTAS_ABONOS = ['registrarAbono','listarAbonos'];
 const RUTAS_PAQUETES = ['listarPaquetes','listarPaquetesTodos','crearPaquete','editarPaquete','togglePaquete'];
 const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];
-const RUTAS_ARCHIVOS = ['subirArchivo','subirArchivoAdmin'];
+const RUTAS_ARCHIVOS = ['subirArchivo','subirArchivoAdmin','subirArchivoCliente','listarArchivosCliente'];
 const RUTAS_REVISION = ['obtenerRevision','guardarRevision'];
 const RUTAS_EQUIPO       = ['obtenerEquipo','marcarProduccion'];
 const RUTAS_CLIENTES    = ['crearCliente','listarClientes','obtenerCliente','actualizarCliente','borrarCliente'];
 const RUTAS_TRABAJOS    = ['crearTrabajo','listarTrabajos','actualizarTrabajo','actualizarEstatusTrabajo'];
-const RUTAS_ACTIVIDADES = ['agendarLlamada','agregarNota','listarActividades'];
+const RUTAS_ACTIVIDADES = ['agendarLlamada','agregarNota','listarActividades','agendarLlamadaRapida','marcarActividad'];
+const RUTAS_CONFIG      = ['obtenerConfig','obtenerConfigAdmin','guardarConfig'];
 
 export default {
   async fetch(request, env, ctx) {
@@ -85,6 +87,8 @@ export default {
       response = await handleTrabajos(request, env, ctx, action);
     } else if (RUTAS_ACTIVIDADES.includes(action)) {
       response = await handleActividades(request, env, ctx, action);
+    } else if (RUTAS_CONFIG.includes(action)) {
+      response = await handleConfig(request, env, ctx, action);
     } else {
       response = err('Acción no encontrada', 404);
     }

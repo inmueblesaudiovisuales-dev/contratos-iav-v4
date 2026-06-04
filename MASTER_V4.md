@@ -335,6 +335,30 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
 
+### Ronda 58 — Rediseño completo admin + portal "Dossier" (2026-06-04)
+
+**Cambio:** Rediseño total de `admin.html` y `portal.html` al sistema de diseño "Dossier" (Apple + editorial cálido), más backend de soporte. Spec en `design/SPEC_REDISENO_IAV.md`. Ejecución autónoma; bitácora en `design/BUILD_LOG.md`.
+
+> **Migración D1 (APLICADA en remoto 2026-06-04):**
+> ```bash
+> cd worker && wrangler d1 execute contratos-iav-v4 --remote --file=migrations/r58-rediseno.sql
+> ```
+> Agrega `clientes.sin_anticipo/anticipo_default/logo_url/carpeta_cliente_id`, `actividades.estado/resultado`, y tabla `config`. Todos los ALTER son aditivos con DEFAULT.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R58-B01 | `worker/migrations/r58-rediseno.sql` + `worker/schema.sql` | Migración aditiva: prefs de anticipo y logo a nivel cliente, estado/resultado de actividades, tabla `config`. |
+| R58-B02 | `worker/src/routes/config.js` (nuevo) + `index.js` | `obtenerConfig` (público, solo claves bancarias), `obtenerConfigAdmin`, `guardarConfig` (admin). Degradación con gracia si `config` no existe. |
+| R58-B03 | `worker/src/routes/clientes.js` | `buscarClientePorTelefono` (dedupe por tel normalizado); `actualizarCliente` acepta `sinAnticipo/anticipoDefault/logoUrl` y `_soloPreferencias`, con fallback si la migración está pendiente. |
+| R58-B04 | `worker/src/routes/actividades.js` | `agendarLlamadaRapida` (atómico: dedupe → reusa/crea trabajo → actividad → Calendar) y `marcarActividad` (estado+resultado). |
+| R58-B05 | `worker/src/routes/archivos.js` | `subirArchivoCliente`/`listarArchivosCliente` (carpeta Drive por cliente, logo); `subirArchivoAdmin` ahora cae a la carpeta del cliente si la del proyecto no existe (fix de subida que "siempre fallaba"). |
+| R58-B06 | `worker/src/db.js` | `normalizarTel()` (espejo de `normalizarTelWA` del frontend) para dedupe. |
+| R58-B07 | `adapter/AdapterScript4_v1.js` | 2026-06-04 02:18:22 CST: `subirArchivoCliente` + `listarArchivosCliente` (carpeta "Clientes/{nombre — id}" en Drive). **Requiere despliegue manual en script.google.com.** |
+
+(Frontend admin/portal: ver IDs R58-Fxx conforme avanza la bitácora.)
+
+---
+
 ### Ronda 57 — Segunda auditoria integral Bitacora (2026-06-04)
 
 **Cambio:** Segunda auditoria exhaustiva de integridad, estados `no_aplica`, jerarquias de espacios y claridad para Cierre/Edicion.

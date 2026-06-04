@@ -36,6 +36,8 @@ function doPost(e) {
       reagendarPropiedad: reagendarPropiedad,
       subirArchivo: subirArchivo,
       subirArchivoAdmin: subirArchivoAdmin,
+      subirArchivoCliente: subirArchivoCliente,
+      listarArchivosCliente: listarArchivosCliente,
       notificarResena: notificarResena,
       notificarRevision: notificarRevision,
       enviarRecordatorioPago: enviarRecordatorioPago,
@@ -926,6 +928,54 @@ function subirArchivoAdmin(body) {
   var archivo = carpeta.createFile(blob);
   archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return { ok: true, url: archivo.getUrl() };
+}
+
+// ── ARCHIVOS A NIVEL CLIENTE (logo reutilizable) — R58 ──────────────────────
+// Carpeta por cliente bajo "Clientes" en CARPETA_PROYECTOS_ID. Reutilizable entre contratos.
+
+function obtenerOCrearCarpetaCliente_(clienteId, nombreCliente, carpetaClienteId) {
+  if (carpetaClienteId) {
+    try { return DriveApp.getFolderById(carpetaClienteId); } catch (e) { /* recrear abajo */ }
+  }
+  var raiz = DriveApp.getFolderById(CONFIG.CARPETA_PROYECTOS_ID);
+  var iterClientes = raiz.getFoldersByName('Clientes');
+  var carpetaClientes = iterClientes.hasNext() ? iterClientes.next() : raiz.createFolder('Clientes');
+  var nombreCarpeta = (nombreCliente ? nombreCliente.replace(/[\\/:*?"<>|]/g, ' ').trim() + ' — ' : '') + clienteId;
+  // Busca por sufijo de clienteId para evitar duplicados si cambió el nombre
+  var iter = carpetaClientes.getFolders();
+  while (iter.hasNext()) {
+    var f = iter.next();
+    if (f.getName().indexOf(clienteId) !== -1) return f;
+  }
+  return carpetaClientes.createFolder(nombreCarpeta);
+}
+
+function subirArchivoCliente(body) {
+  if (!body.clienteId) return { error: 'clienteId requerido' };
+  if (!body.base64) return { error: 'Archivo requerido' };
+  var carpeta = obtenerOCrearCarpetaCliente_(body.clienteId, body.nombreCliente || '', body.carpetaClienteId || '');
+  var blob = Utilities.newBlob(Utilities.base64Decode(body.base64), body.mimeType, body.nombre);
+  var archivo = carpeta.createFile(blob);
+  archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return { ok: true, url: archivo.getUrl(), carpetaClienteId: carpeta.getId(), esLogo: !!body.esLogo };
+}
+
+function listarArchivosCliente(body) {
+  if (!body.carpetaClienteId) return { ok: true, archivos: [] };
+  var archivos = [];
+  try {
+    var carpeta = DriveApp.getFolderById(body.carpetaClienteId);
+    var iter = carpeta.getFiles();
+    while (iter.hasNext()) {
+      var f = iter.next();
+      var nombre = f.getName();
+      var esLogo = /logo/i.test(nombre);
+      archivos.push({ nombre: nombre, url: f.getUrl(), esLogo: esLogo });
+    }
+  } catch (e) {
+    return { error: 'No se pudo leer la carpeta del cliente: ' + e.message };
+  }
+  return { ok: true, archivos: archivos };
 }
 
 // ── SYNC BACKUP — sobreescribe Sheets con snapshot de D1 ────────────────────
