@@ -304,31 +304,6 @@
     .contratos-tab.activo-ctab .ctab-badge { background: var(--gold); color: white; }
     .contratos-tab:not(.activo-ctab) .ctab-badge { background: var(--ink-4); color: var(--ink-2); }
 
-    /* ── SUBTAB STRIP ────────────────────────────────── */
-    .subtab-strip {
-      display: flex;
-      gap: 0;
-      padding: 0 16px;
-      border-bottom: 1px solid var(--border);
-      background: white;
-    }
-    .subtab-btn {
-      padding: 8px 14px;
-      border: none;
-      border-bottom: 2px solid transparent;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--ink-2);
-      background: transparent;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-    }
-    .subtab-btn.activo {
-      color: var(--ink-1);
-      border-bottom-color: var(--ink-1);
-    }
-    .subtab-btn:not(.activo):hover { color: var(--ink-1); }
-
     /* ── TOOLBAR ──────────────────────────────────────── */
     .barra { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
     .barra-fila-principal { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -3093,13 +3068,7 @@ function fmtFecha(iso) {
   return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-var _grupoActual = 'confirmados';
 var _mostrarCancelados = false;
-
-function cambiarGrupoTrabajos(grupo, btn) {
-  _grupoActual = grupo;
-  cargarContratos();
-}
 
 function toggleCancelados() {
   _mostrarCancelados = !_mostrarCancelados;
