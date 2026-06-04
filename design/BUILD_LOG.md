@@ -31,13 +31,32 @@ Cero errores de consola en admin (Hoy/Contratos/panel/Clientes) y portal.
   Clientes→expediente (contratos, hilo de notas, Lo cotizado, Archivos, Recontratar).
   **No se mutó data de producción** (no se registraron abonos/llamadas reales).
 
+### Continuación R60 (misma rama) — datos de pago + auditoría E2E
+- [x] **Datos bancarios en config** (commit pusheado): se llenó la `config` de
+  **producción** (vía API `guardarConfig`) con CLABE/banco/titular/Clip + **cuenta**
+  y **tarjeta**. Se hicieron **cuenta y tarjeta editables desde Ajustes** (claves
+  `pago_cuenta`/`pago_tarjeta` en `worker/config.js`; portal las lee de config con el
+  valor actual como respaldo; las 8 tarjetas hardcodeadas del portal ahora usan
+  `portalData.tarjeta`). Mapeo: CLABE→transferencia, cuenta→cajero, tarjeta→OXXO/Seven.
+  El cobro por WhatsApp del admin sigue solo con CLABE (decisión de Bruno).
+- [x] **P4 — Auditoría E2E destructiva COMPLETA** (contrato de prueba creado y borrado
+  en producción, verificado con Playwright): crear (anticipo Sin/50/100/Otro ✓, precio
+  auto $4,500) → ledger ✓ → panel → abono (correctamente **bloqueado hasta firmar**;
+  tras firmar, $1,000 → saldo $1,250, auto-avanza a Reservado) → **Cobrar por WhatsApp
+  con CLABE** ✓ → **agendar llamada rápida sin duplicar cliente** (dedupe ✓) →
+  **Recontratar** (abre Nuevo precargado) ✓ → **borrado de contrato + cliente,
+  verificado**. Único error de consola en toda la sesión: el 400 esperado del abono
+  pre-firma. **No quedó data de prueba.**
+- [x] **Fix cosmético**: `crearContrato` ya limpia el mensaje "Guardando contrato…" al
+  mostrar el resultado.
+- [x] **P5 — CSS muerto del sidebar/side-menu eliminado** (bloques `#sidebar`,
+  `#side-menu`, `.sm-*`, `.sidebar-*`; sin markup que los use). Quedan solo referencias
+  en reglas agrupadas compartidas (inofensivas) y un `#side-menu{display:none}` residual.
+
 ### Falta para la siguiente sesión (rama `acabado-admin`)
-- **P4 E2E destructivo**: recorrer Anexo G creando 1 contrato de prueba → abono real →
-  agendar llamada (sin duplicar cliente) → recontratar → y **borrarlo** al final.
-- **P5 resto**: borrar el CSS muerto de `#sidebar`/`#side-menu`/`.sidebar-*`/`.sm-*`
-  (sin markup que lo use, en `:root`+media `min-width:1024px`) y las funciones muertas
-  del modelo viejo `trabajos` (`renderTablaTrabajos`/`renderCardsTrabajos`/
-  `seleccionarTrabajo` — no se invocan; `querySelectorAll` vacío no falla).
+- **P5 resto (menor)**: borrar las funciones muertas del modelo viejo `trabajos`
+  (`renderTablaTrabajos`/`renderCardsTrabajos`/`seleccionarTrabajo` — no se invocan;
+  `querySelectorAll` vacío no falla) y las referencias residuales en reglas CSS agrupadas.
 - **P2 resto**: seguir adoptando componentes del design-system donde eleve (botones a
   `.btn-primary`/`.btn-ghost`, chips de estatus, toolbar de Contratos más discreta — hoy
   conserva chips+select+fechas+cancelados; funcional pero más cargada que el mockup).
