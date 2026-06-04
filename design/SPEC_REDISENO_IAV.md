@@ -9,6 +9,29 @@
 
 ## 0. CÓMO USAR ESTE DOCUMENTO
 
+### ⛔ PREFLIGHT OBLIGATORIO — antes de TOCAR una sola línea
+**No empieces a trabajar hasta completar esta verificación. Nunca uses versiones viejas ni asumas que tienes algo.**
+1. **Trabaja contra el repo de GitHub `inmueblesaudiovisuales-dev/contratos-iav-v4`, rama `main`. Es la ÚNICA fuente de verdad.** No uses copias locales sueltas, ni carpetas tipo `/tmp/...`, ni archivos de sesiones anteriores: pueden estar desactualizados.
+2. **Asegura estado fresco:** `git fetch origin && git status` → confirma que estás en `main` y al día; si no, `git pull origin main`. Anota el hash del último commit y verifícalo contra lo que esperas. Si vas a empezar en un entorno limpio, **clona el repo de cero**.
+3. **Confirma que tienes TODOS los archivos necesarios y son los del repo:**
+   - `frontend/admin.html`, `frontend/portal.html`
+   - `worker/` completo (`src/index.js`, `src/routes/*.js`, `schema.sql`, `wrangler.toml`, `migrations/`)
+   - `adapter/AdapterScript4_v1.js`
+   - `design/SPEC_REDISENO_IAV.md` (este), `design/design-system.css`, `design/B-dossier.html`, `design/BUILD_LOG.md`
+   - `MASTER_V4.md` (contexto de DB/flujos) — **léelo también**.
+4. **Verifica tamaños/coherencia:** `admin.html` debe rondar ~6,000 líneas y `portal.html` ~2,800. Si tienes un `admin.html` mucho más corto, es una versión vieja → NO la uses.
+5. **Si falta cualquier archivo o no estás 100% seguro de tener la versión más reciente y completa: BÚSCALO.** Si tras buscar sigues sin poder confirmarlo, **DETENTE y pregúntale a Bruno.** No improvises sobre datos incompletos.
+6. **Repite el `git pull` al inicio de CADA fase** (commiteas por fase; evita trabajar sobre estado viejo).
+
+### Cuándo detenerte y preguntar (no adivines)
+- Falta un archivo o no puedes confirmar que es la versión más reciente (ver preflight).
+- El spec es ambiguo en algo **irreversible o que afecta dinero/datos del cliente**.
+- Un cambio te obligaría a romper el modelo de datos o `equipo.html`.
+- Encuentras una decisión de producto no cubierta aquí que cambia el comportamiento de cara al cliente.
+En esos casos: para, explica el dilema y pregunta. En lo demás (estética, microcopy, detalle de implementación), decide con buen criterio y avanza.
+
+---
+
 1. Lee este spec completo **antes** de tocar código.
 2. Trabaja sobre el repo (`frontend/admin.html`, `frontend/portal.html`, `worker/`, `adapter/AdapterScript4_v1.js`).
 3. **Antes de sobrescribir**, guarda respaldos: copia `frontend/admin.html` → `frontend/admin-v4-backup.html` y `frontend/portal.html` → `frontend/portal-v4-backup.html` en el primer commit.
@@ -614,6 +637,7 @@ Toda respuesta del worker: `{ ok:true, … }` o `{ ok:false, error:"texto" }`. E
 
 **Modo:** un hilo Opus principal que sostiene la visión (no fan-out en `admin.html`). Cada fase = commit a `main`. El contexto vive en: este spec + `design-system.css` + `design/B-dossier.html`. Si el contexto se reinicia, re-anclar con esos tres + el resumen de decisiones (sección 12).
 
+- **Fase -1 — Preflight (obligatoria).** Completar la verificación del inicio de la sección 0: repo `main` al día, todos los archivos presentes y en su versión más reciente (admin ~6k líneas, portal ~2.8k), leídos spec + design-system + mockup + `MASTER_V4.md` + `BUILD_LOG.md`. Si falta algo o hay duda → buscar; si no se resuelve → **detenerse y preguntar a Bruno**. No avanzar sin esto.
 - **Fase 0 — Cimientos.** Incrustar `design-system.css` en `admin.html` (y luego portal). Construir el shell nuevo: topbar + tabs `Hoy/Contratos/Clientes`, quitar sidebar/side-menu, bottom-nav + FAB. Verificar que la app sigue cargando y autenticando. Commit.
 - **Fase 1 — Admin.** En sub-pasos commiteables: (1.1) Hoy · (1.2) Nuevo contrato (1 propiedad) · (1.3) Contratos lista · (1.4) Panel reorganizado · (1.5) Clientes/expediente · (1.6) Ajustes (bancario + plantillas). Tras cada sub-paso, abrir en navegador y comparar con wireframe + mockup. Commit por sub-paso.
 - **Fase 2 — Backend.** Migración `r36-rediseno.sql` (aplicar en D1 remoto) · rutas `config`, dedupe en `clientes`, `agendarLlamadaRapida`, `marcarActividad`, archivos de cliente + **fix de subida** · adapter (carpeta/logo por cliente). *Candidato a subagente dedicado* (archivos independientes). Entregar adapter para despliegue manual. Commit.
@@ -649,7 +673,12 @@ Como el push a `main` despliega al instante y el frontend nuevo llama endpoints 
 
 ### I.5 Alcance de la familia de archivos
 - **En alcance ahora:** `admin.html` (completo, incluida la **pantalla de login**, que también se re-estiliza) y `portal.html` (completo).
-- **Fuera de alcance ahora (no tocar, salvo que cargue el design-system para consistencia visual mínima si es trivial):** `equipo.html` (se arregla un bug en otra sesión), `checklist.html` (Bruno quiere usarlo más; re-estilo a marca queda para una fase posterior — solo asegurar que el **link** desde el admin/equipo funcione), `revision.html` (no prioritario), `chat.html` (no evaluado en esta sesión — **no tocar**; si el ejecutor ve que rompe algo, reportar, no rediseñar).
+- **Fuera de alcance ahora — NO tocar:**
+  - `equipo.html` — **no modificar.** Tiene un bug visual conocido pero **no es prioritario**; se deja para otra sesión. No lo rediseñes ni intentes arreglarlo ahora.
+  - `checklist.html` — **otra sesión.** Bruno quiere usarlo más, pero su re-estilo queda para después. Aquí solo: asegurar que el **link** desde el admin funcione.
+  - `chat.html` — **no tocar.** Le falta mucho para estar listo; ni rediseño ni cambios.
+  - `revision.html` — no prioritario; no tocar.
+  - Si alguno de estos se rompe por un cambio tuyo, **repórtalo**, no lo rediseñes.
 - **Correos automáticos / PDF:** no se rediseña su HTML; se conservan (dan profesionalismo).
 
 ### I.6 Definition of done (por fase)
