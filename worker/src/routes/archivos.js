@@ -10,7 +10,8 @@ export async function handleArchivos(request, env, ctx, action) {
     const { token, base64, mimeType, nombre, numPropiedad } = body;
     if (!token) return err('Token requerido');
 
-    const contrato = await queryOne(db, 'SELECT token FROM contratos WHERE token = ?', [token]);
+    const contrato = await queryOne(db,
+      'SELECT token, folio, nombre_cliente FROM contratos WHERE token = ?', [token]);
     if (!contrato) return err('Contrato no encontrado', 404);
 
     const keyHeader = request.headers.get('X-Admin-Key');
@@ -24,12 +25,15 @@ export async function handleArchivos(request, env, ctx, action) {
     }
 
     const prop = await queryOne(db,
-      'SELECT carpeta_control_id FROM propiedades WHERE contrato_token = ? AND num_propiedad = ?',
+      'SELECT carpeta_control_id, fecha_sesion FROM propiedades WHERE contrato_token = ? AND num_propiedad = ?',
       [token, numPropiedad || 1]
     );
     const result = await callAdapterSync(env, 'subirArchivo', {
       token, base64, mimeType, nombre, numPropiedad,
-      carpetaId: prop?.carpeta_control_id || null
+      carpetaId: prop?.carpeta_control_id || null,
+      folio: contrato.folio || '',
+      nombreCliente: contrato.nombre_cliente || '',
+      fechaSesion: prop?.fecha_sesion || ''
     });
     return ok(result);
   }

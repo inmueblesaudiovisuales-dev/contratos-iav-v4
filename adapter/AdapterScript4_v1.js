@@ -887,13 +887,32 @@ function crearEventoReservado(body) {
 // ── ARCHIVOS ─────────────────────────────────────────────────────────────────
 
 function subirArchivo(body) {
-  // Preferir carpetaId pasado desde el Worker (D1) sobre PropertiesService
+  // 1. Preferir carpetaId desde D1 (Worker lo pasa)
   var carpetaId = body.carpetaId || null;
+
+  // 2. Fallback: PropertiesService (contratos firmados antes del fix de crearCarpetas)
   if (!carpetaId) {
     var props = PropertiesService.getScriptProperties();
     carpetaId = props.getProperty('carpeta_' + body.token + '_' + (body.numPropiedad || 1));
   }
+
+  // 3. Fallback final: crear la carpeta ahora con los datos del Worker
+  if (!carpetaId && body.folio) {
+    try {
+      var res = crearCarpetas({
+        token: body.token,
+        folio: body.folio,
+        nombreCliente: body.nombreCliente || '',
+        propiedades: [{ numPropiedad: body.numPropiedad || 1, fechaSesion: body.fechaSesion || '' }]
+      });
+      carpetaId = res.carpetaControlId || null;
+    } catch (e) {
+      console.error('subirArchivo: crearCarpetas lazy falló:', e.message);
+    }
+  }
+
   if (!carpetaId) return { error: 'Carpeta no encontrada. Contacta a Inmuebles Audiovisuales por WhatsApp.' };
+
   var carpeta = DriveApp.getFolderById(carpetaId);
   var blob = Utilities.newBlob(Utilities.base64Decode(body.base64), body.mimeType, body.nombre);
   var archivo = carpeta.createFile(blob);
