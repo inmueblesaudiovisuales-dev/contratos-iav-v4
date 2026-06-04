@@ -123,6 +123,37 @@
         'Toma de cierre',
       ],
     },
+    quinta: {
+      label: 'Quinta',
+      description: 'Casa principal, exteriores y amenidades de recreo.',
+      spaces: [
+        ['Fachada', 'exterior', true, null, 'Exterior'],
+        ['Acceso / Caseta', 'exterior', false, null, 'Exterior'],
+        ['Estacionamiento', 'exterior', false, null, 'Exterior'],
+        ['Sala', 'interior', true, null, 'Casa principal'],
+        ['Comedor', 'interior', false, null, 'Casa principal'],
+        ['Cocina', 'interior', true, null, 'Casa principal'],
+        ['Recamara principal', 'interior', true, null, 'Casa principal'],
+        ['Bano principal', 'interior', false, 'Recamara principal', 'Casa principal'],
+        ['Recamara 2', 'interior', false, null, 'Casa principal'],
+        ['Bano de visitas', 'interior', false, null, 'Casa principal'],
+        ['Alberca', 'amenidades', true, null, 'Amenidades'],
+        ['Palapa', 'amenidades', true, null, 'Amenidades'],
+        ['Asadores', 'amenidades', false, null, 'Amenidades'],
+        ['Cocina exterior', 'amenidades', false, null, 'Amenidades'],
+        ['Jardines', 'amenidades', true, null, 'Amenidades'],
+        ['Cancha', 'amenidades', false, null, 'Amenidades'],
+        ['Cabanas', 'amenidades', false, null, 'Amenidades'],
+        ['Bano de alberca', 'amenidades', false, null, 'Amenidades'],
+      ],
+    },
+  };
+
+  const SPACE_SUGGESTIONS = {
+    casa: TEMPLATE_DEFS.casa.spaces,
+    departamento: TEMPLATE_DEFS.departamento.spaces,
+    terreno: TEMPLATE_DEFS.terreno.spaces,
+    quinta: TEMPLATE_DEFS.quinta.spaces,
   };
 
   function clone(value) {
@@ -145,6 +176,23 @@
     return value || 'interior';
   }
 
+  const PISOS_DEFAULT = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades'];
+
+  function pisoFromZona(zona) {
+    if (zona === 'amenidades') return 'Amenidades';
+    if (zona === 'exterior') return 'Exterior';
+    if (zona === 'interior') return 'Piso 1';
+    return 'Sin piso';
+  }
+
+  function derivePisos(espacios) {
+    const seen = [];
+    (espacios || []).forEach((space) => {
+      if (space.piso && !seen.includes(space.piso)) seen.push(space.piso);
+    });
+    return seen.length ? seen : PISOS_DEFAULT.slice();
+  }
+
   function createDroneItems() {
     return DRONE_DEFAULTS.map((nombre, index) => ({
       id: 'drone-default-' + index,
@@ -158,6 +206,7 @@
     return {
       version: 2,
       servicios: clone(SERVICES_DEFAULT),
+      pisos: PISOS_DEFAULT.slice(),
       modoActual: 'video',
       espacios: [],
       droneItems: createDroneItems(),
@@ -185,8 +234,10 @@
         orden: space.orden || index + 1,
         clave: !!space.clave,
         zona: normalizeZone(space.zona),
+        piso: space.piso || pisoFromZona(normalizeZone(space.zona)),
         estados: Object.assign(blankEstados(), space.estados || {}),
       }));
+      normalized.pisos = Array.isArray(data.pisos) && data.pisos.length ? data.pisos.slice() : derivePisos(normalized.espacios);
       normalized.droneItems = (normalized.droneItems && normalized.droneItems.length ? normalized.droneItems : createDroneItems())
         .map((item, index) => ({
           id: item.id || makeId('drone'),
@@ -245,12 +296,14 @@
       orden: index + 1,
       clave: false,
       zona: 'interior',
+      piso: pisoFromZona('interior'),
       estados: {
         foto: legacyValueToState(room.foto || room.completado),
         t360: legacyValueToState(room.t360 || room.completado),
         video: legacyValueToState(room.video || room.completado),
       },
     }));
+    base.pisos = derivePisos(base.espacios);
     return base;
   }
 
@@ -610,6 +663,7 @@
         clave: !!row[2],
         parentId: null,
         orden: spaces.length + 1,
+        piso: row[4] || pisoFromZona(row[1]),
         estados: blankEstados(),
       };
       if (row[3] && byName[row[3]]) item.parentId = byName[row[3]].id;
@@ -810,6 +864,7 @@
     CAMERA_DEFAULTS,
     DRONE_DEFAULTS,
     TEMPLATE_DEFS,
+    SPACE_SUGGESTIONS,
     createDefaultState,
     normalizeChecklistData,
     parseSpacesText,

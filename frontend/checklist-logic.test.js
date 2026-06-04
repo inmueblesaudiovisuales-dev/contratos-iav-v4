@@ -424,3 +424,68 @@ test('does not register legacy captures for targets marked no aplica', () => {
 
   assert.equal(state.bitacora.length, 0);
 });
+
+test('default state includes an editable list of pisos', () => {
+  const state = logic.createDefaultState();
+  assert.equal(Array.isArray(state.pisos), true);
+  assert.equal(state.pisos.length > 0, true);
+});
+
+test('preserves an explicit piso on a version 2 space', () => {
+  const state = logic.normalizeChecklistData({
+    version: 2,
+    espacios: [{ id: 'a', nombre: 'Sala', piso: 'Piso 2' }],
+  });
+  assert.equal(state.espacios[0].piso, 'Piso 2');
+});
+
+test('derives piso from zona when missing (deterministic)', () => {
+  const state = logic.normalizeChecklistData({
+    version: 2,
+    espacios: [
+      { id: 'a', nombre: 'Alberca', zona: 'amenidades' },
+      { id: 'b', nombre: 'Fachada', zona: 'exterior' },
+      { id: 'c', nombre: 'Cuarto', zona: 'interior' },
+    ],
+  });
+  assert.equal(state.espacios[0].piso, 'Amenidades');
+  assert.equal(state.espacios[1].piso, 'Exterior');
+  assert.equal(state.espacios[2].piso, 'Piso 1');
+});
+
+test('derives the pisos list from existing spaces in order of appearance', () => {
+  const state = logic.normalizeChecklistData({
+    version: 2,
+    espacios: [
+      { id: 'a', nombre: 'Fachada', piso: 'Exterior' },
+      { id: 'b', nombre: 'Sala', piso: 'Piso 1' },
+      { id: 'c', nombre: 'Cocina', piso: 'Piso 1' },
+    ],
+  });
+  assert.deepEqual(state.pisos, ['Exterior', 'Piso 1']);
+});
+
+test('legacy migration assigns a piso and a pisos list', () => {
+  const state = logic.normalizeChecklistData({
+    cuartos: [{ nombre: 'Sala', completado: true }],
+    columnas: { foto: true },
+  });
+  assert.equal(typeof state.espacios[0].piso, 'string');
+  assert.equal(state.espacios[0].piso.length > 0, true);
+  assert.equal(Array.isArray(state.pisos), true);
+});
+
+test('exposes space suggestions per property type including quinta', () => {
+  assert.ok(logic.SPACE_SUGGESTIONS, 'SPACE_SUGGESTIONS exported');
+  ['casa', 'departamento', 'terreno', 'quinta'].forEach((tipo) => {
+    assert.equal(Array.isArray(logic.SPACE_SUGGESTIONS[tipo]), true, tipo + ' suggestions');
+    assert.equal(logic.SPACE_SUGGESTIONS[tipo].length > 0, true, tipo + ' not empty');
+  });
+  assert.equal(logic.SPACE_SUGGESTIONS.quinta.some((row) => /alberca/i.test(row[0])), true);
+});
+
+test('quinta template builds spaces with pisos', () => {
+  let state = logic.applyTemplate(logic.createDefaultState(), 'quinta', { mode: 'replace' });
+  assert.equal(state.espacios.length > 0, true);
+  assert.equal(state.espacios.every((space) => typeof space.piso === 'string' && space.piso.length > 0), true);
+});
