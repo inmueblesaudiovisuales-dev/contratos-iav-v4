@@ -645,7 +645,7 @@ function requiereDatosEdificio(tipo) {
 
 function accesoTieneDatos(acceso) {
   if (!acceso) return false;
-  return ['nombreRegistro','instruccionesCaseta','contactoAccesoTipo','contactoAcceso','tipoEdificio','torre','piso','departamento','estacionamiento','puntoEncuentro','puntoEncuentroDetalle','restricciones','comentarios'].some(function(k) {
+  return ['contactoAcceso','ubicacionInterna','indicaciones','nombreRegistro','instruccionesCaseta','contactoAccesoTipo','tipoEdificio','torre','piso','departamento','estacionamiento','puntoEncuentro','puntoEncuentroDetalle','restricciones','comentarios'].some(function(k) {
     return !!(acceso[k] && String(acceso[k]).trim());
   }) || !!(acceso.metodos && acceso.metodos.length);
 }
@@ -653,6 +653,12 @@ function accesoTieneDatos(acceso) {
 function resumenAcceso(acceso) {
   if (!accesoTieneDatos(acceso)) return 'Requiere acceso especial; sin instrucciones adicionales';
   var partes = [];
+  // R59: claves fusionadas nuevas
+  if (acceso.tipoEdificio) partes.push('Tipo: ' + acceso.tipoEdificio);
+  if (acceso.contactoAcceso) partes.push('Contacto: ' + acceso.contactoAcceso);
+  if (acceso.ubicacionInterna) partes.push('Ubicación: ' + acceso.ubicacionInterna);
+  if (acceso.indicaciones) partes.push(acceso.indicaciones);
+  // Compat con contratos viejos (esquema anterior)
   if (acceso.metodos && acceso.metodos.length) partes.push('Método: ' + acceso.metodos.map(function(m) { return ACCESO_METODO_LABELS[m] || m; }).join(', '));
   if (acceso.nombreRegistro) partes.push('Registro: ' + acceso.nombreRegistro);
   if (acceso.instruccionesCaseta) partes.push('Caseta: ' + acceso.instruccionesCaseta);
@@ -664,7 +670,7 @@ function resumenAcceso(acceso) {
   if (acceso.puntoEncuentro) partes.push('Punto de encuentro: ' + (ACCESO_PUNTO_LABELS[acceso.puntoEncuentro] || acceso.puntoEncuentro));
   if (acceso.puntoEncuentroDetalle) partes.push('Detalle de encuentro: ' + acceso.puntoEncuentroDetalle);
   if (acceso.restricciones) partes.push('Restricciones: ' + acceso.restricciones);
-  if (acceso.comentarios) partes.push('Comentarios: ' + acceso.comentarios);
+  if (acceso.comentarios && !acceso.indicaciones) partes.push('Comentarios: ' + acceso.comentarios);
   return partes.join('\n');
 }
 
@@ -684,6 +690,22 @@ function renderAccesoDetalle(n, acceso) {
   var tipoActual = acceso.tipoEdificio || '';
   var puntoEncuentro = acceso.puntoEncuentro || '';
   var contactoTipo = acceso.contactoAccesoTipo || (acceso.contactoAcceso ? 'otro' : 'yo');
+  // R59 (3.2 agresiva): campos fusionados, con backfill desde el esquema viejo
+  var contactoVal = acceso.contactoAcceso || acceso.contactoAccesoNombre || '';
+  var ubicacionVal = acceso.ubicacionInterna || [
+    acceso.torre && ('Torre ' + acceso.torre),
+    acceso.piso && ('Piso ' + acceso.piso),
+    acceso.departamento && ('Depto ' + acceso.departamento),
+    acceso.estacionamiento && ('Cajón ' + acceso.estacionamiento)
+  ].filter(Boolean).join(' · ');
+  var indicacionesVal = acceso.indicaciones || [
+    (metodos && metodos.length) ? ('Acceso: ' + metodos.map(function(m){return ACCESO_METODO_LABELS[m]||m;}).join(', ')) : '',
+    acceso.instruccionesCaseta ? ('Caseta: ' + acceso.instruccionesCaseta) : '',
+    acceso.puntoEncuentro ? ('Dónde vernos: ' + (ACCESO_PUNTO_LABELS[acceso.puntoEncuentro] || acceso.puntoEncuentro)) : '',
+    acceso.puntoEncuentroDetalle || '',
+    acceso.restricciones ? ('Restricciones: ' + acceso.restricciones) : '',
+    acceso.comentarios || ''
+  ].filter(Boolean).join('\n');
 
   var html = '<div class="acceso-detalle" id="acceso-detalle-' + n + '">';
   html += '<p class="acceso-intro">Estos datos ayudan a que el equipo llegue, se registre y entre sin perder tiempo el día de la sesión.</p>';
@@ -706,49 +728,17 @@ function renderAccesoDetalle(n, acceso) {
   html += '<hr class="acceso-sep">';
   html += '<div class="acceso-fields">';
 
-  /* Método de acceso */
-  html += '<div class="field full"><label>Método de acceso <span style="font-weight:500;text-transform:none;letter-spacing:0">(opcional)</span></label><div class="acceso-chip-grid">';
-  ACCESO_METODOS.forEach(function(item) {
-    var activo = metodos.indexOf(item[0]) !== -1 ? ' activo' : '';
-    html += '<button type="button" class="acceso-chip' + activo + '" data-prop="' + n + '" data-metodo="' + item[0] + '">' + esc(item[1]) + '</button>';
-  });
-  html += '</div></div>';
+  /* Contacto autorizado */
+  html += '<div class="field full"><label>Contacto autorizado para el acceso <span style="font-weight:500">(opcional)</span></label><input type="text" id="inp-acceso-contacto-' + n + '" placeholder="Nombre y teléfono de quien abre o autoriza (dueño, administración, asesor)" value="' + esc(contactoVal) + '"></div>';
 
-  /* Contacto */
-  html += '<div class="field"><label>Nombre del dueño o contacto autorizado</label><input type="text" id="inp-acceso-registro-' + n + '" placeholder="Ej. Juan Pérez, propietario / administración / asesor" value="' + esc(acceso.nombreRegistro || '') + '"></div>';
-  html += '<div class="field"><label>¿Quién resuelve si hay problema de acceso?</label><div class="acceso-grid">';
-  html += '<div class="acceso-btn' + (contactoTipo === 'yo' ? ' activo' : '') + '" data-contacto-prop="' + n + '" data-contacto-valor="yo">Yo</div>';
-  html += '<div class="acceso-btn' + (contactoTipo === 'otro' ? ' activo' : '') + '" data-contacto-prop="' + n + '" data-contacto-valor="otro">Otro contacto</div>';
-  html += '</div></div>';
-  html += '<div class="field acceso-contacto-otro" id="acceso-contacto-otro-' + n + '"><label>Otro contacto de acceso</label><input type="text" id="inp-acceso-contacto-' + n + '" placeholder="Nombre y teléfono" value="' + esc(acceso.contactoAcceso || '') + '"></div>';
+  /* Ubicación dentro del inmueble */
+  html += '<div class="field full"><label>Ubicación dentro del inmueble <span style="font-weight:500">(opcional)</span></label><input type="text" id="inp-acceso-ubicacion-' + n + '" placeholder="Ej. Torre B · Piso 7 · Depto 704 · Cajón 22" value="' + esc(ubicacionVal) + '"></div>';
 
-  /* Caseta */
-  html += '<hr class="acceso-sep">';
-  html += '<div class="field full"><label>Indicaciones para guardia o caseta</label><textarea id="inp-acceso-caseta-' + n + '" placeholder="Ej. El equipo ya queda en lista; decir que viene a foto/video. Si no los ubican, llamar al contacto autorizado." style="min-height:88px">' + esc(acceso.instruccionesCaseta || '') + '</textarea></div>';
+  /* Cómo llegar y entrar (fusiona método, caseta, punto de encuentro, restricciones, comentarios) */
+  html += '<div class="field full"><label>¿Cómo llegar y entrar?</label><textarea id="inp-acceso-indicaciones-' + n + '" placeholder="Cuéntanos cómo entra el equipo: método de acceso (QR, código, lista), qué decir en caseta, dónde vernos, estacionamiento y restricciones (horarios, drone, amenidades). Cualquier detalle para no perder tiempo." style="min-height:128px">' + esc(indicacionesVal) + '</textarea></div>';
+
+  /* Subir QR / invitación / referencia */
   html += '<div class="field full">' + renderUploadField('fachada', n - 1, 'QR, invitación o referencia de acceso', 'Si tienes QR, invitación digital, código o imagen de referencia para caseta, puedes subirla aquí. También puedes enviarla por WhatsApp después.') + '</div>';
-
-  /* Punto de encuentro — oculto para casa/privada */
-  var ocultoPunto = tipoActual === '' ? ' oculto' : '';
-  html += '<div class="full acceso-punto-section' + ocultoPunto + '" id="acceso-punto-section-' + n + '">';
-  html += '<hr class="acceso-sep" style="margin-top:0">';
-  html += '<div class="field full"><label>¿Dónde nos vemos?</label><div class="acceso-chip-grid" id="acceso-puntos-grid-' + n + '">';
-  html += renderPuntosChips(n, tipoActual, puntoEncuentro);
-  html += '</div></div>';
-  html += '<div class="field acceso-contacto-otro full" id="acceso-punto-otro-' + n + '"><label>Detalle del punto de encuentro</label><input type="text" id="inp-acceso-punto-detalle-' + n + '" placeholder="Ej. acceso de proveedores, caseta 2, lobby de torre B" value="' + esc(acceso.puntoEncuentroDetalle || '') + '"></div>';
-  html += '</div>';
-
-  /* Datos de edificio (condicional) */
-  html += '<div class="acceso-edificio" id="acceso-edificio-' + n + '">';
-  html += '<div class="field"><label>Torre</label><input type="text" id="inp-acceso-torre-' + n + '" placeholder="Ej. Torre B" value="' + esc(acceso.torre || '') + '"></div>';
-  html += '<div class="field"><label>Piso</label><input type="text" id="inp-acceso-piso-' + n + '" placeholder="Ej. 7" value="' + esc(acceso.piso || '') + '"></div>';
-  html += '<div class="field"><label>Departamento / interior</label><input type="text" id="inp-acceso-depa-' + n + '" placeholder="Ej. 704" value="' + esc(acceso.departamento || '') + '"></div>';
-  html += '<div class="field full"><label>Estacionamiento / cajón</label><input type="text" id="inp-acceso-estacionamiento-' + n + '" placeholder="Ej. Cajón 22, sótano 1" value="' + esc(acceso.estacionamiento || '') + '"></div>';
-  html += '</div>';
-
-  /* Restricciones y comentarios */
-  html += '<hr class="acceso-sep">';
-  html += '<div class="field full"><label>Restricciones importantes</label><textarea id="inp-acceso-restricciones-' + n + '" placeholder="Horarios, áreas restringidas, permisos, drone, amenidades..." style="min-height:80px">' + esc(acceso.restricciones || '') + '</textarea></div>';
-  html += '<div class="field full"><label>Comentarios para llegar y entrar</label><textarea id="inp-acceso-comentarios-' + n + '" placeholder="Cualquier detalle para llegar y entrar sin perder tiempo." style="min-height:80px">' + esc(acceso.comentarios || '') + '</textarea></div>';
 
   html += '</div></div>';
   return html;
@@ -1458,84 +1448,66 @@ function valorCampo(id) {
 }
 
 function leerAccesoPropiedad(n) {
-  var metodos = [];
-  Object.keys(accesoMetodos[n] || {}).forEach(function(m) {
-    if (accesoMetodos[n][m]) metodos.push(m);
-  });
+  // R59 (3.2 agresiva): 3 campos fusionados + tipo. Escribe TAMBIÉN las claves que leen
+  // admin (renderAccesoCaseta) y equipo (datosAcceso) para que el equipo en campo lo vea.
   var tipoEdificio = accesoTipoEdificio[n] || '';
-  var contactoTipo = accesoContactoTipo[n] || 'yo';
-  var puntoEncuentro = accesoPuntoEncuentro[n] || '';
+  var contacto     = valorCampo('inp-acceso-contacto-' + n);
+  var ubicacion    = valorCampo('inp-acceso-ubicacion-' + n);
+  var indicaciones = valorCampo('inp-acceso-indicaciones-' + n);
+
   var acceso = {
-    metodos: metodos,
-    nombreRegistro: valorCampo('inp-acceso-registro-' + n),
-    instruccionesCaseta: valorCampo('inp-acceso-caseta-' + n),
-    contactoAccesoTipo: contactoTipo,
     tipoEdificio: tipoEdificio,
-    puntoEncuentro: puntoEncuentro,
-    restricciones: valorCampo('inp-acceso-restricciones-' + n),
-    comentarios: valorCampo('inp-acceso-comentarios-' + n)
+    // claves canónicas nuevas (para re-editar en el portal)
+    contactoAcceso: contacto,
+    ubicacionInterna: ubicacion,
+    indicaciones: indicaciones
   };
-  if (contactoTipo === 'otro') acceso.contactoAcceso = valorCampo('inp-acceso-contacto-' + n);
-  if (puntoEncuentro === 'otro') acceso.puntoEncuentroDetalle = valorCampo('inp-acceso-punto-detalle-' + n);
-  if (requiereDatosEdificio(tipoEdificio)) {
-    acceso.torre = valorCampo('inp-acceso-torre-' + n);
-    acceso.piso = valorCampo('inp-acceso-piso-' + n);
-    acceso.departamento = valorCampo('inp-acceso-depa-' + n);
-    acceso.estacionamiento = valorCampo('inp-acceso-estacionamiento-' + n);
-  }
-  // ── Compatibilidad con equipo.html (R59) ──
-  // equipo lee metodoAcceso / contactoAccesoNombre / comentariosAcceso, distintos a los
-  // que escribe este formulario. Sin esto, el equipo en campo NO ve método de acceso,
-  // contacto, indicaciones de caseta ni comentarios. Escritura aditiva: no rompe lectores.
-  if (metodos.length) acceso.metodoAcceso = metodos.map(function(m) { return ACCESO_METODO_LABELS[m] || m; }).join(', ');
-  if (acceso.contactoAcceso) acceso.contactoAccesoNombre = acceso.contactoAcceso;
-  var _ubicacion = [acceso.torre && ('Torre ' + acceso.torre), acceso.piso && ('Piso ' + acceso.piso), acceso.departamento && ('Depto ' + acceso.departamento)].filter(Boolean).join(' · ');
-  var _comsTeam = [
-    _ubicacion,
-    acceso.nombreRegistro && ('Registro a nombre de: ' + acceso.nombreRegistro),
-    acceso.instruccionesCaseta && ('Caseta: ' + acceso.instruccionesCaseta),
-    acceso.comentarios
+
+  // Texto unificado para los lectores (admin: comentarios; equipo: comentariosAcceso)
+  var comsLectores = [
+    ubicacion && ('Ubicación: ' + ubicacion),
+    indicaciones
   ].filter(Boolean).join('\n');
-  if (_comsTeam) acceso.comentariosAcceso = _comsTeam;
+
+  // Compat admin renderAccesoCaseta: muestra contactoAcceso solo si contactoAccesoTipo==='otro'
+  if (contacto) { acceso.contactoAccesoTipo = 'otro'; acceso.contactoAccesoNombre = contacto; }
+  if (comsLectores) { acceso.comentarios = comsLectores; acceso.comentariosAcceso = comsLectores; }
+
   Object.keys(acceso).forEach(function(k) {
-    if (Array.isArray(acceso[k])) {
-      if (!acceso[k].length) delete acceso[k];
-    } else if (!acceso[k]) {
-      delete acceso[k];
-    }
+    if (!acceso[k]) delete acceso[k];
   });
   return acceso;
 }
 
 function restaurarAccesoDesdePayload(n, acceso, forzarVisible) {
   acceso = acceso || {};
-  accesoMetodos[n] = {};
-  (acceso.metodos || []).forEach(function(m) { accesoMetodos[n][m] = true; });
   accesoTipoEdificio[n] = acceso.tipoEdificio || '';
-  accesoContactoTipo[n] = acceso.contactoAccesoTipo || (acceso.contactoAcceso ? 'otro' : 'yo');
-  accesoPuntoEncuentro[n] = acceso.puntoEncuentro || '';
   seleccionarAcceso(n, forzarVisible || accesoTieneDatos(acceso) ? 1 : 0);
-  ACCESO_METODOS.forEach(function(item) {
-    var chip = document.querySelector('.acceso-chip[data-prop="' + n + '"][data-metodo="' + item[0] + '"]');
-    if (chip) chip.classList.toggle('activo', !!accesoMetodos[n][item[0]]);
-  });
+  // R59: 3 campos fusionados, con backfill desde el esquema viejo
+  var contactoVal = acceso.contactoAcceso || acceso.contactoAccesoNombre || '';
+  var ubicacionVal = acceso.ubicacionInterna || [
+    acceso.torre && ('Torre ' + acceso.torre),
+    acceso.piso && ('Piso ' + acceso.piso),
+    acceso.departamento && ('Depto ' + acceso.departamento),
+    acceso.estacionamiento && ('Cajón ' + acceso.estacionamiento)
+  ].filter(Boolean).join(' · ');
+  var indicacionesVal = acceso.indicaciones || [
+    (acceso.metodos && acceso.metodos.length) ? ('Acceso: ' + acceso.metodos.map(function(m){return ACCESO_METODO_LABELS[m]||m;}).join(', ')) : '',
+    acceso.instruccionesCaseta ? ('Caseta: ' + acceso.instruccionesCaseta) : '',
+    acceso.puntoEncuentro ? ('Dónde vernos: ' + (ACCESO_PUNTO_LABELS[acceso.puntoEncuentro] || acceso.puntoEncuentro)) : '',
+    acceso.puntoEncuentroDetalle || '',
+    acceso.restricciones ? ('Restricciones: ' + acceso.restricciones) : '',
+    acceso.comentarios || ''
+  ].filter(Boolean).join('\n');
   [
-    ['inp-acceso-registro-' + n, acceso.nombreRegistro],
-    ['inp-acceso-contacto-' + n, acceso.contactoAcceso],
-    ['inp-acceso-caseta-' + n, acceso.instruccionesCaseta],
-    ['inp-acceso-punto-detalle-' + n, acceso.puntoEncuentroDetalle],
-    ['inp-acceso-torre-' + n, acceso.torre],
-    ['inp-acceso-piso-' + n, acceso.piso],
-    ['inp-acceso-depa-' + n, acceso.departamento],
-    ['inp-acceso-estacionamiento-' + n, acceso.estacionamiento],
-    ['inp-acceso-restricciones-' + n, acceso.restricciones],
-    ['inp-acceso-comentarios-' + n, acceso.comentarios]
+    ['inp-acceso-contacto-' + n, contactoVal],
+    ['inp-acceso-ubicacion-' + n, ubicacionVal],
+    ['inp-acceso-indicaciones-' + n, indicacionesVal]
   ].forEach(function(pair) {
     var el = document.getElementById(pair[0]);
     if (el) el.value = pair[1] || '';
   });
-  seleccionarContactoAcceso(n, accesoContactoTipo[n]);
-  /* Restaura tipo: actualiza chips, re-renderiza puntos y visibilidad de sección */
+  /* Restaura tipo: actualiza chips y visibilidad de sección */
   seleccionarTipoEdificio(n, accesoTipoEdificio[n]);
 }
 
