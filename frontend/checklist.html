@@ -295,6 +295,7 @@
   <script>
 const API = 'https://contratos.inmueblesaudiovisuales.com/api';
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
+const DEMO = new URLSearchParams(location.search).get('demo') === '1';
 const logic = window.IAVChecklistLogic;
 
 let meta = { folio: '', nombreCliente: '' };
@@ -385,6 +386,7 @@ async function apiPost(payload) {
 }
 
 function scheduleSave() {
+  if (DEMO) return;
   dirty = true;
   retryCount = 0;
   clearTimeout(saveTimer);
@@ -463,8 +465,23 @@ async function poll() {
 }
 
 function iniciarPolling() {
+  if (DEMO) return;
   clearInterval(pollingId);
   pollingId = setInterval(poll, 5000);
+}
+
+function cargarDemo() {
+  const s = document.createElement('script');
+  s.src = './checklist-demo.js';
+  s.onload = () => {
+    meta = window.IAVChecklistDemo.meta;
+    state = window.IAVChecklistDemo.build(logic);
+    ensureActiveMode();
+    const screen = new URLSearchParams(location.search).get('screen');
+    if (['captura', 'cierre', 'edicion'].includes(screen)) activeView = screen;
+    render();
+  };
+  document.body.appendChild(s);
 }
 
 function render() {
@@ -1333,7 +1350,9 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && document.getElementById('overlay').classList.contains('visible')) cerrarModal();
 });
 
-if (!TOKEN) {
+if (DEMO) {
+  cargarDemo();
+} else if (!TOKEN) {
   mostrarError('Este enlace no tiene un token de contrato. Usa el boton Checklist desde el panel de administracion.');
 } else {
   cargar();
