@@ -11,7 +11,8 @@
 
 ### ⛔ PREFLIGHT OBLIGATORIO — antes de TOCAR una sola línea
 **No empieces a trabajar hasta completar esta verificación. Nunca uses versiones viejas ni asumas que tienes algo.**
-1. **Trabaja contra el repo de GitHub `inmueblesaudiovisuales-dev/contratos-iav-v4`, rama `main`. Es la ÚNICA fuente de verdad.** No uses copias locales sueltas, ni carpetas tipo `/tmp/...`, ni archivos de sesiones anteriores: pueden estar desactualizados.
+0. **Entorno: corre LOCAL en la Mac de Bruno** (Claude Code CLI), **no** en la web/nube — porque la migración D1 necesita `wrangler` local. La Mac ya tiene **wrangler 4.88 autenticado** (OAuth, cuenta `inmueblesaudiovisuales@gmail.com`) y el repo **ya está clonado en `~/contratos-iav-v4`**. Trabaja ahí.
+1. **El repo de GitHub `inmueblesaudiovisuales-dev/contratos-iav-v4`, rama `main`, es la ÚNICA fuente de verdad.** Usa el clon local `~/contratos-iav-v4` (haz `git pull`). No uses otras copias sueltas, ni `/tmp/...`, ni archivos de sesiones anteriores: pueden estar desactualizados.
 2. **Asegura estado fresco:** `git fetch origin && git status` → confirma que estás en `main` y al día; si no, `git pull origin main`. Anota el hash del último commit y verifícalo contra lo que esperas. Si vas a empezar en un entorno limpio, **clona el repo de cero**.
 3. **Confirma que tienes TODOS los archivos necesarios y son los del repo:**
    - `frontend/admin.html`, `frontend/portal.html`
@@ -36,7 +37,7 @@ Una vez que el **preflight pasa**, ejecuta TODO de corrido (Fases 0→5) **sin p
 2. Trabaja sobre el repo (`frontend/admin.html`, `frontend/portal.html`, `worker/`, `adapter/AdapterScript4_v1.js`).
 3. **Antes de sobrescribir**, guarda respaldos: copia `frontend/admin.html` → `frontend/admin-v4-backup.html` y `frontend/portal.html` → `frontend/portal-v4-backup.html` en el primer commit.
 4. Ejecuta el **QA de la sección 11** y haz una prueba manual de humo **antes** del push final.
-5. Migraciones D1: se aplican con `wrangler d1 execute contratos-iav-v4 --remote --command="..."` o vía archivo en `worker/migrations/`. Entrega también el SQL en `worker/migrations/r36-rediseno.sql`.
+5. Migraciones D1: se aplican con `wrangler d1 execute contratos-iav-v4 --remote --command="..."` o vía archivo en `worker/migrations/`. Entrega también el SQL en `worker/migrations/r57-rediseno.sql`.
 6. El adapter de Apps Script (`adapter/AdapterScript4_v1.js`) **no se auto-despliega**: deja el archivo listo y avisa a Bruno que debe pegarlo en script.google.com y publicar nueva versión.
 
 ### Mandato de cambio (importante)
@@ -286,7 +287,9 @@ Hoy, al activar "requiere acceso especial", aparecen ~14 campos (método, tipo d
 
 > Mucho ya existe: `actualizarCliente`, `obtenerCliente`, `borrarCliente`, `listarClientes`, `listarActividades`, `agendarLlamada`, `agregarNota`, `crearCliente`, `crearTrabajo`. **Úsalos.** Lo siguiente es lo que falta.
 
-### 9.1 Migración D1 (`worker/migrations/r36-rediseno.sql`)
+### 9.1 Migración D1 (`worker/migrations/r57-rediseno.sql`)
+> **Numeración (importante):** las migraciones se nombran por el **número de Ronda**, NO consecutivo. Los archivos existentes llegan a `r37` (`r35`, `r36-v5-schema` → agregó `clientes.inmobiliaria`, `trabajos.token/ubicacion`, `r37-backfill`), **ya aplicados**, pero el proyecto va en **Ronda 56/57** (confírmalo en `MASTER_V4.md`). Por eso la nueva migración se nombra con la **ronda actual al momento de ejecutar (mínimo `r57`)** — p. ej. `r57-rediseno.sql` o superior si ya avanzó la ronda. **No uses `r38`.**
+> Las columnas de abajo NO existen aún (verificado contra `schema.sql` + r36/r37), pero **verifica el esquema actual antes de aplicar** (`wrangler d1 execute contratos-iav-v4 --remote --command="PRAGMA table_info(clientes)"` etc.); si alguna ya existiera, omite ese `ALTER`. Actualiza también `worker/schema.sql` para reflejar las columnas nuevas, y registra esta ronda en `MASTER_V4.md`.
 ```sql
 -- Preferencia de anticipo por cliente
 ALTER TABLE clientes ADD COLUMN sin_anticipo INTEGER DEFAULT 0;
@@ -330,7 +333,7 @@ CREATE TABLE IF NOT EXISTS config (
 - **`frontend/portal.html`** — rediseño visual mobile-first; claridad del form; simplificación de acceso; pago con CLABE/OXXO/Clip; firma/PDF intactos.
 - **`frontend/admin-v4-backup.html`, `frontend/portal-v4-backup.html`** — respaldos (primer commit).
 - **`worker/src/routes/`** — `config` (nuevo), `clientes.js` (dedupe, logo), `actividades.js` (estado/resultado, agendarLlamadaRapida), `archivos.js` (archivos cliente + fix). `index.js` — registrar rutas nuevas.
-- **`worker/schema.sql`** + **`worker/migrations/r36-rediseno.sql`** — cambios de 9.1.
+- **`worker/schema.sql`** + **`worker/migrations/r57-rediseno.sql`** — cambios de 9.1.
 - **`adapter/AdapterScript4_v1.js`** — carpeta/logo por cliente, fix de subida. (Despliegue manual.)
 
 ---
@@ -355,7 +358,7 @@ CREATE TABLE IF NOT EXISTS config (
 - [ ] Mobile-first; firma y PDF funcionan igual; pago muestra CLABE/OXXO/Clip; acceso simplificado (~5 campos) con toggle; adicionales con precio en vivo; lenguaje claro.
 
 **Backend**
-- [ ] Migración r36 aplicada en D1 remoto; `config` con datos bancarios; subida de archivos confiable; adapter entregado para despliegue manual.
+- [ ] Migración r38 aplicada en D1 remoto; `config` con datos bancarios; subida de archivos confiable; adapter entregado para despliegue manual.
 
 **Seguridad de salida**
 - [ ] Respaldos creados; smoke test manual (crear contrato → abono → firmar en portal) OK; luego commit a `main`.
@@ -643,7 +646,7 @@ Toda respuesta del worker: `{ ok:true, … }` o `{ ok:false, error:"texto" }`. E
 - **Fase -1 — Preflight (obligatoria).** Completar la verificación del inicio de la sección 0: repo `main` al día, todos los archivos presentes y en su versión más reciente (admin ~6k líneas, portal ~2.8k), leídos spec + design-system + mockup + `MASTER_V4.md` + `BUILD_LOG.md`. Si falta algo o hay duda → buscar; si no se resuelve → **detenerse y preguntar a Bruno**. No avanzar sin esto.
 - **Fase 0 — Cimientos.** Incrustar `design-system.css` en `admin.html` (y luego portal). Construir el shell nuevo: topbar + tabs `Hoy/Contratos/Clientes`, quitar sidebar/side-menu, bottom-nav + FAB. Verificar que la app sigue cargando y autenticando. Commit.
 - **Fase 1 — Admin.** En sub-pasos commiteables: (1.1) Hoy · (1.2) Nuevo contrato (1 propiedad) · (1.3) Contratos lista · (1.4) Panel reorganizado · (1.5) Clientes/expediente · (1.6) Ajustes (bancario + plantillas). Tras cada sub-paso, abrir en navegador y comparar con wireframe + mockup. Commit por sub-paso.
-- **Fase 2 — Backend.** Migración `r36-rediseno.sql` (aplicar en D1 remoto) · rutas `config`, dedupe en `clientes`, `agendarLlamadaRapida`, `marcarActividad`, archivos de cliente + **fix de subida** · adapter (carpeta/logo por cliente). *Candidato a subagente dedicado* (archivos independientes). Entregar adapter para despliegue manual. Commit.
+- **Fase 2 — Backend.** Migración `r57-rediseno.sql` (aplicar en D1 remoto) · rutas `config`, dedupe en `clientes`, `agendarLlamadaRapida`, `marcarActividad`, archivos de cliente + **fix de subida** · adapter (carpeta/logo por cliente). *Candidato a subagente dedicado* (archivos independientes). Entregar adapter para despliegue manual. Commit.
 - **Fase 3 — Portal.** Aplicar design-system mobile-first · claridad del form · acceso simplificado (~14→~5) · pago CLABE/OXXO/Clip · firma/PDF intactos. Commit.
 - **Fase 4 — Integración + QA.** Conectar features que cruzan capas (cobro usa `config`, recontratar usa archivos cliente, anticipo recordado). Correr ANEXO G + sección 11. Respaldos creados. Smoke test. Commit y verificación final.
 - **Fase 5 — Auditoría de bugs + resolución (cierre).** Pasada completa cazando bugs introducidos y heredados: revisar cada flujo del ANEXO G, errores de consola, llamadas a endpoints (payloads/nombres), estados borde (sin teléfono, sin sesión, multipropiedad legacy, contratos viejos sin cliente_id), responsive, y subida de archivos. **Documentar y resolver** todo lo encontrado. Entregar una nota de "bugs encontrados y resueltos". Commit final.
@@ -658,11 +661,11 @@ Toda respuesta del worker: `{ ok:true, … }` o `{ ok:false, error:"texto" }`. E
 Como el push a `main` despliega al instante y el frontend nuevo llama endpoints nuevos:
 - **El backend y la migración D1 van PRIMERO** (o en el mismo push) que el frontend que los consume. Recomendado: **Fase 2 (backend) antes de activar en la UI** las features que dependen de endpoints nuevos (`config`/cobro CLABE, `agendarLlamadaRapida`, `marcarActividad`, archivos de cliente).
 - Alternativa de seguridad: el frontend **degrada con gracia** si un endpoint nuevo aún no existe (try/catch + ocultar el botón), de modo que ningún orden rompa la app.
-- La **migración D1** (`r36-rediseno.sql`) debe aplicarse en remoto **antes** de que el worker nuevo lea/escriba esas columnas. Como son `ALTER … DEFAULT`, los registros viejos quedan con default y no truenan.
+- La **migración D1** (`r57-rediseno.sql`) debe aplicarse en remoto **antes** de que el worker nuevo lea/escriba esas columnas. Como son `ALTER … DEFAULT`, los registros viejos quedan con default y no truenan.
 
 ### I.2 Quién corre qué
 - Frontend + worker: se despliegan con el push a `main` (GitHub Actions).
-- **Migración D1: intenta correrla tú** (`wrangler d1 execute contratos-iav-v4 --remote --file=worker/migrations/r36-rediseno.sql`). Reintenta varias veces si falla (auth, red). **Si tras varios intentos no puedes, sáltala** — NO bloquees el rediseño por esto: deja el `.sql` listo, anota en `BUILD_LOG.md` el comando exacto para que Bruno la corra, y **asegura que el worker degrada con gracia** (ver I.4-bis) para que la app no truene mientras la migración esté pendiente. Cada ALTER usa `DEFAULT`, así que aplicarla después no rompe datos.
+- **Migración D1: córrela tú** — corres local en la Mac y `wrangler` ya está autenticado (cuenta `inmueblesaudiovisuales@gmail.com`), así que debería funcionar: `wrangler d1 execute contratos-iav-v4 --remote --file=worker/migrations/r57-rediseno.sql`. Reintenta varias veces si falla (red). **Si tras varios intentos no puedes, sáltala** — NO bloquees el rediseño por esto: deja el `.sql` listo, anota en `BUILD_LOG.md` el comando exacto para que Bruno la corra, y **asegura que el worker degrada con gracia** (ver I.4-bis) para que la app no truene mientras la migración esté pendiente. Cada ALTER usa `DEFAULT`, así que aplicarla después no rompe datos.
 
 ### I.4-bis Degradación con gracia si la migración no está aplicada (OBLIGATORIO)
 Como la migración puede quedar pendiente (Bruno la corre al despertar), el **worker debe tolerar que las columnas/tabla nuevas no existan todavía**: envuelve en try/catch las lecturas/escrituras a `config`, `clientes.sin_anticipo/anticipo_default/logo_url/carpeta_cliente_id` y `actividades.estado/resultado`; si fallan por columna/tabla inexistente, usa defaults (p. ej. `config` → datos bancarios vacíos; `sin_anticipo` → 0). El **frontend** oculta/no-opera las features dependientes si el dato no viene, en vez de romper. Así la app funciona aplique o no la migración; al correrla, las features se activan solas.

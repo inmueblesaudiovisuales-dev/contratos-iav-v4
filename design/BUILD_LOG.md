@@ -15,5 +15,5 @@
 (vacío — el ejecutor escribe aquí)
 
 ## Pendientes / avisos para Bruno
-- Migración D1 r36: aplicar en remoto (ver ANEXO I.2).
+- Migración D1: nómbrala por la ronda actual (mínimo r57, ver MASTER_V4.md), no r38; aplicar en remoto (ver Anexo I.2).
 - Adapter Apps Script: desplegar manualmente en script.google.com tras Fase 2.
