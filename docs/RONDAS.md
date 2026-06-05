@@ -8,6 +8,35 @@
 
 ---
 
+### Rondas 64–79 — Modo Guiado de tomas (2026-06-05 15:00:08 CST)
+
+**Objetivo:** agregar una biblioteca curada de tipos de toma y movimientos de cámara al checklist, un modo guiado de captura que sugiere tomas por cuarto, etiquetado tipo/movimiento en cada archivo registrado, y un panel de configuración para personalizar la biblioteca. El export sigue en `version: 1`; los campos nuevos son aditivos y la app de metadatos de Mac los ignora.
+
+| Ronda | Fase | Alcance |
+|---|---|---|
+| R64 | Plan | Documento de plan y biblioteca de tomas/movimientos de referencia (`docs/superpowers/plans/2026-06-05-modo-guiado-tomas-plan.md`). Constantes SHOT_TYPES, MOVEMENTS, GUIDE_LIBRARY, DRONE_GUIDE, AMENITY_GUIDE diseñadas. |
+| R65 | F1 | Constantes `SHOT_TYPES` (12 tipos: wide, general, medio, detalle, transicion, pov, contrapicado, ventana, reveal, simetrica, textura, exterior), `MOVEMENTS` (15 movimientos), `GUIDE_LIBRARY` (sugerencias must/nice por cuarto interior), `DRONE_GUIDE` (sugerencias por tipo de propiedad), `AMENITY_GUIDE` (alberca, jardín, palapa, etc.), `PROPERTY_FOCUS`, `EDIT_ORDER`, `ROOM_CATEGORIES`. Todo en `frontend/checklist-logic.js`. |
+| R66 | F2 | `detectCategoria(nombre)` (normaliza, recorre ROOM_CATEGORIES por keywords, fallback genérico), `suggestionsForSpace(espacio, state)` y `suggestionsForDrone(state)` (biblioteca efectiva + amenidades concatenadas), `guideCoverage(state, modo)` (must hechas/faltan por target). |
+| R67 | F2 fix | Reorden en `ROOM_CATEGORIES`: `medio_bano` antes de `bano` para que el keyword `"medio bano"` no caiga en la categoría `bano`. Detección robusta con normalización de acentos. |
+| R68 | F3 | Campos `shotType`, `movement`, `suggestionId` añadidos al modelo de `mediaFile`; `registerMediaFile` acepta 4.º arg `guideCtx`; `removeMediaFile` limpia `suggestionProgress`; `normalizeChecklistData` migra v2→v3 (`mediaFiles` ganan los tres campos con `null`; `state.guide` creado si no existe). `version` del estado sube a 3 (el export sigue en 1). |
+| R69 | F4 | `buildExport` enriquecido: por cada archivo calcula `tipoToma`, `tipoTomaLabel`, `movimiento`, `movimientoLabel`, `sugerencia`, `prioridad`, `ordenEdicion` (de `EDIT_ORDER`). `describirArchivo` genera el prefijo `[E<n>]` y el sufijo ` · tipo / movimiento`. Nuevas secciones `resumenGuia` (cobertura must por cuarto) y `guionEdicion` ({ contexto, clips ordenados por ordenEdicion }). `version: 1` intacto. |
+| R70 | F5 | Resolver de biblioteca: `applyGuideConfig(config)` (merge defaults + overrides por id; `removed: true` oculta; ids `custom.*` se agregan). Getters `getShotTypes`, `getMovements`, `getGuideLibrary`, `getDroneGuide`, `getAmenityGuide`, `getRoomCategories` devuelven la versión efectiva (o la frozen si no hay config). |
+| R71 | F6 | Worker: `obtenerConfigGuia` en `worker/src/routes/config.js` (lee clave `guia_config` de la tabla `config`, degrada a `null` sin error si la clave no existe). Registrado en `RUTAS_CONFIG` en `index.js`. Escritura sigue exigiendo `X-Admin-Key`. |
+| R72 | F7 | Cimientos HTML: `version>=2` en las ramas del pollingde `checklist.html` (antes era `===2`); carga de `obtenerConfigGuia` al inicio con `applyGuideConfig`; variables UI `guideMode` y `activeSugId` persistidas en `localStorage`. Con todo apagado, checklist se ve idéntico y el polling no pierde datos. |
+| R73 | F8a | Toggle `[Manual\|Guiado]` en `renderMediaCapture`; `renderGuideList` (lista de sugerencias del cuarto activo con estado derivado, badge must, chip de categoría y `abrirCategoriaSheet`); `seleccionarSugerencia` activa el enfoque. |
+| R74 | F8b | `registrarArchivo` gana 4.º arg `guideCtx` (opcional); liga la toma a la sugerencia activa escribiendo `shotType/movement/suggestionId` en el `mediaFile`; toma libre (sin sugerencia) deja el cuarto en `hecho`; auto-avance a la siguiente sugerencia pendiente. |
+| R75 | F9 | `<details>` colapsado "ver movimiento" en cada sugerencia + `movementGlyph` (micro-animación CSS/SVG, respeta `prefers-reduced-motion`) + CSS dedicado. |
+| R76 | F10 | Contador "faltan N clave" en cabecera del modo guiado + `abrirFaltantes` (panel con la lista de sugerencias must sin grabar de todos los cuartos), usando `guideCoverage`. |
+| R77 | F11 | Input de cuarto rápido dentro de `abrirCambiarCuarto` (reusa `nuevoEspacio`); `setTipoPropiedadDrone` con chips para elegir tipo (casa/departamento/quinta/terreno/comercial) y que la guía de drone muestre las sugerencias correctas. |
+| R78 | F12a | Panel de configuración de la biblioteca (interiores): `abrirConfigGuia`/`renderConfigGuia` con CRUD de categorías/shots; `guardarConfigGuia` (pide `X-Admin-Key` solo al editar, validando contra el worker); `restaurarSeccionGuia`; engrane visible para todos (sin contraseña para ver, contraseña solo para guardar). |
+| R79 | F12b | Panel de configuración extendido: secciones de drone, amenidades, glosarios de tipo de toma y movimiento. Reusa la misma maquinaria de F12a. |
+
+**Falta:** F14–F15 (puente IA: `buildPropuestaPrompt` + UI de copiar/pegar/revisar propuesta), documentados en el plan pero no implementados en esta serie.
+
+**Tests:** 88 pruebas en `frontend/checklist-logic.test.js` al cierre de R79, todas en verde.
+
+---
+
 ### Ronda 63 — Logo persistente por cliente (2026-06-05 10:03:36 CST)
 
 **Objetivo:** si un cliente subió su logo en un contrato anterior, en el siguiente contrato el portal ya lo muestra como "Logo registrado" (con thumbnail), lo auto-usa sin que el cliente haga nada, y lo clona físicamente a la carpeta Control Interno del nuevo contrato en Drive. El cliente puede opcionalmente subir otro.
