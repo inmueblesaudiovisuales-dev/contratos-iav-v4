@@ -718,3 +718,63 @@ test('F1: EDIT_ORDER tiene todos los shotTypes y valores numericos', () => {
     assert.ok(typeof eo[k] === 'number', 'valor no numerico en EDIT_ORDER[' + k + ']');
   });
 });
+
+test('F2: detectCategoria — lavado, bano, recamara y fallback', () => {
+  assert.equal(logic.detectCategoria('Cuarto de lavado'), 'lavado');
+  assert.equal(logic.detectCategoria('Lavanderia'), 'lavado');
+  assert.equal(logic.detectCategoria('Bano principal'), 'bano');
+  assert.equal(logic.detectCategoria('Baño principal'), 'bano');
+  assert.equal(logic.detectCategoria('Recamara principal'), 'recamara');
+  assert.equal(logic.detectCategoria('Recámara principal'), 'recamara');
+  const salon = logic.detectCategoria('Salón raro');
+  assert.ok(salon === 'sala' || salon === 'generico', 'salon raro debe ser sala o generico, got: ' + salon);
+});
+
+test('F2: detectCategoria — acentos no importan', () => {
+  assert.equal(logic.detectCategoria('baño'), logic.detectCategoria('bano'));
+  assert.equal(logic.detectCategoria('recámara'), logic.detectCategoria('recamara'));
+  assert.equal(logic.detectCategoria('cocina'), 'cocina');
+  assert.equal(logic.detectCategoria('vestídor'), 'vestidor');
+});
+
+test('F2: suggestionsForSpace exterior usa terraza', () => {
+  const shots = logic.suggestionsForSpace('exterior', 'Fachada');
+  assert.ok(Array.isArray(shots) && shots.length > 0, 'debe devolver shots de terraza');
+  const terrazaShots = logic.getGuideLibrary().terraza.shots;
+  terrazaShots.forEach((s) => {
+    assert.ok(shots.some((r) => r.id === s.id), 'falta shot de terraza: ' + s.id);
+  });
+});
+
+test('F2: suggestionsForSpace sala con alberca incluye shots de amenidad', () => {
+  const shots = logic.suggestionsForSpace('sala', 'Sala con alberca');
+  const ids = shots.map((s) => s.id);
+  assert.ok(ids.some((id) => id.startsWith('sala.')), 'debe incluir shots de sala');
+  assert.ok(ids.some((id) => id.startsWith('amenity.alberca.')), 'debe incluir shots de alberca');
+});
+
+test('F2: suggestionsForSpace categoria sin entrada usa generico', () => {
+  const shots = logic.suggestionsForSpace('inexistente', 'Cuarto raro');
+  assert.ok(Array.isArray(shots) && shots.length > 0, 'nunca devuelve undefined');
+  assert.ok(shots.some((s) => s.id === 'generico.wide'), 'debe caer en generico');
+});
+
+test('F2: suggestionsForDrone tipo inexistente cae a casa', () => {
+  const shots = logic.suggestionsForDrone('inexistente');
+  const casaShots = logic.DRONE_GUIDE.casa.shots;
+  assert.deepEqual(shots, Array.from(casaShots));
+});
+
+test('F2: findSuggestion — encontrado y no encontrado', () => {
+  const shot = logic.findSuggestion('cocina.wide');
+  assert.ok(shot !== null && shot !== undefined, 'debe encontrar cocina.wide');
+  assert.equal(shot.id, 'cocina.wide');
+  assert.equal(logic.findSuggestion('no.existe'), null);
+});
+
+test('F2: findSuggestion encuentra shots de drone y amenidad', () => {
+  const droneShot = logic.findSuggestion('drone.casa.fachada');
+  assert.ok(droneShot !== null, 'debe encontrar drone.casa.fachada');
+  const amenityShot = logic.findSuggestion('amenity.alberca.wide');
+  assert.ok(amenityShot !== null, 'debe encontrar amenity.alberca.wide');
+});

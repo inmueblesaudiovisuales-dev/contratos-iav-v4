@@ -486,6 +486,88 @@
   function getMovements()  { return MOVEMENTS; }
   function getGuideLibrary() { return GUIDE_LIBRARY; }
 
+  // F2 — keywords para deteccion de amenidades por nombre de espacio
+  const AMENITY_KEYWORDS = Object.freeze([
+    { id: 'alberca',         keywords: ['alberca', 'piscina', 'pool'] },
+    { id: 'jacuzzi',         keywords: ['jacuzzi'] },
+    { id: 'gimnasio',        keywords: ['gimnasio', 'gym'] },
+    { id: 'salon_eventos',   keywords: ['salon de eventos'] },
+    { id: 'lobby',           keywords: ['lobby', 'recepcion'] },
+    { id: 'roof_garden',     keywords: ['roof garden', 'azotea'] },
+    { id: 'jardin',          keywords: ['jardin'] },
+    { id: 'asadores',        keywords: ['asador', 'asadores', 'bbq', 'parrilla'] },
+    { id: 'cancha',          keywords: ['cancha', 'tenis', 'padel'] },
+    { id: 'area_infantil',   keywords: ['area infantil', 'juegos'] },
+    { id: 'business_center', keywords: ['business center', 'coworking'] },
+    { id: 'spa',             keywords: ['spa', 'sauna'] },
+    { id: 'estacionamiento', keywords: ['estacionamiento'] },
+    { id: 'elevadores',      keywords: ['elevador', 'elevadores'] },
+    { id: 'palapa',          keywords: ['palapa'] },
+    { id: 'area_mascotas',   keywords: ['mascotas', 'area mascotas'] },
+  ]);
+
+  function normNombre(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  }
+
+  function detectCategoria(nombre) {
+    const n = normNombre(nombre);
+    const words = new Set(n.split(/[\s\-\/,;]+/).filter(Boolean));
+    for (const cat of ROOM_CATEGORIES) {
+      for (const kw of cat.keywords) {
+        const kwNorm = normNombre(kw);
+        if (kwNorm.includes(' ') ? n.includes(kwNorm) : words.has(kwNorm)) return cat.id;
+      }
+    }
+    return 'generico';
+  }
+
+  function amenityFromName(nombre) {
+    const n = normNombre(nombre);
+    const words = new Set(n.split(/[\s\-\/,;]+/).filter(Boolean));
+    for (const am of AMENITY_KEYWORDS) {
+      for (const kw of am.keywords) {
+        const kwNorm = normNombre(kw);
+        if (kwNorm.includes(' ') ? n.includes(kwNorm) : words.has(kwNorm)) return am.id;
+      }
+    }
+    return null;
+  }
+
+  function suggestionsForSpace(categoria, nombre) {
+    const lib = getGuideLibrary();
+    const ALIAS = { exterior: 'terraza' };
+    const resolved = lib[categoria] ? categoria : (ALIAS[categoria] || 'generico');
+    const entry = lib[resolved] || lib.generico;
+    const base = Array.from(entry.shots);
+    const amenityId = amenityFromName(nombre || '');
+    if (amenityId && AMENITY_GUIDE[amenityId]) {
+      return base.concat(Array.from(AMENITY_GUIDE[amenityId].shots));
+    }
+    return base;
+  }
+
+  function suggestionsForDrone(tipoPropiedad) {
+    return Array.from((DRONE_GUIDE[tipoPropiedad] || DRONE_GUIDE.casa).shots);
+  }
+
+  function findSuggestion(id) {
+    const lib = getGuideLibrary();
+    for (const cat of Object.values(lib)) {
+      const shot = cat.shots.find((s) => s.id === id);
+      if (shot) return shot;
+    }
+    for (const entry of Object.values(DRONE_GUIDE)) {
+      const shot = entry.shots.find((s) => s.id === id);
+      if (shot) return shot;
+    }
+    for (const entry of Object.values(AMENITY_GUIDE)) {
+      const shot = entry.shots.find((s) => s.id === id);
+      if (shot) return shot;
+    }
+    return null;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   function clone(value) {
@@ -1334,6 +1416,12 @@
     getShotTypes,
     getMovements,
     getGuideLibrary,
+    normNombre,
+    detectCategoria,
+    amenityFromName,
+    suggestionsForSpace,
+    suggestionsForDrone,
+    findSuggestion,
     createDefaultState,
     normalizeChecklistData,
     parseSpacesText,
