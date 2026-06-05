@@ -677,7 +677,7 @@
     return Array.from((droneLib[tipoPropiedad] || droneLib.casa).shots);
   }
 
-  function findSuggestion(id) {
+  function findSuggestion(id, state) {
     const lib = getGuideLibrary();
     for (const cat of Object.values(lib)) {
       const shot = cat.shots.find((s) => s.id === id);
@@ -690,6 +690,15 @@
     for (const entry of Object.values(getAmenityGuide())) {
       const shot = entry.shots.find((s) => s.id === id);
       if (shot) return shot;
+    }
+    if (state) {
+      const proposal = state.guide && state.guide.proposal;
+      if (proposal && proposal.porCuarto) {
+        for (const shots of Object.values(proposal.porCuarto)) {
+          const shot = Array.isArray(shots) ? shots.find((s) => s.id === id) : null;
+          if (shot) return shot;
+        }
+      }
     }
     return null;
   }
@@ -704,16 +713,178 @@
     return { done: files.length > 0, count: files.length, files };
   }
 
+  function proposalShotsFor(state, targetId) {
+    const proposal = state.guide && state.guide.proposal;
+    if (!proposal || !proposal.porCuarto) return [];
+    return (proposal.porCuarto[targetId] || []).slice();
+  }
+
+  function suggestionsForTarget(state, mode, target) {
+    let base;
+    if (mode === 'drone') {
+      base = suggestionsForDrone(state.guide ? state.guide.tipoPropiedad : null);
+    } else {
+      const cat = target.categoria || detectCategoria(target.nombre);
+      base = suggestionsForSpace(cat, target.nombre);
+    }
+    return base.concat(proposalShotsFor(state, target.id));
+  }
+
+  function buildPropuestaPrompt(state) {
+    const guide = state.guide || {};
+    const descripcion = guide.descripcion || '';
+    const cuartos = (state.espacios || []).map((esp) => ({
+      id: esp.id,
+      nombre: esp.nombre,
+      categoria: esp.categoria || detectCategoria(esp.nombre),
+    }));
+    const droneTargets = (state.droneItems || []).map((item) => ({
+      id: item.id,
+      nombre: item.nombre,
+      categoria: 'drone',
+    }));
+    const allTargets = cuartos.concat(droneTargets);
+
+    const shotTypes = getShotTypes();
+    const movements = getMovements();
+
+    const shotTypeVocab = Object.entries(shotTypes).map(([id, v]) => '  "' + id + '": "' + v.label + '"').join('\n');
+    const movementVocab = Object.entries(movements).map(([id, v]) => '  "' + id + '": "' + v.label + '"').join('\n');
+    const cuartosStr = allTargets.map((c) => '  { "id": "' + c.id + '", "nombre": "' + c.nombre + '", "categoria": "' + c.categoria + '" }').join(',\n');
+
+    return 'Eres un director de fotografia especializado en bienes raices.\n' +
+      'Propiedad: ' + descripcion + '\n\n' +
+      'Cuartos a filmar:\n[\n' + cuartosStr + '\n]\n\n' +
+      'Vocabulario cerrado de tipos de toma (shotType):\n' + shotTypeVocab + '\n\n' +
+      'Vocabulario cerrado de movimientos (movement):\n' + movementVocab + '\n\n' +
+      'Propon tomas adicionales especificas para ESTA propiedad, por cuarto. Responde SOLO en JSON estricto:\n\n' +
+      '{\n  "porCuarto": {\n    "<id de cuarto>": [\n' +
+      '      { "nombre": "...", "shotType": "<id valido>", "movement": "<id valido>", "enfoque": "...", "priority": "must|nice" }\n' +
+      '    ]\n  }\n}\n\n' +
+      'Ejemplo:\n{\n  "porCuarto": {\n    "ejemplo-id-123": [\n' +
+      '      { "nombre": "Toma de la chimenea", "shotType": "detalle", "movement": "push_in", "enfoque": "Resalta el acabado de piedra", "priority": "must" }\n' +
+      '    ]\n  }\n}\n\n' +
+      'Instrucciones:\n' +
+      '- Usa SOLO los ids exactos del vocabulario cerrado para shotType y movement.\n' +
+      '- priority debe ser "must" o "nice".\n' +
+      '- Propon tomas que aprovechen los destacados de la propiedad.\n' +
+      '- Maximo 6 tomas por cuarto.\n' +
+      '- Responde UNICAMENTE con el JSON, sin texto adicional.';
+  }
+
+  function parsePropuesta(texto, state) {
+    const emptyResult = {
+      proposal: { porCuarto: {} },
+      report: { agregadas: 0, ignoradas: 0, motivos: [] },
+    };
+
+    try {
+      if (!texto || typeof texto !== 'string') return emptyResult;
+
+      let jsonStr = null;
+      const backtickMatch = texto.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (backtickMatch) {
+        jsonStr = backtickMatch[1];
+      } else {
+        const firstBrace = texto.indexOf('{');
+        const lastBrace = texto.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          jsonStr = texto.slice(firstBrace, lastBrace + 1);
+        }
+      }
+
+      if (!jsonStr) return emptyResult;
+
+      let parsed;
+      try { parsed = JSON.parse(jsonStr); } catch (_) { return emptyResult; }
+
+      if (!parsed || typeof parsed !== 'object' || !parsed.porCuarto || typeof parsed.porCuarto !== 'object') {
+        return emptyResult;
+      }
+
+      const allTargets = [...(state.espacios || []), ...(state.droneItems || [])];
+      const byId = new Map(allTargets.map((t) => [t.id, t]));
+      const byNombre = new Map(allTargets.map((t) => [normNombre(t.nombre), t]));
+
+      const shotTypes = getShotTypes();
+      const movements = getMovements();
+
+      const result = {};
+      let agregadas = 0;
+      let ignoradas = 0;
+      const motivos = [];
+      let totalSoFar = 0;
+      const MAX_PER_ROOM = 6;
+      const MAX_TOTAL = 40;
+
+      for (const [rawId, tomas] of Object.entries(parsed.porCuarto)) {
+        if (!Array.isArray(tomas)) continue;
+
+        let target = byId.get(rawId);
+        if (!target) target = byNombre.get(normNombre(rawId));
+        if (!target) {
+          ignoradas += tomas.length;
+          motivos.push('cuarto no encontrado: ' + rawId);
+          continue;
+        }
+
+        const targetId = target.id;
+        const validShots = [];
+
+        for (const toma of tomas) {
+          if (totalSoFar + validShots.length >= MAX_TOTAL) {
+            ignoradas++;
+            motivos.push('limite total alcanzado');
+            break;
+          }
+          if (validShots.length >= MAX_PER_ROOM) {
+            ignoradas++;
+            motivos.push('limite por cuarto alcanzado: ' + targetId);
+            break;
+          }
+          if (!toma || typeof toma !== 'object') {
+            ignoradas++;
+            motivos.push('toma invalida en ' + targetId);
+            continue;
+          }
+          if (!toma.shotType || !shotTypes[toma.shotType]) {
+            ignoradas++;
+            motivos.push('shotType invalido: ' + toma.shotType + ' en ' + targetId);
+            continue;
+          }
+          if (!toma.movement || !movements[toma.movement]) {
+            ignoradas++;
+            motivos.push('movement invalido: ' + toma.movement + ' en ' + targetId);
+            continue;
+          }
+          const priority = (toma.priority === 'must' || toma.priority === 'nice') ? toma.priority : 'nice';
+          validShots.push({
+            id: 'custom.ia.' + Math.random().toString(36).slice(2, 10),
+            nombre: String(toma.nombre || ''),
+            shotType: toma.shotType,
+            movement: toma.movement,
+            enfoque: String(toma.enfoque || ''),
+            priority,
+          });
+        }
+
+        if (validShots.length > 0) {
+          result[targetId] = validShots;
+          agregadas += validShots.length;
+          totalSoFar += validShots.length;
+        }
+      }
+
+      return { proposal: { porCuarto: result }, report: { agregadas, ignoradas, motivos } };
+    } catch (_) {
+      return emptyResult;
+    }
+  }
+
   function guideCoverage(state, mode) {
     const targets = mode === 'drone' ? (state.droneItems || []) : (state.espacios || []);
     return targets.map((target) => {
-      let suggestions;
-      if (mode === 'drone') {
-        suggestions = suggestionsForDrone(state.guide ? state.guide.tipoPropiedad : null);
-      } else {
-        const cat = target.categoria || detectCategoria(target.nombre);
-        suggestions = suggestionsForSpace(cat, target.nombre);
-      }
+      const suggestions = suggestionsForTarget(state, mode, target);
       const guideSkip = target.guideSkip || {};
       const mustSugs = suggestions.filter((s) => s.priority === 'must');
       const niceSugs = suggestions.filter((s) => s.priority === 'nice');
@@ -1688,6 +1859,10 @@
     suggestionsForDrone,
     findSuggestion,
     suggestionProgress,
+    proposalShotsFor,
+    suggestionsForTarget,
+    buildPropuestaPrompt,
+    parsePropuesta,
     guideCoverage,
     createDefaultState,
     normalizeChecklistData,

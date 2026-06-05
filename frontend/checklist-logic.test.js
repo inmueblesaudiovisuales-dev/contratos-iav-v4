@@ -1205,3 +1205,209 @@ test('F5: resetGuideConfig restaura defaults despues de un override', () => {
   assert.equal(lib.sala.shots.length, defaultCount, 'Tras resetGuideConfig los shots vuelven al conteo default');
   assert.notEqual(logic.getShotTypes().wide.label, 'Plano Override', 'Tras resetGuideConfig shotType vuelve al default');
 });
+
+// ─── F14: puente IA — buildPropuestaPrompt + parsePropuesta ──────────────────
+
+function makeStateWithProposal() {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Sala\nCocina');
+  state.espacios[0].categoria = 'sala';
+  state.espacios[1].categoria = 'cocina';
+  state.guide = { tipoPropiedad: 'casa', descripcion: 'Casa amplia con doble altura', proposal: null };
+  return state;
+}
+
+test('F14: buildPropuestaPrompt genera string con cuartos, descripcion y vocabulario', () => {
+  const state = makeStateWithProposal();
+  const prompt = logic.buildPropuestaPrompt(state);
+
+  assert.equal(typeof prompt, 'string', 'debe ser string');
+  assert.ok(prompt.length > 100, 'debe tener contenido sustancial');
+  assert.ok(prompt.includes('Casa amplia con doble altura'), 'debe incluir descripcion');
+  assert.ok(prompt.includes('Sala'), 'debe incluir nombre del cuarto Sala');
+  assert.ok(prompt.includes('Cocina'), 'debe incluir nombre del cuarto Cocina');
+  assert.ok(prompt.includes('porCuarto'), 'debe incluir esquema de respuesta JSON');
+  const firstType = Object.keys(logic.getShotTypes())[0];
+  assert.ok(prompt.includes(firstType), 'debe incluir al menos un id de shotType');
+  const firstMov = Object.keys(logic.getMovements())[0];
+  assert.ok(prompt.includes(firstMov), 'debe incluir al menos un id de movement');
+});
+
+test('F14: parsePropuesta extrae JSON envuelto en ```json`', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  const texto = '```json\n{"porCuarto":{"' + salaId + '":[{"nombre":"Toma IA","shotType":"wide","movement":"static","enfoque":"panoramica","priority":"must"}]}}\n```';
+
+  const result = logic.parsePropuesta(texto, state);
+
+  assert.ok(result.proposal, 'debe devolver proposal');
+  assert.ok(result.proposal.porCuarto[salaId], 'debe tener tomas para salaId');
+  assert.equal(result.proposal.porCuarto[salaId].length, 1);
+  assert.ok(result.proposal.porCuarto[salaId][0].id.startsWith('custom.ia.'), 'id debe empezar con custom.ia.');
+  assert.equal(result.proposal.porCuarto[salaId][0].nombre, 'Toma IA');
+  assert.equal(result.proposal.porCuarto[salaId][0].shotType, 'wide');
+  assert.equal(result.proposal.porCuarto[salaId][0].movement, 'static');
+  assert.equal(result.proposal.porCuarto[salaId][0].priority, 'must');
+});
+
+test('F14: parsePropuesta extrae JSON con texto alrededor', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  const texto = 'Aqui estan las tomas sugeridas:\n{"porCuarto":{"' + salaId + '":[{"nombre":"Toma B","shotType":"general","movement":"pan","enfoque":"foco general","priority":"nice"}]}}\nespero que sea util.';
+
+  const result = logic.parsePropuesta(texto, state);
+
+  assert.ok(result.proposal.porCuarto[salaId], 'debe extraer a pesar del texto alrededor');
+  assert.equal(result.proposal.porCuarto[salaId][0].nombre, 'Toma B');
+});
+
+test('F14: parsePropuesta rechaza cuarto con id inexistente en state.espacios', () => {
+  const state = makeStateWithProposal();
+  const texto = '{"porCuarto":{"id-no-existe":[{"nombre":"Toma X","shotType":"wide","movement":"static","enfoque":"foco","priority":"must"}]}}';
+
+  const result = logic.parsePropuesta(texto, state);
+
+  assert.deepEqual(result.proposal.porCuarto, {}, 'no debe agregar cuartos inexistentes');
+  assert.ok(result.report.ignoradas > 0, 'debe reportar ignoradas');
+});
+
+test('F14: parsePropuesta rechaza shot con shotType invalido', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  const texto = '{"porCuarto":{"' + salaId + '":[{"nombre":"Toma mala","shotType":"INVALIDO","movement":"static","enfoque":"x","priority":"must"}]}}';
+
+  const result = logic.parsePropuesta(texto, state);
+
+  const shots = result.proposal.porCuarto[salaId] || [];
+  assert.equal(shots.length, 0, 'shot con shotType invalido debe descartarse');
+  assert.ok(result.report.ignoradas > 0, 'debe reportar shot ignorada');
+});
+
+test('F14: parsePropuesta rechaza shot con movement invalido', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  const texto = '{"porCuarto":{"' + salaId + '":[{"nombre":"Toma mala mov","shotType":"wide","movement":"INVALIDO","enfoque":"x","priority":"must"}]}}';
+
+  const result = logic.parsePropuesta(texto, state);
+
+  const shots = result.proposal.porCuarto[salaId] || [];
+  assert.equal(shots.length, 0, 'shot con movement invalido debe descartarse');
+  assert.ok(result.report.ignoradas > 0);
+});
+
+test('F14: parsePropuesta normaliza priority invalida a nice', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  const texto = '{"porCuarto":{"' + salaId + '":[{"nombre":"Toma norm","shotType":"wide","movement":"static","enfoque":"x","priority":"invalid"}]}}';
+
+  const result = logic.parsePropuesta(texto, state);
+
+  const shots = result.proposal.porCuarto[salaId] || [];
+  assert.equal(shots.length, 1, 'shot con priority invalida se conserva');
+  assert.equal(shots[0].priority, 'nice', 'priority invalida se normaliza a nice');
+});
+
+test('F14: parsePropuesta recorta a maximo 6 tomas por cuarto', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  const tomas = Array.from({ length: 10 }, (_, i) => ({
+    nombre: 'Toma ' + i,
+    shotType: 'wide',
+    movement: 'static',
+    enfoque: 'x',
+    priority: 'nice',
+  }));
+  const texto = JSON.stringify({ porCuarto: { [salaId]: tomas } });
+
+  const result = logic.parsePropuesta(texto, state);
+
+  const shots = result.proposal.porCuarto[salaId] || [];
+  assert.ok(shots.length <= 6, 'no debe exceder 6 tomas por cuarto, got: ' + shots.length);
+});
+
+test('F14: parsePropuesta con texto basura devuelve proposal vacio sin lanzar', () => {
+  const state = makeStateWithProposal();
+
+  let result;
+  assert.doesNotThrow(() => {
+    result = logic.parsePropuesta('esto no es json para nada', state);
+  }, 'no debe lanzar con texto basura');
+
+  assert.deepEqual(result.proposal.porCuarto, {}, 'debe devolver proposal vacio');
+  assert.equal(typeof result.report.agregadas, 'number');
+});
+
+test('F14: proposalShotsFor devuelve tomas de la propuesta para el target', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  const iaShot = { id: 'custom.ia.abc123', nombre: 'Toma IA', shotType: 'wide', movement: 'static', enfoque: 'x', priority: 'must' };
+  state.guide.proposal = { porCuarto: { [salaId]: [iaShot] } };
+
+  const shots = logic.proposalShotsFor(state, salaId);
+
+  assert.equal(shots.length, 1);
+  assert.equal(shots[0].id, 'custom.ia.abc123');
+});
+
+test('F14: proposalShotsFor devuelve [] cuando no hay propuesta', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+
+  assert.deepEqual(logic.proposalShotsFor(state, salaId), []);
+});
+
+test('F14: suggestionsForTarget concatena shots base con tomas de la propuesta', () => {
+  const state = makeStateWithProposal();
+  const target = state.espacios[0];
+  target.categoria = 'sala';
+  const iaShot = { id: 'custom.ia.xyz456', nombre: 'Toma IA Sala', shotType: 'wide', movement: 'static', enfoque: 'x', priority: 'nice' };
+  state.guide.proposal = { porCuarto: { [target.id]: [iaShot] } };
+
+  const shots = logic.suggestionsForTarget(state, 'video', target);
+
+  const baseShots = logic.suggestionsForSpace(target.categoria, target.nombre);
+  assert.ok(shots.length > baseShots.length, 'debe incluir mas shots que solo los base');
+  assert.ok(shots.some((s) => s.id === 'custom.ia.xyz456'), 'debe incluir la toma IA');
+  baseShots.forEach((bs) => {
+    assert.ok(shots.some((s) => s.id === bs.id), 'debe incluir shot base: ' + bs.id);
+  });
+});
+
+test('F14: findSuggestion encuentra custom.ia con state, null sin state', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  const iaShot = { id: 'custom.ia.test999', nombre: 'Toma IA Test', shotType: 'wide', movement: 'static', enfoque: 'x', priority: 'must' };
+  state.guide.proposal = { porCuarto: { [salaId]: [iaShot] } };
+
+  const found = logic.findSuggestion('custom.ia.test999', state);
+  assert.ok(found, 'debe encontrar custom.ia con state');
+  assert.equal(found.id, 'custom.ia.test999');
+
+  const notFound = logic.findSuggestion('custom.ia.test999');
+  assert.equal(notFound, null, 'sin state debe devolver null');
+});
+
+test('F14: guideCoverage incluye toma IA must en must.faltan hasta que se liga', () => {
+  let state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  state.espacios[0].categoria = 'sala';
+  const iaShot = { id: 'custom.ia.cov001', nombre: 'Toma IA cobertura', shotType: 'wide', movement: 'static', enfoque: 'x', priority: 'must' };
+  state.guide.proposal = { porCuarto: { [salaId]: [iaShot] } };
+
+  const before = logic.guideCoverage(state, 'video');
+  const salaEntry = before.find((e) => e.target.id === salaId);
+  assert.ok(salaEntry.must.faltan.some((s) => s.id === 'custom.ia.cov001'), 'toma IA must debe estar en faltan');
+
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+    suggestionId: 'custom.ia.cov001',
+  });
+
+  const after = logic.guideCoverage(state, 'video');
+  const salaAfter = after.find((e) => e.target.id === salaId);
+  assert.ok(!salaAfter.must.faltan.some((s) => s.id === 'custom.ia.cov001'), 'toma IA ligada no debe estar en faltan');
+  assert.ok(salaAfter.must.hechas >= 1, 'toma IA ligada debe contar como hecha');
+});
