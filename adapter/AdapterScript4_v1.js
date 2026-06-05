@@ -1,8 +1,8 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-04 — fix carpetas duplicadas: getOrCreateFolder_ idempotente
-//   (crearCarpetas/procesarFirma/primerAbono reusan la carpeta del proyecto en vez de duplicarla)
+// Ultima modificacion: 2026-06-05 — fix carpetas duplicadas (getOrCreateFolder_) +
+//   fix link del portal roto en correos HTML (el '=' del token se codifica como &#61;)
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -1129,10 +1129,15 @@ function obtenerLogoCliente(body) {
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 
 function htmlCorreo_(titulo, cuerpoHtml, btnTexto, btnUrl) {
+  // El '=' del query string (?token=) se corrompía al enviar el correo: el codificador
+  // quoted-printable interpreta '=' + 2 hex como un byte (los tokens UUID empiezan con
+  // hex, así que el link quedaba roto en TODOS los correos HTML). Se codifica el '=' como
+  // entidad HTML &#61;, que el cliente de correo decodifica a '=' al abrir el enlace.
+  var hrefUrl = btnUrl ? String(btnUrl).replace(/=/g, '&#61;') : btnUrl;
   var btn = btnTexto && btnUrl
     ? '<table width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0 0"><tr>' +
       '<td style="background:#C9A84C;border-radius:8px;text-align:center">' +
-      '<a href="' + btnUrl + '" style="color:#fff;text-decoration:none;padding:15px 28px;font-weight:700;font-size:14px;letter-spacing:0.5px;display:block">' + btnTexto + '</a>' +
+      '<a href="' + hrefUrl + '" style="color:#fff;text-decoration:none;padding:15px 28px;font-weight:700;font-size:14px;letter-spacing:0.5px;display:block">' + btnTexto + '</a>' +
       '</td></tr></table>'
     : '';
   return '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#F5F4F1;font-family:Helvetica,Arial,sans-serif">' +
