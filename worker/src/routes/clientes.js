@@ -22,8 +22,15 @@ export async function handleClientes(request, env, ctx, action) {
   if (action === 'listarClientes') {
     const { results } = await query(db,
       `WITH clientes_base AS (
-         SELECT id, nombre, telefono, correo, origen, notas_perfil, inmobiliaria, fecha_creacion, fecha_ultima_actividad
-         FROM clientes
+         SELECT cl.id, cl.nombre,
+                CASE WHEN cl.telefono != '' THEN cl.telefono
+                     ELSE COALESCE((SELECT ct.telefono_cliente FROM contratos ct WHERE ct.cliente_id = cl.id AND ct.telefono_cliente != '' ORDER BY ct.fecha_creacion DESC LIMIT 1), '')
+                END AS telefono,
+                CASE WHEN cl.correo != '' THEN cl.correo
+                     ELSE COALESCE((SELECT ct.correo_cliente FROM contratos ct WHERE ct.cliente_id = cl.id AND ct.correo_cliente != '' ORDER BY ct.fecha_creacion DESC LIMIT 1), '')
+                END AS correo,
+                cl.origen, cl.notas_perfil, cl.inmobiliaria, cl.fecha_creacion, cl.fecha_ultima_actividad
+         FROM clientes cl
          UNION ALL
          SELECT '' AS id, ct.nombre_cliente AS nombre, MAX(ct.telefono_cliente) AS telefono,
                 ct.correo_cliente AS correo, 'contrato' AS origen, '' AS notas_perfil,

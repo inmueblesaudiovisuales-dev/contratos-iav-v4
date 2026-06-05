@@ -1,0 +1,130 @@
+{
+  "escenarios": {
+    "1": {
+      "cliente_id": "206ff323-3261-42f6-b12d-27f209e55210",
+      "trabajo_id": "7d6d0375-ccb0-46c4-90a7-cc87af2aa612",
+      "token": "dd68699d-766f-4161-aed6-32695c99a60b",
+      "folio": "IAV-2607.15-A",
+      "correo": "inmueblesaudiovisuales+qa2c1@gmail.com",
+      "nombre": "ZZ QA2 C01 Residencial",
+      "total": 4500,
+      "anticipo": 2250,
+      "paquete": "RES-COMBO",
+      "carpeta_proyecto": "1GMZtEs1FIagrWA-0GYXqCOQ5tIhG1LZv",
+      "carpeta_control": "1klrZy326A4sRSGsQFaWDQnzt-ptRWd6S",
+      "carpeta_entregables": "1dlICH9pZYntBlr3ONsMVpm7mZgjgwldq",
+      "logo_url": "https://drive.google.com/file/d/1WEZe_sFzEfYeyoim6Gqdnjjm-PYrUqVA/view?usp=drivesdk",
+      "fachada_url": "https://drive.google.com/file/d/1IqCvN3FAn0kaaDxEB9CWENOo_Gnz7czx/view?usp=drivesdk"
+    },
+    "2": {
+      "cliente_id": "d6636401-14c7-4a0a-bf9e-6ed20ec3634c",
+      "trabajo_id": "fffe476a-0131-449c-a038-d1e45471335d",
+      "token": "26f86047-0349-4b0e-939d-fda90ae4e838",
+      "folio": "IAV-2607.20-A",
+      "correo": "inmueblesaudiovisuales+qa2c2@gmail.com",
+      "nombre": "ZZ QA2 C02 Terreno",
+      "total": 8000,
+      "paquete": "TER-COMBO"
+    },
+    "3": {
+      "cliente_id": "3aef582e-3e41-4296-9b1d-ced988f0efee",
+      "trabajo_id": "8ba70a6a-af33-4e22-b5b5-333170d3a61c",
+      "token": "3b1b75c5-4162-446f-a606-e8c50030e41b",
+      "folio": "IAV-2607.25-A",
+      "correo": "inmueblesaudiovisuales+qa2c3@gmail.com",
+      "nombre": "ZZ QA2 C03 FotoSinAnticipo",
+      "total": 3000,
+      "paquete": "IND-FOTO"
+    },
+    "4": {
+      "cliente_id": "6f9f7883-6e07-4201-8281-6bd1f967713a",
+      "trabajo_id": "09a99435-f74a-4848-ba9d-6fb4028134ec",
+      "token": "18ab81be-4488-43cd-a620-60f646f44222",
+      "folio": "IAV-2607.27-A",
+      "correo": "inmueblesaudiovisuales+qa2c4@gmail.com",
+      "nombre": "ZZ QA2 C04 VideoPagoTotal",
+      "total": 3000,
+      "paquete": "IND-VIDEO"
+    },
+    "5": {
+      "cliente_id": "9f20d255-34c5-47ee-81a1-7ee956a06682",
+      "trabajo_id": "cb3a8674-1a8c-4729-85f9-162bd47fbc8c",
+      "token": "942e1102-aac0-474b-9975-0c734a136b9d",
+      "folio": "IAV-2607.30-A",
+      "correo": "inmueblesaudiovisuales+qa2c5@gmail.com",
+      "nombre": "ZZ QA2 C05 Recorrido360",
+      "total": 3000,
+      "paquete": "IND-360"
+    },
+    "6": {
+      "cliente_id": "919ad16d-24c6-4178-80dd-744fc82561c6",
+      "trabajo_id": "00957b26-3b8d-49a4-85e7-57fb6d860203",
+      "token": "cd25f0e3-94ff-4fd6-8c0d-a5beaa966506",
+      "folio": "IAV-2608.03-A",
+      "correo": "inmueblesaudiovisuales+qa2c6@gmail.com",
+      "nombre": "ZZ QA2 C06 AdicCliente",
+      "total": 4500,
+      "paquete": "RES-COMBO"
+    },
+    "7": {
+      "cliente_id": "cacd65eb-e535-42a9-b458-705daf89e6f4",
+      "trabajo_id": "41bea2ec-326d-4970-be73-ee0c58974094",
+      "token": "80f57b2d-bbe7-4a8a-8224-91ffb96d0132",
+      "folio": "IAV-2608.05-A",
+      "correo": "inmueblesaudiovisuales+qa2c7@gmail.com",
+      "nombre": "ZZ QA2 C07 Upsell",
+      "total": 4000,
+      "paquete": "TER-COMBO"
+    },
+    "8": {
+      "cliente_id": "40cbde80-ec9b-4a09-be6a-fe89be243363",
+      "trabajo_id": "58733307-8f95-4c05-947c-b008321c3cac",
+      "token": "792676e1-1da5-47b1-aab0-7f0d5ebfa14b",
+      "folio": "IAV-2608.07-A",
+      "correo": "inmueblesaudiovisuales+qa2c8@gmail.com",
+      "nombre": "ZZ QA2 C08 Mixta",
+      "total": 8500,
+      "paquete": "RES-COMBO+TER-COMBO"
+    },
+    "9": {
+      "cliente_id": "f375f29a-7557-4b9d-8c57-2d877af872d4",
+      "trabajo_id": "2d248e8c-9936-40c1-8f5d-d5616131de94",
+      "token": "050399d6-69d1-495a-bfc1-8e5e76730878",
+      "folio": "IAV-2608.11-A",
+      "correo": "inmueblesaudiovisuales+qa2c9@gmail.com",
+      "nombre": "ZZ QA2 C09 Anticipo100",
+      "total": 3000,
+      "paquete": "IND-FOTO"
+    },
+    "10": {
+      "cliente_id": "b40819bb-6958-49a4-8497-57c63257e33c",
+      "trabajo_id": "ca90317c-937a-4d12-a232-70f91fc8708d",
+      "token": "1884d572-34b4-4a52-bab8-74bc3e259023",
+      "folio": "IAV-2608.13-A",
+      "correo": "inmueblesaudiovisuales+qa2c10@gmail.com",
+      "nombre": "ZZ QA2 C10 Exceso",
+      "total": 4500,
+      "paquete": "RES-COMBO"
+    },
+    "11": {
+      "cliente_id": "e36bcb3b-0e0d-40a9-826e-164f9c005440",
+      "trabajo_id": "29f12805-d404-4d42-8afd-97adbaf1af76",
+      "token": "3289a21c-9a84-4b7b-9db0-cd2ec702082d",
+      "folio": "IAV-2608.15-A",
+      "correo": "inmueblesaudiovisuales+qa2c11@gmail.com",
+      "nombre": "ZZ QA2 C11 Cancelar",
+      "total": 4000,
+      "paquete": "TER-COMBO"
+    },
+    "12": {
+      "cliente_id": "8fb4d9d1-5f9f-46bd-a7b4-e3d1e42ecba6",
+      "trabajo_id": "29064183-b775-41f2-82e3-06603ed11ded",
+      "token": "65225a27-2622-40f3-abb4-b4bf24a4d099",
+      "folio": "IAV-2608.17-A",
+      "correo": "inmueblesaudiovisuales+qa2c12@gmail.com",
+      "nombre": "ZZ QA2 C12 Niño Muñoz Ávila <b>Tëst</b> & 'comillas' 🎬",
+      "total": 3000,
+      "paquete": "IND-VIDEO"
+    }
+  }
+}

@@ -2012,7 +2012,7 @@ function renderRevision() {
     var pctRevision = total > 0 ? Math.round(anticipo / total * 100) : 0;
     html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label">Anticipo requerido (' + pctRevision + '%)</span><span class="resumen-valor" style="color:var(--gold)">' + formatMXN(anticipo) + '</span></div>';
   } else {
-    html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label">Anticipo</span><span class="resumen-valor" style="color:var(--concrete)">Sin anticipo</span></div>';
+    html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label">Reservación</span><span class="resumen-valor">Por confirmar</span></div>';
   }
   html += '</div>';
 
@@ -2216,7 +2216,7 @@ function renderEtapa2() {
     var pctAnticipo = total > 0 ? Math.round(anticipo / total * 100) : 0;
     html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label">Anticipo a pagar ahora (' + pctAnticipo + '%)</span><span class="resumen-valor gold">' + esc(formatMXN(anticipo)) + '</span></div>';
   } else {
-    html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label">Anticipo</span><span class="resumen-valor" style="color:var(--concrete)">Sin anticipo</span></div>';
+    html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label">Reservación</span><span class="resumen-valor">Por confirmar</span></div>';
   }
   html += '</div>';
   if (d.pdfContratoUrl) {
@@ -2281,7 +2281,7 @@ function renderEtapa2() {
     // anticipo === 0
     if (total > 0) {
       html += '<div class="card"><p class="section-title">Opciones de pago</p>';
-      html += '<p style="font-size:12px;color:var(--concrete);margin-bottom:16px;line-height:1.6">Tu fecha está confirmada. Estos son los datos para tu pago.</p>';
+      html += '<p style="font-size:12px;color:var(--concrete);margin-bottom:16px;line-height:1.6">Estos son los datos para tu pago.</p>';
 
       html += '<details open style="border:1.5px solid var(--border-strong);border-radius:10px;overflow:hidden;margin-bottom:10px">';
       html += '<summary style="padding:14px 16px;cursor:pointer;font-size:13px;font-weight:700;color:var(--charcoal);list-style:none;display:flex;align-items:center;justify-content:space-between">Transferencia bancaria<span style="font-size:11px;color:var(--concrete);font-weight:500">CLABE / SPEI</span></summary>';

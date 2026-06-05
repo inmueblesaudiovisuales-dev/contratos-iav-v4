@@ -1,8 +1,9 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-05 — fix carpetas duplicadas (getOrCreateFolder_) +
-//   fix link del portal roto en correos HTML (el '=' del token se codifica como &#61;)
+// Ultima modificacion: 2026-06-05 09:14:04 CST (R62) — nueva función enviarCorreoReserva:
+//   correo "Tu sesión está apartada" al apartar fecha desde admin, sin afirmar pago.
+//   Previo R61: correo con anticipo $0 ya no muestra "Anticipo acordado (0%) $0 MXN".
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -33,6 +34,7 @@ function doPost(e) {
       crearCarpetas: crearCarpetas,
       crearEventoReservado: crearEventoReservado,
       enviarCorreoAbono: enviarCorreoAbono,
+      enviarCorreoReserva: enviarCorreoReserva,
       enviarCorreoEntrega: enviarCorreoEntrega,
       reagendarPropiedad: reagendarPropiedad,
       subirArchivo: subirArchivo,
@@ -318,13 +320,20 @@ function generarPDF_(contrato, firmaFile, propiedades, entregables) {
 
 function enviarCorreoConPDF_(contrato, linkPortal, pdfUrl) {
   if (!contrato.correo_cliente) return;
+    var anticipoNum = contrato.anticipo || 0;
     var porcentaje = (contrato.precio_total && contrato.precio_total > 0)
-      ? Math.round((contrato.anticipo || 0) / contrato.precio_total * 100) : 0;
+      ? Math.round(anticipoNum / contrato.precio_total * 100) : 0;
+    // Sin anticipo: no mostrar "$0 / 0%" (no enfatizar que no hay que pagar) — se
+    // muestra "Reservación: Por confirmar" y el saldo completo queda como pendiente.
+    var filaAnticipo = anticipoNum > 0
+      ? '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Anticipo acordado (' + porcentaje + '%)</td>' +
+        '<td align="right" style="font-size:13px;font-weight:700;color:#C9A84C">$' + anticipoNum.toLocaleString('es-MX') + ' MXN</td></tr>'
+      : '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Reservación</td>' +
+        '<td align="right" style="font-size:13px;font-weight:700;color:#1C1C1E">Por confirmar</td></tr>';
   var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + escHtml_(contrato.nombre_cliente) + '</strong>,</p>' +
     '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 20px">Gracias por firmar tu contrato. Adjunto encontrarás tu copia en PDF.</p>' +
     '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F7F4;border-radius:8px;padding:16px 20px;margin-bottom:20px">' +
-    '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Anticipo acordado (' + porcentaje + '%)</td>' +
-    '<td align="right" style="font-size:13px;font-weight:700;color:#C9A84C">$' + (contrato.anticipo || 0).toLocaleString('es-MX') + ' MXN</td></tr>' +
+    filaAnticipo +
     '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Saldo pendiente</td>' +
     '<td align="right" style="font-size:13px;font-weight:700;color:#1C1C1E">$' + (contrato.saldo_pendiente || 0).toLocaleString('es-MX') + ' MXN</td></tr>' +
     '</table>';
@@ -601,6 +610,29 @@ function enviarCorreoAbono(body) {
     body.correoCliente,
     asunto,
     'Hola ' + body.nombreCliente + ', confirmamos tu pago de $' + (body.monto || 0).toLocaleString('es-MX') + ' MXN.',
+    { htmlBody: html }
+  );
+}
+
+// Reserva sin pago — se manda cuando Bruno aparta la fecha desde admin ("Apartar
+// fecha"). Mismo estilo que el correo de abono "Tu sesión está apartada" PERO sin
+// afirmar que se recibió dinero. Solo confirma que la fecha quedó reservada.
+function enviarCorreoReserva(body) {
+  if (!body.correoCliente) return;
+  var nombreEsc = escHtml_(body.nombreCliente);
+  var saldo = body.saldoPendiente || 0;
+  var intro = '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 24px">Hola <strong>' + nombreEsc + '</strong>, apartamos la fecha de tu sesión. Tu lugar quedó reservado en nuestra agenda.</p>';
+  var cuerpo = intro +
+    '<table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #E5E5EA;margin-bottom:24px">' +
+    '<tr><td style="padding:11px 0;font-size:14px;color:#6B6B6F;border-bottom:1px solid #E5E5EA">Saldo pendiente</td>' +
+    '<td align="right" style="padding:11px 0;font-size:14px;font-weight:700;color:#1C1C1E;border-bottom:1px solid #E5E5EA">$' + saldo.toLocaleString('es-MX') + '</td></tr>' +
+    '</table>' +
+    '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0">Cualquier duda, <a href="' + CONFIG.WHATSAPP + '" style="color:#C9A84C;font-weight:700;text-decoration:none">contáctanos por WhatsApp</a>.</p>';
+  var html = htmlCorreo_('Tu sesión está apartada, ' + nombreEsc + '.', cuerpo, 'VER MI PORTAL', body.linkPortal);
+  GmailApp.sendEmail(
+    body.correoCliente,
+    'Tu sesión está apartada — ' + (body.folio || ''),
+    'Hola ' + body.nombreCliente + ', apartamos la fecha de tu sesión.',
     { htmlBody: html }
   );
 }
