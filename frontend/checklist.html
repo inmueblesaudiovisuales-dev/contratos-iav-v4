@@ -521,6 +521,7 @@
     .cap-nav-next { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 46px; padding: 0 16px; border: 1.5px solid var(--gold-leaf); background: var(--gold-soft); border-radius: var(--radius); color: var(--ink-1); font-size: 14px; font-weight: 600; }
     .cap-nav-next i { font-size: 18px; color: var(--gold); }
     .rec-num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; margin-right: 8px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
+    .rec-piso-label { padding: 6px 4px 2px; font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
     .cov-hd-actions { display: flex; gap: 6px; flex: none; }
     /* ===== Foco de cobertura (foto/360) ===== */
     .cov-foco-state { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 14px; border-radius: var(--radius); font-size: 15px; font-weight: 600; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); }
@@ -1644,17 +1645,41 @@ function abrirOrdenarRecorrido() {
   const servicio = state.modoActual;
   const esEspacio = servicio !== 'drone' && servicio !== 'asesor';
   const orden = recorridoTargets(servicio);
-  const nombre = (id) => {
-    const t = (esEspacio ? state.espacios : servicio === 'drone' ? state.droneItems : state.asesorPuntos).find((x) => x.id === id);
-    return t ? t.nombre : '';
-  };
-  abrirModal(`<div class="sheet-head"><h2>Ordenar recorrido · ${esc(SERVICE_UI[servicio].short)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
-    <p class="sheet-note">El orden en que "Siguiente cuarto" te lleva. El primero es donde arrancas.</p>
-    <div class="cuarto-list">${orden.map((id, i) => `<div class="cuarto-row-wrap">
+  const lista = esEspacio ? state.espacios : servicio === 'drone' ? state.droneItems : state.asesorPuntos;
+  const nombre = (id) => { const t = lista.find((x) => x.id === id); return t ? t.nombre : ''; };
+
+  let body;
+  if (esEspacio) {
+    const pisos = (state.pisos && state.pisos.length ? state.pisos : [...new Set(state.espacios.map((e) => e.piso || 'Sin piso'))]);
+    const byPiso = {};
+    orden.forEach((id) => {
+      const esp = state.espacios.find((x) => x.id === id);
+      const p = (esp && esp.piso) || 'Sin piso';
+      (byPiso[p] = byPiso[p] || []).push(id);
+    });
+    let globalNum = 0;
+    body = pisos.filter((p) => byPiso[p] && byPiso[p].length).map((p) => {
+      const rows = byPiso[p].map((id) => {
+        globalNum++;
+        return `<div class="cuarto-row-wrap">
+          <span class="cuarto-row"><span class="cuarto-name"><span class="rec-num">${globalNum}</span>${esc(nombre(id))}</span></span>
+          <button class="setup-mini" onclick="moverRecorrido('${id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
+          <button class="setup-mini" onclick="moverRecorrido('${id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
+        </div>`;
+      }).join('');
+      return `<div class="rec-piso-label">${esc(p)}</div>${rows}`;
+    }).join('');
+  } else {
+    body = orden.map((id, i) => `<div class="cuarto-row-wrap">
       <span class="cuarto-row"><span class="cuarto-name"><span class="rec-num">${i + 1}</span>${esc(nombre(id))}</span></span>
       <button class="setup-mini" onclick="moverRecorrido('${id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
       <button class="setup-mini" onclick="moverRecorrido('${id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
-    </div>`).join('')}</div>`);
+    </div>`).join('');
+  }
+
+  abrirModal(`<div class="sheet-head"><h2>Ordenar recorrido · ${esc(SERVICE_UI[servicio].short)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <p class="sheet-note">El orden en que "Siguiente cuarto" te lleva. Se ordena dentro de cada piso.</p>
+    <div class="cuarto-list">${body}</div>`);
 }
 
 function moverRecorrido(id, dir) {
@@ -1663,6 +1688,9 @@ function moverRecorrido(id, dir) {
   const orden = recorridoEspacios(servicio);
   const i = orden.indexOf(id), j = i + dir;
   if (j < 0 || j >= orden.length) return;
+  const espI = state.espacios.find((x) => x.id === orden[i]);
+  const espJ = state.espacios.find((x) => x.id === orden[j]);
+  if (!espI || !espJ || espI.piso !== espJ.piso) return;
   const t = orden[i]; orden[i] = orden[j]; orden[j] = t;
   if (!state.recorrido) state.recorrido = {};
   state.recorrido[servicio] = orden;
