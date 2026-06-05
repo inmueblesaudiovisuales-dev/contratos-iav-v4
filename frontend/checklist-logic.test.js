@@ -1233,6 +1233,39 @@ test('F14: buildPropuestaPrompt genera string con cuartos, descripcion y vocabul
   assert.ok(prompt.includes(firstMov), 'debe incluir al menos un id de movement');
 });
 
+// G1 (R85) — prompt reforzado con reglas duras
+test('G1: buildPropuestaPrompt incluye regla de basarse estrictamente en descripcion', () => {
+  const state = makeStateWithProposal();
+  const prompt = logic.buildPropuestaPrompt(state);
+  assert.ok(prompt.includes('ESTRICTAMENTE'), 'debe incluir clausula ESTRICTAMENTE');
+  assert.ok(prompt.includes('PROHIBIDO inventar'), 'debe prohibir inventar features');
+});
+
+test('G1: buildPropuestaPrompt incluye regla de solo encuadre/composicion en enfoque', () => {
+  const state = makeStateWithProposal();
+  const prompt = logic.buildPropuestaPrompt(state);
+  assert.ok(prompt.includes('encuadre y composicion'), 'debe mencionar encuadre y composicion');
+  assert.ok(prompt.includes('NADA de hora del dia'), 'debe prohibir hora del dia');
+});
+
+test('G1: buildPropuestaPrompt incluye regla de solo cuartos de la lista', () => {
+  const state = makeStateWithProposal();
+  const prompt = logic.buildPropuestaPrompt(state);
+  assert.ok(prompt.includes('SOLO para cuartos de la lista'), 'debe restringir a cuartos de la lista');
+});
+
+test('G1: buildPropuestaPrompt incluye clausula de descripcion vacia devuelve objeto vacio', () => {
+  const state = makeStateWithProposal();
+  const prompt = logic.buildPropuestaPrompt(state);
+  assert.ok(prompt.includes('{"porCuarto":{}}'), 'debe mencionar el JSON vacio para descripcion generica');
+});
+
+test('G1: buildPropuestaPrompt indica responder UNICAMENTE con JSON sin markdown', () => {
+  const state = makeStateWithProposal();
+  const prompt = logic.buildPropuestaPrompt(state);
+  assert.ok(prompt.includes('sin markdown'), 'debe prohibir markdown en la respuesta');
+});
+
 test('F14: parsePropuesta extrae JSON envuelto en ```json`', () => {
   const state = makeStateWithProposal();
   const salaId = state.espacios[0].id;

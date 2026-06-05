@@ -752,24 +752,30 @@
     const movementVocab = Object.entries(movements).map(([id, v]) => '  "' + id + '": "' + v.label + '"').join('\n');
     const cuartosStr = allTargets.map((c) => '  { "id": "' + c.id + '", "nombre": "' + c.nombre + '", "categoria": "' + c.categoria + '" }').join(',\n');
 
-    return 'Eres un director de fotografia especializado en bienes raices.\n' +
-      'Propiedad: ' + descripcion + '\n\n' +
+    return 'Eres un camarografo de bienes raices recibiendo instrucciones de rodaje.\n' +
+      'Descripcion de la propiedad: ' + (descripcion || '(sin descripcion)') + '\n\n' +
       'Cuartos a filmar:\n[\n' + cuartosStr + '\n]\n\n' +
-      'Vocabulario cerrado de tipos de toma (shotType):\n' + shotTypeVocab + '\n\n' +
-      'Vocabulario cerrado de movimientos (movement):\n' + movementVocab + '\n\n' +
-      'Propon tomas adicionales especificas para ESTA propiedad, por cuarto. Responde SOLO en JSON estricto:\n\n' +
+      'Vocabulario cerrado de tipos de toma (shotType) — usa SOLO estos ids:\n' + shotTypeVocab + '\n\n' +
+      'Vocabulario cerrado de movimientos (movement) — usa SOLO estos ids:\n' + movementVocab + '\n\n' +
+      'Tarea: proponer tomas adicionales especificas para ESTA propiedad, por cuarto.\n\n' +
+      'REGLAS DURAS — incumplir cualquiera invalida la respuesta:\n' +
+      '1. Basate ESTRICTAMENTE en la descripcion. PROHIBIDO inventar muebles, features, vistas o condiciones que no se mencionan en ella.\n' +
+      '2. El campo "enfoque" describe SOLO encuadre y composicion. NADA de hora del dia, golden hour, clima, iluminacion natural ni logistica de rodaje.\n' +
+      '3. Propone tomas SOLO para cuartos de la lista. PROHIBIDO inventar cuartos que no aparecen.\n' +
+      '4. Propone SOLO tomas genuinamente especificas de esta propiedad. NO repitas wides genericos que cualquier propiedad tendria.\n' +
+      '5. Si un cuarto no tiene nada destacable segun la descripcion, NO propongas nada para el (omitelo del JSON).\n' +
+      '6. Si la descripcion esta vacia o es generica (sin detalles especificos), responde exactamente: {"porCuarto":{}}\n' +
+      '7. Usa SOLO los ids exactos del vocabulario cerrado para shotType y movement.\n' +
+      '8. Responde UNICAMENTE con el JSON, sin markdown ni texto adicional.\n\n' +
+      'Formato de respuesta:\n' +
       '{\n  "porCuarto": {\n    "<id de cuarto>": [\n' +
       '      { "nombre": "...", "shotType": "<id valido>", "movement": "<id valido>", "enfoque": "...", "priority": "must|nice" }\n' +
       '    ]\n  }\n}\n\n' +
-      'Ejemplo:\n{\n  "porCuarto": {\n    "ejemplo-id-123": [\n' +
-      '      { "nombre": "Toma de la chimenea", "shotType": "detalle", "movement": "push_in", "enfoque": "Resalta el acabado de piedra", "priority": "must" }\n' +
+      'Ejemplo — cuarto con chimenea de piedra mencionada en la descripcion:\n' +
+      '{\n  "porCuarto": {\n    "ejemplo-id-123": [\n' +
+      '      { "nombre": "Detalle de chimenea de piedra", "shotType": "detalle", "movement": "push_in", "enfoque": "Encuadra la piedra texturizada de la chimenea en primer plano", "priority": "must" }\n' +
       '    ]\n  }\n}\n\n' +
-      'Instrucciones:\n' +
-      '- Usa SOLO los ids exactos del vocabulario cerrado para shotType y movement.\n' +
-      '- priority debe ser "must" o "nice".\n' +
-      '- Propon tomas que aprovechen los destacados de la propiedad.\n' +
-      '- Maximo 6 tomas por cuarto.\n' +
-      '- Responde UNICAMENTE con el JSON, sin texto adicional.';
+      'Maximo 6 tomas por cuarto.';
   }
 
   function parsePropuesta(texto, state) {
