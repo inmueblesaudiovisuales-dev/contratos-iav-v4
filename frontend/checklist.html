@@ -2794,7 +2794,7 @@ function toggleBuena(mediaId) {
 function reintentarToma(mediaId) {
   const file = (state.mediaFiles || []).find((f) => f.id === mediaId);
   if (!file || file.kind !== 'take') return;
-  if (file.good) state = logic.toggleMediaGood(state, mediaId);
+  state = logic.updateMediaFile(state, mediaId, { kind: 'discard', discardReason: 'failed' });
   activeSugId = file.suggestionId || null;
   render(); scheduleSave();
 }
