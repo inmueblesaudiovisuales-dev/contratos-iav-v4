@@ -572,6 +572,20 @@
     @keyframes mov-shrink { 0%,100% { transform: scale(1); } 50% { transform: scale(.72); } }
     @keyframes mov-orbit { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .mov-anim { animation: none !important; } }
+    /* F10 — faltantes en sitio */
+    .guide-toggle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .guide-missing-chip { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--red, #D94F3B); background: var(--red-soft, #FFF0EE); color: var(--red, #D94F3B); }
+    .guide-missing-chip.ok { border-color: var(--green, #2E9E5B); background: var(--green-soft, #E8F7EE); color: var(--green, #2E9E5B); cursor: default; }
+    .guide-missing-chip i { font-size: 15px; }
+    .cuarto-faltan { font-size: 11px; font-weight: 700; color: var(--red, #D94F3B); white-space: nowrap; flex: none; }
+    .faltantes-target { padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .faltantes-target:last-child { border-bottom: none; }
+    .faltantes-target-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .faltantes-target-name { font-size: 15px; font-weight: 700; color: var(--ink-1); }
+    .faltantes-target-jump { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--gold); font-weight: 600; cursor: pointer; border: none; background: none; padding: 0; }
+    .faltantes-shot { display: flex; align-items: baseline; gap: 6px; padding: 4px 0; }
+    .faltantes-shot-name { font-size: 13px; font-weight: 600; color: var(--ink-1); }
+    .faltantes-shot-type { font-size: 11px; color: var(--ink-3); }
   </style>
 </head>
 <body>
@@ -1666,7 +1680,7 @@ function renderMediaCapture() {
   <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
   <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
   ` : `
-  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div></div>
+  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}</div>
   <div class="cap-cam">
     <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
     <div class="cap-cam-copy">
@@ -1703,6 +1717,39 @@ function toggleGuideMode() {
   localStorage.setItem('checklist_guide_' + (TOKEN || 'demo'), guideMode ? '1' : '0');
   activeSugId = null;
   render();
+}
+
+function renderFaltantesChip() {
+  const coverage = logic.guideCoverage(state, state.modoActual);
+  const total = coverage.reduce((acc, c) => acc + c.must.faltan.length, 0);
+  if (total === 0) {
+    return `<button class="guide-missing-chip ok" disabled><i class="ti ti-circle-check"></i>cobertura clave completa</button>`;
+  }
+  return `<button class="guide-missing-chip" onclick="abrirFaltantes()"><i class="ti ti-alert-circle"></i>faltan ${total} clave</button>`;
+}
+
+function abrirFaltantes() {
+  const coverage = logic.guideCoverage(state, state.modoActual);
+  const conFaltantes = coverage.filter((c) => c.must.faltan.length > 0);
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+  let body;
+  if (!conFaltantes.length) {
+    body = '<p class="sheet-note">Todas las tomas clave estan cubiertas.</p>';
+  } else {
+    body = conFaltantes.map((c) => {
+      const shots = c.must.faltan.map((s) => {
+        const typeLabel = (shotTypes[s.shotType] || {}).label || s.shotType;
+        const movLabel = (movements[s.movement] || {}).label || s.movement;
+        return `<div class="faltantes-shot"><span class="faltantes-shot-name">${esc(s.nombre)}</span><span class="faltantes-shot-type">${esc(typeLabel)} / ${esc(movLabel)}</span></div>`;
+      }).join('');
+      const jumpBtn = state.modoActual !== 'drone'
+        ? `<button class="faltantes-target-jump" onclick="setActiveRoom('${c.target.id}')"><i class="ti ti-corner-down-right"></i>ir</button>`
+        : '';
+      return `<div class="faltantes-target"><div class="faltantes-target-head"><span class="faltantes-target-name">${esc(c.target.nombre)}</span>${jumpBtn}</div>${shots}</div>`;
+    }).join('');
+  }
+  abrirModal(`<div class="sheet-head"><h2>Tomas clave pendientes</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>${body}`);
 }
 
 function seleccionarSugerencia(id) {
@@ -1901,9 +1948,15 @@ function cuartoRow(item, type) {
   const done = type === 'drone' ? item.estado === 'hecho' : (item.estados[state.modoActual] || {}).estado === 'hecho';
   const child = type === 'space' && item.parentId;
   const active = item.id === (activeTarget() || {}).id;
+  let faltanBadge = '';
+  if (guideMode && type === 'space') {
+    const cov = logic.guideCoverage(state, state.modoActual).find((c) => c.target.id === item.id);
+    const n = cov ? cov.must.faltan.length : 0;
+    if (n > 0) faltanBadge = `<span class="cuarto-faltan">faltan ${n}</span>`;
+  }
   return `<button class="cuarto-row${child ? ' child' : ''}${active ? ' active' : ''}" onclick="setActiveRoom('${item.id}')">
     <span class="cuarto-name">${esc(item.nombre)}</span>
-    ${done ? `<span class="cuarto-done"><i class="ti ti-check"></i>grabado</span>` : ''}
+    ${done ? `<span class="cuarto-done"><i class="ti ti-check"></i>grabado</span>` : faltanBadge}
   </button>`;
 }
 
