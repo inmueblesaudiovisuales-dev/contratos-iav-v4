@@ -81,7 +81,7 @@ y, si hace falta, llama al **adapter** de Apps Script de forma asíncrona (`ctx.
 | `config` | Configuración clave/valor del sistema (ej. datos bancarios `pago_cuenta`/`pago_tarjeta` que lee el portal). Editable desde Ajustes en el admin. Agregada en R58. |
 
 ### Nota importante — D1 no soporta foreign keys
-`PRAGMA foreign_keys` es ignorado en D1. Las cascadas de eliminación están implementadas manualmente en código con `db.batch()` en orden correcto: checklist → propiedades → abonos → tokens → contratos.
+`PRAGMA foreign_keys` es ignorado en D1. Las cascadas de eliminación están implementadas manualmente en código con `db.batch()`. Orden real en `eliminarContrato` (`contratos.js`): `revisiones_video` → `checklist` → `propiedades` → `abonos` → `tokens` → `contratos`.
 
 ### Consultar D1 desde terminal
 ```bash

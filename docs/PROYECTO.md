@@ -64,6 +64,7 @@ contratos-iav-v4/
 │   ├── admin.html           — panel de administración
 │   ├── portal.html          — portal del cliente (firma, pagos, reseña, revisión)
 │   ├── checklist.html       — bitácora de producción / checklist de rodaje
+│   ├── checklist-logic.js   — lógica pura de la bitácora (con tests)
 │   ├── equipo.html          — portal de equipo (solo lectura + estatus producción)
 │   └── revision.html        — notas de revisión de video
 └── worker/
