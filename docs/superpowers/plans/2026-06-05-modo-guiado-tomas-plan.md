@@ -989,3 +989,19 @@ Comercial:
 - https://vidtech.com/cre-videos-for-retail/
 - https://www.kpi-creatives.com/sps-5/commercial-real-estate-video-production
 - https://shoot2sell.com/commercial-real-estate-photography-services
+
+---
+
+# RONDA 2 — Fixes de campo (tras prueba visual)
+
+Decisiones del usuario:
+- **Editor de biblioteca:** modo aparte **SIN token** (`checklist.html?config=1`), protegido por contraseña de admin; se usa en escritorio, no en campo. **Quitar el engrane** del checklist de trabajo.
+- **IA:** sigue proponiendo **solo tomas** (no cuartos), con **prompt reforzado**.
+- **Ordenar recorrido:** **agrupado y ordenado por piso**, con el piso visible.
+
+Fases (continúan la numeración como G1..G5; un commit por fase, mismas reglas y gates):
+- **G1 · Logic: prompt IA reforzado.** Reescribe `buildPropuestaPrompt` con reglas duras: (a) basarse ESTRICTAMENTE en la descripción; prohibido inventar muebles/features/condiciones que no se mencionan; (b) `enfoque` solo sobre encuadre/composición — NADA de hora del día, clima, iluminación ni logística; (c) solo cuartos de la lista (no inventar cuartos); (d) proponer solo lo genuinamente específico de la propiedad (no repetir wides genéricos); si un cuarto no tiene nada especial, no proponer nada; (e) usar SOLO ids del vocabulario cerrado; (f) responder SOLO JSON. Test: el prompt incluye las cláusulas clave y la estructura.
+- **G2 · UI: des-picar sugerencia.** `seleccionarSugerencia(id)` debe **alternar**: si `activeSugId===id`, ponerlo en `null` (vuelve a "toma libre"); si no, fijarlo. 
+- **G3 · UI: ordenar recorrido por piso.** `abrirOrdenarRecorrido` agrupa por piso (encabezado por piso), se ordena **dentro** de cada piso, y el recorrido global = pisos en su orden + cuartos en su orden dentro del piso. El piso es visible. Ajustar `moverRecorrido`/`recorridoTargets` para respetar el piso (no mover un cuarto fuera de su piso).
+- **G4 · Demo: reinicio fácil.** Botón **"Reiniciar demo"** visible solo con `?demo=1` que limpia el estado demo de localStorage y recarga datos frescos. Enriquecer un poco la data demo (más cuartos/escenarios).
+- **G5 · Config sin token + quitar engrane.** Modo `?config=1` (sin token) que arranca directo el **editor de biblioteca**: carga `obtenerConfigGuia`, `applyGuideConfig`, renderiza el panel de config full-screen, gated por `ensureAdminKey`. **Quita** el engrane/`abrirConfigGuia` del checklist de campo (modo guiado). El editor reusa `renderConfigGuia` existente.
