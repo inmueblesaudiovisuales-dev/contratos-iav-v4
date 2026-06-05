@@ -81,5 +81,10 @@ contratos-iav-v4/
         ├── cron.js          — syncToSheets() backup horario
         └── routes/          — contratos, portal, abonos, paquetes, stats,
                                 checklist, archivos, revision, equipo,
-                                clientes, trabajos, actividades, config, prospectos
+                                clientes, trabajos, actividades, config
 ```
+
+> **Archivos no productivos** (no forman parte del sistema vivo, no están en el mapa de relaciones):
+> `frontend/admin-v4-backup.html` y `frontend/portal-v4-backup.html` (respaldos previos al rediseño),
+> `frontend/chat.html` (mockup; ver `docs/CHAT_PRODUCCION.md` para su plan de productivización),
+> `frontend/checklist-demo.js` (demo) y `frontend/checklist-logic.test.js` (tests de `checklist-logic.js`).

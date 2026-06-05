@@ -15,7 +15,7 @@ y, si hace falta, llama al **adapter** de Apps Script de forma asíncrona (`ctx.
 
 | Frontend | Para qué sirve | Handler(s) en `worker/src/routes/` | Acciones `/api/` que llama |
 |---|---|---|---|
-| `admin.html` | Panel de administración (todo el back-office) | `contratos.js`, `abonos.js`, `paquetes.js`, `archivos.js`, `equipo.js`, `clientes.js`, `trabajos.js`, `actividades.js`, `config.js`, `stats.js` | `crearContrato`, `listarContratos`, `obtenerContrato`, `actualizarEstatus`, `guardarEntrega`, `reagendarPropiedad`, `reservarContrato`, `registrarAbono`, `listarPaquetes`, `crearPaquete`, `editarPaquete`, `togglePaquete`, `subirArchivo(Admin/Cliente)`, `listarArchivosCliente`, `obtenerEquipo`, `crearCliente`, `listarClientes`, `obtenerCliente`, `actualizarCliente`, `crearTrabajo`, `listarTrabajos`, `agendarLlamada(Rapida)`, `agregarNota`, `listarActividades`, `marcarActividad`, `obtenerConfig(Admin)`, `guardarConfig` |
+| `admin.html` | Panel de administración (todo el back-office) | `contratos.js`, `abonos.js`, `paquetes.js`, `archivos.js`, `equipo.js`, `clientes.js`, `trabajos.js`, `actividades.js`, `config.js`, `stats.js` | Usa prácticamente **todos** los endpoints de admin. Principales: `crearContrato`, `listarContratos`, `obtenerContrato`, `actualizarEstatus`, `guardarProduccion`, `guardarEntrega`, `reagendarPropiedad`, `reservarContrato`, `actualizarContratoUpsell`, `eliminarContrato`, `exportarCSV`, `registrarAbono`, `listarPaquetes(Todos)`, `crear/editar/togglePaquete`, `subirArchivo(Admin/Cliente)`, `listarArchivosCliente`, `obtenerEquipo`, `crear/listar/obtener/actualizarCliente`, `crear/listar/actualizarTrabajo`, `agendarLlamada(Rapida)`, `agregarNota`, `listar/marcarActividad`, `obtenerConfig(Admin)`, `guardarConfig` |
 | `portal.html` | Portal del cliente: firma, pagos, reseña, revisión | `portal.js`, `archivos.js`, `config.js` | `obtenerPortal`, `firmaCliente`, `guardarResena`, `subirArchivo`, `obtenerConfig` |
 | `equipo.html` | Portal de equipo (fotógrafo/camarógrafo): solo lectura + estatus de producción | `equipo.js`, `actividades.js` | `obtenerEquipo`, `marcarProduccion`, `agregarNota` |
 | `checklist.html` | Bitácora de producción / checklist de rodaje | `checklist.js`, `actividades.js` | `obtenerChecklist`, `guardarChecklist`, `agregarNota` |
@@ -28,22 +28,23 @@ y, si hace falta, llama al **adapter** de Apps Script de forma asíncrona (`ctx.
 
 | Handler (`routes/`) | Tablas D1 que toca | Acciones del adapter que dispara (async) |
 |---|---|---|
-| `contratos.js` | `contratos`, `propiedades`, `tokens` | `notificarUpsell`, `enviarCorreoEntrega`, `reagendarPropiedad`, `enviarRecordatorioPago` |
-| `portal.js` | `contratos`, `propiedades`, `tokens` | `procesarFirma` (→ Drive + PDF + Calendar), `obtenerLogoCliente` |
-| `abonos.js` | `abonos`, `contratos` | `enviarCorreoAbono` |
+| `contratos.js` | `contratos`, `propiedades`, `tokens` | `crearCarpetas`, `crearEventoReservado`, `reagendarPropiedad`, `notificarUpsell`, `enviarCorreoEntrega`, `enviarRecordatorioPago` |
+| `portal.js` | `contratos`, `propiedades`, `tokens` | `procesarFirma` (→ Drive + PDF + Calendar), `crearEventoReservado`, `obtenerLogoCliente`, `notificarResena` |
+| `abonos.js` | `abonos`, `contratos` | `crearEventoReservado`, `enviarCorreoAbono` |
 | `revision.js` | `revisiones_video`, `contratos` | `notificarRevision` |
 | `equipo.js` | `contratos`, `propiedades` | — (solo lectura/escritura D1) |
 | `checklist.js` | `checklist` | — |
 | `archivos.js` | `propiedades`, `clientes` | `subirArchivo`, `subirArchivoAdmin`, `subirArchivoCliente`, `listarArchivosCliente` |
 | `clientes.js` | `clientes`, `contratos` | — |
-| `trabajos.js` | `trabajos`, `clientes`, `contratos` | `agendarLlamadaCliente` |
+| `trabajos.js` | `trabajos`, `clientes`, `contratos` | `agendarLlamadaCliente`, `crearEventoReservado` |
 | `actividades.js` | `actividades`, `trabajos`, `clientes` | `agendarLlamadaCliente` |
 | `paquetes.js` | `paquetes` | — |
 | `config.js` | `config` | — |
-| `stats.js` | `contratos`, `abonos` | — |
-| `prospectos.js` | `prospectos` | `agendarLlamadaProspecto` |
+| `stats.js` | `contratos`, `abonos`, `trabajos` | — |
 | `cron.js` (Cron Trigger horario) | lee todas las tablas | `syncBackup` (→ Sheets) |
 
+> **No hay handler `prospectos.js`**: la feature de prospectos (R32) quedó absorbida por `clientes.js` / `trabajos.js` / `actividades.js` (R35). En el adapter, `agendarLlamadaProspecto` sobrevive solo como **alias** de `agendarLlamadaCliente`. En `stats.js`/`trabajos.js`, "prospectos" es un **grupo de estatus** del pipeline (`Nuevo`, `En cotizacion`), no una tabla ni una ruta.
+>
 > Dos acciones del adapter **no** las dispara un handler directamente: `procesarPDFsPendientes` corre por un **trigger de Apps Script** (cada minuto) y `primerAbono` es **fallback legacy** (ver más abajo).
 > El adapter llama de vuelta al Worker (`actualizarCarpeta`, `actualizarCalendarEvent`, `actualizarPdfUrl`) para guardar los IDs de Google en D1.
 
@@ -73,10 +74,11 @@ y, si hace falta, llama al **adapter** de Apps Script de forma asíncrona (`ctx.
 | `paquetes` | Catálogo. PK: `clave` (ej. `RES-COMBO`). |
 | `checklist` | Un checklist por contrato. PK: `contrato_token`. |
 | `revisiones_video` | Notas de revisión de video por contrato. FK: `contrato_id` → `contratos.token`. Columnas: `id`, `contrato_id`, `minuto_segundo`, `descripcion_ajuste`, `fecha`. Agregada en R18. |
-| `prospectos` | Llamadas agendadas con prospectos. PK: `id` (UUID). Columnas: `nombre`, `telefono`, `interes`, `fecha_llamada`, `hora_llamada`, `notas`, `estatus` (pendiente/contactado/convertido/descartado), `fecha_creacion`. Agregada en R32. **Tabla creada manualmente por Bruno el 2026-06-02** (DROP + CREATE desde wrangler CLI — la primera migración había creado la tabla sin columnas). |
+| ~~`prospectos`~~ | **Obsoleta (R32).** Reemplazada por `clientes`/`trabajos`/`actividades` en R35. **No está en `schema.sql`** y el código actual no la usa. Puede existir aún en la D1 de producción como tabla huérfana. "Prospectos" hoy es solo un grupo de estatus del pipeline de `trabajos`. |
 | `clientes` | CRM de clientes. PK: `id` (UUID). Columnas: `nombre`, `telefono`, `correo`, `origen`, `notas_perfil`, `fecha_creacion`, `fecha_ultima_actividad`. Agregada en R35. |
 | `trabajos` | Pipeline comercial ligado a `clientes`. PK: `id` (UUID). Columnas: `cliente_id`, `estatus`, `interes`, JSON de paquetes/portafolio/propiedades, `presupuesto_estimado`, `notas`, `contrato_token`, fechas. Agregada en R35. |
 | `actividades` | Bitácora de llamadas/notas por cliente y trabajo. PK: `id` (UUID). Columnas: `cliente_id`, `trabajo_id`, `tipo`, `descripcion`, `fecha_actividad`, `hora`, `fecha_creacion`. Agregada en R35. |
+| `config` | Configuración clave/valor del sistema (ej. datos bancarios `pago_cuenta`/`pago_tarjeta` que lee el portal). Editable desde Ajustes en el admin. Agregada en R58. |
 
 ### Nota importante — D1 no soporta foreign keys
 `PRAGMA foreign_keys` es ignorado en D1. Las cascadas de eliminación están implementadas manualmente en código con `db.batch()` en orden correcto: checklist → propiedades → abonos → tokens → contratos.
@@ -168,9 +170,10 @@ El Worker llama al adapter con `POST` y un JSON `{ action: '...', ...datos }`. L
 
 | Acción | Qué hace |
 |--------|---------|
-| `notificarContratoCreado` | ~~Eliminado en Ronda 8~~ — función vacía removida del handler map |
 | `procesarFirma` | Guarda firma PNG en Drive, registra PDF pendiente; **crea carpetas Drive (año/mes de la sesión) + PDF referencias + eventos Calendar** para todas las propiedades; llama Worker `actualizarCarpeta` + `actualizarCalendarEvent` |
-| `procesarPDFsPendientes` | Genera PDF desde template, envía al cliente, llama Worker `actualizarPdfUrl` |
+| `crearCarpetas` | Crea/garantiza la carpeta Drive del contrato (idempotente, helper `getOrCreateFolder_`). La dispara `contratos.js`. |
+| `crearEventoReservado` | Crea el evento de Calendar de una sesión reservada **sin pago** (texto neutral). La disparan `contratos.js` (`reservarContrato`), `abonos.js`, `portal.js`, `trabajos.js`. |
+| `procesarPDFsPendientes` | Genera PDF desde template, envía al cliente, llama Worker `actualizarPdfUrl`. **Corre por trigger de Apps Script cada minuto, no por un handler.** |
 | `primerAbono` | **Legacy fallback** — solo se ejecuta si el contrato no tiene `carpeta_control_id` (firmado antes de Ronda 11). Igual que `procesarFirma` pero para contratos viejos. Usa fecha de sesión (no hoy) para el mes de carpeta. |
 | `enviarCorreoAbono` | Correo HTML de confirmación de pago al cliente |
 | `enviarRecordatorioPago` | Correo HTML de recordatorio de saldo al cliente |
@@ -179,10 +182,12 @@ El Worker llama al adapter con `POST` y un JSON `{ action: '...', ...datos }`. L
 | `notificarUpsell` | Correo HTML de servicios adicionales |
 | `subirArchivo` | Sube archivo a carpeta de propiedad (desde portal) |
 | `subirArchivoAdmin` | Sube archivo a carpeta (desde admin) |
-| `syncBackup` | Sobreescribe tabs en Sheets con datos de D1 |
-| `agendarLlamadaProspecto` | Crea evento de 30 min en Calendar con nombre, teléfono, interés y notas del prospecto. Agregado en R32. |
+| `subirArchivoCliente` / `listarArchivosCliente` | Sube/lista archivos en la carpeta del cliente en Drive (carpeta "Clientes/{nombre — id}"). Las dispara `archivos.js`. |
+| `syncBackup` | Sobreescribe tabs en Sheets con datos de D1 (lo dispara `cron.js`) |
+| `agendarLlamadaCliente` | Crea evento de 30 min en Calendar para una llamada con el cliente/prospecto. La disparan `actividades.js` y `trabajos.js`. `agendarLlamadaProspecto` es un **alias** de esta misma función. |
 | `obtenerLogoCliente` | Busca logo precargado del cliente en Drive |
 | `notificarRevision` | Correo HTML a Bruno con tabla de timecodes y notas de revisión del cliente (R18) |
+| `notificarResena` | Correo HTML a Bruno cuando un cliente deja una reseña. La dispara `portal.js` (`guardarResena`). |
 
 ### Callbacks del adapter al Worker
 Apps Script llama de vuelta al Worker para guardar IDs de Google en D1:
