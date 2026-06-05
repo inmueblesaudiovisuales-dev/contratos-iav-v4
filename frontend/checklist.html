@@ -559,6 +559,9 @@
     /* F9 — acordeón "ver movimiento" */
     .guide-row-wrap { margin-bottom: 6px; }
     .guide-row-wrap .guide-row { margin-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
+    .guide-toma-btn { display: flex; align-items: center; gap: 5px; width: 100%; padding: 7px 12px; border: 1px solid var(--line); border-top: none; background: var(--card); color: var(--ink-2); font-size: 12px; font-weight: 600; cursor: pointer; }
+    .guide-toma-btn i { font-size: 14px; color: var(--gold); }
+    .guide-toma-btn:active { background: var(--muted); }
     .guide-mov-details { border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--radius) var(--radius); background: var(--muted); overflow: hidden; }
     .guide-mov-summary { display: flex; align-items: center; gap: 5px; padding: 5px 12px; font-size: 11px; color: var(--ink-3); cursor: pointer; list-style: none; user-select: none; }
     .guide-mov-summary::-webkit-details-marker { display: none; }
@@ -1918,6 +1921,7 @@ function renderGuideList(target) {
           ${stateHtml}
         </div>
       </button>
+      <button class="guide-toma-btn" data-sug-id="${esc(s.id)}" onclick="registrarSugerencia(this)"><i class="ti ti-video"></i>Toma</button>
       <details class="guide-mov-details">
         <summary class="guide-mov-summary"><i class="ti ti-chevron-right"></i>ver movimiento</summary>
         <div class="guide-mov-body">
@@ -1941,6 +1945,13 @@ function renderGuideList(target) {
     tipoChipsHtml = `<div class="guide-tipo"><span class="guide-tipo-lbl">Tipo de propiedad</span><div class="chips">${chips}</div></div>`;
   }
   return `<div class="guide-list">${tipoChipsHtml}<div class="guide-list-hd">sugerencias</div>${rows}</div>`;
+}
+
+function registrarSugerencia(btn) {
+  const sugId = btn.dataset.sugId;
+  const target = activeTarget();
+  if (!target || !sugId) return;
+  registrarArchivo(target.id, 'take', undefined, { suggestionId: sugId });
 }
 
 function abrirCategoriaSheet(targetId) {
