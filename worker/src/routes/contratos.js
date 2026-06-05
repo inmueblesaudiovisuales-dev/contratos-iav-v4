@@ -132,7 +132,9 @@ export async function handleContratos(request, env, ctx, action) {
     const tipoPaqueteFinal = tipoPaquete || prop1?.tipo || '';
     const paquete = await queryOne(db, 'SELECT precio FROM paquetes WHERE clave = ?', [paqueteBaseFinal]);
     const precioBase = paquete?.precio ?? totalNum;
-    const saldoPendiente = Math.max(0, totalNum - anticNum);
+    // El anticipo es el primer pago SUGERIDO al cliente, NO un pago hecho:
+    // el saldo arranca completo y solo baja con abonos reales (registrarAbono).
+    const saldoPendiente = totalNum;
 
     const adicionalesOfrecidos = (adicionales || []).filter(Boolean);
     const extrasObjs = (extrasAcordados || []).map(e =>
@@ -211,7 +213,10 @@ export async function handleContratos(request, env, ctx, action) {
       propiedades: propsData.map((p, i) => ({
         numPropiedad: i + 1,
         tipo: p.tipo || tipoPaqueteFinal,
-        paquete: pkMapNombres[p.paquete || paqueteBaseFinal] || p.paquete || paqueteBaseFinal
+        paquete: pkMapNombres[p.paquete || paqueteBaseFinal] || p.paquete || paqueteBaseFinal,
+        // El adapter usa la fecha de sesión para decidir la carpeta de año/mes.
+        // Sin esto caía a "hoy" y creaba la carpeta en otro mes que procesarFirma → duplicados.
+        fechaSesion: p.fechaSesion || ''
       }))
     });
 
@@ -474,6 +479,35 @@ export async function handleContratos(request, env, ctx, action) {
     const { token } = await request.json();
     await run(db, 'UPDATE contratos SET oculto=1 WHERE token=?', [token]);
     return ok({ ok: true });
+  }
+
+  if (action === 'reservarContrato') {
+    // Apartar la fecha (crear evento en calendario) sin requerir abono.
+    // Solo desde "Firmado" (ya hay contrato firmado, falta el pago).
+    const { token } = await request.json();
+    if (!token) return err('Token requerido');
+    const contrato = await queryOne(db, 'SELECT * FROM contratos WHERE token = ?', [token]);
+    if (!contrato) return err('Contrato no encontrado', 404);
+    if (contrato.estatus !== 'Firmado') {
+      return err('Solo se puede apartar la fecha de un contrato firmado y aún sin reservar.', 409);
+    }
+    await run(db, 'UPDATE contratos SET estatus = ? WHERE token = ?', ['Reservado', token]);
+    const trabajoRes = await queryOne(db, 'SELECT id, cliente_id FROM trabajos WHERE token=?', [token]);
+    if (trabajoRes) {
+      await run(db,
+        'UPDATE trabajos SET estatus=?, fecha_ultima_actividad=? WHERE id=?',
+        ['Reservado', now(), trabajoRes.id]);
+      const clienteRes = await queryOne(db,
+        'SELECT nombre, telefono FROM clientes WHERE id=?', [trabajoRes.cliente_id]);
+      callAdapter(ctx, env, 'crearEventoReservado', {
+        trabajoId: trabajoRes.id,
+        token,
+        nombreCliente: contrato.nombre_cliente,
+        telefono: clienteRes?.telefono || '',
+        equipoUrl: `https://contratos.inmueblesaudiovisuales.com/equipo.html?token=${token}`
+      });
+    }
+    return ok({ ok: true, estatus: 'Reservado' });
   }
 
   if (action === 'eliminarContrato') {

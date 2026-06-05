@@ -4,13 +4,14 @@ import { requireAdmin, ok, err } from '../auth.js';
 // Claves que el portal del cliente puede leer (datos bancarios para pagar).
 // Las plantillas de WhatsApp (wa_template_*) NO se exponen al portal.
 const CLAVES_PUBLICAS = [
-  'banco_clabe', 'banco_nombre', 'banco_titular', 'pago_oxxo', 'pago_clip_url'
+  'banco_clabe', 'banco_nombre', 'banco_titular',
+  'pago_cuenta', 'pago_tarjeta', 'pago_oxxo', 'pago_clip_url'
 ];
 
 // Defaults seguros si la tabla config aún no existe (migración pendiente).
 const DEFAULTS = {
   banco_clabe: '', banco_nombre: '', banco_titular: '',
-  pago_oxxo: '', pago_clip_url: ''
+  pago_cuenta: '', pago_tarjeta: '', pago_oxxo: '', pago_clip_url: ''
 };
 
 export async function handleConfig(request, env, ctx, action) {

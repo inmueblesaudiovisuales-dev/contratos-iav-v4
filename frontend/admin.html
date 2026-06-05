@@ -184,79 +184,6 @@
     }
     .btn-nuevo-mobile:hover { opacity: 0.85; }
 
-    /* ── SIDE MENU (mobile) ───────────────────────────── */
-    #side-menu {
-      position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
-      background: var(--card); z-index: 300;
-      display: flex; flex-direction: column;
-      padding: 24px 14px 20px;
-      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
-      transform: translateX(-100%);
-      transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    #side-menu.open { transform: translateX(0); }
-    #side-menu-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.35); z-index: 299;
-    }
-    #side-menu-overlay.visible { display: block; }
-    .sm-brand { margin-bottom: 28px; }
-    .sm-brand-name { font-size: 14px; font-weight: 800; color: var(--ink-1); }
-    .sm-brand-sub { font-size: 10px; color: var(--ink-3); margin-top: 2px; }
-    .sm-nav-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 10px; border-radius: 7px; cursor: pointer;
-      margin-bottom: 2px; border: none; background: none;
-      width: 100%; text-align: left; font-family: inherit;
-    }
-    .sm-nav-item.activo { background: #F5F5F3; }
-    .sm-indicator {
-      width: 3px; height: 20px; border-radius: 2px;
-      background: transparent; flex-shrink: 0;
-    }
-    .sm-nav-item.activo .sm-indicator { background: var(--gold); }
-    .sm-nav-icon { font-size: 18px; color: var(--ink-4); flex-shrink: 0; }
-    .sm-nav-item.activo .sm-nav-icon { color: var(--ink-1); }
-    .sm-nav-label { font-size: 13px; font-weight: 600; color: var(--ink-3); }
-    .sm-nav-item.activo .sm-nav-label { color: var(--ink-1); }
-    .sm-nav-badge {
-      margin-left: auto; background: var(--gold); color: white;
-      font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 10px;
-    }
-    .sm-footer {
-      margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border);
-    }
-    .sm-footer-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 9px 10px; border-radius: 6px; cursor: pointer;
-      border: none; background: none; width: 100%; font-family: inherit;
-    }
-    .sm-footer-item:hover { background: var(--page); }
-    .sm-footer-icon { font-size: 16px; color: var(--ink-4); }
-    .sm-footer-label { font-size: 12px; color: var(--ink-3); }
-    .sm-user {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 6px 0; margin-top: 8px;
-      border-top: 1px solid var(--border);
-    }
-    .sm-user-avatar {
-      width: 28px; height: 28px; background: var(--black); border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    }
-    .sm-user-avatar span { font-size: 10px; font-weight: 700; color: white; }
-    .sm-user-name { font-size: 11px; font-weight: 600; color: var(--ink-1); }
-    .sm-user-role { font-size: 9px; color: var(--ink-3); }
-    .sm-logout-btn {
-      margin-left: auto; background: none; border: none;
-      color: var(--ink-4); cursor: pointer; font-size: 16px; padding: 4px;
-    }
-    .sm-logout-btn:hover { color: var(--danger); }
-
-    /* ── SIDEBAR (desktop — hidden on mobile) ─────────── */
-    #sidebar {
-      display: none;
-    }
 
     /* ── MAIN CONTENT ─────────────────────────────────── */
     .main-content {
@@ -271,6 +198,7 @@
     #contratos-cards { display: none; }
     #statsRibbon { display: none; }
     .filter-chips { display: none; }
+    #filtro-estatus { display: none; } /* en móvil basta con Abiertos/Todos */
     .search-icon { display: none; }
     .search-shortcut { display: none; }
     .toolbar-sep { display: none; }
@@ -303,37 +231,15 @@
     .contratos-tab.activo-ctab .ctab-badge { background: var(--gold); color: white; }
     .contratos-tab:not(.activo-ctab) .ctab-badge { background: var(--ink-4); color: var(--ink-2); }
 
-    /* ── SUBTAB STRIP ────────────────────────────────── */
-    .subtab-strip {
-      display: flex;
-      gap: 0;
-      padding: 0 16px;
-      border-bottom: 1px solid var(--border);
-      background: white;
-    }
-    .subtab-btn {
-      padding: 8px 14px;
-      border: none;
-      border-bottom: 2px solid transparent;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--ink-2);
-      background: transparent;
-      cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
-    }
-    .subtab-btn.activo {
-      color: var(--ink-1);
-      border-bottom-color: var(--ink-1);
-    }
-    .subtab-btn:not(.activo):hover { color: var(--ink-1); }
-
     /* ── TOOLBAR ──────────────────────────────────────── */
     .barra { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
     .barra-fila-principal { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .barra-fila-principal .campo-busqueda { flex: 1; min-width: 200px; }
     .barra-filtros { display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .barra-filtros.visible { display: flex; }
+    .barra-filtros.visible { display: flex; padding: 12px 14px; background: var(--paper-2); border: 1px solid var(--border); border-radius: var(--r); margin-top: 2px; }
+    /* dentro del panel de Filtros, chips y select siempre visibles (anula el ocultar de móvil) */
+    .barra-filtros .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .barra-filtros #filtro-estatus { display: inline-block; width: auto; }
     .filtro-fecha-label { font-size: 11px; font-weight: 700; color: var(--ink-3); white-space: nowrap; letter-spacing: 0.04em; }
     .btn-filtros-toggle {
       display: flex; align-items: center; gap: 6px;
@@ -386,6 +292,65 @@
       width: 32px; height: 32px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+
+    /* ── LEDGER (lista de contratos · patrón Dossier) ─── */
+    .ledger {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r-lg); overflow: hidden;
+    }
+    .lhead {
+      display: grid; grid-template-columns: 124px 1fr 168px 104px 120px;
+      gap: 14px; padding: 11px 22px;
+      background: var(--paper-2); border-bottom: 1px solid var(--border);
+    }
+    .lhead .th {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--ink-3);
+    }
+    .lhead .th.r { text-align: right; }
+    .lrow {
+      display: grid; grid-template-columns: 124px 1fr 168px 104px 120px;
+      gap: 14px; align-items: center; padding: 15px 22px;
+      border-bottom: 1px solid var(--border);
+      border-left: 3px solid transparent; cursor: pointer;
+      transition: background 120ms;
+    }
+    .lrow:last-child { border-bottom: none; }
+    .lrow:hover { background: #FAFAF8; }
+    .lrow.activo { background: #FAFAF8; border-left-color: var(--gold-leaf); }
+    .lrow.tr-ses-hoy { border-left-color: var(--gold-leaf); }
+    .lrow.tr-ses-pronto { border-left-color: var(--warn); }
+    .lrow.tr-ses-semana { border-left-color: var(--blue); }
+    .c-folio { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: .02em; }
+    .c-folio-m { display: none; }
+    .c-name { font-family: var(--font-display); font-size: 16px; font-weight: 500; color: var(--ink-1); line-height: 1.2; }
+    .c-sub { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+    .c-sub .sub-estatus { display: none; }
+    .c-amt { font-family: var(--font-mono); font-size: 13px; text-align: right; color: var(--ink-2); }
+    .c-saldo { font-family: var(--font-mono); font-size: 14px; font-weight: 600; text-align: right; color: var(--warn); white-space: nowrap; }
+    .c-saldo::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 7px; vertical-align: middle; }
+    .c-saldo.pagado { color: var(--success); }
+    .lcheck { display: none; align-items: center; justify-content: center; }
+    .ledger.sel .lhead, .ledger.sel .lrow { grid-template-columns: 34px 110px 1fr 168px 104px 120px; }
+    .ledger.sel .lcheck { display: flex; }
+    /* estampa de estatus */
+    .stamp { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink-2); min-width: 0; }
+    .stamp .seal {
+      width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 11px; font-weight: 600; flex-shrink: 0;
+    }
+    .stamp .stamp-label { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    @media (max-width: 760px) {
+      .lhead { display: none; }
+      .lrow, .ledger.sel .lrow { grid-template-columns: 1fr auto; gap: 12px; padding: 14px 16px; }
+      .lrow > .c-folio, .lrow > .c-estatus, .lrow > .c-amt { display: none; }
+      .ledger.sel .lrow { grid-template-columns: 34px 1fr auto; }
+      .c-folio-m { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); letter-spacing: .03em; margin-bottom: 2px; }
+      .c-sub .sub-estatus { display: inline; }
+      .c-saldo { font-size: 15px; }
     }
 
     /* ── VISTA SESIONES ───────────────────────────────── */
@@ -506,8 +471,18 @@
     }
     .panel-tab-btn:hover { color: var(--ink-1); }
     .panel-tab-btn.activo { color: var(--ink-1); border-bottom-color: var(--ink-1); }
-    .panel-tab-pane { display: none; }
-    .panel-tab-pane.activo { display: block; flex: 1; overflow-y: auto; min-height: 0; padding: 14px 16px; }
+    /* R59: panel de scroll único (tabs ocultas, panes apilados) */
+    .panel-tabs { display: none !important; }
+    #panel-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+    .panel-tab-pane { display: block; padding: 0 16px; }
+    .panel-tab-pane:first-child { padding-top: 14px; }
+    .panel-tab-pane:empty { display: none; }
+    .panel-sec-head {
+      font-family: var(--font-display, 'Fraunces', serif); font-size: 17px; font-weight: 500;
+      color: var(--ink-1); margin: 20px 0 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-tab-pane:first-child .panel-sec-head { margin-top: 4px; }
     .panel-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
     .panel-section-label {
       font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
@@ -933,6 +908,19 @@
     }
     .panel-pay-bar-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width 400ms; }
 
+    /* ── RECIBO (bloque de pago estilo Dossier) ───────── */
+    .recibo { background: var(--paper-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+    .recibo-r { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; color: var(--ink-2); padding: 5px 0; border-bottom: 1px dashed var(--border-2); }
+    .recibo-r:last-of-type { border-bottom: none; }
+    .recibo-r .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-1); }
+    .recibo-r .mono.neg { color: var(--success); }
+    .recibo-total { display: flex; justify-content: space-between; align-items: baseline; margin: 11px 0 12px; }
+    .recibo-total-lbl { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+    .recibo-total-val { font-family: var(--font-display); font-size: 27px; font-weight: 500; color: var(--warn); line-height: 1; }
+    .recibo-total-val.pagado { color: var(--success); }
+    .recibo-track { height: 7px; background: var(--card); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+    .recibo-track-fill { height: 100%; background: var(--gold-leaf); border-radius: 5px; transition: width 400ms var(--ease, ease); }
+
     /* ── PANEL ACTION BAR ─────────────────────────────── */
     #panel-action-bar { padding: 10px 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
     .panel-action-bar { display: flex; flex-direction: column; gap: 6px; }
@@ -1052,7 +1040,7 @@
       .fila-2 { grid-template-columns: 1fr; }
       .form-card { padding: 20px 14px; }
       .barra-fila-principal .campo-busqueda { width: 100%; min-width: 0; order: -1; flex: none; }
-      #filtro-estatus { flex: 1; min-width: 0; }
+      .barra-filtros #filtro-estatus { flex: 0 0 auto; width: auto; min-width: 150px; }
       #filtro-fecha-desde, #filtro-fecha-hasta { flex: 1; min-width: 0; }
       #btn-refresh-tabla, #btn-export-csv { display: none !important; }
       .td-sub.td-email { display: none !important; }
@@ -1123,70 +1111,6 @@
       #side-menu { display: none !important; }
       #side-menu-overlay { display: none !important; }
 
-      /* Sidebar */
-      #sidebar {
-        display: flex; flex-direction: column;
-        position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w);
-        background: #FFFDF9; border-right: 1px solid var(--border);
-        padding: 20px 12px; z-index: 100;
-      }
-      .sidebar-logo {
-        display: flex; align-items: center; gap: 9px;
-        margin-bottom: 28px; padding: 0 4px;
-      }
-      .sidebar-logo-icon {
-        width: 28px; height: 28px; background: var(--black); border-radius: 6px;
-        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-      }
-      .sidebar-logo-icon span { font-size: 8px; font-weight: 800; color: white; }
-      .sidebar-logo-name { font-size: 11px; font-weight: 700; color: var(--ink-1); line-height: 1.3; }
-      .sidebar-logo-sub { font-size: 9px; color: var(--ink-3); font-weight: 400; }
-      .sidebar-section-label {
-        font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-        text-transform: uppercase; color: var(--ink-4);
-        padding: 0 8px; margin: 10px 0 4px;
-      }
-      .sidebar-item {
-        display: flex; align-items: center; gap: 9px;
-        padding: 8px 10px; border-radius: 6px; cursor: pointer;
-        border: none; background: none; width: 100%;
-        text-align: left; font-family: inherit; margin-bottom: 2px;
-        transition: background 120ms;
-      }
-      .sidebar-item:hover { background: var(--page); }
-      .sidebar-item.activo { background: #F5F5F3; }
-      .sidebar-indicator {
-        width: 3px; height: 20px; border-radius: 2px;
-        background: transparent; flex-shrink: 0;
-      }
-      .sidebar-item.activo .sidebar-indicator { background: var(--gold); }
-      .sidebar-icon { font-size: 17px; color: var(--ink-4); flex-shrink: 0; }
-      .sidebar-item.activo .sidebar-icon { color: var(--ink-1); }
-      .sidebar-label { font-size: 13px; font-weight: 600; color: var(--ink-3); flex: 1; }
-      .sidebar-item.activo .sidebar-label { color: var(--ink-1); }
-      .sidebar-badge {
-        font-size: 9px; font-weight: 700; background: var(--gold);
-        color: white; padding: 1px 6px; border-radius: 10px;
-      }
-      .sidebar-footer {
-        margin-top: auto; padding-top: 12px;
-        border-top: 1px solid var(--border);
-        display: flex; align-items: center; gap: 8px; padding: 12px 4px 0;
-      }
-      .sidebar-avatar {
-        width: 28px; height: 28px; background: var(--black); border-radius: 50%;
-        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-      }
-      .sidebar-avatar span { font-size: 10px; font-weight: 700; color: white; }
-      .sidebar-user-name { font-size: 11px; font-weight: 600; color: var(--ink-1); }
-      .sidebar-user-role { font-size: 9px; color: var(--ink-3); }
-      .sidebar-gear {
-        margin-left: auto; background: none; border: none;
-        color: var(--ink-4); cursor: pointer; font-size: 17px; padding: 4px;
-        border-radius: 5px; transition: color 120ms;
-      }
-      .sidebar-gear:hover { color: var(--ink-1); }
-
       /* Main content offset — sin sidebar; nav ahora es topbar superior */
       .main-content { margin-left: 0; }
       .contenido { padding: 24px 28px 60px; }
@@ -1195,6 +1119,7 @@
       .kpi-grid { display: grid; }
       #statsRibbon { display: none; } /* replaced by .kpi-grid */
       .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+      #filtro-estatus { display: inline-block; }
       .search-icon { display: block; }
       .search-shortcut { display: block; }
       .toolbar-sep { display: block; width: 1px; height: 20px; background: var(--border-2); flex-shrink: 0; }
@@ -1379,6 +1304,9 @@
       .iav-tabs { display: flex; }
       .iav-bottomnav { display: none; }
       .main-content { padding-bottom: 0; }
+      /* Hoy: columna editorial centrada (no estirar de orilla a orilla en pantallas anchas) */
+      #sec-hoy { max-width: 1040px; margin: 0 auto; }
+      #sec-hoy .hoy-nuevo-btn { max-width: 360px; }
     }
   </style>
 </head>
@@ -1464,6 +1392,9 @@
 
       <button class="hoy-nuevo-btn" onclick="irANuevo()"><i class="ti ti-plus"></i> Nuevo contrato</button>
 
+      <div class="hoy-seccion-titulo">Radar de sesiones</div>
+      <div class="hoy-filmstrip" id="hoy-filmstrip"></div>
+
       <div class="hoy-seccion-titulo">Sesiones de la semana</div>
       <div id="hoy-sesiones"><div class="hoy-vacio">Cargando…</div></div>
 
@@ -1472,14 +1403,20 @@
 
       <div class="hoy-seccion-titulo">Por cobrar</div>
       <div id="hoy-porcobrar"><div class="hoy-vacio">Cargando…</div></div>
-
-      <div class="hoy-seccion-titulo">Radar de sesiones</div>
-      <div class="hoy-filmstrip" id="hoy-filmstrip"></div>
     </div>
 
     <!-- ── CONTRATOS ─────────────────────────────────── -->
     <div id="sec-trabajos" class="seccion">
 
+      <!-- Tabs Abiertos / Todos -->
+      <div class="contratos-tabs">
+        <button class="contratos-tab activo-ctab" id="ctab-abiertos" onclick="setCiclo('abiertos')">
+          Abiertos <span class="ctab-badge" id="ctab-badge-abiertos" style="display:none">0</span>
+        </button>
+        <button class="contratos-tab" id="ctab-todos" onclick="setCiclo('todos')">
+          Todos
+        </button>
+      </div>
 
       <!-- Toolbar -->
       <div class="barra">
@@ -1487,34 +1424,10 @@
           <div class="campo-busqueda search-wrap">
             <i class="ti ti-search search-icon"></i>
             <input type="text" id="busqueda" placeholder="Buscar nombre, teléfono, folio..." oninput="filtrarContratos()">
-            <span class="search-shortcut">⌘K</span>
           </div>
-          <div class="toolbar-sep"></div>
-          <div class="filter-chips" id="filter-chips">
-            <button class="filter-chip" data-estatus="Pendiente firma" onclick="toggleChip(this)"><span class="chip-dot" style="background:#9CA3AF"></span>Pendiente</button>
-            <button class="filter-chip" data-estatus="Firmado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#3B82F6"></span>Firmado</button>
-            <button class="filter-chip" data-estatus="Reservado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Reservado</button>
-            <button class="filter-chip" data-estatus="En produccion" onclick="toggleChip(this)"><span class="chip-dot" style="background:#8B5CF6"></span>Producción</button>
-            <button class="filter-chip" data-estatus="Entregado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Entregado</button>
-          </div>
-          <select id="filtro-estatus" onchange="document.querySelectorAll('#filter-chips .filter-chip.on').forEach(c=>c.classList.remove('on'));filtrarContratos()" style="width:auto">
-            <option value="">Todos los estatus</option>
-            <option value="Nuevo">Nuevo</option>
-            <option value="En cotizacion">En cotización</option>
-            <option value="Pendiente firma">Pendiente firma</option>
-            <option value="Firmado">Firmado</option>
-            <option value="Reservado">Reservado</option>
-            <option value="En produccion">En producción</option>
-            <option value="Entregado">Entregado</option>
-            <option value="Completado">Completado</option>
-            <option value="Cancelado">Cancelado</option>
-          </select>
-          <button class="btn-filtros-toggle" id="btn-filtros-toggle" onclick="toggleFiltros()" title="Filtrar por fecha">
-            <i class="ti ti-calendar-search"></i> Fechas
+          <button class="btn-filtros-toggle" id="btn-filtros-toggle" onclick="toggleFiltros()" title="Filtros">
+            <i class="ti ti-filter"></i> Filtros
             <span id="badge-filtros" class="filtros-badge" style="display:none">1</span>
-          </button>
-          <button id="btn-cancelados" class="btn-filtros-toggle" onclick="toggleCancelados()">
-            <i class="ti ti-eye"></i> Mostrar cancelados
           </button>
           <button class="btn-primario gold" id="btn-nuevo-toolbar" onclick="irANuevo()">
             <i class="ti ti-plus"></i> Nuevo
@@ -1537,39 +1450,51 @@
             </div>
           </div>
         </div>
-        <!-- Filtros de fecha: colapsados por defecto -->
+        <!-- Filtros avanzados: colapsados por defecto -->
         <div class="barra-filtros" id="barra-filtros">
+          <div class="filter-chips" id="filter-chips">
+            <button class="filter-chip" data-estatus="Pendiente firma" onclick="toggleChip(this)"><span class="chip-dot" style="background:#9CA3AF"></span>Pendiente</button>
+            <button class="filter-chip" data-estatus="Firmado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#3B82F6"></span>Firmado</button>
+            <button class="filter-chip" data-estatus="Reservado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Reservado</button>
+            <button class="filter-chip" data-estatus="En produccion" onclick="toggleChip(this)"><span class="chip-dot" style="background:#8B5CF6"></span>Producción</button>
+            <button class="filter-chip" data-estatus="Entregado" onclick="toggleChip(this)"><span class="chip-dot" style="background:#14B8A6"></span>Entregado</button>
+          </div>
+          <select id="filtro-estatus" onchange="document.querySelectorAll('#filter-chips .filter-chip.on').forEach(c=>c.classList.remove('on'));filtrarContratos()" style="width:auto">
+            <option value="">Todos los estatus</option>
+            <option value="Nuevo">Nuevo</option>
+            <option value="En cotizacion">En cotización</option>
+            <option value="Pendiente firma">Pendiente firma</option>
+            <option value="Firmado">Firmado</option>
+            <option value="Reservado">Reservado</option>
+            <option value="En produccion">En producción</option>
+            <option value="Entregado">Entregado</option>
+            <option value="Completado">Completado</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
           <span class="filtro-fecha-label">Fecha de creación:</span>
           <input type="date" id="filtro-fecha-desde" onchange="filtrarContratos();actualizarBadgeFiltros()" style="width:auto" title="Creado desde">
           <input type="date" id="filtro-fecha-hasta" onchange="filtrarContratos();actualizarBadgeFiltros()" style="width:auto" title="Creado hasta">
           <button type="button" class="btn-secundario btn-sm" onclick="limpiarFiltrosFecha()" title="Limpiar fechas" style="color:var(--warn);font-size:12px">
             <i class="ti ti-x"></i> Limpiar
           </button>
+          <button id="btn-cancelados" class="btn-filtros-toggle" onclick="toggleCancelados()">
+            <i class="ti ti-eye"></i> Mostrar cancelados
+          </button>
         </div>
       </div>
 
-      <!-- Cards mobile de contratos -->
-      <div id="contratos-cards"></div>
-
-      <!-- Tabla de contratos -->
-      <div class="tabla-card" id="tabla-contratos-card">
-        <table>
-          <thead>
-            <tr>
-              <th id="th-check" style="display:none;width:36px"></th>
-              <th style="padding-left:20px;width:130px">Folio</th>
-              <th style="width:52px"></th>
-              <th>Cliente</th>
-              <th style="width:200px">Estatus</th>
-              <th style="width:130px">Sesión</th>
-              <th style="text-align:right;width:110px">Total</th>
-              <th style="text-align:right;width:130px">Saldo</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-body">
-            <tr><td colspan="7" class="tabla-vacio">Cargando...</td></tr>
-          </tbody>
-        </table>
+      <!-- Ledger de contratos (patrón Dossier · responsive) -->
+      <div class="ledger" id="ledger-contratos">
+        <div class="lhead">
+          <div class="th">Folio</div>
+          <div class="th">Cliente</div>
+          <div class="th">Estatus</div>
+          <div class="th r">Total</div>
+          <div class="th r">Saldo</div>
+        </div>
+        <div id="ledger-body">
+          <div class="tabla-vacio">Cargando…</div>
+        </div>
       </div>
 
       <!-- Vista de sesiones (modo Sesiones) -->
@@ -1581,15 +1506,15 @@
     <div id="sec-nuevo" class="seccion">
       <div class="form-card">
         <button class="btn-volver" onclick="mostrarTab('trabajos', null)">
-          <i class="ti ti-arrow-left"></i> Trabajos
+          <i class="ti ti-arrow-left"></i> Contratos
         </button>
         <h2>Nuevo contrato</h2>
-        <p class="form-desc">Configura el contrato para tu cliente. Agrega una o más propiedades.</p>
+        <p class="form-desc">Configura el contrato para tu cliente.</p>
 
         <!-- Datos del cliente -->
         <div id="banner-desde-trabajo" style="display:none;background:rgba(30,132,73,0.08);border:1.5px solid rgba(30,132,73,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:var(--success-text);align-items:center;justify-content:space-between">
           <span><i class="ti ti-circle-check" style="margin-right:6px"></i>Contrato para: <strong id="banner-trabajo-nombre"></strong></span>
-          <button onclick="limpiarOrigenTrabajoContrato()" style="background:none;border:none;color:var(--success-text);cursor:pointer;font-size:16px;padding:0 4px">✕</button>
+          <button onclick="limpiarOrigenTrabajoContrato()" style="background:none;border:none;color:var(--success-text);cursor:pointer;font-size:16px;padding:0 4px"><i class="ti ti-x"></i></button>
         </div>
         <div class="campo" id="campo-cliente-search-contrato">
           <label>Cliente existente <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label>
@@ -1599,7 +1524,7 @@
           </div>
           <div id="contrato-cliente-seleccionado" style="display:none;margin-top:6px;font-size:12px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:6px;padding:6px 10px;align-items:center;justify-content:space-between">
             <span id="contrato-cliente-sel-nombre" style="color:var(--gold-text,#8a6a00);font-weight:600"></span>
-            <button onclick="limpiarClienteContrato()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:12px">✕ quitar</button>
+            <button onclick="limpiarClienteContrato()" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:12px"><i class="ti ti-x"></i> quitar</button>
           </div>
         </div>
         <div class="campo">
@@ -1619,7 +1544,7 @@
 
         <!-- Propiedades dinámicas -->
         <div id="props-container"></div>
-        <button type="button" class="btn-secundario btn-sm" onclick="agregarPropiedad()" style="margin-bottom:16px">+ Agregar propiedad</button>
+        <button type="button" onclick="agregarPropiedad()" style="margin-bottom:16px;background:none;border:none;color:var(--ink-3);font-size:12px;font-weight:600;cursor:pointer;padding:4px 0">+ Agregar otra propiedad</button>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
 
@@ -1630,8 +1555,14 @@
             <input type="number" id="est-precio-total" placeholder="0" oninput="precioManual=true">
           </div>
           <div class="campo">
-            <label>Anticipo (50% por defecto)</label>
-            <input type="number" id="est-anticipo" placeholder="0" oninput="anticipoManual=true">
+            <label>Anticipo</label>
+            <div id="seg-anticipo" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+              <button type="button" class="par-tipo-btn seg-ant-btn" data-ant="0" onclick="setAnticipo('0')">Sin anticipo</button>
+              <button type="button" class="par-tipo-btn seg-ant-btn activo-par" data-ant="50" onclick="setAnticipo('50')">50%</button>
+              <button type="button" class="par-tipo-btn seg-ant-btn" data-ant="100" onclick="setAnticipo('100')">100%</button>
+              <button type="button" class="par-tipo-btn seg-ant-btn" data-ant="otro" onclick="setAnticipo('otro')">Otro</button>
+            </div>
+            <input type="number" id="est-anticipo" placeholder="0" oninput="anticipoManual=true;marcarAnticipoOtro()">
           </div>
         </div>
 
@@ -1655,39 +1586,22 @@
   <div class="sec-clientes-header">
     <div>
       <div class="sec-clientes-titulo">Clientes</div>
-      <div class="sec-clientes-sub">Pipeline de ventas y seguimiento</div>
+      <div class="sec-clientes-sub">Directorio y seguimiento</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn-secundario btn-sm" onclick="cargarClientes()" title="Actualizar"><i class="ti ti-refresh"></i></button>
-      <button class="btn-secundario btn-sm" onclick="abrirModalTrabajo()"><i class="ti ti-plus"></i> Nuevo trabajo</button>
+      <button class="btn-secundario btn-sm" onclick="abrirModalLlamada()"><i class="ti ti-phone-plus"></i> Agendar llamada</button>
       <button class="btn-primario gold btn-sm" onclick="abrirModalCliente()"><i class="ti ti-user-plus"></i> Nuevo cliente</button>
     </div>
   </div>
 
-  <div class="clientes-grid">
-    <!-- Pipeline activo -->
-    <div class="clientes-col-pipeline">
-      <div class="sec-sublabel">Pipeline activo</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="pipeline-chips">
-        <button class="filter-chip on" data-estatus="todos" onclick="filtrarPipeline(this)">Todos</button>
-        <button class="filter-chip" data-estatus="Nuevo" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#7D3C98"></span>Nuevo</button>
-        <button class="filter-chip" data-estatus="En cotizacion" onclick="filtrarPipeline(this)"><span class="chip-dot" style="background:#F59E0B"></span>En cotización</button>
-      </div>
-      <div id="pipeline-lista">
-        <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
-      </div>
+  <!-- Directorio único de clientes (sin pipeline separado: un lead es un cliente con trabajo abierto) -->
+  <div class="clientes-lista-wrap" style="max-width:720px">
+    <div style="position:relative;margin-bottom:12px">
+      <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:14px;pointer-events:none"></i>
+      <input type="text" id="clientes-search" placeholder="Buscar por nombre o teléfono…" oninput="filtrarListaClientes()" style="padding-left:34px;font-size:13px;width:100%">
     </div>
-
-    <!-- Todos los clientes -->
-    <div class="clientes-col-lista">
-      <div class="sec-sublabel">Todos los clientes</div>
-      <div style="position:relative;margin-bottom:12px">
-        <i class="ti ti-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:14px;pointer-events:none"></i>
-        <input type="text" id="clientes-search" placeholder="Buscar por nombre o teléfono…" oninput="filtrarListaClientes()" style="padding-left:34px;font-size:13px;width:100%">
-      </div>
-      <div id="clientes-lista">
-        <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
-      </div>
+    <div id="clientes-lista">
+      <p style="color:var(--ink-3);font-style:italic;font-size:13px;padding:8px 0">Cargando...</p>
     </div>
   </div>
 
@@ -1696,7 +1610,7 @@
     <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div style="font-size:16px;font-weight:700;color:var(--ink-1)">Nuevo cliente</div>
-        <button onclick="cerrarModalCliente()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)">✕</button>
+        <button onclick="cerrarModalCliente()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-x"></i></button>
       </div>
       <div class="campo"><label>Nombre *</label><input type="text" id="cli-nombre" placeholder="Nombre completo"></div>
       <div class="campo"><label>Teléfono</label><input type="tel" id="cli-telefono" placeholder="81 1234 5678"></div>
@@ -1744,12 +1658,37 @@
     </div>
   </div>
 
+  <!-- Modal: Agendar llamada rápida (R59 · 5.x) -->
+  <div id="modal-llamada" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:900;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:700;color:var(--ink-1)">Agendar llamada</div>
+        <button onclick="cerrarModalLlamada()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="llamada-cliente-banner" style="display:none;background:rgba(201,168,76,0.1);border:1.5px solid rgba(201,168,76,0.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--gold-text,#8a6a00)">
+        Cliente: <strong id="llamada-cliente-nombre-banner"></strong>
+      </div>
+      <div class="campo" id="llamada-nombre-campo"><label>Nombre del cliente</label><input type="text" id="llamada-nombre" placeholder="Nombre o prospecto"></div>
+      <div class="campo" id="llamada-tel-campo"><label>Teléfono</label><input type="tel" id="llamada-telefono" placeholder="81 1234 5678"></div>
+      <div class="fila-2">
+        <div class="campo"><label>Fecha *</label><input type="date" id="llamada-fecha"></div>
+        <div class="campo"><label>Hora</label><input type="time" id="llamada-hora" value="10:00"></div>
+      </div>
+      <div class="campo"><label>Tema / nota</label><textarea id="llamada-nota" rows="2" placeholder="Ej: cerrar paquete residencial" style="resize:vertical;font-size:13px"></textarea></div>
+      <input type="hidden" id="llamada-cliente-id">
+      <div style="margin-top:8px;display:flex;gap:10px;align-items:center">
+        <button class="btn-primario gold" style="flex:1;justify-content:center" onclick="guardarLlamadaRapida()"><i class="ti ti-phone-plus"></i> Agendar</button>
+        <span id="llamada-msg" style="font-size:12px;line-height:1.3;max-width:120px"></span>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Nuevo trabajo -->
   <div id="modal-nuevo-trabajo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:900;align-items:center;justify-content:center;padding:20px">
     <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div style="font-size:16px;font-weight:700;color:var(--ink-1)">Nuevo trabajo</div>
-        <button onclick="cerrarModalTrabajo()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)">✕</button>
+        <button onclick="cerrarModalTrabajo()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-3)"><i class="ti ti-x"></i></button>
       </div>
       <div id="trab-cliente-banner" style="display:none;background:rgba(201,168,76,0.1);border:1.5px solid rgba(201,168,76,0.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--gold-text,#8a6a00)">
         Cliente: <strong id="trab-cliente-nombre-banner"></strong>
@@ -1848,14 +1787,15 @@
       <div id="apane-bancarios" class="ajustes-pane">
         <div class="form-card" style="max-width:560px">
           <h2>Datos bancarios</h2>
-          <p class="form-desc">Se usan al cobrar por WhatsApp y en el portal del cliente. El cliente ve la CLABE, banco y titular.</p>
-          <div class="campo"><label>CLABE</label><input type="text" id="cfg-banco-clabe" placeholder="18 dígitos" inputmode="numeric"></div>
+          <p class="form-desc">Se usan al cobrar por WhatsApp y en el portal del cliente. Cada dato tiene su uso: la <strong>CLABE</strong> para transferencias, la <strong>cuenta</strong> para depósito en cajero, y la <strong>tarjeta</strong> para depósito en OXXO / 7-Eleven.</p>
+          <div class="campo"><label>CLABE <span style="font-weight:400;color:var(--ink-3)">(transferencias)</span></label><input type="text" id="cfg-banco-clabe" placeholder="18 dígitos" inputmode="numeric"></div>
           <div class="fila-2">
-            <div class="campo"><label>Banco</label><input type="text" id="cfg-banco-nombre" placeholder="Ej. BBVA"></div>
+            <div class="campo"><label>Banco</label><input type="text" id="cfg-banco-nombre" placeholder="Ej. Banamex"></div>
             <div class="campo"><label>Titular de la cuenta</label><input type="text" id="cfg-banco-titular" placeholder="Nombre del titular"></div>
           </div>
-          <div class="campo"><label>Depósito en OXXO / 7-Eleven <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><input type="text" id="cfg-pago-oxxo" placeholder="Tarjeta o referencia para depósito en efectivo"></div>
-          <div class="campo"><label>Link de Clip (pago con tarjeta) <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><input type="url" id="cfg-pago-clip" placeholder="https://clip.mx/..."></div>
+          <div class="campo"><label>Número de cuenta <span style="font-weight:400;color:var(--ink-3)">(depósito en cajero)</span></label><input type="text" id="cfg-pago-cuenta" placeholder="Para depósito directo en ventanilla / cajero" inputmode="numeric"></div>
+          <div class="campo"><label>Número de tarjeta <span style="font-weight:400;color:var(--ink-3)">(depósito en OXXO / 7-Eleven)</span></label><input type="text" id="cfg-pago-tarjeta" placeholder="16 dígitos de la tarjeta" inputmode="numeric"></div>
+          <div class="campo"><label>Link de Clip (pago con tarjeta en línea) <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><input type="url" id="cfg-pago-clip" placeholder="https://clip.mx/..."></div>
           <button class="btn-primario gold" style="width:100%;margin-top:6px" onclick="guardarConfigBancario()"><i class="ti ti-device-floppy"></i> Guardar datos bancarios</button>
           <div id="cfg-banco-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
         </div>
@@ -2019,10 +1959,13 @@
     <button class="panel-tab-btn" onclick="mostrarPanelTab('prod', this)">Producción</button>
     <button class="panel-tab-btn" onclick="mostrarPanelTab('llamada', this)">Llamada</button>
   </div>
-  <div id="pane-info"    class="panel-tab-pane activo"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-  <div id="pane-pagos"   class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-  <div id="pane-prod"    class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
-  <div id="pane-llamada" class="panel-tab-pane"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+  <!-- Panel de scroll único: orden Pago → Datos → Acciones → Llamada (R59) -->
+  <div id="panel-scroll">
+    <div id="pane-pagos"   class="panel-tab-pane activo"><p style="color:var(--ink-3);font-style:italic;font-size:13px">Selecciona un contrato.</p></div>
+    <div id="pane-info"    class="panel-tab-pane activo"></div>
+    <div id="pane-prod"    class="panel-tab-pane activo"></div>
+    <div id="pane-llamada" class="panel-tab-pane activo"></div>
+  </div>
   <!-- Sticky action bar (populated by renderPanel) -->
   <div id="panel-action-bar"></div>
 </div>
@@ -2083,7 +2026,8 @@ function toggleModoSeleccion() {
   seleccionados.clear();
   var menuItem = document.getElementById('menu-item-seleccion');
   if (menuItem) menuItem.classList.toggle('activo', modoSeleccion);
-  document.getElementById('th-check').style.display = modoSeleccion ? '' : 'none';
+  var lg = document.getElementById('ledger-contratos');
+  if (lg) lg.classList.toggle('sel', modoSeleccion);
   actualizarBulkBar();
   filtrarContratos();
 }
@@ -2093,7 +2037,8 @@ function salirModoSeleccion() {
   seleccionados.clear();
   var menuItemSel = document.getElementById('menu-item-seleccion');
   if (menuItemSel) menuItemSel.classList.remove('activo');
-  document.getElementById('th-check').style.display = 'none';
+  var lgSel = document.getElementById('ledger-contratos');
+  if (lgSel) lgSel.classList.remove('sel');
   actualizarBulkBar();
   filtrarContratos();
 }
@@ -2374,7 +2319,8 @@ async function cargarConfigBancario() {
     document.getElementById('cfg-banco-clabe').value   = _configCache.banco_clabe   || '';
     document.getElementById('cfg-banco-nombre').value  = _configCache.banco_nombre  || '';
     document.getElementById('cfg-banco-titular').value = _configCache.banco_titular || '';
-    document.getElementById('cfg-pago-oxxo').value     = _configCache.pago_oxxo      || '';
+    document.getElementById('cfg-pago-cuenta').value   = _configCache.pago_cuenta   || '';
+    document.getElementById('cfg-pago-tarjeta').value  = _configCache.pago_tarjeta  || '';
     document.getElementById('cfg-pago-clip').value     = _configCache.pago_clip_url  || '';
   } catch (e) {
     setMsg('cfg-banco-msg', 'No se pudo cargar (¿migración pendiente?).', 'msg-err');
@@ -2386,7 +2332,8 @@ async function guardarConfigBancario() {
     banco_clabe:   document.getElementById('cfg-banco-clabe').value.trim(),
     banco_nombre:  document.getElementById('cfg-banco-nombre').value.trim(),
     banco_titular: document.getElementById('cfg-banco-titular').value.trim(),
-    pago_oxxo:     document.getElementById('cfg-pago-oxxo').value.trim(),
+    pago_cuenta:   document.getElementById('cfg-pago-cuenta').value.trim(),
+    pago_tarjeta:  document.getElementById('cfg-pago-tarjeta').value.trim(),
     pago_clip_url: document.getElementById('cfg-pago-clip').value.trim()
   };
   try {
@@ -2764,15 +2711,35 @@ function actualizarAnticipo(p) {
   document.getElementById(p + '-anticipo').value = Math.round(total * 0.5);
 }
 
+// Selector prominente de anticipo (Sin / 50% / 100% / Otro) — R59
+function setAnticipo(mode) {
+  var antEl = document.getElementById('est-anticipo');
+  var total = parsePrecio(document.getElementById('est-precio-total').value);
+  document.querySelectorAll('#seg-anticipo .seg-ant-btn').forEach(function(b) {
+    b.classList.toggle('activo-par', b.dataset.ant === mode);
+  });
+  if (mode === '0')        { anticipoManual = true;  antEl.value = 0; }
+  else if (mode === '50')  { anticipoManual = false; antEl.value = Math.round(total * 0.5); }
+  else if (mode === '100') { anticipoManual = true;  antEl.value = Math.round(total); }
+  else if (mode === 'otro'){ anticipoManual = true;  antEl.focus(); }
+}
+function marcarAnticipoOtro() {
+  document.querySelectorAll('#seg-anticipo .seg-ant-btn').forEach(function(b) {
+    b.classList.toggle('activo-par', b.dataset.ant === 'otro');
+  });
+}
+
 // ── CONTRATOS ─────────────────────────────────────────────────────────────────
 
 
 async function cargarContratos(tokenInicial) {
   if (_cargandoContratos) return;
   _cargandoContratos = true;
-  document.getElementById('tabla-body').innerHTML = skeletonRows();
+  document.getElementById('ledger-body').innerHTML = skeletonRows();
   try {
-    const dataC = await apiGet({ action: 'listarContratos' });
+    const dataC = await apiGet(_mostrarCancelados
+      ? { action: 'listarContratos', periodo: 'todos' }
+      : { action: 'listarContratos' });
     if (!dataC.ok) throw new Error(dataC.error || 'Error desconocido');
     todosContratos = dataC.contratos || [];
     filtrarContratos();
@@ -2780,8 +2747,8 @@ async function cargarContratos(tokenInicial) {
     const tok = tokenInicial || new URLSearchParams(location.search).get('token');
     if (tok) abrirPanel(tok);
   } catch (e) {
-    document.getElementById('tabla-body').innerHTML =
-      `<tr><td colspan="${modoSeleccion ? 8 : 7}" style="color:var(--danger);padding:24px;text-align:center">Error: ${esc(e.message)}</td></tr>`;
+    document.getElementById('ledger-body').innerHTML =
+      `<div class="tabla-vacio" style="color:var(--danger)">Error: ${esc(e.message)}</div>`;
     _cargandoContratos = false;
     return;
   }
@@ -2963,16 +2930,13 @@ async function cobrarWhatsApp(token, ev) {
 }
 
 function setCiclo(ciclo) {
+  // Solo Abiertos / Todos: las sesiones viven en la pantalla Hoy.
+  if (ciclo !== 'abiertos' && ciclo !== 'todos') ciclo = 'abiertos';
   filtroCiclo = ciclo;
-  document.getElementById('ctab-sesiones').classList.toggle('activo-ctab', ciclo === 'sesiones');
-  document.getElementById('ctab-abiertos').classList.toggle('activo-ctab', ciclo === 'abiertos');
-  document.getElementById('ctab-todos').classList.toggle('activo-ctab',    ciclo === 'todos');
-  document.getElementById('tabla-contratos-card').style.display = ciclo === 'sesiones' ? 'none' : '';
-  document.getElementById('sesiones-lista').style.display        = ciclo === 'sesiones' ? ''     : 'none';
-  document.getElementById('filtro-estatus').style.display = ciclo === 'sesiones' ? 'none' : '';
-  document.getElementById('btn-filtros-toggle').style.display = ciclo === 'sesiones' ? 'none' : '';
-  const fc = document.getElementById('filter-chips');
-  if (fc) fc.style.visibility = ciclo === 'sesiones' ? 'hidden' : '';
+  const tAb = document.getElementById('ctab-abiertos');
+  const tTo = document.getElementById('ctab-todos');
+  if (tAb) tAb.classList.toggle('activo-ctab', ciclo === 'abiertos');
+  if (tTo) tTo.classList.toggle('activo-ctab', ciclo === 'todos');
   filtrarContratos();
 }
 
@@ -2985,15 +2949,7 @@ function fmtFecha(iso) {
   return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-var _grupoActual = 'confirmados';
 var _mostrarCancelados = false;
-
-function cambiarGrupoTrabajos(grupo, btn) {
-  _grupoActual = grupo;
-  document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('activo'));
-  if (btn) btn.classList.add('activo');
-  cargarTrabajos();
-}
 
 function toggleCancelados() {
   _mostrarCancelados = !_mostrarCancelados;
@@ -3003,69 +2959,14 @@ function toggleCancelados() {
       ? '<i class="ti ti-eye-off"></i> Ocultar cancelados'
       : '<i class="ti ti-eye"></i> Mostrar cancelados';
   }
-  cargarTrabajos();
+  // Re-carga sobre el modelo único de Contratos (los cancelados requieren periodo=todos)
+  cargarContratos();
 }
 
-async function cargarTrabajos(tokenInicial) {
-  try {
-    const params = { action: 'listarTrabajos', grupo: _grupoActual };
-    if (_mostrarCancelados) params.cancelados = '1';
-    const data = await apiGet(params);
-    const lista = data.trabajos || [];
-    window.todosTrabajos = lista;
-    renderTablaTrabajos(lista);
-    renderCardsTrabajos(lista);
-    if (tokenInicial) {
-      const t = lista.find(t => t.token === tokenInicial || t.id === tokenInicial);
-      if (t) seleccionarTrabajo(t);
-    }
-  } catch(e) {
-    console.error('cargarTrabajos error:', e);
-  }
-}
-
-function renderTablaTrabajos(lista) {
-  const tbody = document.getElementById('tabla-body');
-  if (!tbody) return;
-  if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--ink-2)">Sin trabajos en esta vista.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = lista.map(function(t) {
-    var _em = ESTATUS_MAP[t.estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: t.estatus || '—' };
-    var folio = t.folio || '—';
-    var tid = jsArg(t.id || '');
-    return '<tr class="cont-row" onclick="seleccionarTrabajo(' + tid + ')">' +
-      '<td><span class="estatus-badge" style="background:' + _em.bg + ';color:' + _em.color + '">' +
-        '<span class="dot" style="background:' + _em.dot + '"></span>' + esc(_em.label) + '</span></td>' +
-      '<td>' + esc(t.cliente_nombre || '—') + '</td>' +
-      '<td>' + esc(t.interes ? t.interes.substring(0,60) : '—') + '</td>' +
-      '<td>' + esc(folio) + '</td>' +
-      '<td style="color:var(--ink-2);font-size:12px">' + fmtFecha(t.fecha_creacion) + '</td>' +
-    '</tr>';
-  }).join('');
-}
-
-function renderCardsTrabajos(lista) {
-  var cont = document.getElementById('contratos-cards');
-  if (!cont) return;
-  cont.innerHTML = lista.map(function(t) {
-    var _em = ESTATUS_MAP[t.estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: t.estatus || '—' };
-    var tid = jsArg(t.id || '');
-    return '<div class="cont-card" onclick="seleccionarTrabajo(' + tid + ')">' +
-      '<div class="cont-card-top">' +
-        '<span class="cont-card-folio">' + esc(t.folio || (t.id || '').substring(0,8)) + '</span>' +
-        '<span class="cont-card-pill" style="background:' + _em.bg + ';color:' + _em.color + '">' + esc(_em.label) + '</span>' +
-      '</div>' +
-      '<div class="cont-card-nombre">' + esc(t.cliente_nombre || '—') + '</div>' +
-      '<div class="cont-card-paquete">' + esc(t.interes ? t.interes.substring(0,50) : '—') + '</div>' +
-      '<div class="cont-card-bottom">' +
-        '<span>' + esc(fmtFecha(t.fecha_creacion)) + '</span>' +
-        '<span style="color:var(--ink-2)">' + esc(t.cliente_telefono || '') + '</span>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
+// RETIRADO (R60): el modelo viejo de "trabajos" (cargarTrabajos / renderTablaTrabajos /
+// renderCardsTrabajos) ya no se usa — Contratos es el modelo único. Se eliminaron esas
+// funciones por estar muertas. `seleccionarTrabajo` permanece sólo por referencias
+// guardadas residuales (nunca se ejecuta sin window._trabajoActivo).
 
 async function seleccionarTrabajo(idOrObj) {
   var t = typeof idOrObj === 'object' ? idOrObj
@@ -3270,7 +3171,11 @@ function filtrarContratos() {
   const hasta = document.getElementById('filtro-fecha-hasta').value;
   const hoy   = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 10);
   let lista = todosContratos.filter(c => {
-    if (filtroCiclo === 'abiertos' && !ESTATUS_ABIERTOS.includes(c.Estatus)) return false;
+    const esCancelado = c.Estatus === 'Cancelado';
+    // Cancelados: ocultos por defecto; visibles solo con "Mostrar cancelados" (y entonces
+    // pasan por alto el filtro de ciclo para que aparezcan).
+    if (esCancelado && !_mostrarCancelados) return false;
+    if (!esCancelado && filtroCiclo === 'abiertos' && !ESTATUS_ABIERTOS.includes(c.Estatus)) return false;
     if (filtroCiclo === 'sesiones' && (!c.FechaSesion || String(c.FechaSesion).substring(0, 10) < hoy)) return false;
     if (chipSt && !chipSt.includes(c.Estatus)) return false;
     if (!chipSt && st && c.Estatus !== st) return false;
@@ -3304,19 +3209,38 @@ function diasEnEstatus(c) {
 }
 
 function skeletonRows() {
-  return Array.from({length: 5}).map(() => `
-    <tr style="pointer-events:none">
-      ${modoSeleccion ? '<td style="width:32px"></td>' : ''}
-      <td class="td-folio"><span class="skel" style="width:64px;height:12px"></span></td>
-      <td>
-        <span class="skel" style="width:130px;height:13px;display:block;margin-bottom:5px"></span>
-        <span class="skel" style="width:90px;height:11px;display:block"></span>
-      </td>
-      <td><span class="skel" style="width:80px;height:20px;border-radius:20px"></span></td>
-      <td class="td-fecha"><span class="skel" style="width:60px;height:12px"></span></td>
-      <td class="td-monto"><span class="skel" style="width:55px;height:12px"></span></td>
-      <td class="td-saldo"><span class="skel" style="width:50px;height:12px"></span></td>
-    </tr>`).join('');
+  return Array.from({length: 6}).map(() => `
+    <div class="lrow" style="pointer-events:none">
+      ${modoSeleccion ? '<div class="lcheck"></div>' : ''}
+      <div class="c-folio"><span class="skel" style="width:70px;height:11px"></span></div>
+      <div>
+        <span class="skel" style="width:140px;height:15px;display:block;margin-bottom:6px"></span>
+        <span class="skel" style="width:96px;height:11px;display:block"></span>
+      </div>
+      <div class="c-estatus"><span class="skel" style="width:96px;height:20px;border-radius:20px"></span></div>
+      <div style="text-align:right"><span class="skel" style="width:56px;height:12px;display:inline-block"></span></div>
+      <div style="text-align:right"><span class="skel" style="width:60px;height:12px;display:inline-block"></span></div>
+    </div>`).join('');
+}
+
+// Estampa de estatus (seal Dossier: círculo con inicial + etiqueta)
+const SEAL_MAP = {
+  'Nuevo':            { l:'N', c:'var(--ink-3)',   label:'Nuevo'            },
+  'En cotizacion':    { l:'C', c:'var(--warn)',    label:'En cotización'    },
+  'Pendiente firma':  { l:'!', c:'var(--blue)',    label:'Pendiente firma'  },
+  'Firmado':          { l:'F', c:'var(--blue)',    label:'Firmado'          },
+  'Reservado':        { l:'A', c:'var(--success)', label:'Reservado'        },
+  'En produccion':    { l:'P', c:'var(--purple)',  label:'En producción'    },
+  'Entregado':        { l:'E', c:'var(--blue)',    label:'Entregado'        },
+  'Completado':       { l:'L', c:'var(--gold)',    label:'Completado'       },
+  'Cancelado':        { l:'X', c:'var(--danger)',  label:'Cancelado'        },
+};
+function stampHTML(estatus) {
+  const s = SEAL_MAP[estatus] || { l:'·', c:'var(--ink-3)', label: estatus || '—' };
+  return '<span class="stamp" style="color:' + s.c + '">'
+       +   '<span class="seal">' + s.l + '</span>'
+       +   '<span class="stamp-label">' + esc(s.label) + '</span>'
+       + '</span>';
 }
 
 const ESTATUS_MAP = {
@@ -3393,9 +3317,12 @@ function renderContratosCards(lista) {
 }
 
 function renderTabla(lista) {
-  const tbody = document.getElementById('tabla-body');
+  const cont = document.getElementById('ledger-body');
+  if (!cont) return;
   if (!lista.length) {
-    tbody.innerHTML = `<tr><td colspan="${modoSeleccion ? 8 : 7}" class="tabla-vacio">Sin contratos que mostrar.</td></tr>`;
+    cont.innerHTML = `<div class="tabla-vacio">Sin contratos que mostrar.</div>`;
+    actualizarStatsRibbon(todosContratos);
+    actualizarNavBadges(todosContratos);
     return;
   }
   const ahora  = Date.now();
@@ -3403,14 +3330,13 @@ function renderTabla(lista) {
   const hoyStr = new Date(ahora - tzOff).toISOString().substring(0, 10);
   const en2Str = new Date(ahora - tzOff + 2 * 86400000).toISOString().substring(0, 10);
   const en7Str = new Date(ahora - tzOff + 7 * 86400000).toISOString().substring(0, 10);
-  tbody.innerHTML = lista.map(c => {
+  cont.innerHTML = lista.map(c => {
     const activo    = tokenActivo === c.Token ? 'activo' : '';
     const checked   = seleccionados.has(c.Token) ? 'checked' : '';
     const checkCell = modoSeleccion
-      ? `<td class="td-check" onclick="event.stopPropagation()"><input type="checkbox" class="row-check" ${checked} onchange="toggleSeleccion('${esc(c.Token)}',this)"></td>`
+      ? `<div class="lcheck" onclick="event.stopPropagation()"><input type="checkbox" class="row-check" ${checked} onchange="toggleSeleccion('${esc(c.Token)}',this)"></div>`
       : '';
     const rowClick  = modoSeleccion ? '' : `onclick="abrirPanel('${esc(c.Token)}')"`;
-    const dias      = diasEnEstatus(c);
     const horasDesdeCreacion = c.FechaCreacion ? (ahora - new Date(c.FechaCreacion).getTime()) / (1000 * 60 * 60) : 0;
     const alertaExpiry = c.Estatus === 'Pendiente firma' && horasDesdeCreacion > 60;
     const fs = c.FechaSesion ? String(c.FechaSesion).substring(0, 10) : '';
@@ -3419,70 +3345,51 @@ function renderTabla(lista) {
          : fs <= en2Str ? 'tr-ses-pronto'
          : fs <= en7Str ? 'tr-ses-semana' : '')
       : '';
-    // Celda de sesión: fecha coloreada por proximidad
-    const sesColorStyle = sesClass === 'tr-ses-hoy'   ? 'color:var(--gold);font-weight:700'
-                        : sesClass === 'tr-ses-pronto' ? 'color:var(--warn);font-weight:600'
-                        : sesClass === 'tr-ses-semana' ? 'color:#3B82F6;font-weight:600'
-                        : 'color:var(--ink-3)';
-    const sesCell = fs
-      ? `<td class="td-fecha" style="${sesColorStyle}">${fmxnFecha(fs)}</td>`
-      : `<td class="td-fecha" style="color:var(--ink-4)">—</td>`;
-    const statusColor = ESTATUS_COLOR[c.Estatus] ? `--row-color:${ESTATUS_COLOR[c.Estatus]}` : '';
-    const iniciales = (c.NombreCliente||'?').split(' ').slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase();
-    // deterministic gradient by first initial
-    const avClasses = ['av-a','av-b','av-c','av-d','av-e','av-f'];
-    const avClass = avClasses[(iniciales.charCodeAt(0) || 0) % avClasses.length];
-    const avatarCell = `<td class="td-avatar-desktop" style="padding-left:20px"><div class="td-avatar ${avClass}">${iniciales}</div></td>`;
+    // Línea de sesión coloreada por proximidad, plegada en el sub
+    let sesHtml = '';
+    if (fs) {
+      const col = sesClass === 'tr-ses-hoy'    ? 'color:var(--gold);font-weight:700'
+                : sesClass === 'tr-ses-pronto' ? 'color:var(--warn);font-weight:700'
+                : sesClass === 'tr-ses-semana' ? 'color:var(--blue);font-weight:600'
+                : 'color:var(--ink-3)';
+      const lbl = fs === hoyStr ? 'sesión hoy' : 'sesión ' + fmxnFecha(fs);
+      sesHtml = `<span style="${col}">${lbl}</span>`;
+    }
 
-    // status dot + label + age
-    const _em = ESTATUS_MAP[c.Estatus] || { dot:'#9CA3AF', bg:'#F3F4F6', color:'#374151', label: c.Estatus || '—' };
-    const dotColor = _em.dot;
+    const _em = SEAL_MAP[c.Estatus] || { label: c.Estatus || '—' };
     const estatusLabel = _em.label;
-    const ageText = dias > 0 ? `${dias} día${dias !== 1 ? 's' : ''}` : '';
-    const statusCell = `<td>
-      <div class="td-status-wrap">
-        <span class="td-status-dot" style="background:${dotColor}"></span>
-        <div>
-          <div class="td-status-label">${esc(estatusLabel)}${alertaExpiry ? ` <i class="ti ti-alert-triangle" style="color:var(--warn);font-size:11px;vertical-align:middle" title="Link próximo a expirar"></i>` : ''}</div>
-          ${ageText ? `<div class="td-status-age">${ageText}</div>` : ''}
-        </div>
-      </div>
-    </td>`;
 
-    // saldo bar
+    // sub: paquete + sesión (escritorio); en móvil se antepone el estatus
+    const subBits = [];
+    if (c.PaqueteBase) subBits.push(esc(c.PaqueteBase));
+    if (sesHtml) subBits.push(sesHtml);
+    const subDesktop = subBits.join(' · ');
+    const subMobileEstatus = `<span class="sub-estatus">${esc(estatusLabel)}${subDesktop ? ' · ' : ''}</span>`;
+
     const saldoVal  = parseFloat(c.SaldoPendiente) || 0;
-    const precioVal = parseFloat(c.PrecioTotal) || 0;
-    const pagadoPct = precioVal > 0 ? Math.min(100, Math.round((precioVal - saldoVal) / precioVal * 100)) : 0;
-    const barColor  = saldoVal <= 0 ? '#10B981' : pagadoPct >= 50 ? '#F59E0B' : '#DC2626';
-    const saldoClass = saldoVal <= 0 ? 'green' : pagadoPct >= 50 ? 'amber' : 'red';
-    const saldoText  = saldoVal <= 0
-      ? '<i class="ti ti-check"></i> Pagado'
-      : fmxn(saldoVal);
-    const saldoCell = `<td>
-      <div class="td-saldo-wrap">
-        <span class="td-saldo-val ${saldoClass}">${saldoText}</span>
-        <div class="saldo-bar-wrap"><div class="saldo-bar-fill" style="width:${pagadoPct}%;background:${barColor}"></div></div>
-      </div>
-    </td>`;
+    const saldoCls  = saldoVal <= 0 ? 'pagado' : '';
+    const saldoText = saldoVal <= 0 ? 'Pagado' : fmxn(saldoVal);
 
-    return `<tr class="${[activo, sesClass].filter(Boolean).join(' ')}" ${rowClick} style="${statusColor}">
+    const expressBadge = c.EntregaExpress
+      ? `<span style="background:var(--express-bg);color:var(--express-color);font-size:9px;font-weight:800;letter-spacing:.8px;padding:1px 6px;border-radius:3px;margin-right:6px;vertical-align:middle">EXPRESS</span>`
+      : '';
+    const alertIcon = alertaExpiry
+      ? ` <i class="ti ti-alert-triangle" style="color:var(--warn);font-size:12px;vertical-align:middle" title="Link próximo a expirar"></i>`
+      : '';
+
+    return `<div class="lrow ${[activo, sesClass].filter(Boolean).join(' ')}" ${rowClick}>
       ${checkCell}
-      <td class="td-folio" style="padding-left:20px">${esc(c.Folio) || '—'}</td>
-      ${avatarCell}
-      <td>
-        <div class="td-nombre">
-          ${c.EntregaExpress ? `<span style="background:var(--express-bg);color:var(--express-color);font-size:9px;font-weight:800;letter-spacing:.8px;padding:1px 6px;border-radius:3px;margin-right:5px;vertical-align:middle">EXPRESS</span>` : ''}${esc(c.NombreCliente)}
-        </div>
-        <div class="td-sub td-email">${esc(c.CorreoCliente)}</div>
-        ${c.PaqueteBase ? `<div class="td-sub" style="color:var(--ink-2)">${esc(c.PaqueteBase)}</div>` : ''}
-      </td>
-      ${statusCell}
-      ${sesCell}
-      <td class="td-monto">${fmxn(c.PrecioTotal)}</td>
-      ${saldoCell}
-    </tr>`;
+      <div class="c-folio">${esc(c.Folio) || '—'}</div>
+      <div>
+        <div class="c-folio-m">${esc(c.Folio) || '—'}</div>
+        <div class="c-name">${expressBadge}${esc(c.NombreCliente)}${alertIcon}</div>
+        <div class="c-sub">${subMobileEstatus}${subDesktop}</div>
+      </div>
+      <div class="c-estatus">${stampHTML(c.Estatus)}</div>
+      <div class="c-amt">${fmxn(c.PrecioTotal)}</div>
+      <div class="c-saldo ${saldoCls}">${saldoText}</div>
+    </div>`;
   }).join('');
-  renderContratosCards(lista);
   actualizarStatsRibbon(todosContratos);
   actualizarNavBadges(todosContratos);
 }
@@ -3598,8 +3505,7 @@ function cerrarPanel() {
   document.getElementById('panel-lateral').classList.remove('visible');
   document.getElementById('overlay').classList.remove('visible');
   document.body.classList.remove('panel-open');
-  document.querySelectorAll('#tabla-body tr').forEach(tr => tr.classList.remove('activo'));
-  document.querySelectorAll('#contratos-cards .cont-card').forEach(function(c){ c.classList.remove('activo'); });
+  document.querySelectorAll('#ledger-body .lrow').forEach(r => r.classList.remove('activo'));
 }
 
 var clienteActivo = null;
@@ -3680,66 +3586,183 @@ function renderPanelCliente(data) {
   var _pab  = document.getElementById('panel-action-bar');
   if (_pab) _pab.innerHTML =
     '<div class="panel-action-bar" style="flex-direction:row;gap:8px">' +
-    '<button class="panel-action-btn primary" style="flex:1;justify-content:center" onclick="abrirModalTrabajo('+jsArg(c.id)+')">' +
-      '<i class="ti ti-calendar-plus"></i> Nuevo trabajo</button>' +
+    '<button class="panel-action-btn primary" style="flex:1;justify-content:center" onclick="recontratarCliente('+[c.id,c.nombre,c.telefono,c.correo].map(jsArg).join(',')+')">' +
+      '<i class="ti ti-file-plus"></i> Recontratar</button>' +
+    '<button class="panel-action-btn" style="flex:1;justify-content:center" onclick="abrirModalLlamada('+jsArg(c.id)+')">' +
+      '<i class="ti ti-phone-plus"></i> Llamada</button>' +
     (waNum ? '<a class="panel-action-btn wa" style="flex:1;justify-content:center;text-align:center" href="https://wa.me/'+esc(waNum)+'" target="_blank" rel="noopener">' +
       '<i class="ti ti-brand-whatsapp"></i> WhatsApp</a>' : '') +
     '</div>';
 
-  // Pane trabajos
-  var pInfo = document.getElementById('pane-info');
-  if (!trabajos.length) {
-    pInfo.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Sin trabajos registrados.</p>';
+  // ── PANE CONTRATOS (historial — primero por el orden de scroll) ──
+  var pPagos = document.getElementById('pane-pagos');
+  var html2 = '<div class="panel-sec-head">Contratos</div>';
+  if (!contratos.length) {
+    html2 += '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Sin contratos todavía.</p>';
   } else {
-    var html = '<div style="display:flex;flex-direction:column;gap:10px">';
+    html2 += '<div style="display:flex;flex-direction:column;gap:8px">';
+    contratos.forEach(function(ct) {
+      // El API devuelve claves PascalCase; toleramos snake_case por si acaso.
+      var _folio   = ct.Folio || ct.folio || '—';
+      var _estatus = ct.Estatus || ct.estatus || '';
+      var _token   = ct.Token || ct.token || '';
+      var _saldo   = ct.SaldoPendiente != null ? ct.SaldoPendiente : ct.saldo_pendiente;
+      var _precio  = ct.PrecioTotal != null ? ct.PrecioTotal : ct.precio_total;
+      var _em2 = ESTATUS_MAP[_estatus] || { bg:'#F3F4F6', color:'#374151' };
+      html2 += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">';
+      html2 += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:var(--font-mono,monospace);min-width:48px">'+esc(_folio)+'</span>';
+      html2 += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+_em2.bg+';color:'+_em2.color+'">'+esc(_estatus)+'</span>';
+      if (_saldo > 0) html2 += '<span style="font-size:11px;color:var(--warn);margin-left:auto">$'+Math.round(_saldo).toLocaleString()+' pendiente</span>';
+      else html2 += '<span style="font-size:11px;color:var(--ink-3);margin-left:auto">$'+Math.round(_precio||0).toLocaleString()+'</span>';
+      html2 += '<button onclick="irAContratoDesdeCliente('+jsArg(_token)+')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
+      html2 += '</div>';
+    });
+    html2 += '</div>';
+  }
+  pPagos.innerHTML = html2;
+
+  // ── PANE INFO: Actividades + Lo cotizado + Archivos ──
+  var pInfo = document.getElementById('pane-info');
+  var cotizadoHtml = '';
+  if (trabajos.length) {
+    cotizadoHtml = '<details class="panel-acord"><summary>Lo cotizado</summary><div class="panel-acord-body"><div style="display:flex;flex-direction:column;gap:10px">';
     trabajos.forEach(function(t) {
       var color = TRAB_ESTATUS_COLORS[t.estatus] || '#aaa';
       var label = TRAB_ESTATUS_LABELS[t.estatus] || t.estatus;
       var intStr = INTERES_LABELS[t.interes] || '';
       var fechaStr = t.fecha_creacion ? fmxnFecha(t.fecha_creacion.substring(0,10)) : '';
-      html += '<div style="border:1.5px solid var(--border);border-radius:8px;overflow:hidden">';
-      html += '<div style="height:3px;background:'+color+'"></div>';
-      html += '<div style="padding:10px 12px">';
-      html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">';
-      html += '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'18;border-radius:20px;padding:2px 9px">'+esc(label)+'</span>';
-      if (intStr) html += '<span style="font-size:11px;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00);border-radius:20px;padding:2px 9px">'+esc(intStr)+'</span>';
-      if (fechaStr) html += '<span style="font-size:11px;color:var(--ink-3)">'+esc(fechaStr)+'</span>';
-      html += '</div>';
-      if (t.notas) html += '<div style="font-size:12px;color:var(--ink-2);white-space:pre-wrap;line-height:1.5;margin-bottom:8px">'+esc(t.notas)+'</div>';
-      html += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
-      if (!t.contrato_token && t.estatus !== 'Cancelado') {
-        html += '<button onclick="crearContratoDesdeWork('+[t.id,c.nombre,c.id,c.telefono,c.correo].map(jsArg).join(',')+')" style="font-size:11px;background:var(--gold);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#1a1000;font-weight:600"><i class="ti ti-file-plus" style="font-size:10px"></i> Crear contrato</button>';
-      }
-      if (t.contrato_token) {
-        html += '<button onclick="irAContratoDesdeCliente('+jsArg(t.contrato_token)+')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-2)"><i class="ti ti-external-link" style="font-size:10px"></i> Ver contrato</button>';
-      }
-      html += '</div>';
-      html += '</div></div>';
+      cotizadoHtml += '<div style="border:1.5px solid var(--border);border-radius:8px;overflow:hidden"><div style="height:3px;background:'+color+'"></div><div style="padding:10px 12px">';
+      cotizadoHtml += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">';
+      cotizadoHtml += '<span style="font-size:11px;font-weight:700;color:'+color+';background:'+color+'18;border-radius:20px;padding:2px 9px">'+esc(label)+'</span>';
+      if (intStr) cotizadoHtml += '<span style="font-size:11px;background:rgba(201,168,76,0.12);color:var(--gold-text,#8a6a00);border-radius:20px;padding:2px 9px">'+esc(intStr)+'</span>';
+      if (fechaStr) cotizadoHtml += '<span style="font-size:11px;color:var(--ink-3)">'+esc(fechaStr)+'</span>';
+      cotizadoHtml += '</div>';
+      if (t.notas) cotizadoHtml += '<div style="font-size:12px;color:var(--ink-2);white-space:pre-wrap;line-height:1.5;margin-bottom:8px">'+esc(t.notas)+'</div>';
+      if (!t.contrato_token && t.estatus !== 'Cancelado')
+        cotizadoHtml += '<button onclick="crearContratoDesdeWork('+[t.id,c.nombre,c.id,c.telefono,c.correo].map(jsArg).join(',')+')" style="font-size:11px;background:var(--gold-leaf,#C9A84C);border:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:#1a1000;font-weight:600"><i class="ti ti-file-plus" style="font-size:10px"></i> Crear contrato</button>';
+      if (t.contrato_token)
+        cotizadoHtml += '<button onclick="irAContratoDesdeCliente('+jsArg(t.contrato_token)+')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--ink-2)"><i class="ti ti-external-link" style="font-size:10px"></i> Ver contrato</button>';
+      cotizadoHtml += '</div></div>';
     });
-    html += '</div>';
-    pInfo.innerHTML = html;
+    cotizadoHtml += '</div></div></details>';
   }
+  pInfo.innerHTML =
+    '<div class="panel-sec-head">Llamadas y notas</div>' +
+    '<div id="cli-actividades-' + esc(c.id) + '"><p style="color:var(--ink-3);font-size:13px">Cargando…</p></div>' +
+    '<div style="display:flex;gap:6px;margin-top:8px">' +
+      '<input type="text" id="cli-nota-input" placeholder="Agregar nota…" style="flex:1;font-size:13px">' +
+      '<button class="btn-secundario btn-sm" onclick="agregarNotaCliente('+jsArg(c.id)+')"><i class="ti ti-plus"></i></button>' +
+    '</div>' +
+    '<div class="form-msg" id="cli-nota-msg"></div>' +
+    cotizadoHtml +
+    '<details class="panel-acord"><summary>Archivos del cliente</summary><div class="panel-acord-body">' +
+      '<input type="file" id="cli-file-input" multiple style="display:block;font-size:12px;margin-bottom:8px;width:100%">' +
+      '<button class="btn-secundario btn-sm" style="width:100%;justify-content:center" onclick="subirArchivosCliente('+jsArg(c.id)+')"><i class="ti ti-upload"></i> Subir a Drive</button>' +
+      '<div id="cli-archivos-lista" style="margin-top:10px"><p style="color:var(--ink-3);font-size:12px">Cargando…</p></div>' +
+      '<div class="form-msg" id="cli-archivos-msg" style="margin-top:6px"></div>' +
+    '</div></details>';
 
-  // Pane contratos
-  var pPagos = document.getElementById('pane-pagos');
-  if (!contratos.length) {
-    pPagos.innerHTML = '<p style="color:var(--ink-3);font-style:italic;font-size:13px">Sin contratos.</p>';
-  } else {
-    var html2 = '<div style="display:flex;flex-direction:column;gap:8px">';
-    contratos.forEach(function(ct) {
-      var _em2 = ESTATUS_MAP[ct.estatus] || { bg:'#F3F4F6', color:'#374151' };
-      var bs = { bg: _em2.bg, color: _em2.color };
-      html2 += '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">';
-      html2 += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:monospace;min-width:48px">'+(ct.folio||'—')+'</span>';
-      html2 += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:'+bs.bg+';color:'+bs.color+'">'+esc(ct.estatus)+'</span>';
-      if (ct.saldo_pendiente > 0) html2 += '<span style="font-size:11px;color:var(--red,#c0392b);margin-left:auto">$'+Math.round(ct.saldo_pendiente).toLocaleString()+' pendiente</span>';
-      else html2 += '<span style="font-size:11px;color:var(--ink-3);margin-left:auto">$'+Math.round(ct.precio_total||0).toLocaleString()+'</span>';
-      html2 += '<button onclick="irAContratoDesdeCliente('+jsArg(ct.token)+')" style="font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
-      html2 += '</div>';
-    });
-    html2 += '</div>';
-    pPagos.innerHTML = html2;
+  cargarActividadesCliente(c.id);
+  cargarArchivosCliente(c.id);
+}
+
+// ── Expediente: actividades, notas, archivos, recontratar (R59 · 1.5) ──
+async function cargarActividadesCliente(clienteId) {
+  var cont = document.getElementById('cli-actividades-' + clienteId);
+  if (!cont) return;
+  try {
+    var r = await apiGet({ action: 'listarActividades', clienteId: clienteId });
+    var acts = (r && r.actividades) ? r.actividades : [];
+    if (!acts.length) { cont.innerHTML = '<p style="color:var(--ink-3);font-size:13px">Sin llamadas ni notas.</p>'; return; }
+    cont.innerHTML = acts.map(function(a) {
+      var esLlamada = (a.tipo || '').indexOf('llamada') === 0;
+      var pendiente = esLlamada && (a.estado == null || a.estado === 'pendiente');
+      var fecha = a.fecha_actividad ? fmxnFecha(a.fecha_actividad) : (a.fecha_creacion ? fmxnFecha(a.fecha_creacion.substring(0,10)) : '');
+      var icono = esLlamada ? 'ti-phone' : 'ti-note';
+      return '<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">' +
+        '<i class="ti ' + icono + '" style="font-size:15px;color:var(--ink-3);margin-top:2px"></i>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:12px;color:var(--ink-3)">' + esc(fecha) + (a.hora ? ' · ' + esc(a.hora) : '') + (pendiente ? ' · <span style="color:var(--warn);font-weight:600">pendiente</span>' : '') + '</div>' +
+          (a.descripcion ? '<div style="font-size:13px;color:var(--ink-1);white-space:pre-wrap;line-height:1.45">' + esc(a.descripcion) + '</div>' : '') +
+          (a.resultado ? '<div style="font-size:12px;color:var(--ink-2);margin-top:2px"><i class="ti ti-corner-down-right" style="font-size:11px"></i> ' + esc(a.resultado) + '</div>' : '') +
+        '</div>' +
+        (pendiente ? '<button class="btn-secundario btn-sm" style="flex-shrink:0;font-size:11px;padding:3px 8px" onclick="marcarActividadCliente('+jsArg(a.id)+','+jsArg(clienteId)+')">Hecha</button>' : '') +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    cont.innerHTML = '<p style="color:var(--ink-3);font-size:13px">No se pudieron cargar las actividades.</p>';
   }
+}
+
+async function marcarActividadCliente(actividadId, clienteId) {
+  var resumen = prompt('Resumen de la llamada (opcional):', '');
+  if (resumen === null) return;
+  try {
+    var r = await apiPost({ action: 'marcarActividad', actividadId: actividadId, estado: 'hecha', resultado: resumen || '' });
+    if (r && r.ok) cargarActividadesCliente(clienteId);
+  } catch (e) { /* noop */ }
+}
+
+async function agregarNotaCliente(clienteId) {
+  var input = document.getElementById('cli-nota-input');
+  var nota = (input && input.value || '').trim();
+  if (!nota) return;
+  setMsg('cli-nota-msg', 'Guardando…', '');
+  try {
+    var r = await apiPost({ action: 'agregarNota', clienteId: clienteId, descripcion: nota, tipo: 'nota' });
+    if (r && r.ok) { if (input) input.value = ''; setMsg('cli-nota-msg', '', ''); cargarActividadesCliente(clienteId); }
+    else setMsg('cli-nota-msg', (r && r.error) || 'No se pudo guardar.', 'error');
+  } catch (e) { setMsg('cli-nota-msg', 'Error de red.', 'error'); }
+}
+
+async function cargarArchivosCliente(clienteId) {
+  var cont = document.getElementById('cli-archivos-lista');
+  if (!cont) return;
+  try {
+    var r = await apiGet({ action: 'listarArchivosCliente', clienteId: clienteId });
+    var archivos = (r && r.archivos) ? r.archivos : [];
+    if (!archivos.length) { cont.innerHTML = '<p style="color:var(--ink-3);font-size:12px">Sin archivos.</p>'; return; }
+    cont.innerHTML = archivos.map(function(a) {
+      return '<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+        '<span style="word-break:break-all">' + esc(a.nombre || a.name || 'archivo') + '</span>' +
+        '<a href="' + esc(a.url || '#') + '" target="_blank" rel="noopener" style="color:var(--gold);white-space:nowrap;font-weight:600;flex-shrink:0">Ver</a>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    cont.innerHTML = '<p style="color:var(--ink-3);font-size:12px">No se pudieron cargar (¿adapter sin desplegar?).</p>';
+  }
+}
+
+async function subirArchivosCliente(clienteId) {
+  var input = document.getElementById('cli-file-input');
+  var msg = document.getElementById('cli-archivos-msg');
+  if (!input || !input.files.length) { if (msg) { msg.textContent = 'Selecciona un archivo.'; msg.style.color = 'var(--warn)'; } return; }
+  var archivos = Array.from(input.files);
+  var hayError = false;
+  for (var i = 0; i < archivos.length; i++) {
+    var archivo = archivos[i];
+    if (msg) { msg.textContent = 'Subiendo ' + (i + 1) + '/' + archivos.length + '…'; msg.style.color = ''; }
+    try {
+      var base64 = await new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function(e) { var res = e.target.result; resolve(res.substring(res.indexOf(',') + 1)); };
+        reader.onerror = reject;
+        reader.readAsDataURL(archivo);
+      });
+      var data = await apiPost({ action: 'subirArchivoCliente', clienteId: clienteId, nombre: archivo.name, mimeType: archivo.type || 'application/octet-stream', base64: base64 });
+      if (!data.ok) throw new Error(data.error || 'Error');
+    } catch (e) { hayError = true; if (msg) { msg.textContent = 'Error en ' + archivo.name + ': ' + e.message; msg.style.color = 'var(--danger)'; } }
+  }
+  input.value = '';
+  if (!hayError && msg) { msg.textContent = 'Listo.'; msg.style.color = 'var(--success)'; setTimeout(function(){ if (msg) msg.textContent = ''; }, 2000); }
+  cargarArchivosCliente(clienteId);
+}
+
+function recontratarCliente(id, nombre, telefono, correo) {
+  cerrarPanel();
+  if (window.innerWidth >= 1024) abrirDrawerNuevo();
+  else mostrarTab('nuevo');
+  setTimeout(function() { seleccionarClienteContrato(id, nombre || '', telefono || '', correo || ''); }, 90);
 }
 
 function renderAccesoCaseta(p) {
@@ -3841,12 +3864,9 @@ function renderPanel(data) {
     }
   }
 
-  // "Crear contrato" button — visible only when trabajo has no contrato
+  // "Crear contrato" no aplica en el panel de un contrato (ya existe). Siempre oculto. (R59 fix)
   const _btnCrearContrato = document.getElementById('panel-btn-crear-contrato');
-  if (_btnCrearContrato) {
-    const _tieneContrato = !!(data._equipoData && data._equipoData.tieneContrato);
-    _btnCrearContrato.style.display = _tieneContrato ? 'none' : '';
-  }
+  if (_btnCrearContrato) _btnCrearContrato.style.display = 'none';
 
   // KPI cards + payment progress bar
   const _precioTotal  = parseFloat(c.PrecioTotal)   || 0;
@@ -4014,9 +4034,10 @@ function renderPanel(data) {
     </div>`;
   }).join('') : '';
 
-  // ── PANE INFO ──
+  // ── PANE INFO (Datos) ──
   document.getElementById('pane-info').innerHTML = `
-    <details class="panel-acord" open>
+    <div class="panel-sec-head">Datos</div>
+    <details class="panel-acord">
       <summary>Datos del cliente</summary>
       <div class="panel-acord-body">
         <div class="info-fila"><span class="etiq">Nombre</span><span class="val">${esc(c.NombreCliente)}</span></div>
@@ -4032,14 +4053,19 @@ function renderPanel(data) {
       <div class="panel-acord-body">${propInfoHtml}</div>
     </details>`;
 
-  // ── PANE PAGOS ──
+  // ── PANE PAGOS (Pago) ──
+  const _saldoVivo = saldo;
   document.getElementById('pane-pagos').innerHTML = `
-    <div class="panel-kpi-row" style="margin-bottom:12px">
-      <div class="panel-kpi-card"><div class="panel-kpi-label">Total</div><div class="panel-kpi-val">${fmxn(precioTotal)}</div><div class="panel-kpi-sub">Contratado</div></div>
-      <div class="panel-kpi-card"><div class="panel-kpi-label">Pagado</div><div class="panel-kpi-val green">${fmxn(totalAbonado)}</div><div class="panel-kpi-sub">${pct}% del total</div></div>
-      <div class="panel-kpi-card"><div class="panel-kpi-label">Saldo</div><div class="panel-kpi-val${saldo > 0 ? ' amber' : ' green'}">${fmxn(saldo)}</div><div class="panel-kpi-sub">${saldo > 0 ? 'Pendiente' : 'Pagado'}</div></div>
+    <div class="panel-sec-head">Pago</div>
+    <div class="recibo">
+      <div class="recibo-r"><span>Total contratado</span><span class="mono">${fmxn(precioTotal)}</span></div>
+      <div class="recibo-r"><span>Pagado${totalAbonado > 0 ? ` · ${pct}%` : ''}</span><span class="mono neg">${totalAbonado > 0 ? '−' : ''}${fmxn(totalAbonado)}</span></div>
+      <div class="recibo-total">
+        <span class="recibo-total-lbl">${saldo > 0 ? 'Saldo pendiente' : 'Liquidado'}</span>
+        <span class="recibo-total-val${saldo > 0 ? '' : ' pagado'}">${fmxn(saldo)}</span>
+      </div>
+      <div class="recibo-track"><div class="recibo-track-fill" style="width:${pct}%"></div></div>
     </div>
-    <div class="pago-barra-track" style="margin-bottom:16px"><div class="pago-barra-fill" style="width:${pct}%"></div></div>
     <p class="sec-label">Historial de abonos</p>
     <div id="historial-abonos">${abonosHtml}</div>
     <p class="sec-label">Registrar abono</p>
@@ -4058,7 +4084,22 @@ function renderPanel(data) {
     <button class="btn-primario gold" style="width:100%" id="btn-abono" onclick="registrarAbono()">
       <i class="ti ti-check"></i> Registrar abono
     </button>
-    <div class="form-msg" id="msg-abono"></div>`;
+    <div class="form-msg" id="msg-abono"></div>
+
+    <div class="panel-sec-head">Cobrar y compartir</div>
+    ${_saldoVivo > 0 ? `<button class="btn-primario gold" style="width:100%;margin-bottom:8px" onclick="cobrarWhatsAppPanel()">
+      <i class="ti ti-brand-whatsapp"></i> Cobrar por WhatsApp — ${fmxn(_saldoVivo)}
+    </button>` : `<div style="font-size:12px;color:var(--success-text,#1E8449);background:rgba(30,132,73,.08);border:1px solid rgba(30,132,73,.2);border-radius:8px;padding:8px 10px;margin-bottom:8px"><i class="ti ti-circle-check"></i> Contrato pagado por completo.</div>`}
+    <div class="link-portal-box">
+      <div class="link-portal-label">Portal del cliente</div>
+      <div class="link-portal-url">${esc(urlPortal)}</div>
+      <div class="link-portal-btns">
+        <button class="btn-copiar" data-url="${esc(urlPortal)}" onclick="copiarDesdeBtn(this)"><i class="ti ti-copy"></i> Copiar</button>
+        <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${waUrl}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+        <button class="btn-secundario btn-sm" onclick="enviarRecordatorio()"><i class="ti ti-bell"></i> Recordatorio</button>
+        <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${EQUIPO_BASE + '?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-camera"></i> Equipo</a>
+      </div>
+    </div>`;
 
   // ── PANE PRODUCCIÓN ──
   const prodFila = (hecho, etiqueta, fechaVal) => `
@@ -4070,7 +4111,9 @@ function renderPanel(data) {
       </div>
     </div>`;
 
-  const estadoAnticipo  = totalAbonado > 0 || ['Reservado','En produccion','Entregado','Completado'].includes(c.Estatus);
+  // "Anticipo abonado" = hubo pago real. (Con "reservar sin abono" un contrato puede
+  // estar Reservado sin abonos, así que NO inferimos pago desde el estatus.)
+  const estadoAnticipo  = totalAbonado > 0;
   const estadoLiquidado = c.Estatus === 'Completado';
   const prodFotoHecho      = !!(c.FotografiaLista && String(c.FotografiaLista).trim());
   const prodVideoHecho     = !!(c.VideoListo && String(c.VideoListo).trim());
@@ -4112,20 +4155,18 @@ function renderPanel(data) {
     <div style="margin-top:8px;font-size:11px;color:var(--ink-3)">Solo editable desde equipo.html · <a href="${EQUIPO_BASE + '?token=' + esc(tok)}" target="_blank" style="color:var(--ink-2);text-decoration:underline">Abrir equipo</a></div>
   </div>`;
 
-  document.getElementById('pane-prod').innerHTML = prodEstadoHtml + `
-    <!-- Estado del contrato -->
+  document.getElementById('pane-prod').innerHTML = `<div class="panel-sec-head">Acciones</div>`
+    + (c.Estatus === 'Firmado' ? `
+    <button class="btn-primario gold" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px" onclick="reservarSinAnticipo()">
+      <i class="ti ti-calendar-plus"></i> Apartar fecha (reservar sin abono)
+    </button>
+    <p style="font-size:11px;color:var(--ink-3);margin-bottom:10px;line-height:1.4">Crea el evento en tu calendario sin registrar pago. El cliente seguirá viendo su saldo completo.</p>
+    <div class="form-msg" id="msg-reservar" style="margin-bottom:8px"></div>` : '')
+    + prodEstadoHtml + `
+    <!-- Estado del contrato (informativo — el estatus se infiere de firma/pagos/entrega) -->
     <details class="panel-acord" open>
-      <summary>Estado del contrato</summary>
+      <summary>Avance del contrato</summary>
       <div class="panel-acord-body">
-        <div class="estatus-fila" style="margin-bottom:8px">
-          <select id="panel-estatus">
-            ${['Pendiente firma','Firmado','Reservado','En produccion','Entregado','Completado','Cancelado'].map(s =>
-              `<option value="${s}" ${c.Estatus === s ? 'selected' : ''}>${s === 'En produccion' ? 'En producción' : esc(s)}</option>`
-            ).join('')}
-          </select>
-          <button class="btn-secundario btn-sm" onclick="cambiarEstatus()">Guardar</button>
-        </div>
-        <div class="form-msg" id="msg-estatus"></div>
         ${prodFila(true, 'Contrato enviado', c.FechaCreacion)}
         ${prodFila(!!c.FechaFirma, 'Contrato firmado', c.FechaFirma)}
         ${prodFila(estadoAnticipo, 'Anticipo abonado', c.FechaUltimoAbono)}
@@ -4199,24 +4240,6 @@ function renderPanel(data) {
       </div>
     </details>
 
-    <!-- Links y portales -->
-    <details class="panel-acord">
-      <summary>Links y portales</summary>
-      <div class="panel-acord-body">
-        <div class="link-portal-box">
-          <div class="link-portal-label">Portal del cliente</div>
-          <div class="link-portal-url">${esc(urlPortal)}</div>
-          <div class="link-portal-btns">
-            <button class="btn-copiar" data-url="${esc(urlPortal)}" onclick="copiarDesdeBtn(this)"><i class="ti ti-copy"></i> Copiar</button>
-            <button class="btn-secundario btn-sm" onclick="enviarRecordatorio()"><i class="ti ti-bell"></i> Recordatorio</button>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-          <a class="btn-secundario btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none" href="${EQUIPO_BASE + '?token=' + esc(c.Token)}" target="_blank" rel="noopener"><i class="ti ti-camera"></i> Equipo</a>
-        </div>
-      </div>
-    </details>
-
     <!-- Acciones por propiedad -->
     ${_props.length ? `<details class="panel-acord"><summary>Acciones por propiedad</summary><div class="panel-acord-body">
       ${propActionsHtml}
@@ -4242,6 +4265,10 @@ function renderPanel(data) {
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <button class="btn-secundario btn-sm" style="flex:1" onclick="abrirModalUpsell()"><i class="ti ti-plus"></i> Servicio extra</button>
         </div>
+        ${c.Estatus === 'Cancelado'
+          ? `<button class="btn-secundario btn-sm" style="width:100%;margin-bottom:8px" onclick="cancelarContrato(false)"><i class="ti ti-rotate"></i> Reactivar contrato</button>`
+          : `<button class="btn-secundario btn-sm" style="width:100%;margin-bottom:8px;color:var(--warn);border-color:var(--warn)" onclick="cancelarContrato(true)"><i class="ti ti-ban"></i> Cancelar contrato</button>`}
+        <div class="form-msg" id="msg-cancelar" style="margin-bottom:8px"></div>
         <div style="display:flex;gap:8px">
           <button class="btn-secundario btn-sm" style="flex:1;color:var(--warn);border-color:var(--warn)" onclick="archivarContrato()"><i class="ti ti-archive"></i> Archivar</button>
           <button class="btn-secundario btn-sm" style="flex:1;color:var(--error);border-color:var(--error)" onclick="eliminarContrato()"><i class="ti ti-trash"></i> Eliminar</button>
@@ -4252,6 +4279,7 @@ function renderPanel(data) {
 
   // ── PANE LLAMADA ──
   document.getElementById('pane-llamada').innerHTML = `
+    <div class="panel-sec-head">Agendar llamada</div>
     <p style="font-size:13px;color:var(--ink-2);margin-bottom:16px;line-height:1.6">Agenda una llamada de seguimiento con el cliente.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
       <div class="campo" style="margin:0"><label>Fecha</label><input type="date" id="contrato-llamada-fecha"></div>
@@ -4503,30 +4531,81 @@ async function guardarUpsell() {
 
 // ── CAMBIAR ESTATUS ──────────────────────────────────────────────────────────
 
-async function cambiarEstatus() {
-  const estatus = document.getElementById('panel-estatus').value;
+// Apartar fecha sin abono: marca Reservado y crea el evento de calendario, sin pago.
+async function reservarSinAnticipo() {
   const t = tokenActivo;
-  setMsg('msg-estatus', '', '');
+  if (!t) return;
+  if (!confirm('¿Apartar la fecha de este contrato sin registrar abono?\n\nSe creará el evento en tu calendario. El cliente seguirá viendo su saldo completo (no se marca ningún pago).')) return;
+  setMsg('msg-reservar', 'Apartando fecha…', '');
   try {
-    let data = await apiPost({ action: 'actualizarEstatus', token: t, estatus });
-    if (!data.ok && data.codigoError === 'TRANSICION_BLOQUEADA') {
-      const confirmar = confirm(
-        'Estás retrocediendo de "' + (data.estatusActual || '?') + '" a "' + estatus + '".\n\n' +
-        '¿Confirmas que es intencional?'
-      );
-      if (!confirmar) { setMsg('msg-estatus', 'Cambio cancelado.', ''); return; }
-      data = await apiPost({ action: 'actualizarEstatus', token: t, estatus, forzar: true });
-    }
-    if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    if (t && t === tokenActivo) {
-      await abrirPanel(t);
-      mostrarPanelTab('prod', document.querySelectorAll('.panel-tab-btn')[2]);
-      setMsg('msg-estatus', 'Estatus actualizado.', 'ok');
-    }
+    const data = await apiPost({ action: 'reservarContrato', token: t });
+    if (!data.ok) throw new Error(data.error || 'No se pudo reservar');
+    setMsg('msg-reservar', 'Fecha apartada. Evento creado en tu calendario.', 'ok');
     cargarContratos();
+    if (t && t === tokenActivo) await abrirPanel(t);
   } catch (e) {
-    setMsg('msg-estatus', 'Error: ' + e.message, 'error');
+    setMsg('msg-reservar', 'Error: ' + e.message, 'error');
   }
+}
+
+// Cancelar / reactivar contrato (acción explícita; reemplaza al viejo selector de 9 estatus)
+// Al reactivar, restaura un estatus COHERENTE con los datos (si ya estaba firmado/pagado/
+// entregado, no debe regresar a "Pendiente firma" — eso dejaba firmado y sin firmar a la vez).
+function estatusReactivar(c) {
+  if (!c) return 'Pendiente firma';
+  const precio = parseFloat(c.PrecioTotal) || 0;
+  const saldoRaw = parseFloat(c.SaldoPendiente);
+  const saldo = isNaN(saldoRaw) ? precio : saldoRaw;
+  if (saldo <= 0 && precio > 0) return 'Completado';  // pagado por completo
+  if (c.FechaEntrega)           return 'Entregado';   // entregado, con saldo
+  if (precio > saldo)           return 'Reservado';   // hubo abonos parciales
+  if (c.FechaFirma)             return 'Firmado';
+  return 'Pendiente firma';
+}
+
+async function cancelarContrato(cancelar) {
+  const t = tokenActivo;
+  if (!t) return;
+  if (cancelar && !confirm('¿Cancelar este contrato? El cliente ya no podrá usar su portal hasta reactivarlo.')) return;
+  const _c = (window._contratoActivo && window._contratoActivo.c)
+    || (todosContratos || []).find(x => x.Token === t);
+  const estatus = cancelar ? 'Cancelado' : estatusReactivar(_c);
+  setMsg('msg-cancelar', cancelar ? 'Cancelando…' : 'Reactivando…', '');
+  try {
+    let data = await apiPost({ action: 'actualizarEstatus', token: t, estatus, forzar: true });
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    cargarContratos();
+    if (t && t === tokenActivo) await abrirPanel(t);
+  } catch (e) {
+    setMsg('msg-cancelar', 'Error: ' + e.message, 'error');
+  }
+}
+
+// Cobrar por WhatsApp desde el panel (usa CLABE + plantilla de config)
+async function cobrarWhatsAppPanel() {
+  const ca = window._contratoActivo;
+  if (!ca || !ca.c) return;
+  const c = ca.c;
+  if (!_configCache || !_configCache.wa_cobro || !_configCache.banco_clabe) {
+    try {
+      const r = await apiGet({ action: 'obtenerConfigAdmin' });
+      if (r && r.config) _configCache = Object.assign({}, _configCache, r.config);
+    } catch (e) { /* degrada con defaults */ }
+  }
+  const plantilla = (_configCache && _configCache.wa_cobro) || WA_DEFAULTS.wa_cobro;
+  const saldo = fmxn(parseFloat(c.SaldoPendiente) || 0);
+  const link = PORTAL_BASE + '?token=' + encodeURIComponent(c.Token);
+  const primerNombre = (c.NombreCliente || '').split(' ')[0] || c.NombreCliente || '';
+  const msg = plantilla
+    .replace(/{nombre}/g, primerNombre)
+    .replace(/{saldo}/g, saldo)
+    .replace(/{clabe}/g, (_configCache && _configCache.banco_clabe) || '')
+    .replace(/{banco}/g, (_configCache && _configCache.banco_nombre) || '')
+    .replace(/{titular}/g, (_configCache && _configCache.banco_titular) || '')
+    .replace(/{link}/g, link);
+  const tel = normalizarTelWA(c.TelefonoCliente);
+  if (!tel) { alert('Este contrato no tiene teléfono para WhatsApp.'); return; }
+  window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 // ── GUARDAR ENTREGA ──────────────────────────────────────────────────────────
@@ -4796,9 +4875,10 @@ async function crearContrato() {
         '</button>' +
       '</div>';
 
+    setMsg(msgId, '', ''); // limpia el "Guardando contrato…" una vez mostrado el resultado
     btn.disabled    = false;
     btn.textContent = 'Crear contrato y generar link';
-    cargarTrabajos();
+    cargarContratos();
     _clientesCache = [];
     cargarClientesParaAutocomplete();
     _trabajoOrigenId = null;
@@ -5974,7 +6054,7 @@ function renderListaClientes(clientes) {
     html += '</div>';
     html += '<div class="cli-card-acciones">';
     if (telefono && waNum) html += '<a href="https://wa.me/'+waNum+'" target="_blank" class="cli-card-action-btn wa" title="WhatsApp"><i class="ti ti-brand-whatsapp"></i></a>';
-    if (id) html += '<button onclick="abrirModalTrabajo('+jsArg(id)+')" class="cli-card-action-btn" title="Nuevo trabajo"><i class="ti ti-calendar-plus"></i></button>';
+    if (id) html += '<button onclick="abrirModalLlamada('+jsArg(id)+')" class="cli-card-action-btn" title="Agendar llamada"><i class="ti ti-phone-plus"></i></button>';
     if (id) html += '<button onclick="borrarCliente('+jsArg(id)+','+jsArg(nombre)+')" class="cli-card-action-btn danger" title="Borrar cliente"><i class="ti ti-trash"></i></button>';
     html += '</div>';
     html += '</div>';
@@ -6005,12 +6085,15 @@ function toggleContratosCliente(id, btn) {
     }
     var html = '<div style="display:flex;flex-direction:column;gap:6px">';
     r.contratos.forEach(function(c) {
-      var _em3 = ESTATUS_MAP[c.estatus] || { bg:'#F3F4F6', color:'#374151' };
+      var _folio = c.Folio || c.folio || '—';
+      var _estatus = c.Estatus || c.estatus || '';
+      var _token = c.Token || c.token || '';
+      var _em3 = ESTATUS_MAP[_estatus] || { bg:'#F3F4F6', color:'#374151' };
       var bs = { bg: _em3.bg, color: _em3.color };
       html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">';
-      html += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:monospace">'+(c.folio||'—')+'</span>';
-      html += '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:'+bs.bg+';color:'+bs.color+'">'+esc(c.estatus)+'</span>';
-      html += '<button onclick="irAContratoDesdeCliente('+jsArg(c.token)+')" style="margin-left:auto;font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:2px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
+      html += '<span style="font-size:11px;font-weight:700;color:var(--ink-3);font-family:monospace">'+esc(_folio)+'</span>';
+      html += '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:'+bs.bg+';color:'+bs.color+'">'+esc(_estatus)+'</span>';
+      html += '<button onclick="irAContratoDesdeCliente('+jsArg(_token)+')" style="margin-left:auto;font-size:11px;background:none;border:1px solid var(--border);border-radius:6px;padding:2px 9px;cursor:pointer;color:var(--ink-2)">Ver</button>';
       html += '</div>';
     });
     html += '</div>';
@@ -6032,6 +6115,65 @@ function abrirModalCliente() {
   var modal = document.getElementById('modal-nuevo-cliente');
   if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
   if (modal) modal.style.display = 'flex';
+}
+
+// ── AGENDAR LLAMADA RÁPIDA (R59 · 5.x) ─────────────────────────────────────────
+function abrirModalLlamada(clienteId) {
+  var modal = document.getElementById('modal-llamada');
+  if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+  var banner = document.getElementById('llamada-cliente-banner');
+  var nomCampo = document.getElementById('llamada-nombre-campo');
+  var telCampo = document.getElementById('llamada-tel-campo');
+  document.getElementById('llamada-cliente-id').value = '';
+  document.getElementById('llamada-msg').textContent = '';
+  document.getElementById('llamada-fecha').value = fechaLocalISO();
+  document.getElementById('llamada-hora').value = '10:00';
+  document.getElementById('llamada-nota').value = '';
+  document.getElementById('llamada-nombre').value = '';
+  document.getElementById('llamada-telefono').value = '';
+  if (clienteId) {
+    var cli = (_clientesDataCache || []).find(function(c){ return clienteIdVal(c) === clienteId; });
+    document.getElementById('llamada-cliente-id').value = clienteId;
+    if (cli) {
+      document.getElementById('llamada-nombre').value = clienteNombreVal(cli);
+      document.getElementById('llamada-telefono').value = clienteTelefonoVal(cli);
+      if (document.getElementById('llamada-cliente-nombre-banner'))
+        document.getElementById('llamada-cliente-nombre-banner').textContent = clienteNombreVal(cli);
+    }
+    if (banner) banner.style.display = 'block';
+    if (nomCampo) nomCampo.style.display = 'none';
+    if (telCampo) telCampo.style.display = 'none';
+  } else {
+    if (banner) banner.style.display = 'none';
+    if (nomCampo) nomCampo.style.display = '';
+    if (telCampo) telCampo.style.display = '';
+  }
+  if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalLlamada() {
+  var modal = document.getElementById('modal-llamada');
+  if (modal) modal.style.display = 'none';
+}
+
+async function guardarLlamadaRapida() {
+  var nombre = (document.getElementById('llamada-nombre').value || '').trim();
+  var telefono = (document.getElementById('llamada-telefono').value || '').trim();
+  var fecha = document.getElementById('llamada-fecha').value;
+  var hora = document.getElementById('llamada-hora').value || '10:00';
+  var nota = (document.getElementById('llamada-nota').value || '').trim();
+  var msg = document.getElementById('llamada-msg');
+  if (!nombre && !telefono) { if (msg) msg.textContent = 'Nombre o teléfono.'; return; }
+  if (!fecha) { if (msg) msg.textContent = 'Fecha requerida.'; return; }
+  if (msg) msg.textContent = 'Agendando…';
+  try {
+    var r = await apiPost({ action: 'agendarLlamadaRapida', nombre: nombre, telefono: telefono, fecha: fecha, hora: hora, nota: nota });
+    if (r && r.ok) {
+      cerrarModalLlamada();
+      if (document.getElementById('sec-clientes').classList.contains('activa')) cargarClientes();
+      if (document.getElementById('sec-hoy').classList.contains('activa')) cargarHoy();
+    } else if (msg) { msg.textContent = (r && r.error) || 'No se pudo agendar.'; }
+  } catch (e) { if (msg) msg.textContent = 'Error de red.'; }
 }
 
 function cerrarModalCliente() {
@@ -6366,6 +6508,9 @@ function seleccionarClienteContrato(id, nombre, telefono, correo) {
     var el = document.getElementById(id);
     if (el) { el.readOnly = true; el.closest('.campo') && el.closest('.campo').classList.add('campo-locked'); }
   });
+  // Anticipo recordado: si el cliente recurrente no suele dar anticipo, preselecciona "Sin anticipo" (R59 · 5.x)
+  var full = _clientesCache.find(function(c) { return clienteIdVal(c) === id; });
+  if (full && (full.sin_anticipo == 1 || full.sin_anticipo === true)) setAnticipo('0');
 }
 
 function limpiarClienteContrato() {

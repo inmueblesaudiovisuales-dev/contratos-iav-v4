@@ -48,6 +48,9 @@ export async function handleAbonos(request, env, ctx, action) {
     );
 
     const nuevoSaldo = Math.max(0, contrato.saldo_pendiente - monto);
+    // Si se permitió pagar de más, el sobrepago sube el precio total (el cliente acordó
+    // pagar más) — así el portal/admin reflejan el nuevo total, como promete el modal.
+    const nuevoPrecioTotal = (exceso > 0.5) ? contrato.precio_total + exceso : contrato.precio_total;
     const ESTATUSES_AVANZADOS = ['En produccion', 'Entregado', 'Completado'];
     let nuevoEstatus;
     if (nuevoSaldo === 0) {
@@ -59,8 +62,8 @@ export async function handleAbonos(request, env, ctx, action) {
     }
     const seActivaReservado = nuevoEstatus === 'Reservado' && contrato.estatus !== 'Reservado';
     await run(db,
-      'UPDATE contratos SET saldo_pendiente = ?, estatus = ?, fecha_ultimo_abono = ? WHERE token = ?',
-      [nuevoSaldo, nuevoEstatus, now(), token]
+      'UPDATE contratos SET saldo_pendiente = ?, precio_total = ?, estatus = ?, fecha_ultimo_abono = ? WHERE token = ?',
+      [nuevoSaldo, nuevoPrecioTotal, nuevoEstatus, now(), token]
     );
 
     // Sync status to trabajos
@@ -94,13 +97,13 @@ export async function handleAbonos(request, env, ctx, action) {
       metodo: metodo || 'Transferencia',
       nuevoSaldo,
       anticipo: contrato.anticipo,
-      precioTotal: contrato.precio_total,
+      precioTotal: nuevoPrecioTotal,
       esPrimerAbono,
       linkPortal: `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`
     });
 
     const totalAbonado = abonosPrevios.reduce((s, a) => s + (a.monto || 0), 0) + monto;
-    return ok({ ok: true, nuevoSaldo, estatus: nuevoEstatus, totalAbonado });
+    return ok({ ok: true, nuevoSaldo, estatus: nuevoEstatus, totalAbonado, precioTotal: nuevoPrecioTotal });
   }
 
   if (action === 'listarAbonos') {

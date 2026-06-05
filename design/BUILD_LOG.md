@@ -1,6 +1,145 @@
 # BUILD LOG — Rediseño IAV (admin + portal)
 
+## Fix carpetas duplicadas en Drive (2026-06-04) — VERIFICADO EN VIVO
+Cada contrato creaba 2+ carpetas de proyecto. Causa doble:
+1. `crearCarpetas` (al crear) y `procesarFirma` (al firmar) ambas hacían `createFolder`
+   sin checar si existía → **fix adapter**: helper `getOrCreateFolder_` idempotente.
+2. El worker NO enviaba `fechaSesion` a `crearCarpetas`, así que el adapter caía a "hoy"
+   y ponía la carpeta en un mes distinto al de `procesarFirma` (que sí usa la fecha de
+   sesión) → quedaban en meses distintos y el helper no las unía → **fix worker**: enviar
+   `fechaSesion` en el payload de `crearCarpetas`.
+Ambos desplegados. Verificado: un contrato nuevo crea **UNA** carpeta de proyecto con
+**una** "Control Interno" y **una** "Entregables".
+
 > Bitácora de ejecución. Para retomar: leer `design/SPEC_REDISENO_IAV.md` + `design/design-system.css` + `design/B-dossier.html` + este log + `MASTER_V4.md` (R58).
+
+## Auditoría exhaustiva 3 (2026-06-04) — seguridad/robustez. Sistema sólido.
+Revisión de auth, validación, escaping/XSS, concurrencia, cron y backend no leído antes.
+**Sin bugs nuevos.** Verificado OK: cobertura de `requireAdmin` en todos los endpoints
+sensibles; endpoints públicos del portal validan token+scope; doble-firma bloqueada;
+escaping consistente (`esc()`/`safeHref`) — sin XSS; subida de archivos validada por token;
+cron con try/catch; modelo de saldo consistente.
+
+### ⚠️ Hallazgo documentado (NO se arregla — riesgo aceptado por Bruno, baja prioridad)
+**Fuga de datos internos vía `equipo.html`.** El portal del cliente y `equipo.html`
+comparten el MISMO token de contrato. `obtenerEquipo` es público (sin `requireAdmin`) y
+devuelve `actividades` (notas internas de llamadas), datos del cliente e IDs de Drive.
+Un cliente podría cambiar `portal.html?token=X` → `equipo.html?token=X` y ver la vista
+interna. **Confirmado en vivo** (curl sin admin key devolvió actividades + cliente).
+- **Decisión de Bruno (2026-06-04)**: dejarlo documentado, NO es prioridad — es poco
+  probable (el cliente tendría que copiar su token y conocer la página `equipo.html`
+  específica; los tokens son UUIDs no adivinables).
+- **Fix recomendado cuando se rediseñe equipo/checklist**: darle a `equipo.html` un token
+  separado del portal (o quitar `actividades`/notas internas de `obtenerEquipo`).
+
+## Auditoría exhaustiva 2 (2026-06-04, post-merge a main) — DESPLEGADA
+Revisión profunda de todo el backend + E2E en producción tras el cambio de modelo de saldo.
+- [x] **[CRÍTICO] Fix**: `firmaCliente` (portal.js) re-restaba el anticipo del saldo al firmar
+  (`saldo = precio − anticipo`) y con 100% anticipo marcaba "Reservado" sin pago — deshacía el
+  fix de `crearContrato` justo en el paso de firma. Ahora firmar deja `saldo = precio_total` y
+  estatus 'Firmado'. **El modelo de saldo quedó consistente en TODO el backend.** Desplegado.
+- [x] **Auditoría del saldo system-wide**: revisados todos los escritores de saldo
+  (crear / firmar / upsell / abono / reservar / entrega) — ninguno resta el anticipo;
+  todos usan `saldo = precio − abonos reales`. Cero `precio − anticipo` restante.
+- [x] **Revisados sin bugs**: actualizarEstatus (guards de transición), actualizarContratoUpsell,
+  registrarAbono, reservarContrato, guardarEntrega/revocarEntrega (estatus por saldo), dedupe
+  (clientes/actividades por teléfono normalizado), stats (porCobrar = suma de saldos reales),
+  trabajos, archivos, equipo.
+- [x] **E2E en producción verificado** (creado y borrado): crear (saldo $4,500 completo) → firmar
+  (saldo SIGUE $4,500, Firmado) → abono $2,250 (saldo $2,250, Reservado) → cobrar WhatsApp (CLABE
+  + saldo correcto) → entrega (Entregado, saldo>0) → pago final (Completado, saldo $0). Y aparte:
+  reservar sin abono (Reservado, saldo intacto). Sin errores de producto en consola.
+- Nota: quedan ~14 clientes de prueba sin contratos (inofensivos); se pueden limpiar si se desea.
+
+## Sesión 2026-06-04 (R60) — Acabado + auditoría · rama `acabado-admin` (NO mergeada)
+Trabajo en rama `acabado-admin` (sin push). Verificado en navegador con Playwright
+sirviendo `frontend/` local contra el API de producción (CORS `*`, solo lecturas).
+Cero errores de consola en admin (Hoy/Contratos/panel/Clientes) y portal.
+
+- [x] **P1 — Lista de Contratos al patrón `.ledger`** (commit `41c8a4e`). Rehecha la
+  tabla recoloreada estilo Excel → ledger Dossier: filas `.lrow` en grid con folio
+  mono, nombre Fraunces, estatus como **estampa** (`seal` circular con inicial +
+  etiqueta), total/saldo en mono tabular, saldo con punto de color, canto izquierdo
+  dorado si la sesión es hoy (warn pronto / azul esta semana). **Tabs Abiertos/Todos**
+  (los `ctab-*` no existían en markup y rompían `setCiclo`; reescrito). Una sola lista
+  responsive (en móvil colapsa a nombre+saldo, folio/estatus plegados en el sub; se
+  retira la vista de cards duplicada). Modo selección por clase `.sel`. Verificado
+  desktop + móvil + apertura de panel + fila activa.
+- [x] **P2 (parcial) — Recibo de pago en el panel** (commit siguiente a 41c8a4e). El
+  `pane-pagos` pasa de 3 tarjetas KPI a un **recibo** editorial (líneas con guion +
+  Saldo grande en Fraunces + track), estilo mockup B. Solo presentación, mismos datos.
+- [x] **P3 — Portal: verificado, ya estaba cumplido.** El form ya tiene lenguaje humano,
+  placeholders con ejemplos, revelado progresivo (caseta Sí/No), bloque de acceso a 5
+  campos, y **precio en vivo** (`actualizarTotales()` cableado al toggle de adicionales,
+  actualiza `txt-total`/`txt-anticipo`). No requirió cambios.
+- [x] **P5 (parcial) — Limpieza** (commit `<cleanup>`): elimina CSS de `.subtab-strip`/
+  `.subtab-btn` y la función `cambiarGrupoTrabajos` + `_grupoActual`. **No quedan glifos
+  `✕`/`✓` de texto** en admin ni portal (ya eran íconos Tabler).
+- [~] **P4 — Auditoría (read-only).** Verificado sin errores de consola: Contratos→panel,
+  registrar abono (UI), Cobrar por WhatsApp (botón con CLABE), portal (carga + resumen),
+  Clientes→expediente (contratos, hilo de notas, Lo cotizado, Archivos, Recontratar).
+  **No se mutó data de producción** (no se registraron abonos/llamadas reales).
+
+### Continuación R60 (misma rama) — datos de pago + auditoría E2E
+- [x] **Datos bancarios en config** (commit pusheado): se llenó la `config` de
+  **producción** (vía API `guardarConfig`) con CLABE/banco/titular/Clip + **cuenta**
+  y **tarjeta**. Se hicieron **cuenta y tarjeta editables desde Ajustes** (claves
+  `pago_cuenta`/`pago_tarjeta` en `worker/config.js`; portal las lee de config con el
+  valor actual como respaldo; las 8 tarjetas hardcodeadas del portal ahora usan
+  `portalData.tarjeta`). Mapeo: CLABE→transferencia, cuenta→cajero, tarjeta→OXXO/Seven.
+  El cobro por WhatsApp del admin sigue solo con CLABE (decisión de Bruno).
+- [x] **P4 — Auditoría E2E destructiva COMPLETA** (contrato de prueba creado y borrado
+  en producción, verificado con Playwright): crear (anticipo Sin/50/100/Otro ✓, precio
+  auto $4,500) → ledger ✓ → panel → abono (correctamente **bloqueado hasta firmar**;
+  tras firmar, $1,000 → saldo $1,250, auto-avanza a Reservado) → **Cobrar por WhatsApp
+  con CLABE** ✓ → **agendar llamada rápida sin duplicar cliente** (dedupe ✓) →
+  **Recontratar** (abre Nuevo precargado) ✓ → **borrado de contrato + cliente,
+  verificado**. Único error de consola en toda la sesión: el 400 esperado del abono
+  pre-firma. **No quedó data de prueba.**
+- [x] **Fix cosmético**: `crearContrato` ya limpia el mensaje "Guardando contrato…" al
+  mostrar el resultado.
+- [x] **P5 — CSS muerto del sidebar/side-menu eliminado** (bloques `#sidebar`,
+  `#side-menu`, `.sm-*`, `.sidebar-*`; sin markup que los use). Quedan solo referencias
+  en reglas agrupadas compartidas (inofensivas) y un `#side-menu{display:none}` residual.
+
+### Auditoría exhaustiva R60 — bugs + modelo de saldo + reservar
+- [x] **Auditoría completa** (admin + portal, todos los flujos, consola monitoreada):
+  cero errores de aplicación introducidos por el rediseño. Referencias huérfanas
+  tras las eliminaciones: todas inofensivas (guards / código muerto).
+- [x] **Bug ALTO encontrado y arreglado**: el portal no reconocía estatus "Reservado"
+  (el que el backend asigna tras el primer abono) → cliente veía "no se pudo cargar".
+  Ahora "Reservado" = etapa 3. Verificado.
+- [x] **Modelo de saldo corregido** (decisión de Bruno): el anticipo es el primer pago
+  *sugerido*, NO un pago hecho. `crearContrato` arrancaba `saldo = precio − anticipo`
+  (descontaba un anticipo no pagado) → admin y portal mostraban montos distintos.
+  Ahora `saldo = precio_total` al crear; solo baja con abonos reales. **Requiere deploy.**
+- [x] **Nueva función "Apartar fecha (reservar sin abono)"**: botón en Acciones (visible
+  en Firmado) → acción backend `reservarContrato` marca Reservado + crea evento de
+  calendario, sin pago. Portal: etapa 3 ya no afirma "Anticipo recibido" sin abono real
+  (muestra "Tu fecha está apartada"). **Requiere deploy.**
+- [x] **Datos de prueba borrados**: los 10 contratos de prueba eliminados (slate limpio,
+  autorizado). Backend `crearContrato`/`reservarContrato` se verifican al desplegar.
+- **PENDIENTE de confirmar con Bruno**: con esta implementación, "Apartar fecha" mueve el
+  contrato a Reservado, así que el portal del cliente SÍ cambia (de "paga tu anticipo" a
+  "fecha apartada, paga tu saldo") — honesto, no afirma pago. Bruno había pedido "que no
+  cambie el portal"; confirmar si el banner honesto basta o se prefiere no cambiar estatus.
+
+### Detalles finales R60 (hechos)
+- [x] **Toolbar de Contratos más limpia**: fila principal = búsqueda + Filtros + Nuevo + ⋯;
+  los filtros avanzados (chips, select de estatus, fechas, cancelados) en un panel
+  desplegable "Filtros". Verificado desktop + móvil.
+- [x] **Fix de bug**: la fila de Contratos del expediente de cliente mostraba folio "—",
+  $0 y "Ver" roto — `renderPanelCliente`/`toggleContratosCliente` leían snake_case pero el
+  API devuelve PascalCase. Corregido (con fallback).
+- [x] **Dead code**: eliminadas `cargarTrabajos`/`renderTablaTrabajos`/`renderCardsTrabajos`.
+- **Decisión**: el chip "N en pipeline" en tarjetas de Clientes se **deja** (es info útil
+  del nº de trabajos activos; no estorba — decisión de Bruno).
+
+### Falta (opcional, menor) para la siguiente sesión
+- **P2 (gusto)**: seguir adoptando componentes del design-system donde eleve (botones a
+  `.btn-primary`/`.btn-ghost`, etc.). No bloquea nada.
+- `seleccionarTrabajo` permanece (referencias guardadas residuales, nunca se ejecuta) —
+  se puede retirar junto con `irANuevoDesdePanel`/`_trabajoActivo` en una pasada futura.
 
 ## Estado (al cierre de la sesión nocturna 2026-06-04)
 - [x] **Fase 2 — Backend** (migración r58 APLICADA + config + dedupe + agendarLlamadaRapida + marcarActividad + archivos cliente + fix subida + adapter). **Desplegado y verificado en producción.**
@@ -8,10 +147,27 @@
 - [~] **Fase 1 — Admin** (en progreso):
   - [x] 1.6 Ajustes (Datos bancarios + Plantillas).
   - [x] **Nav + pantalla Hoy (R59, commit 8794191, DESPLEGADO)**: shell nuevo topbar onyx + tabs Hoy/Contratos/Clientes + canto dorado + bottom-nav móvil con FAB + menú (⋯) con Clientes/Métricas/Paquetes/Ajustes/Salir; se eliminó sidebar/side-menu/mobile-topbar. Pantalla `#sec-hoy` con saludo+fecha, total por cobrar, botón Nuevo contrato, Sesiones de la semana, Llamadas de hoy (endpoint `listarActividadesPendientes`), lista Por cobrar con botón **Cobrar** (WhatsApp con CLABE+plantilla de config), y film-strip "radar" con punto que respira. **Unificó Contratos** (un solo modelo `listarContratos`): esto arregló el bug donde alternar las sub-tabs Confirmados/Prospectos colapsaba la lista a 1 fila. Verificado en navegador.
-  - **Falta**: 1.2 Nuevo contrato a 1 propiedad, 1.4 panel reorganizado (Pago primero, quitar selector de 9 estatus), 1.5 expediente de cliente sin pipeline, features 5.x (agendar llamada rápida UI, recontratar, anticipo recordado, archivos cliente UI).
-- [~] **Fase 3 — Portal** (parcial): hecho 3.3 pago con CLABE/banco/titular/OXXO/Clip desde config. **Falta** 3.1 claridad del formulario y 3.2 simplificación del bloque de acceso (~14→~5 campos).
-- [ ] **Fase 4 — Integración + QA** (parcial: cobro/portal usan config; falta ANEXO G completo).
-- [ ] **Fase 5 — Auditoría de bugs.**
+  - [x] **1.4 Panel de contrato (R59)**: scroll único (sin tabs), orden Pago → Datos → Acciones → Llamada; Cobrar por WhatsApp; **selector de 9 estatus eliminado** → estatus informativo + acciones explícitas + Cancelar/Reactivar.
+  - [x] **1.2 Nuevo contrato (R59)**: anticipo prominente (Sin/50%/100%/Otro), 1 propiedad por defecto, anticipo recordado por cliente.
+  - [x] **1.5 Clientes (R59)**: directorio único sin pipeline; expediente con Contratos + hilo de Llamadas y notas (marcar hecha/agregar) + Lo cotizado + Archivos + Recontratar.
+  - [x] **Features 5.x**: agendar llamada rápida (modal), cobro CLABE (Hoy + panel), recontratar, anticipo recordado, archivos de cliente UI.
+  - **Falta (menor)**: 1.3 restyle de la lista Contratos al patrón `.ledger` con tabs Abiertos/Todos (hoy funciona la tabla unificada; pendiente cosmético). Quitado el chip ⌘K.
+- [x] **Fase 3 — Portal**: 3.3 (CLABE desde config) + **arreglo del contrato de datos portal→equipo** + **3.2 reducción del bloque de acceso a 5 campos (versión agresiva)**, verificado end-to-end con contrato de prueba creado y borrado (equipo.html recibe tipoEdificio/contactoAccesoNombre/comentariosAcceso). Backfill de contratos viejos. Mayúsculas neutralizadas. Falta 3.1 fino (precio en vivo de adicionales — verificar si ya existe).
+- [~] **Fase 4 — Integración + QA**: cobro/portal usan config; panel/Hoy/Clientes verificados en navegador sin errores de consola. Falta recorrido ANEXO G formal en móvil real.
+- [x] **Fase 5 — Auditoría (parcial)**: fix "Crear contrato" que aparecía en todo panel de contrato; glifos ✕ → íconos Tabler. No se crearon datos de prueba esta sesión (nada que borrar).
+
+## Sesión 2026-06-04 (R59) — resumen
+Ejecutado de corrido a `main` (verificado en navegador con Playwright en cada paso):
+1. **Nav + Hoy** (8794191): shell topbar/tabs/bottom-nav/FAB + pantalla Hoy + **unifica Contratos** (arregla bug de sub-tabs Confirmados/Prospectos que colapsaba la lista). Endpoint `listarActividadesPendientes`.
+2. **Panel 1.4** (6d37279): scroll único Pago→Datos→Acciones→Llamada, Cobrar por WhatsApp, **sin selector de 9 estatus** (informativo + acciones explícitas + Cancelar).
+3. **Nuevo contrato 1.2** (8c649c8): anticipo Sin/50%/100%/Otro, 1 propiedad por defecto.
+4. **Clientes 1.5** (386189b): directorio único sin pipeline; expediente con contratos + hilo de actividades + archivos + Recontratar; agendar llamada rápida (5.x).
+5. **Portal Fase 3** (0c25400): fix contrato de datos portal→equipo + limpieza de mayúsculas.
+6. **Fase 5** (2273955): fixes de auditoría.
+
+### Acción pendiente de Bruno (sin cambios)
+1. Desplegar `adapter/AdapterScript4_v1.js` (necesario para archivos de cliente).
+2. Llenar Datos bancarios en Admin → Ajustes (para que Cobrar por WhatsApp y el portal muestren tu CLABE).
 
 ---
 

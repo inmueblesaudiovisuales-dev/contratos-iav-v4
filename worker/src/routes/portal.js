@@ -233,8 +233,11 @@ export async function handlePortal(request, env, ctx, action) {
     }
 
     const anticipo = contrato.anticipo;
-    const saldoPendiente = Math.max(0, precioTotal - anticipo);
-    const nuevoEstatus = saldoPendiente === 0 ? 'Reservado' : 'Firmado';
+    // El anticipo es el primer pago SUGERIDO, no un pago hecho: firmar NO reduce el
+    // saldo ni reserva. El saldo queda completo (con los adicionales que el cliente
+    // haya agregado) y solo baja con abonos reales.
+    const saldoPendiente = precioTotal;
+    const nuevoEstatus = 'Firmado';
     const nuevoAdicionales = [...acordados, ...adicionalesAceptados];
 
     const firmaNow = now();
