@@ -958,3 +958,107 @@ test('F3: guideCoverage respeta guideSkip (excluye sugerencias marcadas no aplic
   const faltanIds = salaCoverage.must.faltan.map((s) => s.id);
   assert.ok(!faltanIds.includes('sala.wide'), 'sala.wide con guideSkip no debe aparecer en faltan');
 });
+
+// ─── F4: export enriquecido ────────────────────────────────────────────────────
+
+test('F4: buildExport version sigue siendo 1', () => {
+  const state = logic.createDefaultState();
+  const exp = logic.buildExport(state, {});
+  assert.equal(exp.version, 1);
+});
+
+test('F4: buildExport incluye resumenGuia y guionEdicion', () => {
+  const state = logic.createDefaultState();
+  const exp = logic.buildExport(state, {});
+  assert.ok(Array.isArray(exp.resumenGuia), 'resumenGuia debe ser array');
+  assert.ok(exp.guionEdicion && Array.isArray(exp.guionEdicion.clips), 'guionEdicion.clips debe ser array');
+});
+
+test('F4: buildExport refleja tipoToma/movimiento/prioridad/ordenEdicion/labels en archivo con shotType', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+    shotType: 'wide',
+    movement: 'static',
+    suggestionId: 'sala.wide',
+  });
+
+  const exp = logic.buildExport(state, {});
+  const a = exp.archivos[0];
+
+  assert.equal(a.tipoToma, 'wide');
+  assert.equal(a.tipoTomaLabel, logic.getShotTypes()['wide'].label);
+  assert.equal(a.movimiento, 'static');
+  assert.equal(a.movimientoLabel, logic.getMovements()['static'].label);
+  assert.equal(a.sugerencia, 'sala.wide');
+  assert.equal(a.prioridad, 'must');
+  assert.equal(a.ordenEdicion, logic.EDIT_ORDER['wide']);
+});
+
+test('F4: premiere.Description con shotType empieza con [E y contiene tipo/movimiento', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+    shotType: 'wide',
+    movement: 'static',
+  });
+
+  const exp = logic.buildExport(state, {});
+  const desc = exp.archivos[0].premiere.Description;
+  assert.ok(desc.startsWith('[E'), 'Description debe empezar con [E');
+  assert.ok(desc.includes(logic.getShotTypes()['wide'].label), 'Description debe incluir el label del tipo de toma');
+  assert.ok(desc.includes(logic.getMovements()['static'].label), 'Description debe incluir el label del movimiento');
+});
+
+test('F4: archivo sin shotType tiene ordenEdicion:null y Description sin [E', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+  });
+
+  const exp = logic.buildExport(state, {});
+  const a = exp.archivos[0];
+  assert.equal(a.ordenEdicion, null);
+  assert.ok(!a.premiere.Description.startsWith('[E'), 'Description no debe empezar con [E si no hay shotType');
+});
+
+test('F4: guionEdicion.clips ordena takes por ordenEdicion (null al final)', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nCocina');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+
+  // detalle → ordenEdicion 50
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take', shotType: 'detalle',
+  });
+  // wide → ordenEdicion 10
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main', targetId: state.espacios[1].id, kind: 'take', shotType: 'wide',
+  });
+  // sin shotType → ordenEdicion null (al final)
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take',
+  });
+
+  const exp = logic.buildExport(state, {});
+  const clips = exp.guionEdicion.clips;
+
+  assert.equal(clips.length, 3);
+  // wide (10) primero
+  assert.equal(clips[0].ordenEdicion, logic.EDIT_ORDER['wide']);
+  // detalle (50) segundo
+  assert.equal(clips[1].ordenEdicion, logic.EDIT_ORDER['detalle']);
+  // null al final
+  assert.equal(clips[2].ordenEdicion, null);
+});

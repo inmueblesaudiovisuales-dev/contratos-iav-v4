@@ -1394,24 +1394,51 @@
     return state.bitacora.filter((entry) => entry.tipo === filter);
   }
 
+  // file puede incluir ordenEdicion/tipoTomaLabel/movimientoLabel (campos derivados por buildExport)
   function describirArchivo(servicio, file) {
-    if (file.kind === 'take') return servicio + ' · ' + (file.good ? 'toma buena' : 'toma');
-    if (file.kind === 'omitted') return servicio + ' · sin identificar';
-    const motivos = { failed: 'descarte: toma fallida', unrelated: 'descarte: no relacionado', empty: 'descarte: vacío/accidental' };
-    return servicio + ' · ' + (motivos[file.discardReason] || 'descarte');
+    let base;
+    if (file.kind === 'take') {
+      base = servicio + ' · ' + (file.good ? 'toma buena' : 'toma');
+    } else if (file.kind === 'omitted') {
+      return servicio + ' · sin identificar';
+    } else {
+      const motivos = { failed: 'descarte: toma fallida', unrelated: 'descarte: no relacionado', empty: 'descarte: vacío/accidental' };
+      return servicio + ' · ' + (motivos[file.discardReason] || 'descarte');
+    }
+    const prefijo = file.ordenEdicion != null ? '[E' + file.ordenEdicion + '] ' : '';
+    const tipo = file.tipoTomaLabel || null;
+    const mov = file.movimientoLabel || null;
+    const sufijo = (tipo || mov) ? ' · ' + [tipo, mov].filter(Boolean).join(' / ') : '';
+    return prefijo + base + sufijo;
   }
 
   // Exportación estable para el programa de metadatos de Premiere.
   // Solo incluye ARCHIVOS de cámara (video/drone/asesor); foto/360 son cobertura, no archivos.
+  // version:1 permanece intacto; los campos nuevos son opcionales y la app de Mac los ignora.
   function buildExport(state, meta) {
     meta = meta || {};
     const camById = (id) => (state.cameras || []).find((c) => c.id === id) || {};
     const segById = (id) => (state.sequenceSegments || []).find((s) => s.id === id) || {};
+    const shotTypes = getShotTypes();
+    const movements = getMovements();
+
     const archivos = (state.mediaFiles || []).map((f) => {
       const cam = camById(f.cameraId);
       const seg = segById(f.segmentId);
       const servicio = cam.mode || 'video';
       const espacio = (servicio === 'drone' || servicio === 'asesor') ? null : (state.espacios || []).find((e) => e.id === f.targetId);
+
+      const tipoToma = f.shotType || null;
+      const tipoTomaLabel = tipoToma && shotTypes[tipoToma] ? shotTypes[tipoToma].label : null;
+      const movimiento = f.movement || null;
+      const movimientoLabel = movimiento && movements[movimiento] ? movements[movimiento].label : null;
+      const sugerencia = f.suggestionId || null;
+      const sug = sugerencia ? findSuggestion(sugerencia) : null;
+      const prioridad = sug ? sug.priority : null;
+      const ordenEdicion = tipoToma != null ? (EDIT_ORDER[tipoToma] !== undefined ? EDIT_ORDER[tipoToma] : null) : null;
+
+      const enrichedFile = { kind: f.kind, good: f.good, discardReason: f.discardReason, ordenEdicion, tipoTomaLabel, movimientoLabel };
+
       return {
         archivo: f.fileToken,
         consecutivo: f.fileCounter,
@@ -1432,23 +1459,82 @@
         par: f.pairId || null,
         autor: f.author || '',
         hora: f.createdAt || null,
+        tipoToma,
+        tipoTomaLabel,
+        movimiento,
+        movimientoLabel,
+        sugerencia,
+        prioridad,
+        ordenEdicion,
         premiere: {
           Scene: f.scenePath || f.scene || '',
           Shot: f.shotNumber ? String(f.shotNumber) : '',
           'Camera Roll': cam.label || '',
           Good: !!f.good,
           Comment: f.note || '',
-          Description: describirArchivo(servicio, f),
+          Description: describirArchivo(servicio, enrichedFile),
         },
       };
     });
+
+    // resumenGuia: cobertura por cuarto/target para que el editor sepa qué es hero y qué falta
+    const videoCoverage = guideCoverage(state, 'video');
+    const droneCoverage = guideCoverage(state, 'drone');
+    const resumenGuia = [
+      ...videoCoverage.map((entry) => ({
+        nombre: entry.target.nombre || entry.target.id,
+        modo: 'video',
+        mustHechas: entry.must.hechas,
+        mustFaltan: entry.must.faltan.length,
+      })),
+      ...droneCoverage.map((entry) => ({
+        nombre: entry.target.nombre || entry.target.id,
+        modo: 'drone',
+        mustHechas: entry.must.hechas,
+        mustFaltan: entry.must.faltan.length,
+      })),
+    ];
+
+    // guionEdicion: lista ordenada de takes para que el editor arme el string-out
+    const guide = state.guide || {};
+    const foco = guide.tipoPropiedad ? (PROPERTY_FOCUS[guide.tipoPropiedad] || null) : null;
+    const contexto = [foco, guide.descripcion].filter(Boolean).join(' — ') || null;
+
+    const clips = archivos
+      .filter((a) => a.tipo === 'take')
+      .slice()
+      .sort((a, b) => {
+        const oa = a.ordenEdicion != null ? a.ordenEdicion : Infinity;
+        const ob = b.ordenEdicion != null ? b.ordenEdicion : Infinity;
+        if (oa !== ob) return oa - ob;
+        const pa = a.piso || '';
+        const pb = b.piso || '';
+        if (pa !== pb) return pa < pb ? -1 : 1;
+        const ea = a.escenaRuta || a.escena || '';
+        const eb = b.escenaRuta || b.escena || '';
+        if (ea !== eb) return ea < eb ? -1 : 1;
+        return (a.toma || 0) - (b.toma || 0);
+      })
+      .map((a) => ({
+        archivo: a.archivo,
+        escena: a.escena,
+        ordenEdicion: a.ordenEdicion,
+        buena: a.buena,
+        tipo: a.tipoTomaLabel,
+        movimiento: a.movimientoLabel,
+      }));
+
+    const guionEdicion = { contexto, clips };
+
     return {
       version: 1,
       folio: meta.folio || '',
       cliente: meta.nombreCliente || '',
       exportadoEn: new Date().toISOString(),
       totalArchivos: archivos.length,
-      archivos: archivos,
+      archivos,
+      resumenGuia,
+      guionEdicion,
     };
   }
 
