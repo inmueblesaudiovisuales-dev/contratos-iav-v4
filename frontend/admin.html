@@ -4841,7 +4841,7 @@ async function crearContrato() {
     var fechaProp    = (document.getElementById('prop-fecha-' + i)           || {value:''}).value;
     var horaProp     = (document.getElementById('prop-hora-' + i)            || {value:'10:00'}).value;
     var formatoVideo = 'vertical_nativo';
-    var ocultarFmt   = 1;
+    var ocultarFmt   = 0;
 
     if (!nombreSvc && !paqClave) {
       setMsg(msgId, 'Propiedad ' + i + ': necesitas un nombre de servicio o elegir un paquete.', 'error');
