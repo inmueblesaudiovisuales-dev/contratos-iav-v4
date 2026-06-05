@@ -1,8 +1,9 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-05 — fix carpetas duplicadas (getOrCreateFolder_) +
-//   fix link del portal roto en correos HTML (el '=' del token se codifica como &#61;)
+// Ultima modificacion: 2026-06-05 (R61) — correo: con anticipo $0 ya no muestra
+//   "Anticipo acordado (0%) $0 MXN"; muestra "Reservación: Por confirmar" + saldo.
+//   Previo: fix carpetas duplicadas (getOrCreateFolder_) + fix link del portal en correos.
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
