@@ -14,14 +14,15 @@
       --onyx:   #1C1C1E;
       --gold:   #C9A84C;
       --gold-d: #a8863b;
-      --page:   #F5F5F5;
+      --page:   #F4F3F0;
       --card:   #FFFFFF;
       --ink-1:  #1C1C1E;
       --ink-2:  #6B6B6B;
-      --ink-3:  #A8A8A8;
-      --border: #E5E5E5;
+      --ink-3:  #A0A0A0;
+      --border: #E6E5E1;
       --success:#2A9D5C;
-      --r:      12px;
+      --blue:   #3B82F6;
+      --r:      14px;
     }
 
     html, body { min-height: 100vh; background: var(--page); }
@@ -31,15 +32,17 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* TOP BAR */
+    /* ===== TOP BAR ===== */
     .topbar {
       background: var(--onyx); color: #fff;
       padding: max(14px, env(safe-area-inset-top)) 16px 14px;
       position: sticky; top: 0; z-index: 50;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.4);
     }
-    .topbar-row { display: flex; align-items: center; gap: 10px; }
+    .topbar-inner { max-width: 1080px; margin: 0 auto; }
+    .topbar-row { display: flex; align-items: center; gap: 12px; }
     .topbar-logo {
-      width: 32px; height: 32px; border-radius: 8px;
+      width: 34px; height: 34px; border-radius: 9px;
       background: linear-gradient(135deg, var(--gold), var(--gold-d));
       display: flex; align-items: center; justify-content: center;
       font-weight: 800; font-size: 11px; color: #1a1000; flex-shrink: 0;
@@ -47,120 +50,153 @@
     .topbar-info { flex: 1; min-width: 0; }
     .topbar-folio {
       font-size: 10px; font-weight: 700;
-      letter-spacing: 0.1em; text-transform: uppercase;
+      letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--gold); margin-bottom: 1px;
     }
     .topbar-nombre {
-      font-size: 14px; font-weight: 700;
+      font-size: 15px; font-weight: 700;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
+    .topbar-meta { font-size: 11px; color: #B8B8B8; margin-top: 2px; font-weight: 500; }
     .topbar-badge {
       font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-      padding: 3px 7px; border-radius: 20px; flex-shrink: 0;
+      padding: 4px 9px; border-radius: 20px; flex-shrink: 0;
     }
     .topbar-badge.express { background: #FEF3C7; color: #92400E; }
 
-    /* MAIN */
-    .main { padding: 16px; max-width: 640px; margin: 0 auto; }
+    /* ===== MAIN ===== */
+    .main { padding: 16px; max-width: 880px; margin: 0 auto; }
 
-    /* SECCION */
+    /* checklist CTA */
+    .checklist-link {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--onyx); color: #fff;
+      padding: 14px 16px; border-radius: var(--r);
+      text-decoration: none; margin-bottom: 14px;
+      font-size: 13.5px; font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .checklist-link .cl-emoji { font-size: 16px; }
+    .checklist-link .cl-text { flex: 1; }
+    .checklist-link-arrow { font-size: 18px; color: var(--gold); }
+
+    /* aviso sin contrato */
+    .aviso-sin {
+      background: var(--card); border: 1px dashed var(--border); border-radius: var(--r);
+      padding: 22px 18px; text-align: center; color: var(--ink-2);
+      font-size: 13px; line-height: 1.6; margin-bottom: 14px;
+    }
+    .aviso-sin .av-emoji { font-size: 28px; display: block; margin-bottom: 8px; }
+
+    /* ===== CARDS GRID (masonry en desktop) ===== */
+    .cards { }
+    @media (min-width: 820px) {
+      .main { padding: 28px 24px; max-width: 1080px; }
+      .cards { column-count: 2; column-gap: 18px; }
+      .cards > .seccion { break-inside: avoid; }
+      .checklist-link { max-width: 420px; }
+    }
+
+    /* ===== SECCION ===== */
     .seccion {
       background: var(--card); border-radius: var(--r);
-      border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden;
+      border: 1px solid var(--border); margin-bottom: 14px; overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     }
     .sec-header {
-      padding: 12px 16px 10px;
+      padding: 13px 16px;
       border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: 10px;
+      background: #FAFAF8;
     }
     .sec-icon {
-      width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
       background: linear-gradient(135deg, var(--gold), var(--gold-d));
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px;
+      font-size: 14px; color: #1a1000;
     }
     .sec-titulo {
-      font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--ink-2);
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.09em; color: var(--ink-2);
     }
     .sec-body { padding: 14px 16px; }
 
-    /* FILA DE DATO */
+    /* ===== FILA DE DATO ===== */
     .dato-row {
       display: flex; align-items: flex-start;
-      gap: 8px; padding: 5px 0;
+      gap: 10px; padding: 7px 0;
       border-bottom: 1px solid var(--border);
     }
     .dato-row:last-child { border-bottom: none; }
     .dato-label {
       font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
       text-transform: uppercase; color: var(--ink-3);
-      min-width: 100px; padding-top: 1px; flex-shrink: 0;
+      min-width: 96px; padding-top: 2px; flex-shrink: 0;
     }
-    .dato-val { font-size: 13px; font-weight: 500; color: var(--ink-1); line-height: 1.5; }
+    .dato-val { font-size: 13.5px; font-weight: 500; color: var(--ink-1); line-height: 1.5; min-width: 0; word-break: break-word; }
     .dato-val a { color: var(--gold-d); text-decoration: none; font-weight: 600; }
     .dato-val a:hover { text-decoration: underline; }
 
-    /* BLOQUE ACCESO */
+    /* ===== BLOQUE ACCESO ===== */
     .acceso-bloque {
       border-left: 3px solid var(--gold); background: #FDFAF4;
       border-radius: 0 8px 8px 0; padding: 12px 14px; margin-top: 6px;
     }
-    .acceso-item { font-size: 12px; color: var(--ink-1); line-height: 1.6; }
+    .acceso-item { font-size: 12.5px; color: var(--ink-1); line-height: 1.65; }
     .acceso-item strong { font-weight: 700; color: var(--ink-2); }
 
-    /* ARCHIVOS */
+    /* ===== ARCHIVOS ===== */
     .archivos-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
     .archivo-card {
-      border: 1px solid var(--border); border-radius: 8px;
-      overflow: hidden; width: 100px;
-      display: flex; flex-direction: column;
+      border: 1px solid var(--border); border-radius: 10px;
+      overflow: hidden; width: 104px;
+      display: flex; flex-direction: column; text-decoration: none;
     }
-    .archivo-img { width: 100%; height: 80px; object-fit: cover; background: var(--page); }
+    .archivo-img { width: 100%; height: 82px; object-fit: cover; background: var(--page); }
     .archivo-label {
       font-size: 9px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.05em; color: var(--ink-2); padding: 5px 7px;
+      letter-spacing: 0.05em; color: var(--ink-2); padding: 6px 7px;
       text-align: center;
     }
 
-    /* DRIVE LINKS */
+    /* ===== DRIVE LINKS ===== */
     .drive-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .drive-link {
       display: inline-flex; align-items: center; gap: 6px;
-      background: #F0FFF4; border: 1px solid #BBF7D0; border-radius: 8px;
-      padding: 8px 12px; font-size: 12px; font-weight: 600;
+      background: #F0FFF4; border: 1px solid #BBF7D0; border-radius: 9px;
+      padding: 9px 13px; font-size: 12px; font-weight: 600;
       color: #166534; text-decoration: none;
     }
     .drive-link:hover { background: #DCFCE7; }
 
-    /* ENTREGABLES LISTA */
+    /* ===== ENTREGABLES LISTA ===== */
     .entregables-lista { margin-top: 4px; }
     .entregable-item {
-      font-size: 12px; font-weight: 500; color: var(--ink-1);
-      padding: 3px 0; display: flex; align-items: center; gap: 6px;
+      font-size: 12.5px; font-weight: 500; color: var(--ink-1);
+      padding: 4px 0; display: flex; align-items: center; gap: 8px;
     }
     .entregable-item::before {
       content: ''; width: 5px; height: 5px; border-radius: 50%;
       background: var(--gold); flex-shrink: 0;
     }
 
-    /* ADDONS */
+    /* ===== ADDONS / CHIPS ===== */
     .addon-pill {
       display: inline-flex; align-items: center; gap: 5px;
-      background: #F5F5F5; border: 1px solid var(--border);
-      border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 600;
-      color: var(--ink-1); margin: 3px 4px 3px 0;
+      background: #F2F1EC; border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 11px; font-size: 11px; font-weight: 600;
+      color: var(--ink-1); margin: 3px 4px 3px 0; text-decoration: none;
     }
 
-    /* POST-PRODUCCION */
+    /* ===== POST-PRODUCCION ===== */
     .prod-row {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 0; border-bottom: 1px solid var(--border);
+      padding: 11px 0; border-bottom: 1px solid var(--border); gap: 10px;
     }
     .prod-row:last-child { border-bottom: none; }
-    .prod-row-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .prod-row-left { display: flex; align-items: center; gap: 11px; flex: 1; min-width: 0; }
     .prod-check {
-      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
       border: 2px solid var(--border); background: var(--page);
       display: flex; align-items: center; justify-content: center;
       transition: background 0.2s, border-color 0.2s;
@@ -169,11 +205,11 @@
     .prod-check-icon { font-size: 12px; color: #fff; display: none; font-weight: 700; }
     .prod-check.listo .prod-check-icon { display: block; }
     .prod-label-wrap { min-width: 0; }
-    .prod-label { font-size: 13px; font-weight: 600; }
+    .prod-label { font-size: 13.5px; font-weight: 600; }
     .prod-fecha { font-size: 10px; color: var(--ink-3); margin-top: 1px; }
     .btn-marcar {
       font-family: inherit; font-size: 11px; font-weight: 700;
-      padding: 6px 14px; border-radius: 20px; cursor: pointer;
+      padding: 7px 15px; border-radius: 20px; cursor: pointer;
       border: 1px solid; transition: filter 0.15s; flex-shrink: 0;
     }
     .btn-marcar.pendiente { background: var(--onyx); color: #fff; border-color: var(--onyx); }
@@ -181,34 +217,34 @@
     .btn-marcar:hover { filter: brightness(0.92); }
     .btn-marcar:disabled { opacity: 0.5; cursor: default; }
 
-    /* RECORRIDO URL INPUT */
-    .recorrido-url-wrap { padding: 8px 0 4px; }
+    /* ===== RECORRIDO URL INPUT ===== */
+    .recorrido-url-wrap { padding: 10px 0 4px; }
     .recorrido-url-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin-bottom: 6px; }
     .recorrido-url-row { display: flex; gap: 8px; }
     .recorrido-url-input {
       flex: 1; font-family: inherit; font-size: 12px; font-weight: 500;
-      padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+      padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px;
       background: var(--page); color: var(--ink-1); min-width: 0;
     }
     .recorrido-url-input:focus { outline: none; border-color: var(--gold); }
     .btn-guardar-url {
       font-family: inherit; font-size: 11px; font-weight: 700;
-      padding: 8px 14px; border-radius: 8px; cursor: pointer;
+      padding: 9px 15px; border-radius: 9px; cursor: pointer;
       background: var(--onyx); color: #fff; border: none; flex-shrink: 0;
     }
     .btn-guardar-url:disabled { opacity: 0.5; cursor: default; }
 
-    /* TOGGLE RECORRIDO */
+    /* ===== TOGGLE RECORRIDO ===== */
     .recorrido-toggle {
       display: flex; align-items: center; gap: 8px;
-      padding: 8px 0 4px; font-size: 11px; color: var(--ink-3); cursor: pointer;
+      padding: 10px 0 4px; font-size: 11.5px; color: var(--ink-2); cursor: pointer;
     }
-    .recorrido-toggle input { accent-color: var(--gold); width: 14px; height: 14px; cursor: pointer; }
+    .recorrido-toggle input { accent-color: var(--gold); width: 15px; height: 15px; cursor: pointer; }
 
-    /* PROP TAB SELECTOR */
+    /* ===== PROP TABS ===== */
     .prop-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
     .prop-tab {
-      flex-shrink: 0; padding: 10px 14px;
+      flex-shrink: 0; padding: 11px 15px;
       font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
       color: var(--ink-2); cursor: pointer; border-bottom: 2px solid transparent;
       background: none; border: none; border-bottom: 2px solid transparent;
@@ -218,60 +254,77 @@
     .prop-panel { display: none; padding: 14px 16px; }
     .prop-panel.activo { display: block; }
 
-    /* LINK CHECKLIST */
-    .checklist-link {
-      display: flex; align-items: center; justify-content: space-between;
-      background: var(--onyx); color: #fff;
-      padding: 13px 16px; border-radius: var(--r);
-      text-decoration: none; margin-bottom: 12px;
-      font-size: 13px; font-weight: 600;
-    }
-    .checklist-link-arrow { font-size: 18px; }
-
-    /* LOADING / ERROR */
-    .estado { text-align: center; padding: 60px 20px; color: var(--ink-2); font-size: 13px; }
-
-    /* PROPIEDAD TITULO */
+    /* ===== PROP SUBTITULO ===== */
     .prop-sec-titulo {
       font-size: 9px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; color: var(--ink-3); margin: 12px 0 6px;
+      letter-spacing: 0.09em; color: var(--ink-3); margin: 14px 0 6px;
     }
     .prop-sec-titulo:first-child { margin-top: 0; }
 
-    /* FORM MSG */
+    /* ===== LLAMADAS Y NOTAS ===== */
+    .eq-act-item {
+      display: flex; gap: 11px; align-items: flex-start;
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+    }
+    .eq-act-item:last-child { border-bottom: none; }
+    .eq-act-dot {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: #fff;
+    }
+    .eq-act-dot.llamada { background: var(--blue); }
+    .eq-act-dot.nota    { background: var(--ink-3); }
+    .eq-act-body { min-width: 0; flex: 1; }
+    .eq-act-meta {
+      font-size: 9.5px; color: var(--ink-3); margin-bottom: 2px;
+      text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;
+    }
+    .eq-act-desc { font-size: 13px; color: var(--ink-1); line-height: 1.5; word-break: break-word; }
+    .eq-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+    .eq-chip { background: #F2F1EC; color: var(--ink-1); border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 600; }
+    .eq-link-chip { background: #EAF2FF; color: #1D4ED8; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 600; text-decoration: none; }
+    .eq-link-chip:hover { text-decoration: underline; }
+    .eq-btn-nota {
+      width: 100%; background: var(--page); border: 1px dashed var(--border);
+      border-radius: 10px; padding: 9px 14px; font-size: 12.5px; font-weight: 600;
+      color: var(--ink-2); cursor: pointer; margin-top: 12px; font-family: inherit;
+    }
+    .eq-btn-nota:hover { border-color: var(--gold); color: var(--ink-1); }
+    .eq-nota-form { margin-top: 10px; display: none; }
+    .eq-nota-textarea {
+      width: 100%; border: 1px solid var(--border); border-radius: 9px;
+      padding: 10px; font-size: 13px; resize: vertical; box-sizing: border-box;
+      font-family: inherit; color: var(--ink-1);
+    }
+    .eq-nota-textarea:focus { outline: none; border-color: var(--gold); }
+    .eq-nota-submit {
+      margin-top: 8px; background: var(--onyx); color: #fff; border: none;
+      border-radius: 9px; padding: 8px 18px; font-size: 12.5px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+
+    /* ===== ESTADOS ===== */
+    .estado { text-align: center; padding: 60px 20px; color: var(--ink-2); font-size: 13px; }
+    .vacio { font-size: 12.5px; color: var(--ink-3); padding: 4px 0; }
+
+    /* ===== FORM MSG ===== */
     .form-msg-inline { font-size: 11px; color: var(--success); margin-top: 4px; min-height: 16px; }
     .form-msg-inline.error { color: #dc2626; }
-
-    .eq-block { padding: 20px; border-bottom: 1px solid #E5E7EB; }
-    .eq-block-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9CA3AF; margin-bottom: 12px; }
-    .eq-campo { margin-bottom: 10px; }
-    .eq-campo-label { font-size: 11px; color: #9CA3AF; margin-bottom: 2px; }
-    .eq-campo-valor { font-size: 14px; color: #111827; }
-    .eq-actividades { display: flex; flex-direction: column; gap: 10px; }
-    .eq-act-item { display: flex; gap: 10px; align-items: flex-start; }
-    .eq-act-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .eq-act-meta { font-size: 11px; color: #9CA3AF; margin-bottom: 2px; }
-    .eq-act-desc { font-size: 13px; color: #374151; }
-    .eq-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-    .eq-chip { background: #F3F4F6; color: #374151; border-radius: 4px; padding: 3px 10px; font-size: 12px; }
-    .eq-link-chip { background: #DBEAFE; color: #1D4ED8; border-radius: 4px; padding: 3px 10px; font-size: 12px; text-decoration: none; }
-    .eq-link-chip:hover { text-decoration: underline; }
-    .eq-btn-nota { background: white; border: 1px solid #D1D5DB; border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; margin-top: 8px; }
-    .eq-nota-form { margin-top: 10px; display: none; }
-    .eq-nota-textarea { width: 100%; border: 1px solid #D1D5DB; border-radius: 6px; padding: 8px; font-size: 13px; resize: vertical; box-sizing: border-box; }
-    .eq-nota-submit { margin-top: 6px; background: #111827; color: white; border: none; border-radius: 6px; padding: 6px 16px; font-size: 13px; cursor: pointer; }
   </style>
 </head>
 <body>
 
 <div id="topbar" class="topbar" style="display:none">
-  <div class="topbar-row">
-    <div class="topbar-logo">IAV</div>
-    <div class="topbar-info">
-      <div class="topbar-folio" id="tb-folio"></div>
-      <div class="topbar-nombre" id="tb-nombre"></div>
+  <div class="topbar-inner">
+    <div class="topbar-row">
+      <div class="topbar-logo">IAV</div>
+      <div class="topbar-info">
+        <div class="topbar-folio" id="tb-folio"></div>
+        <div class="topbar-nombre" id="tb-nombre"></div>
+        <div class="topbar-meta" id="tb-meta" style="display:none"></div>
+      </div>
+      <div id="tb-express" class="topbar-badge express" style="display:none">Express</div>
     </div>
-    <div id="tb-express" class="topbar-badge express" style="display:none">Express</div>
   </div>
 </div>
 
@@ -281,56 +334,81 @@
   <div class="main">
 
     <a id="checklist-link" class="checklist-link" href="#" target="_blank" rel="noopener">
-      Abrir checklist de rodaje
+      <span class="cl-emoji">&#128247;</span>
+      <span class="cl-text">Abrir checklist de rodaje</span>
       <span class="checklist-link-arrow">&#8599;</span>
     </a>
 
-    <!-- Cliente -->
-    <div class="seccion">
-      <div class="sec-header">
-        <div class="sec-icon">&#128100;</div>
-        <div class="sec-titulo">Cliente</div>
-      </div>
-      <div class="sec-body">
-        <div class="dato-row">
-          <div class="dato-label">Nombre</div>
-          <div class="dato-val" id="cliente-nombre"></div>
+    <div id="no-contrato-aviso" class="aviso-sin" style="display:none">
+      <span class="av-emoji">&#128196;</span>
+      Sin contrato todavia &mdash; la informacion de produccion aparecera cuando se genere el contrato.
+    </div>
+
+    <div class="cards">
+
+      <!-- Cliente -->
+      <section class="seccion" id="sec-cliente">
+        <div class="sec-header">
+          <div class="sec-icon">&#128100;</div>
+          <div class="sec-titulo">Cliente</div>
         </div>
-        <div class="dato-row" id="cliente-tel-row" style="display:none">
-          <div class="dato-label">Telefono</div>
-          <div class="dato-val" id="cliente-tel"></div>
+        <div class="sec-body" id="cliente-body"></div>
+      </section>
+
+      <!-- Llamadas y notas -->
+      <section class="seccion" id="sec-llamadas">
+        <div class="sec-header">
+          <div class="sec-icon">&#128222;</div>
+          <div class="sec-titulo">Llamadas y notas</div>
         </div>
-      </div>
-    </div>
+        <div class="sec-body">
+          <div id="eq-actividades-list"></div>
+          <button class="eq-btn-nota" onclick="toggleNotaForm()">+ Agregar nota</button>
+          <div class="eq-nota-form" id="eq-nota-form">
+            <textarea class="eq-nota-textarea" id="eq-nota-txt" placeholder="Observacion durante la llamada..." rows="3"></textarea>
+            <button class="eq-nota-submit" onclick="guardarNotaEquipo()">Guardar nota</button>
+          </div>
+        </div>
+      </section>
 
-    <!-- Propiedades (tabs si hay mas de una) -->
-    <div class="seccion">
-      <div class="sec-header">
-        <div class="sec-icon">&#127968;</div>
-        <div class="sec-titulo" id="sec-prop-titulo">Propiedad</div>
-      </div>
-      <div id="prop-tabs" class="prop-tabs" style="display:none"></div>
-      <div id="prop-paneles"></div>
-    </div>
+      <!-- Propiedades (tabs si hay mas de una) -->
+      <section class="seccion" id="sec-propiedad" style="display:none">
+        <div class="sec-header">
+          <div class="sec-icon">&#127968;</div>
+          <div class="sec-titulo" id="sec-prop-titulo">Propiedad</div>
+        </div>
+        <div id="prop-tabs" class="prop-tabs" style="display:none"></div>
+        <div id="prop-paneles"></div>
+      </section>
 
-    <!-- Post-produccion -->
-    <div class="seccion">
-      <div class="sec-header">
-        <div class="sec-icon">&#9999;</div>
-        <div class="sec-titulo">Post-produccion</div>
-      </div>
-      <div class="sec-body" id="prod-body"></div>
-    </div>
+      <!-- Post-produccion -->
+      <section class="seccion" id="sec-prod" style="display:none">
+        <div class="sec-header">
+          <div class="sec-icon">&#9989;</div>
+          <div class="sec-titulo">Post-produccion</div>
+        </div>
+        <div class="sec-body" id="prod-body"></div>
+      </section>
 
-    <!-- Adicionales contratados -->
-    <div id="addons-sec" class="seccion" style="display:none">
-      <div class="sec-header">
-        <div class="sec-icon">&#43;</div>
-        <div class="sec-titulo">Adicionales contratados</div>
-      </div>
-      <div class="sec-body" id="addons-body"></div>
-    </div>
+      <!-- Cotizacion -->
+      <section class="seccion" id="sec-cotizacion" style="display:none">
+        <div class="sec-header">
+          <div class="sec-icon">&#128221;</div>
+          <div class="sec-titulo">Cotizacion</div>
+        </div>
+        <div class="sec-body" id="cot-body"></div>
+      </section>
 
+      <!-- Adicionales contratados -->
+      <section id="addons-sec" class="seccion" style="display:none">
+        <div class="sec-header">
+          <div class="sec-icon">&#43;</div>
+          <div class="sec-titulo">Adicionales contratados</div>
+        </div>
+        <div class="sec-body" id="addons-body"></div>
+      </section>
+
+    </div>
   </div>
 </div>
 
@@ -352,6 +430,11 @@ function esc(s) {
   return String(s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function datoRow(label, valHtml) {
+  return '<div class="dato-row"><div class="dato-label">' + esc(label) +
+    '</div><div class="dato-val">' + valHtml + '</div></div>';
 }
 
 function fmxnFecha(iso) {
@@ -396,102 +479,135 @@ async function cargar() {
 function renderApp(data) {
   window.EQ_DATA = data;
 
-  // Build the new blocks HTML
-  var bloqueHtml = '';
-
-  // BLOCK 1: Cliente
-  var cli = data.cliente;
-  if (cli) {
-    bloqueHtml += '<div class="eq-block">' +
-      '<div class="eq-block-titulo">Cliente</div>' +
-      '<div class="eq-campo"><div class="eq-campo-label">Nombre</div><div class="eq-campo-valor">' + esc(cli.nombre || '—') + '</div></div>' +
-      '<div class="eq-campo"><div class="eq-campo-label">Teléfono</div><div class="eq-campo-valor">' + esc(cli.telefono || '—') + '</div></div>' +
-      (cli.correo ? '<div class="eq-campo"><div class="eq-campo-label">Correo</div><div class="eq-campo-valor">' + esc(cli.correo) + '</div></div>' : '') +
-      (cli.inmobiliaria ? '<div class="eq-campo"><div class="eq-campo-label">Inmobiliaria</div><div class="eq-campo-valor">' + esc(cli.inmobiliaria) + '</div></div>' : '') +
-      (cli.origen ? '<div class="eq-campo"><div class="eq-campo-label">Origen</div><div class="eq-campo-valor">' + esc(cli.origen) + '</div></div>' : '') +
-      '</div>';
-  }
-
-  // BLOCK 2: Cotización
-  var paqCot = data.paquetesCotizados || [];
-  var portLinks = data.portafolioLinks || [];
-  var hasCotiz = data.ubicacion || data.notasCotizacion || paqCot.length || portLinks.length;
-  bloqueHtml += '<div class="eq-block">' +
-    '<div class="eq-block-titulo">Cotización</div>' +
-    (data.ubicacion ? '<div class="eq-campo"><div class="eq-campo-label">Ubicación</div><div class="eq-campo-valor">' + esc(data.ubicacion) + '</div></div>' : '') +
-    (data.notasCotizacion ? '<div class="eq-campo"><div class="eq-campo-label">Notas</div><div class="eq-campo-valor" style="white-space:pre-wrap">' + esc(data.notasCotizacion) + '</div></div>' : '') +
-    (paqCot.length ? '<div class="eq-campo"><div class="eq-campo-label">Paquetes cotizados</div><div class="eq-chips">' + paqCot.map(function(p){return '<span class="eq-chip">'+esc(String(p))+'</span>';}).join('') + '</div></div>' : '') +
-    (portLinks.length ? '<div class="eq-campo"><div class="eq-campo-label">Portafolio enviado</div><div class="eq-chips">' + portLinks.map(function(l){return '<a class="eq-link-chip" href="'+esc(l)+'" target="_blank">'+esc(l.replace(/^https?:\/\//,'').substring(0,40))+'</a>';}).join('') + '</div></div>' : '') +
-    (!hasCotiz ? '<span style="font-size:13px;color:#9CA3AF">Sin información de cotización.</span>' : '') +
-    '</div>';
-
-  // BLOCK 3: Llamadas y notas
-  var actividades = data.actividades || [];
-  var actHtml = actividades.length ? actividades.map(function(a) {
-    var esLlamada = a.tipo === 'llamada_agendada';
-    var dotColor = esLlamada ? '#3B82F6' : '#6B7280';
-    return '<div class="eq-act-item">' +
-      '<div class="eq-act-dot" style="background:' + dotColor + ';color:white;font-size:10px">' +
-        '<i class="ti ' + (esLlamada ? 'ti-phone' : 'ti-note') + '"></i>' +
-      '</div>' +
-      '<div><div class="eq-act-meta">' + esc(a.fecha_actividad || '') + (a.hora ? ' ' + esc(a.hora) : '') + ' · ' + (esLlamada ? 'Llamada' : 'Nota') + '</div>' +
-      '<div class="eq-act-desc">' + esc(a.descripcion || '') + '</div></div>' +
-      '</div>';
-  }).join('') : '<span style="font-size:13px;color:#9CA3AF">Sin actividades.</span>';
-
-  bloqueHtml += '<div class="eq-block">' +
-    '<div class="eq-block-titulo">Llamadas y notas</div>' +
-    '<div class="eq-actividades" id="eq-actividades-list">' + actHtml + '</div>' +
-    '<button class="eq-btn-nota" onclick="toggleNotaForm()">+ Agregar nota</button>' +
-    '<div class="eq-nota-form" id="eq-nota-form">' +
-      '<textarea class="eq-nota-textarea" id="eq-nota-txt" placeholder="Observación durante la llamada..." rows="3"></textarea>' +
-      '<button class="eq-nota-submit" onclick="guardarNotaEquipo()">Guardar nota</button>' +
-    '</div>' +
-    '</div>';
-
-  // Insert the 3 new blocks before the existing content
-  var estadoEl = document.getElementById('estado');
-  if (estadoEl) {
-    var existing = document.getElementById('eq-bloques-nuevos');
-    if (existing) existing.remove();
-    var bloqueDiv = document.createElement('div');
-    bloqueDiv.id = 'eq-bloques-nuevos';
-    bloqueDiv.innerHTML = bloqueHtml;
-    estadoEl.parentNode.insertBefore(bloqueDiv, estadoEl);
-  }
-
-  if (!data.tieneContrato) {
-    estadoEl.innerHTML = '<div style="padding:20px;text-align:center;color:#9CA3AF;font-size:14px">' +
-      '<i class="ti ti-file-off" style="font-size:32px;display:block;margin-bottom:8px"></i>' +
-      'Sin contrato — la producción aparecerá cuando se genere el contrato.' +
-      '</div>';
-    return; // Skip rest of renderApp (propiedades, production section)
-  }
-
   document.getElementById('estado').style.display = 'none';
+  document.getElementById('app').style.display = '';
 
-  document.getElementById('tb-folio').textContent = data.folio || '';
-  document.getElementById('tb-nombre').textContent = data.nombreCliente || '';
+  // ===== Topbar =====
+  const cli = data.cliente || {};
+  document.getElementById('tb-folio').textContent = data.folio || (data.tieneContrato ? '' : 'Prospecto');
+  document.getElementById('tb-nombre').textContent = data.nombreCliente || cli.nombre || '';
   if (data.entregaExpress) document.getElementById('tb-express').style.display = '';
   document.getElementById('topbar').style.display = '';
 
+  const props = data.propiedades || [];
+  const tbMeta = document.getElementById('tb-meta');
+  if (props.length === 1 && props[0].fechaSesion) {
+    tbMeta.textContent = fmtFechaCorta(props[0].fechaSesion) + (props[0].horaSesion ? ' · ' + props[0].horaSesion : '');
+    tbMeta.style.display = '';
+  } else if (props.length > 1) {
+    tbMeta.textContent = props.length + ' propiedades';
+    tbMeta.style.display = '';
+  } else {
+    tbMeta.style.display = 'none';
+  }
+
+  // ===== Cliente (fusionado) =====
+  renderCliente(data);
+
+  // ===== Llamadas y notas (CRM) =====
+  renderActividades(data);
+
+  // ===== Cotizacion (CRM) =====
+  renderCotizacion(data);
+
+  // ===== Toggle de secciones que dependen del contrato =====
+  const tiene = !!data.tieneContrato;
+  document.getElementById('sec-propiedad').style.display = tiene ? '' : 'none';
+  document.getElementById('sec-prod').style.display = tiene ? '' : 'none';
+  document.getElementById('checklist-link').style.display = tiene ? '' : 'none';
+  document.getElementById('no-contrato-aviso').style.display = tiene ? 'none' : '';
+
+  if (!tiene) {
+    document.getElementById('addons-sec').style.display = 'none';
+    return;
+  }
+
+  // ===== Checklist =====
   document.getElementById('checklist-link').href =
     BASE + '/checklist.html?token=' + encodeURIComponent(TOKEN);
 
-  // Cliente
-  document.getElementById('cliente-nombre').textContent = data.nombreCliente || '—';
-  if (data.telefonoCliente) {
-    const telRow = document.getElementById('cliente-tel-row');
-    const telEl  = document.getElementById('cliente-tel');
-    telEl.innerHTML = '<a href="tel:' + esc(data.telefonoCliente) + '">' + esc(data.telefonoCliente) + '</a>';
-    telRow.style.display = '';
-  }
+  // ===== Propiedades =====
+  renderPropiedades(data);
 
-  // Propiedades
+  // ===== Post-produccion =====
+  renderPostProduccion(data);
+
+  // ===== Adicionales =====
+  const addonsSec = document.getElementById('addons-sec');
+  if (data.extrasAcordados && data.extrasAcordados.length) {
+    addonsSec.style.display = '';
+    document.getElementById('addons-body').innerHTML =
+      data.extrasAcordados.map(a => '<span class="addon-pill">' + esc(a.nombre) + '</span>').join('');
+  } else {
+    addonsSec.style.display = 'none';
+  }
+}
+
+function renderCliente(data) {
+  const cli = data.cliente || {};
+  const nombre = data.nombreCliente || cli.nombre || '—';
+  const tel = data.telefonoCliente || cli.telefono || '';
+  let h = datoRow('Nombre', esc(nombre));
+  if (tel)            h += datoRow('Telefono', '<a href="tel:' + esc(tel) + '">' + esc(tel) + '</a>');
+  if (cli.correo)       h += datoRow('Correo', esc(cli.correo));
+  if (cli.inmobiliaria) h += datoRow('Inmobiliaria', esc(cli.inmobiliaria));
+  if (cli.origen)       h += datoRow('Origen', esc(cli.origen));
+  document.getElementById('cliente-body').innerHTML = h;
+}
+
+function renderActividades(data) {
+  const actividades = data.actividades || [];
+  const list = document.getElementById('eq-actividades-list');
+  if (!actividades.length) {
+    list.innerHTML = '<div class="vacio">Sin actividades registradas.</div>';
+    return;
+  }
+  list.innerHTML = actividades.map(function(a) {
+    const esLlamada = a.tipo === 'llamada_agendada';
+    const meta = esc(a.fecha_actividad || '') + (a.hora ? ' · ' + esc(a.hora) : '') + ' · ' + (esLlamada ? 'Llamada' : 'Nota');
+    return '<div class="eq-act-item">' +
+      '<div class="eq-act-dot ' + (esLlamada ? 'llamada' : 'nota') + '">' + (esLlamada ? '&#9742;' : '&#9998;') + '</div>' +
+      '<div class="eq-act-body">' +
+        '<div class="eq-act-meta">' + meta + '</div>' +
+        '<div class="eq-act-desc">' + esc(a.descripcion || '') + '</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function renderCotizacion(data) {
+  const sec = document.getElementById('sec-cotizacion');
+  const body = document.getElementById('cot-body');
+  const paqCot = data.paquetesCotizados || [];
+  const portLinks = data.portafolioLinks || [];
+  const has = data.ubicacion || data.notasCotizacion || paqCot.length || portLinks.length;
+  if (!has) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+
+  let h = '';
+  if (data.ubicacion)       h += datoRow('Ubicacion', esc(data.ubicacion));
+  if (data.notasCotizacion) h += datoRow('Notas', '<span style="white-space:pre-wrap">' + esc(data.notasCotizacion) + '</span>');
+  if (paqCot.length) {
+    h += '<div class="prop-sec-titulo">Paquetes cotizados</div><div class="eq-chips">' +
+      paqCot.map(p => '<span class="eq-chip">' + esc(String(p)) + '</span>').join('') + '</div>';
+  }
+  if (portLinks.length) {
+    h += '<div class="prop-sec-titulo">Portafolio enviado</div><div class="eq-chips">' +
+      portLinks.map(l => '<a class="eq-link-chip" href="' + esc(l) + '" target="_blank" rel="noopener">' +
+        esc(l.replace(/^https?:\/\//,'').substring(0,40)) + '</a>').join('') + '</div>';
+  }
+  body.innerHTML = h;
+}
+
+function renderPropiedades(data) {
   const props = data.propiedades || [];
+  const titulo = document.getElementById('sec-prop-titulo');
+  const tabsEl = document.getElementById('prop-tabs');
+  const panelesEl = document.getElementById('prop-paneles');
+  tabsEl.innerHTML = '';
+  panelesEl.innerHTML = '';
+
   if (props.length > 1) {
-    document.getElementById('sec-prop-titulo').textContent = 'Propiedades (' + props.length + ')';
-    const tabsEl = document.getElementById('prop-tabs');
+    titulo.textContent = 'Propiedades (' + props.length + ')';
     tabsEl.style.display = '';
     props.forEach((p, i) => {
       const btn = document.createElement('button');
@@ -500,14 +616,16 @@ function renderApp(data) {
       btn.onclick = () => {
         tabsEl.querySelectorAll('.prop-tab').forEach(b => b.classList.remove('activo'));
         btn.classList.add('activo');
-        document.querySelectorAll('.prop-panel').forEach(el => el.classList.remove('activo'));
+        panelesEl.querySelectorAll('.prop-panel').forEach(el => el.classList.remove('activo'));
         document.getElementById('prop-panel-' + i).classList.add('activo');
       };
       tabsEl.appendChild(btn);
     });
+  } else {
+    titulo.textContent = 'Propiedad';
+    tabsEl.style.display = 'none';
   }
 
-  const panelesEl = document.getElementById('prop-paneles');
   props.forEach((p, i) => {
     const div = document.createElement('div');
     div.className = 'prop-panel' + (i === 0 ? ' activo' : '');
@@ -515,20 +633,6 @@ function renderApp(data) {
     div.innerHTML = renderPropiedad(p);
     panelesEl.appendChild(div);
   });
-
-  // Post-produccion
-  renderPostProduccion(data);
-
-  // Adicionales
-  if (data.extrasAcordados && data.extrasAcordados.length) {
-    document.getElementById('addons-sec').style.display = '';
-    document.getElementById('addons-body').innerHTML =
-      data.extrasAcordados.map(a =>
-        '<span class="addon-pill">' + esc(a.nombre) + '</span>'
-      ).join('');
-  }
-
-  document.getElementById('app').style.display = '';
 }
 
 function renderPropiedad(p) {
