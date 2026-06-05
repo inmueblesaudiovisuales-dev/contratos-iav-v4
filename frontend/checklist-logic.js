@@ -3,13 +3,24 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.IAVChecklistLogic = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
-  const SERVICES_DEFAULT = { foto: true, t360: true, video: true, drone: true };
-  const SERVICE_LABELS = { foto: 'Foto', t360: '360', video: 'Video', drone: 'Drone' };
+  const SERVICES_DEFAULT = { foto: true, t360: true, video: true, drone: true, asesor: true };
+  const SERVICE_LABELS = { foto: 'Foto', t360: '360', video: 'Video', drone: 'Drone', asesor: 'Asesores' };
   const CAMERA_DEFAULTS = [
     { id: 'sony-main', label: 'Sony principal', mode: 'video', kind: 'sony' },
     { id: 'osmo-pocket-3', label: 'Osmo Pocket 3', mode: 'video', kind: 'dji', optional: true },
     { id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' },
+    { id: 'sony-asesor', label: 'Sony FX30', mode: 'asesor', kind: 'sony', role: 'video' },
+    { id: 'osmo-asesor', label: 'Osmo + DJI Mic', mode: 'asesor', kind: 'dji', role: 'audio' },
   ];
+  const ASESOR_DEFAULTS = [
+    { nombre: 'Introducción', tipo: 'normal' },
+    { nombre: 'Despedida', tipo: 'normal' },
+  ];
+  function createAsesorPuntos() {
+    return ASESOR_DEFAULTS.map((p, index) => ({
+      id: 'asesor-default-' + index, nombre: p.nombre, tipo: p.tipo, estado: 'pendiente', ordenLista: index + 1,
+    }));
+  }
   const DRONE_DEFAULTS = [
     'Fachada aerea',
     'Vista general de propiedad',
@@ -210,6 +221,7 @@
       modoActual: 'video',
       espacios: [],
       droneItems: createDroneItems(),
+      asesorPuntos: createAsesorPuntos(),
       bitacora: [],
       cameras: clone(CAMERA_DEFAULTS),
       activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
@@ -247,6 +259,14 @@
           ultimoOrden: item.ultimoOrden || null,
           noAplica: !!item.noAplica,
         }));
+      normalized.asesorPuntos = (normalized.asesorPuntos && normalized.asesorPuntos.length ? normalized.asesorPuntos : createAsesorPuntos())
+        .map((p, index) => ({
+          id: p.id || makeId('asesor'),
+          nombre: p.nombre || 'Punto',
+          tipo: p.tipo === 'voz' ? 'voz' : 'normal',
+          estado: p.estado || 'pendiente',
+          ordenLista: p.ordenLista || index + 1,
+        }));
       normalized.bitacora = normalized.bitacora || [];
       const savedCameras = normalized.cameras || [];
       normalized.cameras = CAMERA_DEFAULTS.map((camera) => Object.assign({}, camera, savedCameras.find((item) => item.id === camera.id) || {}))
@@ -261,7 +281,7 @@
       normalized.mediaFiles = normalized.mediaFiles || [];
       normalized.mediaFiles.forEach((file) => {
         const camera = normalized.cameras.find((item) => item.id === file.cameraId);
-        const targets = camera && camera.mode === 'drone' ? normalized.droneItems : normalized.espacios;
+        const targets = camera ? targetsForMode(normalized, camera.mode) : [];
         if (!camera || (file.targetId && !targets.some((target) => target.id === file.targetId))) {
           file.targetId = null;
           file.scene = 'Sin identificar';
@@ -363,11 +383,17 @@
     return next;
   }
 
+  function targetsForMode(state, mode) {
+    if (mode === 'drone') return state.droneItems || [];
+    if (mode === 'asesor') return state.asesorPuntos || [];
+    return state.espacios || [];
+  }
+
   function getScenePath(state, targetId, mode) {
-    const list = mode === 'drone' ? state.droneItems : state.espacios;
+    const list = targetsForMode(state, mode);
     const target = list.find((item) => item.id === targetId);
     if (!target) return 'Sin identificar';
-    if (mode === 'drone') return target.nombre;
+    if (mode === 'drone' || mode === 'asesor') return target.nombre;
     const names = [];
     const visited = new Set();
     let current = target;
@@ -395,7 +421,7 @@
   }
 
   function getSceneData(state, camera, targetId) {
-    const list = camera.mode === 'drone' ? state.droneItems : state.espacios;
+    const list = targetsForMode(state, camera.mode);
     const target = list.find((item) => item.id === targetId);
     if (!target) return { scene: 'Sin identificar', scenePath: 'Sin identificar' };
     return { scene: target.nombre, scenePath: getScenePath(state, targetId, camera.mode) };
@@ -435,6 +461,11 @@
       if (item) item.estado = files.length ? 'hecho' : 'pendiente';
       return;
     }
+    if (camera.mode === 'asesor') {
+      const punto = (state.asesorPuntos || []).find((entry) => entry.id === targetId);
+      if (punto) punto.estado = files.length ? 'hecho' : 'pendiente';
+      return;
+    }
     const space = state.espacios.find((entry) => entry.id === targetId);
     if (space && files.length) space.estados.video = { estado: 'hecho' };
     else if (space && (space.estados.video || {}).estado !== 'no_aplica') space.estados.video = { estado: 'pendiente' };
@@ -459,8 +490,12 @@
       const camera = state.cameras.find((entry) => entry.mode === 'drone');
       if (camera) deriveMediaTargetState(state, camera, item.id);
     });
+    (state.asesorPuntos || []).forEach((punto) => {
+      const camera = state.cameras.find((entry) => entry.mode === 'asesor');
+      if (camera) deriveMediaTargetState(state, camera, punto.id);
+    });
     state.cameras.forEach((camera) => {
-      const targets = camera.mode === 'drone' ? state.droneItems : state.espacios;
+      const targets = targetsForMode(state, camera.mode);
       targets.forEach((target) => renumberTargetShots(state, camera.id, target.id));
     });
   }
@@ -498,6 +533,49 @@
     const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
     activeSegment.counterNext++;
     if (kind === 'take' && options.targetId) deriveMediaTargetState(next, camera, options.targetId);
+    return next;
+  }
+
+  function registerAsesorFile(state, options) {
+    const punto = (state.asesorPuntos || []).find((p) => p.id === options.puntoId);
+    if (!punto) return state;
+    const cams = punto.tipo === 'voz' ? ['osmo-asesor'] : ['sony-asesor', 'osmo-asesor'];
+    for (let i = 0; i < cams.length; i++) {
+      if (!getCameraSequence(state, cams[i]).segment) return state;
+    }
+    const next = clone(state);
+    const nextPunto = next.asesorPuntos.find((p) => p.id === options.puntoId);
+    const kind = options.kind || 'take';
+    const pairId = makeId('pair');
+    cams.forEach((cid) => {
+      const camera = getCamera(next, cid);
+      const sequence = getCameraSequence(next, cid);
+      const shotNumber = kind === 'take'
+        ? next.mediaFiles.filter((file) => file.cameraId === cid && file.targetId === options.puntoId && file.kind === 'take').length + 1
+        : null;
+      next.mediaFiles.push({
+        id: makeId('media'),
+        cameraId: cid,
+        segmentId: sequence.segment.id,
+        fileCounter: sequence.segment.counterNext,
+        fileToken: formatFileToken(sequence.segment, sequence.segment.counterNext),
+        targetId: options.puntoId,
+        scene: punto.nombre,
+        scenePath: punto.nombre,
+        shotNumber,
+        kind,
+        discardReason: options.discardReason || null,
+        good: false,
+        note: options.note || '',
+        pairId,
+        role: camera.role,
+        author: options.autor || 'Anonimo',
+        createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
+      });
+      const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
+      activeSegment.counterNext++;
+    });
+    if (kind === 'take') nextPunto.estado = 'hecho';
     return next;
   }
 
@@ -878,6 +956,7 @@
     getDescendantIds,
     getMediaSceneGroups,
     registerMediaFile,
+    registerAsesorFile,
     toggleMediaGood,
     insertOmittedMediaFile,
     updateMediaFile,

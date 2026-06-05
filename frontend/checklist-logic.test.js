@@ -489,3 +489,49 @@ test('quinta template builds spaces with pisos', () => {
   assert.equal(state.espacios.length > 0, true);
   assert.equal(state.espacios.every((space) => typeof space.piso === 'string' && space.piso.length > 0), true);
 });
+
+test('default state has asesor cameras and default puntos', () => {
+  const s = logic.createDefaultState();
+  assert.ok(s.cameras.some((c) => c.id === 'sony-asesor' && c.mode === 'asesor' && c.role === 'video'));
+  assert.ok(s.cameras.some((c) => c.id === 'osmo-asesor' && c.mode === 'asesor' && c.role === 'audio'));
+  assert.ok(Array.isArray(s.asesorPuntos) && s.asesorPuntos.length >= 2);
+});
+
+test('registerAsesorFile creates a linked Sony+Osmo pair for a normal point', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260517111742_0245_D' });
+  const punto = s.asesorPuntos[0];
+  s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take', autor: 'Bruno' });
+  assert.equal(s.mediaFiles.length, 2);
+  assert.equal(s.mediaFiles[0].pairId, s.mediaFiles[1].pairId);
+  const sony = s.mediaFiles.find((f) => f.cameraId === 'sony-asesor');
+  const osmo = s.mediaFiles.find((f) => f.cameraId === 'osmo-asesor');
+  assert.equal(sony.fileToken, 'PIB2819');
+  assert.equal(osmo.fileToken, '0246');
+  assert.equal(sony.scene, punto.nombre);
+  assert.equal(s.asesorPuntos[0].estado, 'hecho');
+});
+
+test('registerAsesorFile on a voz point uses only the Osmo audio', () => {
+  let s = logic.createDefaultState();
+  s.asesorPuntos.push({ id: 'voz1', nombre: 'Voz en off', tipo: 'voz', estado: 'pendiente', ordenLista: 99 });
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260517111742_0245_D' });
+  s = logic.registerAsesorFile(s, { puntoId: 'voz1', kind: 'take', autor: 'Fer' });
+  assert.equal(s.mediaFiles.length, 1);
+  assert.equal(s.mediaFiles[0].cameraId, 'osmo-asesor');
+  assert.equal(s.mediaFiles[0].fileToken, '0246');
+});
+
+test('asesor pair keeps independent consecutives across two takes', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260517111742_0245_D' });
+  const punto = s.asesorPuntos[0];
+  s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take' });
+  s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take' });
+  assert.equal(logic.getCameraSequence(s, 'sony-asesor').nextToken, 'PIB2821');
+  assert.equal(logic.getCameraSequence(s, 'osmo-asesor').nextToken, '0248');
+  assert.equal(s.mediaFiles.filter((f) => f.cameraId === 'sony-asesor').length, 2);
+});
