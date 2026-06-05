@@ -1,6 +1,6 @@
 # IAV Contratos v4.0 — Documento Master
 
-> Última actualización: 2026-06-03 19:37:12 CST (Ronda 56 — Auditoria integral Bitacora R55)
+> Última actualización: 2026-06-04 CST (Ronda 60 — Acabado, modelo de saldo, auditorías y E2E con Google)
 > Sistema anterior: v3.0 (Google Apps Script + Sheets) — sigue vivo en `inmueblesaudiovisuales.com`, sin cambios.
 
 ---
@@ -334,6 +334,50 @@ Reemplazar el PDF que se genera desde Drive por una página web dinámica accesi
 ---
 
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
+
+### Ronda 60 — Acabado del rediseño, modelo de saldo, auditorías y E2E con Google (2026-06-04/05)
+
+**Cambio:** Sesión larga de acabado + auditorías exhaustivas + pruebas end-to-end reales contra producción (Drive/Calendar/Gmail). Todo desplegado a `main`. Bitácora detallada en `design/BUILD_LOG.md`. **El adapter se re-publicó en Apps Script** (carpetas + correos).
+
+**Diseño / UI (admin + portal):**
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R60-01 | `frontend/admin.html` | Lista de Contratos rehecha al patrón **ledger Dossier** (folio mono, nombre Fraunces, estatus como estampa, total/saldo mono, canto dorado si la sesión es hoy). Tabs Abiertos/Todos. |
+| R60-02 | `frontend/admin.html` | Bloque de **Pago del panel como "recibo"** (líneas con guion + saldo grande en Fraunces). |
+| R60-03 | `frontend/admin.html` | **Toolbar de Contratos más limpia**: búsqueda + Filtros (panel desplegable con chips/select/fechas/cancelados) + Nuevo. |
+| R60-04 | `frontend/admin.html` | Limpieza de CSS/JS muerto (sidebar viejo, `.subtab-strip`, `cambiarGrupoTrabajos`, funciones del modelo "trabajos"). |
+
+**Datos de pago configurables:**
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R60-05 | `worker/src/routes/config.js` + `frontend/admin.html` + `frontend/portal.html` | **Cuenta y tarjeta editables desde Ajustes** (claves `pago_cuenta`/`pago_tarjeta`); el portal las lee de config. Sembrados los datos bancarios reales en la `config` de producción. CLABE→transferencia, cuenta→cajero, tarjeta→OXXO/Seven. |
+
+**Modelo de saldo (corrección de fondo) — el anticipo es un primer pago SUGERIDO, no un pago hecho:**
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R60-06 | `worker/src/routes/contratos.js` | `crearContrato`: el saldo arranca en el **precio completo** (antes restaba el anticipo). |
+| R60-07 | `worker/src/routes/portal.js` | `firmaCliente`: firmar **ya NO resta el anticipo** del saldo ni marca Reservado. Saldo = precio; solo baja con abonos reales. |
+| R60-08 | `worker/src/routes/abonos.js` | `permitirExceso`: el sobrepago **sube el precio total** (antes quedaba pagado > total). |
+| R60-09 | `frontend/portal.html` | Etapa de pago del portal reconoce estatus **"Reservado"** (antes mostraba "no se pudo cargar") y no afirma pago si no hubo abono. |
+
+**Reservar sin abono (función nueva):**
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R60-10 | `worker/src/routes/contratos.js` + `index.js` + `frontend/admin.html` | Acción `reservarContrato` + botón **"Apartar fecha (reservar sin abono)"** (visible en Firmado): marca Reservado y crea el evento de calendario sin pago. |
+| R60-11 | `frontend/admin.html` | Reactivar un contrato cancelado restaura un **estatus coherente** (Firmado/Reservado/Entregado/Completado) en vez de forzar "Pendiente firma". |
+
+**Adapter (Apps Script) — requirió re-publicar:**
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R60-12 | `adapter/AdapterScript4_v1.js` + `worker/src/routes/contratos.js` | **Fix carpetas duplicadas en Drive**: helper `getOrCreateFolder_` idempotente + el worker envía `fechaSesion` a `crearCarpetas` (antes la carpeta caía en otro mes). Ahora 1 sola carpeta por contrato. |
+| R60-13 | `adapter/AdapterScript4_v1.js` | **Fix link roto en correos HTML**: el `=` del token se corrompía (quoted-printable) → se codifica como `&#61;`. Afectaba el botón de TODOS los correos. |
+| R60-14 | `adapter/AdapterScript4_v1.js` | `escHtml_`: **escapa el nombre del cliente** en todos los correos HTML. Correo de abono reconoce el **pago que liquida** ("Pago completo recibido"). Evento "Reservado" con texto neutral. Separador " · " en títulos de Calendar. |
+
+**Auditorías:**
+- Auditoría de seguridad/robustez (auth, escaping/XSS, concurrencia, cron): sistema sólido. Único hallazgo documentado (riesgo aceptado): el token de `portal.html` y `equipo.html` es el mismo → un cliente podría ver la vista de equipo cambiando la URL (poco probable; corregir al rediseñar equipo/checklist).
+- E2E exhaustivo contra producción verificando Drive/Calendar/Gmail en cada paso (12 escenarios, todos los paquetes, las 4 situaciones de pago). Bugs reales encontrados → todos arreglados en R60-08..R60-14.
+
+---
 
 ### Ronda 58 — Rediseño completo admin + portal "Dossier" (2026-06-04)
 
