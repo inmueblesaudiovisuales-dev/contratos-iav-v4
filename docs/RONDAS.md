@@ -8,6 +8,24 @@
 
 ---
 
+### Ronda 90 — Adapter: registrarUsoTomas (banco de datos de aprendizaje) (2026-06-05 16:35:22 CST)
+
+**Archivo:** `adapter/AdapterScript4_v1.js` — **requiere despliegue manual** en script.google.com (Bruno pega el archivo y publica nueva versión).
+
+- Nueva función **`registrarUsoTomas(body)`** registrada en el router `doPost`. Recibe del programa de
+  metadatos (app de Mac, otro repo) una fila por toma de un trabajo y la **anexa al tab `UsoTomas`** del
+  Sheet de respaldo (`SHEETS_BACKUP_ID`), acumulando todos los trabajos. **Idempotente por folio**: re-registrar
+  un mismo folio reemplaza sus filas (no duplica).
+- **Contrato del POST** (para el spec futuro de la app de Mac):
+  `{ action: 'registrarUsoTomas', folio, cliente, filas: [ { fecha, archivo, escena, piso, servicio, tipoToma, movimiento, prioridad, buena, usada, autor } ] }`.
+  Columnas del Sheet: `fecha, folio, cliente, archivo, escena, piso, servicio, tipoToma, movimiento, prioridad, buena, usada, autor`.
+- Propósito: capturar **qué tomas se usaron en el video final** (la app de Mac leerá la secuencia final de
+  Premiere — FCP XML/EDL — y cruzará por token) para analizar uso por tipo de toma/categoría/prioridad y
+  afinar la biblioteca (loop de aprendizaje). La señal `usada` la llena la app de Mac; el resto sale del export.
+- **Pendiente (otro repo):** el paso nuevo en `iav-metadata-app` que lee la secuencia, cruza tokens y hace el POST.
+
+---
+
 ### Rondas 64–79 — Modo Guiado de tomas (2026-06-05 15:00:08 CST)
 
 **Objetivo:** agregar una biblioteca curada de tipos de toma y movimientos de cámara al checklist, un modo guiado de captura que sugiere tomas por cuarto, etiquetado tipo/movimiento en cada archivo registrado, y un panel de configuración para personalizar la biblioteca. El export sigue en `version: 1`; los campos nuevos son aditivos y la app de metadatos de Mac los ignora.

@@ -1,9 +1,10 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-05 10:03:36 CST (R63) — procesarFirma: clona logo del cliente
-//   a la carpeta Control Interno del contrato nuevo si body.logoClienteUrl está presente.
-//   Previo R62: nueva función enviarCorreoReserva.
+// Ultima modificacion: 2026-06-05 16:35:22 CST (R90) — nueva función registrarUsoTomas:
+//   anexa al Sheet maestro (tab "UsoTomas" en SHEETS_BACKUP_ID) una fila por toma con su
+//   archivo y si se usó en el video final; idempotente por folio. Banco de datos de aprendizaje.
+//   Registrada en el router doPost. Previo R63: procesarFirma clona logo del cliente a Control Interno.
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -47,6 +48,7 @@ function doPost(e) {
       notificarUpsell: notificarUpsell,
       obtenerLogoCliente: obtenerLogoCliente,
       syncBackup: syncBackup,
+      registrarUsoTomas: registrarUsoTomas,
       agendarLlamadaProspecto: agendarLlamadaCliente,
       agendarLlamadaCliente: agendarLlamadaCliente
     };
@@ -1352,4 +1354,55 @@ function agendarLlamadaCliente(body) {
   });
 
   return { ok: true };
+}
+
+// ── USO DE TOMAS — banco de datos de aprendizaje (Sheet maestro) ───────────
+// Recibe del programa de metadatos (app de Mac) una fila por toma de un trabajo,
+// con su nombre de archivo y si se usó en el video final. Anexa al tab "UsoTomas"
+// del Sheet de respaldo, acumulando todos los trabajos. Idempotente por folio:
+// re-registrar un mismo folio reemplaza sus filas (no duplica).
+// body: { folio, cliente, filas: [ { fecha, archivo, escena, piso, servicio,
+//         tipoToma, movimiento, prioridad, buena, usada, autor } ] }
+function registrarUsoTomas(body) {
+  var folio = body.folio || '';
+  var cliente = body.cliente || '';
+  var filas = Array.isArray(body.filas) ? body.filas : [];
+  if (!folio) return { error: 'Falta folio' };
+
+  var headers = ['fecha', 'folio', 'cliente', 'archivo', 'escena', 'piso', 'servicio',
+                 'tipoToma', 'movimiento', 'prioridad', 'buena', 'usada', 'autor'];
+  var ss = SpreadsheetApp.openById(CONFIG.SHEETS_BACKUP_ID);
+  var hoja = ss.getSheetByName('UsoTomas');
+  if (!hoja) {
+    hoja = ss.insertSheet('UsoTomas');
+    hoja.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+
+  // Conserva las filas de OTROS folios (idempotencia por trabajo).
+  var lastRow = hoja.getLastRow();
+  var conservadas = [];
+  if (lastRow > 1) {
+    var prev = hoja.getRange(2, 1, lastRow - 1, headers.length).getValues();
+    var fIdx = headers.indexOf('folio');
+    conservadas = prev.filter(function(r) { return String(r[fIdx]) !== String(folio); });
+  }
+
+  // Filas nuevas de ESTE folio.
+  var nuevas = filas.map(function(f) {
+    return headers.map(function(h) {
+      if (h === 'folio') return folio;
+      if (h === 'cliente') return cliente;
+      var v = f[h];
+      if (typeof v === 'boolean') return v ? 'si' : 'no';
+      return v !== undefined && v !== null ? v : '';
+    });
+  });
+
+  var todas = conservadas.concat(nuevas);
+
+  // Reescribe el bloque de datos (debajo del header).
+  if (lastRow > 1) hoja.getRange(2, 1, lastRow - 1, headers.length).clearContent();
+  if (todas.length) hoja.getRange(2, 1, todas.length, headers.length).setValues(todas);
+
+  return { ok: true, folio: folio, escritas: nuevas.length, total: todas.length };
 }
