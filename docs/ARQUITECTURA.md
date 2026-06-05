@@ -173,12 +173,12 @@ El Worker llama al adapter con `POST` y un JSON `{ action: '...', ...datos }`. L
 |--------|---------|
 | `procesarFirma` | Guarda firma PNG en Drive, registra PDF pendiente; **crea carpetas Drive (año/mes de la sesión) + PDF referencias + eventos Calendar** para todas las propiedades; llama Worker `actualizarCarpeta` + `actualizarCalendarEvent` |
 | `crearCarpetas` | Crea/garantiza la carpeta Drive del contrato (idempotente, helper `getOrCreateFolder_`). La dispara `contratos.js`. |
-| `crearEventoReservado` | Crea el evento de Calendar de una sesión reservada **sin pago** (texto neutral). La disparan `contratos.js` (`reservarContrato`), `abonos.js`, `portal.js`, `trabajos.js`. |
+| `crearEventoReservado` | Crea un **marcador de 30 min en Calendar para hoy** ("Reservado — {nombre}", texto neutral con tel + URL de equipo) al reservar/abonar **sin afirmar pago**. La disparan `contratos.js` (`reservarContrato`), `abonos.js`, `portal.js`, `trabajos.js`. |
 | `procesarPDFsPendientes` | Genera PDF desde template, envía al cliente, llama Worker `actualizarPdfUrl`. **Corre por trigger de Apps Script cada minuto, no por un handler.** |
 | `primerAbono` | **Legacy fallback** — solo se ejecuta si el contrato no tiene `carpeta_control_id` (firmado antes de Ronda 11). Igual que `procesarFirma` pero para contratos viejos. Usa fecha de sesión (no hoy) para el mes de carpeta. |
 | `enviarCorreoAbono` | Correo HTML de confirmación de pago al cliente |
 | `enviarRecordatorioPago` | Correo HTML de recordatorio de saldo al cliente |
-| `reagendarPropiedad` | Actualiza fecha/hora del evento Calendar; actualiza **título** del evento con nuevo folio; actualiza **descripción** con nuevo PDF URL; **renombra carpeta** con nuevo folio; **mueve carpeta** al mes/año correcto según nueva fecha; **borra PDF referencias anterior** y **regenera** con nuevo folio; llama Worker `actualizarCalendarEvent` |
+| `reagendarPropiedad` | Actualiza fecha/hora del evento Calendar; actualiza **título** (con nuevo folio, separador ` · `) y **descripción** (bloque estándar: tipo/paquete, dirección, mapa, cómo llegar, portal de equipo); **renombra carpeta** con nuevo folio; **mueve carpeta** al mes/año correcto según nueva fecha; **borra PDF referencias anterior** y **regenera** con nuevo folio; llama Worker `actualizarCalendarEvent`; envía correo de reagendamiento al cliente |
 | `enviarCorreoEntrega` | Correo HTML de entrega al cliente |
 | `notificarUpsell` | Correo HTML de servicios adicionales |
 | `subirArchivo` | Sube archivo a carpeta de propiedad (desde portal) |
