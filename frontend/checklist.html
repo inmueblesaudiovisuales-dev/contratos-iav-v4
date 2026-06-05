@@ -512,6 +512,23 @@
     .cap-focus-copy { min-width: 0; }
     .cap-focus-opts { width: 38px; height: 38px; flex: none; margin-top: 4px; border-radius: 8px; border: 1px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
     .cap-focus-opts i { font-size: 20px; }
+    /* ===== Navegación de recorrido (anterior / cambiar / siguiente) ===== */
+    .cap-nav { display: flex; gap: 8px; margin-top: 12px; }
+    .cap-nav-prev { width: 46px; flex: none; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); border-radius: var(--radius); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
+    .cap-nav-prev i { font-size: 20px; }
+    .cap-nav-change { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 46px; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); border-radius: var(--radius); color: var(--ink-1); font-size: 14px; font-weight: 600; white-space: nowrap; }
+    .cap-nav-change i { font-size: 18px; color: var(--ink-3); }
+    .cap-nav-next { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 46px; padding: 0 16px; border: 1.5px solid var(--gold-leaf); background: var(--gold-soft); border-radius: var(--radius); color: var(--ink-1); font-size: 14px; font-weight: 600; }
+    .cap-nav-next i { font-size: 18px; color: var(--gold); }
+    .rec-num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; margin-right: 8px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
+    .cov-hd-actions { display: flex; gap: 6px; flex: none; }
+    /* ===== Foco de cobertura (foto/360) ===== */
+    .cov-foco-state { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 14px; border-radius: var(--radius); font-size: 15px; font-weight: 600; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); }
+    .cov-foco-state i { font-size: 20px; }
+    .cov-foco-state.hecho { background: var(--green-soft); color: var(--green); border-color: #BFE0CC; }
+    .cov-foco-state.no_aplica { background: var(--muted); color: var(--ink-3); }
+    .cov-foco-prog { margin-top: 12px; font-size: 13px; color: var(--ink-3); }
+    .cov-vertodos { background: none; border: 0; color: var(--gold); font-weight: 600; font-size: 13px; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -582,6 +599,8 @@ function chooseLane(lane) {
   state.modoActual = lane;
   localStorage.setItem(laneKey(), lane);
   ensureActiveMode();
+  const inicio = primerEnRecorrido(true) || primerEnRecorrido(false);
+  if (inicio) { activeRoomId = inicio; localStorage.setItem(roomKey(), inicio); }
   cerrarModal();
   render();
   scheduleSave();
@@ -1117,7 +1136,59 @@ function getPrimaryRisk(summary) {
 function renderCaptureView() {
   if (state.modoActual === 'asesor') return renderAsesorCapture();
   if (isMediaMode()) return renderMediaCapture();
-  return renderCoverage();
+  return coberturaVista() === 'rejilla' ? renderCoverage() : renderCoberturaFoco();
+}
+
+function coberturaVista() { return localStorage.getItem('checklist_cov_' + (TOKEN || 'demo')) || 'foco'; }
+function setCoberturaVista(v) { localStorage.setItem('checklist_cov_' + (TOKEN || 'demo'), v); render(); }
+
+function renderCoberturaFoco() {
+  const target = activeTarget();
+  if (!target) {
+    return `<div class="empty"><h2>Sin cuartos todavía</h2><p>Agrega cuartos para marcar cobertura.</p><button class="primary" onclick="abrirSetup()" style="margin-top:12px">Armar cuartos</button></div>`;
+  }
+  const svc = state.modoActual;
+  const st = (target.estados[svc] || {}).estado || 'pendiente';
+  const piso = target.piso || 'Sin piso';
+  const parentName = target.parentId ? (state.espacios.find((e) => e.id === target.parentId) || {}).nombre : '';
+  const ord = recorridoEspacios(svc);
+  const total = ord.length;
+  const hechos = ord.filter((id) => { const e = state.espacios.find((x) => x.id === id); return e && (e.estados[svc] || {}).estado === 'hecho'; }).length;
+  return `
+  <section class="cap-focus">
+    <div class="cap-focus-head">
+      <div class="cap-focus-copy">
+        <span class="cap-floor"><i class="ti ti-stairs-up"></i>${esc(piso)}</span>
+        <h2 class="cap-room">${parentName ? `<span class="cap-parent">${esc(parentName)}</span>` : ''}${esc(target.nombre)}</h2>
+      </div>
+      <button class="cap-focus-opts" onclick="abrirAccionesFoco()" aria-label="Opciones del cuarto"><i class="ti ti-dots-vertical"></i></button>
+    </div>
+  </section>
+  <div class="cov-foco-state ${st}"><i class="ti ti-${st === 'hecho' ? 'circle-check-filled' : st === 'no_aplica' ? 'circle-minus' : 'circle'}"></i>${st === 'hecho' ? 'Listo' : st === 'no_aplica' ? 'No aplica' : 'Pendiente'}</div>
+  ${renderCapNav('cuarto', 'abrirCambiarCuarto()')}
+  <div class="cov-foco-prog">${hechos}/${total} cuartos listos · <button class="cov-vertodos" onclick="setCoberturaVista('rejilla')">ver todos</button></div>
+  <div class="cap-thumb">
+    <button class="cap-btn-toma" onclick="coberturaListo('${target.id}')"><span class="cap-toma-lbl">Listo</span></button>
+    <button class="cap-btn-no" onclick="coberturaNoAplica('${target.id}')"><i class="ti ti-circle-minus"></i><span>No aplica</span></button>
+  </div>`;
+}
+
+function coberturaListo(id) {
+  const sp = state.espacios.find((e) => e.id === id);
+  if (!sp) return;
+  sp.estados[state.modoActual] = { estado: 'hecho', autor: miNombre() };
+  activeRoomId = id; localStorage.setItem(roomKey(), id);
+  scheduleSave(); render();
+  siguienteCuarto(1);
+}
+
+function coberturaNoAplica(id) {
+  const sp = state.espacios.find((e) => e.id === id);
+  if (!sp) return;
+  sp.estados[state.modoActual] = { estado: 'no_aplica' };
+  activeRoomId = id; localStorage.setItem(roomKey(), id);
+  scheduleSave(); render();
+  siguienteCuarto(1);
 }
 
 function asesorFilesForPunto(puntoId) {
@@ -1153,10 +1224,7 @@ function renderAsesorCapture() {
     ${esVoz ? '' : asesorCamRow('Sony FX30', 'video', sony, 'sony-asesor')}
     ${asesorCamRow('Osmo + DJI Mic', 'audio', osmo, 'osmo-asesor')}
   </div>
-  <button class="cap-change" onclick="abrirCambiarPunto()">
-    <span class="cap-change-l"><i class="ti ti-arrows-exchange"></i>Cambiar punto</span>
-    <i class="ti ti-chevron-right cap-change-chev"></i>
-  </button>
+  ${renderCapNav('punto', 'abrirCambiarPunto()')}
   <section class="cap-takes">
     <div class="cap-takes-hd"><span>Tomas de este punto</span><span class="cap-takes-n">${pairList.length} · ${goodCount} buena${goodCount === 1 ? '' : 's'}</span></div>
     ${pairList.length ? renderAsesorPairs(pairList) : `<p class="cap-empty">Aún no registras nada aquí. Da Toma cuando graben.</p>`}
@@ -1205,6 +1273,7 @@ function registrarAsesor(puntoId, kind) {
   const prev = state;
   state = logic.registerAsesorFile(state, { puntoId, kind, discardReason: kind === 'discard' ? 'failed' : null, autor: miNombre(), now: new Date() });
   if (state === prev) return showToast('Inicia las secuencias primero');
+  activeRoomId = puntoId; localStorage.setItem(roomKey(), puntoId);
   render(); scheduleSave();
   const last = state.mediaFiles[state.mediaFiles.length - 1];
   if (kind === 'discard') {
@@ -1361,7 +1430,10 @@ function renderCoverage() {
   }).join('');
   return `<div class="cov-hd">
       <div><h2 class="cov-title">${esc(SERVICE_UI[svc].label)}</h2><p class="cov-sub">Toca un cuarto para marcar su cobertura.</p></div>
-      <button class="cov-edit" onclick="abrirSetup()" aria-label="Armar cuartos"><i class="ti ti-home-cog"></i></button>
+      <div class="cov-hd-actions">
+        <button class="cov-edit" onclick="setCoberturaVista('foco')" aria-label="Ver en foco"><i class="ti ti-focus-2"></i></button>
+        <button class="cov-edit" onclick="abrirSetup()" aria-label="Armar cuartos"><i class="ti ti-home-cog"></i></button>
+      </div>
     </div>
     ${groups || '<div class="empty"><h2>Sin cuartos</h2><p>Arma la lista de cuartos para empezar.</p></div>'}`;
 }
@@ -1407,6 +1479,100 @@ function activeTarget() {
   return list[0];
 }
 
+// ===== Recorrido (orden de cuartos por servicio) + Siguiente cuarto =====
+function pisoIndex(piso) {
+  const pisos = state.pisos || [];
+  const i = pisos.indexOf(piso || '');
+  return i < 0 ? 999 : i;
+}
+
+function recorridoEspacios(servicio) {
+  const def = state.espacios.slice().sort((a, b) => {
+    const pa = pisoIndex(a.piso), pb = pisoIndex(b.piso);
+    return pa !== pb ? pa - pb : (a.orden || 0) - (b.orden || 0);
+  });
+  const stored = (state.recorrido && state.recorrido[servicio]) || [];
+  const ids = state.espacios.map((e) => e.id);
+  const valid = stored.filter((id) => ids.includes(id));
+  const missing = def.filter((e) => !valid.includes(e.id)).map((e) => e.id);
+  return [...valid, ...missing];
+}
+
+function recorridoTargets(servicio) {
+  if (servicio === 'drone') return state.droneItems.slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0)).map((t) => t.id);
+  if (servicio === 'asesor') return (state.asesorPuntos || []).slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0)).map((t) => t.id);
+  return recorridoEspacios(servicio);
+}
+
+function esPendiente(id, servicio) {
+  if (servicio === 'drone') { const it = state.droneItems.find((x) => x.id === id); return !!it && it.estado !== 'hecho' && !it.noAplica; }
+  if (servicio === 'asesor') { const it = (state.asesorPuntos || []).find((x) => x.id === id); return !!it && it.estado !== 'hecho'; }
+  const sp = state.espacios.find((x) => x.id === id);
+  if (!sp) return false;
+  const st = (sp.estados[servicio] || {}).estado;
+  return st !== 'hecho' && st !== 'no_aplica';
+}
+
+function primerEnRecorrido(soloPendiente) {
+  const servicio = state.modoActual;
+  const orden = recorridoTargets(servicio);
+  for (let i = 0; i < orden.length; i++) { if (!soloPendiente || esPendiente(orden[i], servicio)) return orden[i]; }
+  return null;
+}
+
+function siguienteCuarto(dir) {
+  const servicio = state.modoActual;
+  const orden = recorridoTargets(servicio);
+  if (!orden.length) return;
+  const cur = (activeTarget() || {}).id;
+  let i = orden.indexOf(cur);
+  if (i < 0) i = dir > 0 ? -1 : orden.length;
+  for (let k = 1; k <= orden.length; k++) {
+    const idx = i + dir * k;
+    if (idx < 0 || idx >= orden.length) break;
+    if (esPendiente(orden[idx], servicio)) return setActiveRoom(orden[idx]);
+  }
+  showToast(dir > 0 ? 'No hay más cuartos pendientes adelante' : 'No hay anteriores pendientes');
+}
+
+function abrirOrdenarRecorrido() {
+  const servicio = state.modoActual;
+  const esEspacio = servicio !== 'drone' && servicio !== 'asesor';
+  const orden = recorridoTargets(servicio);
+  const nombre = (id) => {
+    const t = (esEspacio ? state.espacios : servicio === 'drone' ? state.droneItems : state.asesorPuntos).find((x) => x.id === id);
+    return t ? t.nombre : '';
+  };
+  abrirModal(`<div class="sheet-head"><h2>Ordenar recorrido · ${esc(SERVICE_UI[servicio].short)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <p class="sheet-note">El orden en que "Siguiente cuarto" te lleva. El primero es donde arrancas.</p>
+    <div class="cuarto-list">${orden.map((id, i) => `<div class="cuarto-row-wrap">
+      <span class="cuarto-row"><span class="cuarto-name"><span class="rec-num">${i + 1}</span>${esc(nombre(id))}</span></span>
+      <button class="setup-mini" onclick="moverRecorrido('${id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
+      <button class="setup-mini" onclick="moverRecorrido('${id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
+    </div>`).join('')}</div>`);
+}
+
+function moverRecorrido(id, dir) {
+  const servicio = state.modoActual;
+  if (servicio === 'drone' || servicio === 'asesor') return moverLista(servicio, id, dir);
+  const orden = recorridoEspacios(servicio);
+  const i = orden.indexOf(id), j = i + dir;
+  if (j < 0 || j >= orden.length) return;
+  const t = orden[i]; orden[i] = orden[j]; orden[j] = t;
+  if (!state.recorrido) state.recorrido = {};
+  state.recorrido[servicio] = orden;
+  scheduleSave();
+  abrirOrdenarRecorrido();
+}
+
+function renderCapNav(label, changeFn) {
+  return `<div class="cap-nav">
+    <button class="cap-nav-prev" onclick="siguienteCuarto(-1)" aria-label="Anterior"><i class="ti ti-chevron-left"></i></button>
+    <button class="cap-nav-change" onclick="${changeFn}"><i class="ti ti-arrows-exchange"></i> Cambiar ${esc(label)}</button>
+    <button class="cap-nav-next" onclick="siguienteCuarto(1)">Siguiente <i class="ti ti-chevron-right"></i></button>
+  </div>`;
+}
+
 function discardShort(file) {
   return { empty: 'vacío', failed: 'fallida', unrelated: 'no relacionado' }[file.discardReason] || 'descarte';
 }
@@ -1448,10 +1614,7 @@ function renderMediaCapture() {
     </div>
     <button class="cap-swap" aria-label="Cambiar o iniciar cámara" onclick="${state.modoActual === 'video' ? 'abrirCamaras()' : 'abrirSecuencia()'}"><i class="ti ti-switch-horizontal"></i></button>
   </div>
-  <button class="cap-change" onclick="abrirCambiarCuarto()">
-    <span class="cap-change-l"><i class="ti ti-arrows-exchange"></i>Cambiar ${isDrone ? 'toma' : 'cuarto'}</span>
-    <i class="ti ti-chevron-right cap-change-chev"></i>
-  </button>
+  ${renderCapNav(isDrone ? 'toma' : 'cuarto', 'abrirCambiarCuarto()')}
   <section class="cap-takes">
     <div class="cap-takes-hd"><span>Tomas en ${isDrone ? 'esta toma' : 'este cuarto'}</span><span class="cap-takes-n">${files.length} · ${good.length} buena${good.length === 1 ? '' : 's'}</span></div>
     ${files.length ? renderCapTakes(files) : `<p class="cap-empty">Aún no registras nada aquí. Da Toma cuando grabes.</p>`}
@@ -1534,11 +1697,12 @@ function abrirCambiarCuarto() {
     return `<div class="cuarto-piso">${esc(piso)}</div>${rooms.map((r) => cuartoRow(r, 'space')).join('')}`;
   }).join('');
   abrirModal(`<div class="sheet-head"><h2>Cambiar cuarto</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
-    <div class="cuarto-list">${body}</div>`);
+    <div class="cuarto-list">${body}</div>
+    <div class="action-stack" style="margin-top:12px"><button class="btn ghost" onclick="abrirOrdenarRecorrido()"><i class="ti ti-list-numbers"></i> Ordenar recorrido</button></div>`);
 }
 
 function cuartoRow(item, type) {
-  const done = type === 'drone' ? item.estado === 'hecho' : mediaFilesForTarget(item.id).some((f) => f.kind === 'take');
+  const done = type === 'drone' ? item.estado === 'hecho' : (item.estados[state.modoActual] || {}).estado === 'hecho';
   const child = type === 'space' && item.parentId;
   const active = item.id === (activeTarget() || {}).id;
   return `<button class="cuarto-row${child ? ' child' : ''}${active ? ' active' : ''}" onclick="setActiveRoom('${item.id}')">
@@ -1772,6 +1936,7 @@ function registrarArchivo(targetId, kind, discardReason) {
   const previous = state;
   state = logic.registerMediaFile(state, { cameraId: camera.id, targetId, kind, discardReason, autor: miNombre(), now: new Date() });
   if (state === previous) return showToast('Reactiva este elemento antes de registrar');
+  activeRoomId = targetId; localStorage.setItem(roomKey(), targetId);
   render(); scheduleSave();
   const file = state.mediaFiles[state.mediaFiles.length - 1];
   if (kind === 'discard') {

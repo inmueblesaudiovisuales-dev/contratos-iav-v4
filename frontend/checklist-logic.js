@@ -222,6 +222,7 @@
       espacios: [],
       droneItems: createDroneItems(),
       asesorPuntos: createAsesorPuntos(),
+      recorrido: {},
       bitacora: [],
       cameras: clone(CAMERA_DEFAULTS),
       activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
