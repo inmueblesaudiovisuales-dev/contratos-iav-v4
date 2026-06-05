@@ -1799,7 +1799,7 @@ function abrirFaltantes() {
 }
 
 function seleccionarSugerencia(id) {
-  activeSugId = id;
+  activeSugId = activeSugId === id ? null : id;
   render();
 }
 
