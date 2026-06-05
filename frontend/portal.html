@@ -943,7 +943,7 @@ function renderEtapa1() {
       '<div class="total-fila"><span>Precio base</span><span id="tb-base">' + formatMXN(precioBase) + '</span></div>' +
       '<div id="tb-addons-list"></div>' +
       '<div class="total-fila principal separador"><span>Total</span><span id="tb-total">' + formatMXN(precioBase) + '</span></div>' +
-      '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' +
+      (anticipo0 > 0 ? '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' : '') +
     '</div>';
   } else if (props.length > 1) {
     // Multi-prop: keep static total/anticipo lines (add-ons card is separate)
@@ -951,12 +951,12 @@ function renderEtapa1() {
       html += '<div class="resumen-fila"><span class="resumen-label">Precio base</span><span class="resumen-valor" id="txt-precio-base">' + esc(formatMXN(precioBase)) + '</span></div>';
     }
     html += '<div class="resumen-fila"><span class="resumen-label">Total</span><span class="resumen-valor gold" id="txt-total">' + esc(formatMXN(precioBase)) + '</span></div>';
-    html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label" id="txt-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span class="resumen-valor" id="txt-anticipo" style="color:var(--gold);font-size:15px">' + esc(formatMXN(anticipo0)) + '</span></div>';
+    if (anticipo0 > 0) html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label" id="txt-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span class="resumen-valor" id="txt-anticipo" style="color:var(--gold);font-size:15px">' + esc(formatMXN(anticipo0)) + '</span></div>';
   }
   // 1-prop without add-ons or multi-prop with no add-ons: always show total/anticipo
   if (props.length === 1 && addonsGlobal.length === 0) {
     html += '<div class="resumen-fila"><span class="resumen-label">Total</span><span class="resumen-valor gold" id="txt-total">' + esc(formatMXN(precioBase)) + '</span></div>';
-    html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label" id="txt-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span class="resumen-valor" id="txt-anticipo" style="color:var(--gold);font-size:15px">' + esc(formatMXN(anticipo0)) + '</span></div>';
+    if (anticipo0 > 0) html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label" id="txt-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span class="resumen-valor" id="txt-anticipo" style="color:var(--gold);font-size:15px">' + esc(formatMXN(anticipo0)) + '</span></div>';
   }
   if (d.notasContrato) {
     html += '<div class="resumen-fila" style="border-bottom:none;margin-top:8px"><span class="resumen-label">Notas</span><span class="resumen-valor" style="font-size:12px;color:var(--concrete);text-align:right;white-space:pre-wrap;line-height:1.5">' + esc(d.notasContrato) + '</span></div>';
@@ -1003,7 +1003,7 @@ function renderEtapa1() {
       '<div class="total-fila"><span>Precio base</span><span id="tb-base">' + formatMXN(precioBase) + '</span></div>' +
       '<div id="tb-addons-list"></div>' +
       '<div class="total-fila principal separador"><span>Total</span><span id="tb-total">' + formatMXN(precioBase) + '</span></div>' +
-      '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' +
+      (anticipo0 > 0 ? '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' : '') +
     '</div>';
     html += '</details></div>';
   } else if (addonsPorProp.length > 0) {
@@ -1012,7 +1012,7 @@ function renderEtapa1() {
       '<div class="total-fila"><span>Precio base</span><span id="tb-base">' + formatMXN(precioBase) + '</span></div>' +
       '<div id="tb-addons-list"></div>' +
       '<div class="total-fila principal separador"><span>Total</span><span id="tb-total">' + formatMXN(precioBase) + '</span></div>' +
-      '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' +
+      (anticipo0 > 0 ? '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' : '') +
     '</div></div>';
   }
   } // end if props.length > 1
