@@ -1470,6 +1470,74 @@ test('C1: parsePropuesta genera IDs deterministas estables entre dos parseos del
   assert.ok(shots1[0].id.startsWith('custom.ia.'), 'ID debe empezar con custom.ia.');
 });
 
+test('C2: capasCubiertas con solo wides devuelve abierto=true medio=false detalle=false', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  const targetId = state.espacios[0].id;
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId, kind: 'take', shotType: 'wide' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId, kind: 'take', shotType: 'general' });
+
+  const capas = logic.capasCubiertas(state, 'video', targetId);
+
+  assert.equal(capas.abierto, true, 'abierto debe ser true');
+  assert.equal(capas.medio, false, 'medio debe ser false');
+  assert.equal(capas.detalle, false, 'detalle debe ser false');
+});
+
+test('C2: capasCubiertas con wide+detalle deja medio=false', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  const targetId = state.espacios[0].id;
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId, kind: 'take', shotType: 'wide' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId, kind: 'take', shotType: 'detalle' });
+
+  const capas = logic.capasCubiertas(state, 'video', targetId);
+
+  assert.equal(capas.abierto, true);
+  assert.equal(capas.medio, false, 'medio debe ser false');
+  assert.equal(capas.detalle, true);
+});
+
+test('C2: capasCubiertas con las 3 capas devuelve todo true', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  const targetId = state.espacios[0].id;
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId, kind: 'take', shotType: 'wide' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId, kind: 'take', shotType: 'medio' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId, kind: 'take', shotType: 'textura' });
+
+  const capas = logic.capasCubiertas(state, 'video', targetId);
+
+  assert.equal(capas.abierto, true);
+  assert.equal(capas.medio, true);
+  assert.equal(capas.detalle, true);
+});
+
+test('C2: capasCubiertas ignora tomas libres sin shotType', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  const targetId = state.espacios[0].id;
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId, kind: 'take' });
+
+  const capas = logic.capasCubiertas(state, 'video', targetId);
+
+  assert.equal(capas.abierto, false, 'toma libre sin shotType no cuenta para capa abierto');
+  assert.equal(capas.medio, false);
+  assert.equal(capas.detalle, false);
+});
+
+test('C2: capasCubiertas no confunde lanes (drone no cuenta para video)', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
+  const targetId = state.espacios[0].id;
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId, kind: 'take', shotType: 'wide' });
+
+  const capas = logic.capasCubiertas(state, 'video', targetId);
+
+  assert.equal(capas.abierto, false, 'toma de drone no debe contar para lane video');
+});
+
 test('C1: applyGuideConfig con una seccion invalida conserva las secciones validas', () => {
   logic.applyGuideConfig(null);
 

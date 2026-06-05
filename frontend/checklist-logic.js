@@ -912,6 +912,24 @@
     });
   }
 
+  const CAPA_ABIERTO = new Set(['wide', 'general', 'exterior', 'establecimiento', 'pov']);
+  const CAPA_MEDIO = new Set(['medio', 'feature']);
+  const CAPA_DETALLE = new Set(['detalle', 'textura', 'ventana']);
+
+  function capasCubiertas(state, mode, targetId) {
+    const cameraIds = new Set(
+      (state.cameras || []).filter((c) => c.mode === mode).map((c) => c.id)
+    );
+    const files = (state.mediaFiles || []).filter(
+      (f) => f.kind === 'take' && f.targetId === targetId && cameraIds.has(f.cameraId) && f.shotType
+    );
+    return {
+      abierto: files.some((f) => CAPA_ABIERTO.has(f.shotType)),
+      medio: files.some((f) => CAPA_MEDIO.has(f.shotType)),
+      detalle: files.some((f) => CAPA_DETALLE.has(f.shotType)),
+    };
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   function clone(value) {
@@ -1880,6 +1898,7 @@
     buildPropuestaPrompt,
     parsePropuesta,
     guideCoverage,
+    capasCubiertas,
     createDefaultState,
     normalizeChecklistData,
     parseSpacesText,
