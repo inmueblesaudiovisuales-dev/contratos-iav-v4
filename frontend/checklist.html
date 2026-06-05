@@ -1889,7 +1889,7 @@ function abrirGateSalida() {
         return `<div class="faltantes-shot"><span class="faltantes-shot-name">${esc(s.nombre)}</span><span class="faltantes-shot-type">${esc(typeLabel)} / ${esc(movLabel)}</span></div>`;
       }).join('');
       const jumpBtn = lane === 'video'
-        ? `<button class="faltantes-target-jump" onclick="setActiveRoom('${c.target.id}');cerrarModal()"><i class="ti ti-corner-down-right"></i>ir</button>`
+        ? `<button class="faltantes-target-jump" onclick="irACuartoVideo('${c.target.id}')"><i class="ti ti-corner-down-right"></i>ir</button>`
         : '';
       return `<div class="faltantes-target"><div class="faltantes-target-head"><span class="faltantes-target-name">${esc(c.target.nombre)}</span>${jumpBtn}</div>${shots}</div>`;
     }).join('');
@@ -2578,6 +2578,12 @@ function cuartoRow(item, type, covMap) {
     <span class="cuarto-name">${esc(item.nombre)}</span>
     ${done ? `<span class="cuarto-done"><i class="ti ti-check"></i>grabado</span>` : faltanBadge}
   </button>`;
+}
+
+function irACuartoVideo(id) {
+  state.modoActual = 'video';
+  localStorage.setItem(laneKey(), 'video');
+  setActiveRoom(id);
 }
 
 function setActiveRoom(id) {

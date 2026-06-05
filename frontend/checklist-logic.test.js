@@ -1513,6 +1513,19 @@ test('C2: capasCubiertas con las 3 capas devuelve todo true', () => {
   assert.equal(capas.detalle, true);
 });
 
+test('C2: capasCubiertas con reveal cuenta como abierto=true', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Recamara principal');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  const targetId = state.espacios[0].id;
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId, kind: 'take', shotType: 'reveal' });
+
+  const capas = logic.capasCubiertas(state, 'video', targetId);
+
+  assert.equal(capas.abierto, true, 'reveal debe contar como capa abierta');
+  assert.equal(capas.medio, false);
+  assert.equal(capas.detalle, false);
+});
+
 test('C2: capasCubiertas ignora tomas libres sin shotType', () => {
   let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });

@@ -912,8 +912,8 @@
     });
   }
 
-  const CAPA_ABIERTO = new Set(['wide', 'general', 'exterior', 'establecimiento', 'pov']);
-  const CAPA_MEDIO = new Set(['medio', 'feature']);
+  const CAPA_ABIERTO = new Set(['wide', 'general', 'exterior', 'pov', 'reveal', 'simetrica', 'contrapicado']);
+  const CAPA_MEDIO = new Set(['medio']);
   const CAPA_DETALLE = new Set(['detalle', 'textura', 'ventana']);
 
   function capasCubiertas(state, mode, targetId) {
