@@ -364,6 +364,8 @@
     .cap-mark i { font-size: 16px; color: var(--gold); }
     .cap-mark.active { background: var(--green-soft); border-color: var(--green); color: var(--green); }
     .cap-mark.active i { color: var(--green); }
+    .cap-reintentar { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-3); font-size: 12px; font-weight: 600; margin-left: 4px; }
+    .cap-reintentar i { font-size: 14px; }
     .cap-thumb { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-width: 960px; margin: 0 auto; padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1.7fr 1fr; gap: 10px; background: linear-gradient(to top, var(--page) 74%, rgba(247,244,236,0)); }
     .cap-btn-toma { min-height: 64px; border: 0; border-radius: 14px; background: var(--gold-leaf); color: var(--black); box-shadow: 0 1px 0 var(--gold), 0 6px 16px rgba(176,141,46,.18); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
     .cap-toma-lbl { font-size: 18px; font-weight: 700; }
@@ -2453,12 +2455,15 @@ function renderCapTakes(files) {
         ? `<button class="cap-mark active" onclick="toggleBuena('${file.id}')"><i class="ti ti-star-filled"></i>buena</button>`
         : `<button class="cap-mark" onclick="toggleBuena('${file.id}')"><i class="ti ti-star"></i>buena</button>`)
       : `<span class="cap-badge fail"><i class="ti ti-x"></i>${esc(discardShort(file))}</span>`;
+    const reintentarHtml = (latest && file.kind === 'take')
+      ? `<button class="cap-reintentar" onclick="reintentarToma('${file.id}')"><i class="ti ti-rotate"></i>reintentar</button>`
+      : '';
     return `<div class="cap-take${latest ? ' latest' : ''}">
       <button class="cap-take-main" onclick="abrirArchivo('${file.id}')">
         <span class="cap-tok">${esc(file.fileToken)}</span>
         <span class="cap-take-meta">${esc(mediaKindLabel(file))} · ${esc(file.author || '')}</span>
       </button>
-      ${right}
+      ${right}${reintentarHtml}
     </div>`;
   }).join('');
 }
@@ -2783,6 +2788,14 @@ function confirmarDescarte(targetId, reason) {
 
 function toggleBuena(mediaId) {
   state = logic.toggleMediaGood(state, mediaId);
+  render(); scheduleSave();
+}
+
+function reintentarToma(mediaId) {
+  const file = (state.mediaFiles || []).find((f) => f.id === mediaId);
+  if (!file || file.kind !== 'take') return;
+  if (file.good) state = logic.toggleMediaGood(state, mediaId);
+  activeSugId = file.suggestionId || null;
   render(); scheduleSave();
 }
 
