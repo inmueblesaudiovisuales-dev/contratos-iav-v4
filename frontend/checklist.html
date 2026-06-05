@@ -573,6 +573,8 @@ let dirty = false;
 let retryCount = 0;
 let toastTimer = null;
 let syncStatus = 'ok';
+let guideMode = localStorage.getItem('checklist_guide_' + (TOKEN || 'demo')) === '1';
+let activeSugId = null;
 
 const SERVICE_UI = {
   foto: { label: 'Foto normal', short: 'Foto', verb: 'foto', help: 'Marca cobertura fotografica.' },
@@ -713,7 +715,7 @@ async function cargar() {
     const data = await apiGet({ action: 'obtenerChecklist' });
     if (data.error) return mostrarError(data.error);
     meta = { folio: data.folio || '', nombreCliente: data.nombreCliente || '' };
-    const payload = data.cuartos && data.cuartos.version === 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
+    const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     state = logic.normalizeChecklistData(payload);
     const savedLane = localStorage.getItem(laneKey());
     if (savedLane && state.servicios[savedLane]) state.modoActual = savedLane;
@@ -749,7 +751,7 @@ async function poll() {
     const data = await apiGet({ action: 'obtenerChecklist' });
     if (dirty || saving) return;
     if (data.error) return;
-    const payload = data.cuartos && data.cuartos.version === 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
+    const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     const next = logic.normalizeChecklistData(payload);
     next.modoActual = state.modoActual;
     next.activeCameraByMode = state.activeCameraByMode;
@@ -2583,6 +2585,10 @@ if (DEMO) {
   mostrarError('Este enlace no tiene un token de contrato. Usa el boton Checklist desde el panel de administracion.');
 } else {
   cargar();
+  fetch('/api/obtenerConfigGuia?token=' + encodeURIComponent(TOKEN))
+    .then((r) => r.ok ? r.json() : null)
+    .then((data) => { if (data && data.guia) { logic.applyGuideConfig(data.guia); render(); } })
+    .catch(() => {});
 }
   </script>
 </body>
