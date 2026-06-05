@@ -180,6 +180,54 @@
     .fmt-nota { font-size: 11px; line-height: 1.45; }
     .fmt-precio { padding-top: 0; font-size: 14px; }
     .fmt-precio.placeholder { visibility: hidden; }
+    .fmt-sel { display: none; }
+  }
+  /* Selector de formato — mejoras visuales mobile */
+  .fmt-precio.placeholder { display: none; }
+  .formato-btn { position: relative; }
+  .formato-btn:active { transform: scale(0.985); }
+  .formato-btn.activo {
+    border-color: var(--gold-leaf);
+    border-left: 3px solid var(--gold-leaf);
+    padding-left: 14px;
+    background: var(--gold-dim);
+    box-shadow: 0 4px 18px rgba(176,141,46,0.14);
+  }
+  .fmt-sel {
+    position: absolute; top: 13px; right: 13px;
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    background: var(--white); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.25s, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .formato-btn.activo .fmt-sel {
+    background: var(--gold-leaf); border-color: var(--gold-leaf);
+    box-shadow: 0 0 0 4px var(--gold-dim);
+    transform: scale(1.12);
+  }
+  .fmt-sel::after {
+    content: '';
+    width: 4px; height: 8px;
+    border-right: 2px solid var(--charcoal);
+    border-bottom: 2px solid var(--charcoal);
+    transform: rotate(45deg) translateY(-1px) scale(0);
+    transition: transform 0.15s 0.06s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .formato-btn.activo .fmt-sel::after { transform: rotate(45deg) translateY(-1px) scale(1); }
+  .fmt-letterbox {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 6px; font-size: 10.5px; color: var(--concrete); line-height: 1.45;
+  }
+  .fmt-letterbox-icon {
+    flex-shrink: 0; width: 24px; height: 15px;
+    border: 1.5px solid currentColor; border-radius: 2px;
+    display: flex; flex-direction: column; overflow: hidden; opacity: 0.7;
+  }
+  .fmt-letterbox-bar { height: 3px; background: currentColor; }
+  .fmt-letterbox-mid { flex: 1; background: transparent; }
+  @media (max-width: 1023px) {
+    .formato-btn { padding-right: 42px; }
   }
   /* Acceso/caseta */
   .acceso-grid { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -1071,10 +1119,10 @@ function renderEtapa1() {
             '<div class="fmt-mockup-zone"><div class="fmt-phone"><div class="fmt-fill"></div></div></div>' +
             '<div class="fmt-text">' +
               '<div class="fmt-desc fmt-canal">Instagram · TikTok · Reels · Shorts</div>' +
-              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en vertical</div>' +
-              '<div class="fmt-desc fmt-nota" style="margin-top:3px">No incluye versión horizontal</div>' +
-              '<div class="fmt-precio placeholder">$0</div>' +
+              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en vertical nativo</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">Sin franjas negras · máxima calidad en redes</div>' +
             '</div>' +
+            '<div class="fmt-sel"></div>' +
           '</div>' +
         '</div>';
 
@@ -1085,9 +1133,12 @@ function renderEtapa1() {
             '<div class="fmt-text">' +
               '<div class="fmt-desc fmt-canal">YouTube · Sitio web</div>' +
               '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en horizontal</div>' +
-              '<div class="fmt-desc fmt-nota" style="margin-top:3px">En redes se verá con franjas negras</div>' +
-              '<div class="fmt-precio placeholder">$0</div>' +
+              '<div class="fmt-letterbox">' +
+                '<div class="fmt-letterbox-icon"><div class="fmt-letterbox-bar"></div><div class="fmt-letterbox-mid"></div><div class="fmt-letterbox-bar"></div></div>' +
+                'En Instagram y TikTok se verá con franjas negras arriba y abajo' +
+              '</div>' +
             '</div>' +
+            '<div class="fmt-sel"></div>' +
           '</div>' +
         '</div>';
 
@@ -1098,9 +1149,10 @@ function renderEtapa1() {
             '<div class="fmt-text">' +
               '<div class="fmt-desc fmt-canal">Redes + web · Calidad nativa en ambos</div>' +
               '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en ambos formatos</div>' +
-              '<div class="fmt-desc fmt-nota" style="margin-top:3px">Se graba dos veces en la misma visita</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">Dos grabaciones en la misma visita</div>' +
               '<div class="fmt-precio">+$1,500</div>' +
             '</div>' +
+            '<div class="fmt-sel"></div>' +
           '</div>' +
         '</div>';
 
