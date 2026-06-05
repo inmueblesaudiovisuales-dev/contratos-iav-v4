@@ -8,6 +8,20 @@
 
 ---
 
+### Ronda 61 — Copy de anticipo $0: dejar de enfatizar que no hay que pagar (2026-06-05 08:59:52 CST)
+
+**Objetivo:** cuando un contrato tiene anticipo $0 (pero sí tiene precio), el portal y el correo dejaban demasiado obvio que no había nada que pagar ("Sin anticipo", "$0", "Tu fecha está confirmada"). Se suaviza el copy sin mentir: no se afirma que deben pagar, solo se quitan las señales de "es gratis".
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R61-01 | `frontend/portal.html` | Resúmenes de firma y de pago: la fila `Anticipo · Sin anticipo` ahora dice `Reservación · Por confirmar`. |
+| R61-02 | `frontend/portal.html` | Etapa de pago con anticipo $0: la intro `"Tu fecha está confirmada. Estos son los datos para tu pago."` ahora solo dice `"Estos son los datos para tu pago."` (la tarjeta ya mostraba CLABE/OXXO/tarjeta con el total). |
+| R61-03 | `adapter/AdapterScript4_v1.js` | `enviarCorreoConPDF_`: con anticipo $0 ya no se muestra `Anticipo acordado (0%) $0 MXN`; se muestra `Reservación · Por confirmar` y el `Saldo pendiente` (= total). Con anticipo real, todo igual. **Requiere despliegue manual en script.google.com.** |
+
+**Adapter:** R61-03 toca `enviarCorreoConPDF_`. **Requiere que Bruno pegue el archivo en script.google.com y publique una versión nueva** (el push a `main` NO lo despliega).
+
+---
+
 ## Cambios aplicados — Post-auditoría v3 → v4 (2026-05-30)
 
 ### Ronda 60 — Acabado del rediseño, modelo de saldo, auditorías y E2E con Google (2026-06-04/05)

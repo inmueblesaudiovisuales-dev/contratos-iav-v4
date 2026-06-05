@@ -318,13 +318,20 @@ function generarPDF_(contrato, firmaFile, propiedades, entregables) {
 
 function enviarCorreoConPDF_(contrato, linkPortal, pdfUrl) {
   if (!contrato.correo_cliente) return;
+    var anticipoNum = contrato.anticipo || 0;
     var porcentaje = (contrato.precio_total && contrato.precio_total > 0)
-      ? Math.round((contrato.anticipo || 0) / contrato.precio_total * 100) : 0;
+      ? Math.round(anticipoNum / contrato.precio_total * 100) : 0;
+    // Sin anticipo: no mostrar "$0 / 0%" (no enfatizar que no hay que pagar) — se
+    // muestra "Reservación: Por confirmar" y el saldo completo queda como pendiente.
+    var filaAnticipo = anticipoNum > 0
+      ? '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Anticipo acordado (' + porcentaje + '%)</td>' +
+        '<td align="right" style="font-size:13px;font-weight:700;color:#C9A84C">$' + anticipoNum.toLocaleString('es-MX') + ' MXN</td></tr>'
+      : '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Reservación</td>' +
+        '<td align="right" style="font-size:13px;font-weight:700;color:#1C1C1E">Por confirmar</td></tr>';
   var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + escHtml_(contrato.nombre_cliente) + '</strong>,</p>' +
     '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 20px">Gracias por firmar tu contrato. Adjunto encontrarás tu copia en PDF.</p>' +
     '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F7F4;border-radius:8px;padding:16px 20px;margin-bottom:20px">' +
-    '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Anticipo acordado (' + porcentaje + '%)</td>' +
-    '<td align="right" style="font-size:13px;font-weight:700;color:#C9A84C">$' + (contrato.anticipo || 0).toLocaleString('es-MX') + ' MXN</td></tr>' +
+    filaAnticipo +
     '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Saldo pendiente</td>' +
     '<td align="right" style="font-size:13px;font-weight:700;color:#1C1C1E">$' + (contrato.saldo_pendiente || 0).toLocaleString('es-MX') + ' MXN</td></tr>' +
     '</table>';
