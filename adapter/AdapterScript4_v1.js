@@ -1,9 +1,9 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-05 10:03:36 CST (R63) — procesarFirma: clona logo del cliente
-//   a la carpeta Control Interno del contrato nuevo si body.logoClienteUrl está presente.
-//   Previo R62: nueva función enviarCorreoReserva.
+// Ultima modificacion: 2026-06-05 10:39:26 CST (R64) — procesarFirma: clona hasta 3 versiones
+//   de logo (body.logosClienteUrls[]) a Control Interno, con sufijo -v1/-v2/-v3 si hay varias.
+//   Compatible con body.logoClienteUrl (una sola) de R63. Previo R63: clonado de logo único.
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -132,14 +132,18 @@ function procesarFirma(body) {
     var carpetaEntregablesId = carpetaEntregables.getId();
     var carpetaUrl = carpetaControl.getUrl();
 
-    // Clonar logo del cliente a la carpeta Control Interno
-    if (body.logoClienteUrl) {
+    // Clonar logo(s) del cliente a la carpeta Control Interno (hasta 3 versiones)
+    var logosAClonar = body.logosClienteUrls || (body.logoClienteUrl ? [body.logoClienteUrl] : []);
+    for (var li = 0; li < logosAClonar.length; li++) {
       try {
-        var logoMatch = body.logoClienteUrl.match(/\/d\/([^\/\?&]+)/) || body.logoClienteUrl.match(/[?&]id=([^&]+)/);
+        var logoUrlClon = logosAClonar[li];
+        if (!logoUrlClon) continue;
+        var logoMatch = logoUrlClon.match(/\/d\/([^\/\?&]+)/) || logoUrlClon.match(/[?&]id=([^&]+)/);
         if (logoMatch && logoMatch[1]) {
-          DriveApp.getFileById(logoMatch[1]).makeCopy('logo-' + (contrato.nombre_cliente || 'cliente'), carpetaControl);
+          var sufijo = logosAClonar.length > 1 ? '-v' + (li + 1) : '';
+          DriveApp.getFileById(logoMatch[1]).makeCopy('logo-' + (contrato.nombre_cliente || 'cliente') + sufijo, carpetaControl);
         }
-      } catch (eLogo) { console.error('procesarFirma: error clonando logo:', eLogo.message); }
+      } catch (eLogo) { console.error('procesarFirma: error clonando logo ' + (li + 1) + ':', eLogo.message); }
     }
 
     // Guardar en PropertiesService y notificar al Worker

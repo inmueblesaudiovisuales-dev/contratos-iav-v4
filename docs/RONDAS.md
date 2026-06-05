@@ -8,6 +8,23 @@
 
 ---
 
+### Ronda 64 — Hasta 3 versiones de logo (2026-06-05 10:39:26 CST)
+
+**Objetivo:** el cliente puede subir hasta 3 versiones de su logo en el portal. La UI no pone 3 campos: tras subir el primero aparece un enlace discreto "+ Agregar otra versión" (desaparece al llegar a 3). Cada versión queda guardada en BD y se clona a Drive. `logo_url` sigue siendo el principal (primera versión) por compatibilidad; la nueva columna `logos_json` guarda el array completo.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R64-01 | `worker/migrations/r64-logos-multiples.sql` | Nueva columna `propiedades.logos_json TEXT DEFAULT ''` (aditiva). **Aplicar en D1 remoto.** |
+| R64-02 | `worker/schema.sql` | `CREATE TABLE propiedades` incluye `logos_json` (para BDs nuevas). |
+| R64-03 | `worker/src/routes/portal.js` | `obtenerPortal`: devuelve `logosUrls` (parseo de `logos_json`) por propiedad. `firmaCliente`: guarda el array en `logos_json` (máx 3), `logo_url`=primera, y persiste la primera en `clientes.logo_url`. Pasa `logosClienteUrls[]` al adapter. |
+| R64-04 | `adapter/AdapterScript4_v1.js` | `procesarFirma`: clona cada URL de `body.logosClienteUrls[]` a Control Interno (sufijo `-v1/-v2/-v3` si hay varias). Compatible con `logoClienteUrl` único de R63. **Requiere despliegue manual en script.google.com.** |
+| R64-05 | `frontend/portal.html` | Sección de logo auto-renderizada (`renderLogoSection`): thumbnails de las versiones subidas con botón quitar (×), y enlace "+ Agregar otra versión" mientras haya < 3. Slots `logo-0..logo-2`. El logo registrado se auto-usa como antes. |
+
+**Adapter:** R64-04 toca `procesarFirma`. **Requiere que Bruno pegue el archivo en script.google.com y publique una versión nueva** (el push a `main` NO lo despliega).
+**D1:** R64-01 requiere correr la migración en producción (ver comando abajo).
+
+---
+
 ### Ronda 63 — Logo persistente por cliente (2026-06-05 10:03:36 CST)
 
 **Objetivo:** si un cliente subió su logo en un contrato anterior, en el siguiente contrato el portal ya lo muestra como "Logo registrado" (con thumbnail), lo auto-usa sin que el cliente haga nada, y lo clona físicamente a la carpeta Control Interno del nuevo contrato en Drive. El cliente puede opcionalmente subir otro.

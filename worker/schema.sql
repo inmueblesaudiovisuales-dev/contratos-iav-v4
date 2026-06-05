@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS propiedades (
   perimetro_url TEXT,
   datos_especificos TEXT DEFAULT '{}',
   logo_url TEXT,
+  logos_json TEXT DEFAULT '',
   carpeta_control_id TEXT,
   calendar_event_id TEXT,
   carpeta_entregables_id TEXT,
