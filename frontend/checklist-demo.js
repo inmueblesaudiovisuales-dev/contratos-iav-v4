@@ -46,6 +46,15 @@ window.IAVChecklistDemo = {
     s = logic.toggleMediaGood(s, s.mediaFiles[s.mediaFiles.length - 1].id);
     s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: rec, kind: 'discard', discardReason: 'failed', autor: 'tú' }); // PIB2817
     s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: rec, kind: 'take', autor: 'tú' });    // PIB2818
+
+    // Asesores: secuencias de ambas cámaras + un par de tomas en Introducción
+    s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB4810' });
+    s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260520_0090_D' });
+    const intro = s.asesorPuntos[0].id;
+    s = logic.registerAsesorFile(s, { puntoId: intro, kind: 'take', autor: 'tú' });        // PIB4811 + 0091
+    s = logic.toggleMediaGood(s, s.mediaFiles[s.mediaFiles.length - 2].id);                // marca la Sony del par como buena
+    s = logic.registerAsesorFile(s, { puntoId: intro, kind: 'discard', discardReason: 'failed', autor: 'tú' });
+    s = logic.registerAsesorFile(s, { puntoId: intro, kind: 'take', autor: 'tú' });        // otra toma
     return s;
   },
 };

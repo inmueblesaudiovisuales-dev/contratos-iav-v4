@@ -491,6 +491,17 @@
     /* el toast oculto NO debe asomar al fondo ni interceptar toques */
     .toast { transform: translateY(calc(100% + 32px)); visibility: hidden; pointer-events: none; }
     .toast.visible { transform: translateY(0); visibility: visible; pointer-events: auto; }
+
+    /* ===== Asesores (par de cámaras) ===== */
+    .cap-cam.asesor-cam { flex-direction: column; align-items: stretch; gap: 0; padding: 4px 12px; }
+    .asesor-cam-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--muted); }
+    .asesor-cam-row:first-child { border-top: 0; }
+    .asesor-cam-role { width: 34px; height: 34px; flex: none; border-radius: 8px; background: var(--gold-soft); display: flex; align-items: center; justify-content: center; }
+    .asesor-cam-role i { font-size: 18px; color: var(--gold); }
+    .asesor-cam-copy { flex: 1; min-width: 0; }
+    .asesor-cam-lbl { font-size: 13px; font-weight: 600; }
+    .asesor-tok .pair-plus { color: var(--ink-3); font-weight: 400; margin: 0 3px; }
+    .punto-voz { font-size: 10px; font-weight: 600; color: var(--gold); background: var(--gold-soft); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
   </style>
 </head>
 <body>
@@ -535,6 +546,7 @@ const SERVICE_UI = {
   t360: { label: 'Recorrido 360', short: '360', verb: 'recorrido 360', help: 'Marca recorridos por espacio.' },
   video: { label: 'Video', short: 'Video', verb: 'video', help: 'Registra el orden real de tomas.' },
   drone: { label: 'Drone', short: 'Drone', verb: 'toma drone', help: 'Registra secuencia aerea.' },
+  asesor: { label: 'Asesores', short: 'Asesores', verb: 'toma', help: 'Graba puntos del asesor con par de cámaras.' },
 };
 const ZONE_LABELS = { interior: 'Interior', exterior: 'Exterior', amenidades: 'Amenidades', drone: 'Drone' };
 
@@ -564,11 +576,11 @@ function chooseLane(lane) {
   render();
   scheduleSave();
 }
-const LANE_ICON = { foto: 'camera', t360: 'rotate-360', video: 'video', drone: 'drone' };
+const LANE_ICON = { foto: 'camera', t360: 'rotate-360', video: 'video', drone: 'drone', asesor: 'microphone-2' };
 function laneIcon(lane) { return LANE_ICON[lane] || 'video'; }
 
 function activeServices() {
-  return ['foto', 't360', 'video', 'drone'].filter((key) => state.servicios[key]);
+  return ['foto', 't360', 'video', 'drone', 'asesor'].filter((key) => state.servicios[key]);
 }
 
 function ensureActiveMode() {
@@ -782,7 +794,7 @@ function renderLaneEntry() {
     ['t360', '360', 'rotate-360', 'Marca los recorridos 360 por cuarto.'],
     ['video', 'Video', 'video', 'Registra cada archivo con su cuarto y calidad.'],
     ['drone', 'Drone', 'drone', 'Registra la secuencia de tomas aéreas.'],
-    ['asesor', 'Asesores', 'microphone-2', 'Grabación de asesores. Pronto.'],
+    ['asesor', 'Asesores', 'microphone-2', 'Graba al asesor: par de cámaras Sony + Osmo ligado.'],
   ];
   return `<div class="lane-entry">
     <div class="lane-entry-hd">
@@ -795,10 +807,10 @@ function renderLaneEntry() {
       <input class="field" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" autocomplete="off">
     </div>
     <div class="lane-opts">${lanes.map((l) => `
-      <button class="lane-opt${l[0] === 'asesor' ? ' soon' : ''}" ${l[0] === 'asesor' ? 'disabled' : ''} onclick="chooseLane('${l[0]}')">
+      <button class="lane-opt" onclick="chooseLane('${l[0]}')">
         <span class="lane-opt-ic"><i class="ti ti-${l[2]}"></i></span>
         <span class="lane-opt-copy"><strong>${l[1]}</strong><span>${l[3]}</span></span>
-        ${l[0] === 'asesor' ? '<span class="lane-soon">pronto</span>' : '<i class="ti ti-chevron-right lane-opt-chev"></i>'}
+        <i class="ti ti-chevron-right lane-opt-chev"></i>
       </button>`).join('')}</div>
   </div>`;
 }
@@ -1020,8 +1032,147 @@ function getPrimaryRisk(summary) {
 }
 
 function renderCaptureView() {
+  if (state.modoActual === 'asesor') return renderAsesorCapture();
   if (isMediaMode()) return renderMediaCapture();
   return renderCoverage();
+}
+
+function asesorFilesForPunto(puntoId) {
+  return (state.mediaFiles || []).filter((f) => (f.cameraId === 'sony-asesor' || f.cameraId === 'osmo-asesor') && f.targetId === puntoId);
+}
+
+function renderAsesorCapture() {
+  const puntos = state.asesorPuntos || [];
+  if (!puntos.length) {
+    return `<div class="empty"><h2>Sin puntos todavía</h2><p>Agrega los puntos del asesor para empezar.</p><button class="primary" style="margin-top:12px" onclick="agregarPunto(false)">Agregar punto</button></div>`;
+  }
+  const punto = activeTarget();
+  const esVoz = punto.tipo === 'voz';
+  const sony = logic.getCameraSequence(state, 'sony-asesor');
+  const osmo = logic.getCameraSequence(state, 'osmo-asesor');
+  const files = asesorFilesForPunto(punto.id);
+  const pairsMap = {};
+  files.forEach((f) => { (pairsMap[f.pairId] = pairsMap[f.pairId] || []).push(f); });
+  const pairList = Object.values(pairsMap);
+  const goodCount = pairList.filter((p) => p[0].kind !== 'discard' && p.some((f) => f.good)).length;
+  const nextLabel = esVoz ? (osmo.nextToken || '—') : `${sony.nextToken || '—'} + ${osmo.nextToken || '—'}`;
+  return `
+  <section class="cap-focus">
+    <span class="cap-floor"><i class="ti ti-microphone-2"></i>${esVoz ? 'Voz en off · solo audio' : 'Punto · Sony + Osmo'}</span>
+    <h2 class="cap-room">${esc(punto.nombre)}</h2>
+  </section>
+  <div class="cap-cam asesor-cam">
+    ${esVoz ? '' : asesorCamRow('Sony FX30', 'video', sony, 'sony-asesor')}
+    ${asesorCamRow('Osmo + DJI Mic', 'audio', osmo, 'osmo-asesor')}
+  </div>
+  <button class="cap-change" onclick="abrirCambiarPunto()">
+    <span class="cap-change-l"><i class="ti ti-arrows-exchange"></i>Cambiar punto</span>
+    <i class="ti ti-chevron-right cap-change-chev"></i>
+  </button>
+  <section class="cap-takes">
+    <div class="cap-takes-hd"><span>Tomas de este punto</span><span class="cap-takes-n">${pairList.length} · ${goodCount} buena${goodCount === 1 ? '' : 's'}</span></div>
+    ${pairList.length ? renderAsesorPairs(pairList) : `<p class="cap-empty">Aún no registras nada aquí. Da Toma cuando graben.</p>`}
+  </section>
+  <div class="cap-thumb">
+    <button class="cap-btn-toma" onclick="registrarAsesor('${punto.id}','take')"><span class="cap-toma-lbl">Toma</span><span class="cap-toma-sub">${esc(nextLabel)}</span></button>
+    <button class="cap-btn-no" onclick="registrarAsesor('${punto.id}','discard')"><i class="ti ti-circle-x"></i><span>No sirve</span></button>
+  </div>`;
+}
+
+function asesorCamRow(label, role, seq, cameraId) {
+  return `<div class="asesor-cam-row">
+    <span class="asesor-cam-role"><i class="ti ti-${role === 'audio' ? 'microphone' : 'video'}"></i></span>
+    <div class="asesor-cam-copy"><div class="asesor-cam-lbl">${esc(label)}</div>
+      <div class="cap-cam-next">${seq.nextToken ? `siguiente · <b>${esc(seq.nextToken)}</b>` : 'inicia la secuencia'}</div></div>
+    <button class="cap-swap" onclick="abrirSecuenciaAsesor('${cameraId}')" aria-label="Secuencia"><i class="ti ti-${seq.nextToken ? 'refresh' : 'player-play'}"></i></button>
+  </div>`;
+}
+
+function renderAsesorPairs(pairList) {
+  return pairList.slice().reverse().map((pair, i) => {
+    const sony = pair.find((f) => f.cameraId === 'sony-asesor');
+    const osmo = pair.find((f) => f.cameraId === 'osmo-asesor');
+    const isDiscard = pair[0].kind === 'discard';
+    const good = pair.some((f) => f.good);
+    const target = sony || osmo;
+    const tokens = sony ? `${esc(sony.fileToken)} <span class="pair-plus">+</span> ${esc(osmo.fileToken)}` : esc(osmo.fileToken);
+    const right = isDiscard
+      ? `<span class="cap-badge fail"><i class="ti ti-x"></i>${esc(discardShort(pair[0]))}</span>`
+      : good ? `<span class="cap-badge good"><i class="ti ti-star-filled"></i>buena</span>`
+             : `<button class="cap-mark" onclick="toggleBuena('${target.id}')"><i class="ti ti-star"></i>Marcar buena</button>`;
+    return `<div class="cap-take${i === 0 ? ' latest' : ''}">
+      <div class="cap-take-main"><span class="cap-tok asesor-tok">${tokens}</span><span class="cap-take-meta">${sony ? 'Sony + Osmo' : 'Solo audio'}${pair[0].author ? ' · ' + esc(pair[0].author) : ''}</span></div>
+      ${right}</div>`;
+  }).join('');
+}
+
+function registrarAsesor(puntoId, kind) {
+  const punto = (state.asesorPuntos || []).find((p) => p.id === puntoId);
+  if (!punto) return;
+  const cams = punto.tipo === 'voz' ? ['osmo-asesor'] : ['sony-asesor', 'osmo-asesor'];
+  for (let i = 0; i < cams.length; i++) {
+    if (!logic.getCameraSequence(state, cams[i]).segment) return abrirSecuenciaAsesor(cams[i]);
+  }
+  const prev = state;
+  state = logic.registerAsesorFile(state, { puntoId, kind, discardReason: kind === 'discard' ? 'failed' : null, autor: miNombre(), now: new Date() });
+  if (state === prev) return showToast('Inicia las secuencias primero');
+  render(); scheduleSave();
+  showToast(kind === 'discard' ? 'Descarte registrado' : 'Toma registrada');
+}
+
+function abrirCambiarPunto() {
+  const puntos = state.asesorPuntos || [];
+  abrirModal(`<div class="sheet-head"><h2>Cambiar punto</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="cuarto-list">${puntos.map(puntoRow).join('')}</div>
+    <div class="action-stack" style="margin-top:12px">
+      <button class="btn" onclick="agregarPunto(false)"><i class="ti ti-plus"></i> Agregar punto</button>
+      <button class="btn ghost" onclick="agregarPunto(true)"><i class="ti ti-microphone"></i> Agregar voz en off</button>
+    </div>`);
+}
+
+function puntoRow(punto) {
+  const done = punto.estado === 'hecho';
+  const active = punto.id === (activeTarget() || {}).id;
+  return `<button class="cuarto-row${active ? ' active' : ''}" onclick="setActiveRoom('${punto.id}')">
+    <span class="cuarto-name">${esc(punto.nombre)}${punto.tipo === 'voz' ? ' <span class="punto-voz">voz</span>' : ''}</span>
+    ${done ? '<span class="cuarto-done"><i class="ti ti-check"></i>grabado</span>' : ''}
+  </button>`;
+}
+
+function agregarPunto(esVoz) {
+  abrirModal(`<div class="sheet-head"><h2>${esVoz ? 'Voz en off' : 'Nuevo punto'}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="setup-add"><input class="field" id="punto-input" type="text" placeholder="${esVoz ? 'Voz en off' : 'Punto 1, La ubicación…'}" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarPunto(${esVoz ? 'true' : 'false'})"><button class="btn" onclick="confirmarPunto(${esVoz ? 'true' : 'false'})">Agregar</button></div>`);
+}
+
+function confirmarPunto(esVoz) {
+  const input = document.getElementById('punto-input');
+  const value = input && input.value.trim();
+  if (!value) return;
+  if (!state.asesorPuntos) state.asesorPuntos = [];
+  const id = 'asesor-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  state.asesorPuntos.push({ id, nombre: value, tipo: esVoz ? 'voz' : 'normal', estado: 'pendiente', ordenLista: state.asesorPuntos.length + 1 });
+  activeRoomId = id;
+  cerrarModal(); scheduleSave(); render();
+}
+
+function abrirSecuenciaAsesor(cameraId) {
+  const camera = (state.cameras || []).find((c) => c.id === cameraId);
+  if (!camera) return;
+  abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="sheet-body">
+      <div class="sequence-alert">Escribe el último archivo que ya existe en esta cámara. Empezamos con el siguiente.</div>
+      <input class="field" id="last-filename-asesor" type="text" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
+      <button class="primary block" style="width:100%" onclick="iniciarSecuenciaAsesor('${cameraId}')">Iniciar</button>
+    </div>`);
+}
+
+function iniciarSecuenciaAsesor(cameraId) {
+  const camera = (state.cameras || []).find((c) => c.id === cameraId);
+  const input = document.getElementById('last-filename-asesor');
+  if (!camera || !input || !input.value.trim()) return;
+  const filename = input.value.trim();
+  if (!logic.parseFilenameSequence(filename, camera.kind)) return showToast('No encontramos un consecutivo en ese nombre');
+  aplicarSecuencia(cameraId, filename);
 }
 
 function renderCoverage() {
@@ -1064,7 +1215,8 @@ function cycleCobertura(id) {
 }
 
 function activeTarget() {
-  const list = state.modoActual === 'drone' ? state.droneItems : state.espacios;
+  const list = state.modoActual === 'asesor' ? (state.asesorPuntos || [])
+    : state.modoActual === 'drone' ? state.droneItems : state.espacios;
   if (!list.length) return null;
   if (activeRoomId) {
     const found = list.find((item) => item.id === activeRoomId);
