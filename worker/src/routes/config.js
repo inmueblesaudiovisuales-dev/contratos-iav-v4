@@ -67,5 +67,16 @@ export async function handleConfig(request, env, ctx, action) {
     return ok({ ok: true });
   }
 
+  if (action === 'obtenerConfigGuia') {
+    let guia = null;
+    try {
+      const { results } = await query(db, "SELECT valor FROM config WHERE clave = 'guia_config'");
+      if (results && results[0] && results[0].valor) {
+        try { guia = JSON.parse(results[0].valor); } catch (_) { guia = null; }
+      }
+    } catch (e) { /* tabla/clave inexistente → guia null */ }
+    return ok({ ok: true, guia });
+  }
+
   return err('Acción no encontrada', 404);
 }

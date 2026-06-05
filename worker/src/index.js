@@ -39,7 +39,7 @@ const RUTAS_EQUIPO       = ['obtenerEquipo','marcarProduccion'];
 const RUTAS_CLIENTES    = ['crearCliente','listarClientes','obtenerCliente','actualizarCliente','borrarCliente','buscarClientePorTelefono'];
 const RUTAS_TRABAJOS    = ['crearTrabajo','listarTrabajos','actualizarTrabajo','actualizarEstatusTrabajo'];
 const RUTAS_ACTIVIDADES = ['agendarLlamada','agregarNota','listarActividades','listarActividadesPendientes','agendarLlamadaRapida','marcarActividad'];
-const RUTAS_CONFIG      = ['obtenerConfig','obtenerConfigAdmin','guardarConfig'];
+const RUTAS_CONFIG      = ['obtenerConfig','obtenerConfigAdmin','guardarConfig','obtenerConfigGuia'];
 
 export default {
   async fetch(request, env, ctx) {
