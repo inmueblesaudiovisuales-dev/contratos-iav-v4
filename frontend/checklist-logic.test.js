@@ -1062,3 +1062,146 @@ test('F4: guionEdicion.clips ordena takes por ordenEdicion (null al final)', () 
   // null al final
   assert.equal(clips[2].ordenEdicion, null);
 });
+
+// F5 — resolver de config (defaults + overrides)
+
+test('F5: sin config los getters devuelven los defaults', () => {
+  logic.resetGuideConfig();
+  const st = logic.getShotTypes();
+  assert.ok(st.wide && st.detalle && st.reveal, 'SHOT_TYPES defaults presentes');
+  const mv = logic.getMovements();
+  assert.ok(mv.static && mv.pan && mv.orbit, 'MOVEMENTS defaults presentes');
+  const lib = logic.getGuideLibrary();
+  assert.ok(lib.sala && lib.cocina && lib.bano, 'GUIDE_LIBRARY defaults presentes');
+  const drone = logic.getDroneGuide();
+  assert.ok(drone.casa && drone.lujo, 'DRONE_GUIDE defaults presentes');
+  const amen = logic.getAmenityGuide();
+  assert.ok(amen.alberca && amen.gimnasio, 'AMENITY_GUIDE defaults presentes');
+  const cats = logic.getRoomCategories();
+  assert.ok(Array.isArray(cats) && cats.length > 0, 'ROOM_CATEGORIES defaults presentes');
+});
+
+test('F5: config renombra shot, oculta default y agrega custom — getGuideLibrary y findSuggestion reflejan los tres', () => {
+  logic.resetGuideConfig();
+  const salaDefaultShots = logic.getGuideLibrary().sala.shots;
+  const primerShot = salaDefaultShots[0];
+
+  logic.applyGuideConfig({
+    categorias: {
+      sala: {
+        shots: [
+          { id: primerShot.id, nombre: 'Nombre renombrado' },
+          { id: salaDefaultShots[1].id, removed: true },
+          { id: 'custom.sala-especial-x1', nombre: 'Toma especial', shotType: 'wide', movement: 'static', enfoque: 'Test', priority: 'nice' },
+        ],
+      },
+    },
+  });
+
+  const lib = logic.getGuideLibrary();
+  const salaShots = lib.sala.shots;
+
+  // (a) renombrar: el primer shot tiene el nuevo nombre
+  const renombrado = salaShots.find((s) => s.id === primerShot.id);
+  assert.ok(renombrado, 'El shot renombrado debe existir');
+  assert.equal(renombrado.nombre, 'Nombre renombrado');
+
+  // (b) ocultar: el segundo shot default no aparece
+  const oculto = salaShots.find((s) => s.id === salaDefaultShots[1].id);
+  assert.equal(oculto, undefined, 'El shot con removed:true no debe aparecer');
+
+  // (c) agregar custom: aparece en la lista y en findSuggestion
+  const custom = salaShots.find((s) => s.id === 'custom.sala-especial-x1');
+  assert.ok(custom, 'El shot custom debe aparecer en getGuideLibrary');
+  const found = logic.findSuggestion('custom.sala-especial-x1');
+  assert.ok(found, 'findSuggestion debe encontrar el shot custom');
+  assert.equal(found.nombre, 'Toma especial');
+
+  logic.resetGuideConfig();
+});
+
+test('F5: override de roomCategories cambia resultado de detectCategoria', () => {
+  logic.resetGuideConfig();
+
+  logic.applyGuideConfig({
+    roomCategories: [
+      { id: 'categoria_test', keywords: ['especial', 'prueba'] },
+    ],
+  });
+
+  const cat = logic.detectCategoria('Cuarto especial');
+  assert.equal(cat, 'categoria_test', 'detectCategoria debe usar las roomCategories del override');
+
+  // nombre sin keyword de la lista custom → generico
+  const catDefault = logic.detectCategoria('Sala');
+  assert.equal(catDefault, 'generico', 'Sin keywords en override → generico');
+
+  logic.resetGuideConfig();
+});
+
+test('F5: override de drone cambia suggestionsForDrone', () => {
+  logic.resetGuideConfig();
+  const defaultCasaShots = logic.getDroneGuide().casa.shots;
+  const primerShotId = defaultCasaShots[0].id;
+
+  logic.applyGuideConfig({
+    drone: {
+      casa: {
+        shots: [
+          { id: primerShotId, nombre: 'Drone renombrado' },
+          { id: 'custom.drone-casa-extra', nombre: 'Toma extra drone', shotType: 'exterior', movement: 'orbit', enfoque: 'Test', priority: 'nice' },
+        ],
+      },
+    },
+  });
+
+  const sugs = logic.suggestionsForDrone('casa');
+  const renombrado = sugs.find((s) => s.id === primerShotId);
+  assert.ok(renombrado && renombrado.nombre === 'Drone renombrado', 'suggestionsForDrone refleja el override');
+  const extra = sugs.find((s) => s.id === 'custom.drone-casa-extra');
+  assert.ok(extra, 'suggestionsForDrone incluye el shot custom de drone');
+
+  logic.resetGuideConfig();
+});
+
+test('F5: config invalido con shots no-array no lanza y la categoria default usa shots del default', () => {
+  logic.resetGuideConfig();
+  const defaultCocinaShots = logic.getGuideLibrary().cocina.shots.slice();
+
+  assert.doesNotThrow(() => {
+    logic.applyGuideConfig({ categorias: { cocina: { shots: 'no-es-array' } } });
+  }, 'applyGuideConfig con shots no-array no debe lanzar');
+
+  const shots = logic.getGuideLibrary().cocina.shots;
+  assert.equal(shots.length, defaultCocinaShots.length, 'Shots de cocina deben ser los defaults cuando override.shots no es array');
+
+  logic.resetGuideConfig();
+});
+
+test('F5: config null no lanza y deja defaults', () => {
+  logic.applyGuideConfig({ categorias: { sala: { shots: [{ id: 'custom.x', nombre: 'X', shotType: 'wide', movement: 'static', enfoque: '', priority: 'nice' }] } } });
+  assert.doesNotThrow(() => logic.applyGuideConfig(null), 'applyGuideConfig(null) no debe lanzar');
+  const lib = logic.getGuideLibrary();
+  // despues de null, debe volver a defaults
+  const custom = lib.sala.shots.find((s) => s.id === 'custom.x');
+  assert.equal(custom, undefined, 'Tras applyGuideConfig(null) los getters devuelven defaults');
+});
+
+test('F5: resetGuideConfig restaura defaults despues de un override', () => {
+  logic.resetGuideConfig();
+  const defaultLabel = logic.getGuideLibrary().sala.label;
+  const defaultCount = logic.getGuideLibrary().sala.shots.length;
+
+  logic.applyGuideConfig({
+    categorias: { sala: { label: 'Sala Override' } },
+    shotTypes: { wide: { label: 'Plano Override' } },
+  });
+  assert.equal(logic.getGuideLibrary().sala.label, 'Sala Override', 'Override de label aplicado');
+  assert.equal(logic.getShotTypes().wide.label, 'Plano Override', 'Override de shotType aplicado');
+
+  logic.resetGuideConfig();
+  const lib = logic.getGuideLibrary();
+  assert.equal(lib.sala.label, defaultLabel, 'Tras resetGuideConfig el label de sala vuelve al default');
+  assert.equal(lib.sala.shots.length, defaultCount, 'Tras resetGuideConfig los shots vuelven al conteo default');
+  assert.notEqual(logic.getShotTypes().wide.label, 'Plano Override', 'Tras resetGuideConfig shotType vuelve al default');
+});

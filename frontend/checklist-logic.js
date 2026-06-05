@@ -482,9 +482,125 @@
     textura:      50,
   });
 
-  function getShotTypes() { return SHOT_TYPES; }
-  function getMovements()  { return MOVEMENTS; }
-  function getGuideLibrary() { return GUIDE_LIBRARY; }
+  // F5 — module-level cache for effective (resolved) library; null = use frozen constants directly
+  let _effectiveShotTypes      = null;
+  let _effectiveMovements      = null;
+  let _effectiveGuideLibrary   = null;
+  let _effectiveDroneGuide     = null;
+  let _effectiveAmenityGuide   = null;
+  let _effectiveRoomCategories = null;
+
+  function getShotTypes()      { return _effectiveShotTypes      || SHOT_TYPES; }
+  function getMovements()      { return _effectiveMovements      || MOVEMENTS; }
+  function getGuideLibrary()   { return _effectiveGuideLibrary   || GUIDE_LIBRARY; }
+  function getDroneGuide()     { return _effectiveDroneGuide     || DRONE_GUIDE; }
+  function getAmenityGuide()   { return _effectiveAmenityGuide   || AMENITY_GUIDE; }
+  function getRoomCategories() { return _effectiveRoomCategories || ROOM_CATEGORIES; }
+
+  function _mergeShots(defaultShots, overrideShots) {
+    if (!Array.isArray(overrideShots)) return defaultShots.slice();
+    const byId = {};
+    for (const s of overrideShots) {
+      if (s && typeof s === 'object' && s.id) byId[s.id] = s;
+    }
+    const result = [];
+    for (const shot of defaultShots) {
+      const over = byId[shot.id];
+      if (!over) { result.push(shot); continue; }
+      if (over.removed) continue;
+      result.push(Object.assign({}, shot, over));
+    }
+    for (const s of overrideShots) {
+      if (!s || !s.id || s.removed) continue;
+      if (defaultShots.some((d) => d.id === s.id)) continue;
+      result.push(s);
+    }
+    return result;
+  }
+
+  function applyGuideConfig(config) {
+    if (config == null || typeof config !== 'object') {
+      resetGuideConfig();
+      return;
+    }
+    try {
+      if (config.shotTypes && typeof config.shotTypes === 'object') {
+        const m = Object.assign({}, SHOT_TYPES);
+        for (const [id, ov] of Object.entries(config.shotTypes)) {
+          if (ov && typeof ov === 'object') m[id] = Object.assign({}, m[id] || {}, ov);
+        }
+        _effectiveShotTypes = m;
+      } else {
+        _effectiveShotTypes = null;
+      }
+      if (config.movements && typeof config.movements === 'object') {
+        const m = Object.assign({}, MOVEMENTS);
+        for (const [id, ov] of Object.entries(config.movements)) {
+          if (ov && typeof ov === 'object') m[id] = Object.assign({}, m[id] || {}, ov);
+        }
+        _effectiveMovements = m;
+      } else {
+        _effectiveMovements = null;
+      }
+      if (config.categorias && typeof config.categorias === 'object') {
+        const m = {};
+        for (const [catId, catDef] of Object.entries(GUIDE_LIBRARY)) {
+          const ov = config.categorias[catId];
+          if (!ov || typeof ov !== 'object') { m[catId] = catDef; continue; }
+          const label = (typeof ov.label === 'string' && ov.label) ? ov.label : catDef.label;
+          m[catId] = { label, shots: _mergeShots(Array.from(catDef.shots), ov.shots) };
+        }
+        for (const [catId, ov] of Object.entries(config.categorias)) {
+          if (GUIDE_LIBRARY[catId] || !ov || typeof ov !== 'object') continue;
+          if (!Array.isArray(ov.shots)) continue;
+          m[catId] = { label: (typeof ov.label === 'string' && ov.label) ? ov.label : catId, shots: ov.shots };
+        }
+        _effectiveGuideLibrary = m;
+      } else {
+        _effectiveGuideLibrary = null;
+      }
+      if (config.drone && typeof config.drone === 'object') {
+        const m = {};
+        for (const [tipo, tipoDef] of Object.entries(DRONE_GUIDE)) {
+          const ov = config.drone[tipo];
+          if (!ov || typeof ov !== 'object') { m[tipo] = tipoDef; continue; }
+          const label = (typeof ov.label === 'string' && ov.label) ? ov.label : tipoDef.label;
+          m[tipo] = { label, shots: _mergeShots(Array.from(tipoDef.shots), ov.shots) };
+        }
+        _effectiveDroneGuide = m;
+      } else {
+        _effectiveDroneGuide = null;
+      }
+      if (config.amenidades && typeof config.amenidades === 'object') {
+        const m = {};
+        for (const [amenId, amenDef] of Object.entries(AMENITY_GUIDE)) {
+          const ov = config.amenidades[amenId];
+          if (!ov || typeof ov !== 'object') { m[amenId] = amenDef; continue; }
+          const label = (typeof ov.label === 'string' && ov.label) ? ov.label : amenDef.label;
+          m[amenId] = { label, shots: _mergeShots(Array.from(amenDef.shots), ov.shots) };
+        }
+        _effectiveAmenityGuide = m;
+      } else {
+        _effectiveAmenityGuide = null;
+      }
+      if (Array.isArray(config.roomCategories) && config.roomCategories.length > 0) {
+        _effectiveRoomCategories = config.roomCategories;
+      } else {
+        _effectiveRoomCategories = null;
+      }
+    } catch (_) {
+      resetGuideConfig();
+    }
+  }
+
+  function resetGuideConfig() {
+    _effectiveShotTypes      = null;
+    _effectiveMovements      = null;
+    _effectiveGuideLibrary   = null;
+    _effectiveDroneGuide     = null;
+    _effectiveAmenityGuide   = null;
+    _effectiveRoomCategories = null;
+  }
 
   // F2 — keywords para deteccion de amenidades por nombre de espacio
   const AMENITY_KEYWORDS = Object.freeze([
@@ -513,13 +629,13 @@
   function detectCategoria(nombre) {
     const n = normNombre(nombre);
     const words = new Set(n.split(/[\s\-\/,;]+/).filter(Boolean));
-    for (const cat of ROOM_CATEGORIES) {
+    for (const cat of getRoomCategories()) {
       for (const kw of cat.keywords) {
         const kwNorm = normNombre(kw);
         if (kwNorm.includes(' ') && n.includes(kwNorm)) return cat.id;
       }
     }
-    for (const cat of ROOM_CATEGORIES) {
+    for (const cat of getRoomCategories()) {
       for (const kw of cat.keywords) {
         const kwNorm = normNombre(kw);
         if (!kwNorm.includes(' ') && words.has(kwNorm)) return cat.id;
@@ -531,7 +647,9 @@
   function amenityFromName(nombre) {
     const n = normNombre(nombre);
     const words = new Set(n.split(/[\s\-\/,;]+/).filter(Boolean));
+    const effectiveAmenities = getAmenityGuide();
     for (const am of AMENITY_KEYWORDS) {
+      if (!effectiveAmenities[am.id]) continue;
       for (const kw of am.keywords) {
         const kwNorm = normNombre(kw);
         if (kwNorm.includes(' ') ? n.includes(kwNorm) : words.has(kwNorm)) return am.id;
@@ -547,14 +665,16 @@
     const entry = lib[resolved] || lib.generico;
     const base = Array.from(entry.shots);
     const amenityId = amenityFromName(nombre || '');
-    if (amenityId && AMENITY_GUIDE[amenityId]) {
-      return base.concat(Array.from(AMENITY_GUIDE[amenityId].shots));
+    const amenityLib = getAmenityGuide();
+    if (amenityId && amenityLib[amenityId]) {
+      return base.concat(Array.from(amenityLib[amenityId].shots));
     }
     return base;
   }
 
   function suggestionsForDrone(tipoPropiedad) {
-    return Array.from((DRONE_GUIDE[tipoPropiedad] || DRONE_GUIDE.casa).shots);
+    const droneLib = getDroneGuide();
+    return Array.from((droneLib[tipoPropiedad] || droneLib.casa).shots);
   }
 
   function findSuggestion(id) {
@@ -563,11 +683,11 @@
       const shot = cat.shots.find((s) => s.id === id);
       if (shot) return shot;
     }
-    for (const entry of Object.values(DRONE_GUIDE)) {
+    for (const entry of Object.values(getDroneGuide())) {
       const shot = entry.shots.find((s) => s.id === id);
       if (shot) return shot;
     }
-    for (const entry of Object.values(AMENITY_GUIDE)) {
+    for (const entry of Object.values(getAmenityGuide())) {
       const shot = entry.shots.find((s) => s.id === id);
       if (shot) return shot;
     }
@@ -1556,6 +1676,11 @@
     getShotTypes,
     getMovements,
     getGuideLibrary,
+    getDroneGuide,
+    getAmenityGuide,
+    getRoomCategories,
+    applyGuideConfig,
+    resetGuideConfig,
     normNombre,
     detectCategoria,
     amenityFromName,
