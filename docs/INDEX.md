@@ -2,6 +2,16 @@
 
 Guia rapida para encontrar specs, planes, handoffs y reportes del repo. Si algun documento historico contiene tokens, claves o datos reales, tratarlo como sensible y no copiar esos valores.
 
+## Empezar aqui (referencia viva)
+
+| Documento | Para que sirve |
+|---|---|
+| `CLAUDE.md` (raiz) | Punto de entrada: reglas criticas, comandos y mapa de documentos. Leerlo primero. |
+| `docs/PROYECTO.md` | Que es el sistema, URLs de produccion, repo y estructura de archivos. |
+| `docs/ARQUITECTURA.md` | Referencia tecnica estable: D1, paquetes, flujos, adapter, backup, pendientes y comandos. |
+| `docs/CREDENCIALES.md` | Claves, IDs de D1 y URLs internas. Sensible. |
+| `docs/RONDAS.md` | Historial completo de cambios, ronda por ronda. |
+
 ## Handoffs y guias activas
 
 | Documento | Para que sirve |
@@ -59,7 +69,7 @@ Guia rapida para encontrar specs, planes, handoffs y reportes del repo. Si algun
 
 | Documento | Que contiene |
 |---|---|
-| `MASTER_V4.md` | Fuente principal del sistema v4: arquitectura, URLs, deploy, DB, flujos y rondas. |
+| `MASTER_V4.md` | **Historico congelado** (hasta Ronda 60). Reemplazado por CLAUDE.md + docs/PROYECTO.md + docs/ARQUITECTURA.md + docs/RONDAS.md. |
 | `ARRANQUE.md` | Guia historica de setup inicial: Wrangler, D1, adapter, backup y dominio. |
 | `MASTER_AUTOMATIZACION.md` | Vision del sistema de automatizacion WhatsApp, fases, tablas y dependencias externas. |
 | `PLAN_UNIFICACION_V5.md` | Plan para unificar contratos y eliminar distinciones antiguas. |
