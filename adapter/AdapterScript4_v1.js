@@ -70,6 +70,15 @@ function getOrCreateFolder_(parent, name) {
   return it.hasNext() ? it.next() : parent.createFolder(name);
 }
 
+// ── Helper: escapa texto para insertarlo en el HTML de los correos ──────────
+// El nombre del cliente (u otro texto libre) podría traer < > & " ' y romper/
+// inyectar el HTML del correo. Usar SOLO para el cuerpo HTML (no en calendar ni texto plano).
+function escHtml_(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // ── FIRMA — guarda PNG en Drive, genera PDF diferido ────────────────────────
 
 function procesarFirma(body) {
@@ -160,7 +169,7 @@ function procesarFirma(body) {
           prop.referencias ? 'Cómo llegar: ' + prop.referencias : '',
           'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
         ].filter(Boolean).join('\n');
-        var titulo = folio + ' IA ' + contrato.nombre_cliente + ' — ' + (prop.paquete || contrato.paquete_base || '');
+        var titulo = folio + ' · ' + contrato.nombre_cliente + ' — ' + (prop.paquete || contrato.paquete_base || '');
         var evento = CalendarApp.getDefaultCalendar().createEvent(titulo, fechaEv, fin,
           { description: descripcion, location: mapsOk || prop.direccion || '' });
         props.setProperty('cal_' + token + '_' + prop.num_propiedad, evento.getId());
@@ -311,7 +320,7 @@ function enviarCorreoConPDF_(contrato, linkPortal, pdfUrl) {
   if (!contrato.correo_cliente) return;
     var porcentaje = (contrato.precio_total && contrato.precio_total > 0)
       ? Math.round((contrato.anticipo || 0) / contrato.precio_total * 100) : 0;
-  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + contrato.nombre_cliente + '</strong>,</p>' +
+  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + escHtml_(contrato.nombre_cliente) + '</strong>,</p>' +
     '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 20px">Gracias por firmar tu contrato. Adjunto encontrarás tu copia en PDF.</p>' +
     '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F7F4;border-radius:8px;padding:16px 20px;margin-bottom:20px">' +
     '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Anticipo acordado (' + porcentaje + '%)</td>' +
@@ -419,7 +428,7 @@ function primerAbono(body) {
         'Portal de equipo: https://contratos.inmueblesaudiovisuales.com/equipo.html?token=' + token,
       ].filter(Boolean).join('\n');
 
-      var titulo = (folio || token) + ' IA ' + contrato.nombre_cliente + ' — ' + (prop.paquete || contrato.paquete_base || '');
+      var titulo = (folio || token) + ' · ' + contrato.nombre_cliente + ' — ' + (prop.paquete || contrato.paquete_base || '');
 
       var evento = CalendarApp.getDefaultCalendar().createEvent(titulo, fecha, fin, {
         description: descripcion,
@@ -561,9 +570,13 @@ function enviarCorreoAbono(body) {
   var metodoLabel = body.metodo || 'Transferencia';
   var saldoColor = (body.nuevoSaldo || 0) === 0 ? '#C9A84C' : '#1C1C1E';
 
-  var intro = esPrimero
-    ? '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 24px">Hola <strong>' + body.nombreCliente + '</strong>, recibimos tu pago. Tu fecha queda confirmada.</p>'
-    : '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 24px">Hola <strong>' + body.nombreCliente + '</strong>, confirmamos la recepción de tu pago.</p>';
+  var liquidado = (body.nuevoSaldo || 0) === 0;
+  var nombreEsc = escHtml_(body.nombreCliente);
+  var intro = liquidado
+    ? '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 24px">Hola <strong>' + nombreEsc + '</strong>, recibimos tu pago. Tu contrato queda pagado por completo. ¡Gracias!</p>'
+    : esPrimero
+      ? '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 24px">Hola <strong>' + nombreEsc + '</strong>, recibimos tu pago. Tu fecha queda confirmada.</p>'
+      : '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 24px">Hola <strong>' + nombreEsc + '</strong>, confirmamos la recepción de tu pago.</p>';
 
   var cuerpo = intro +
     '<table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #E5E5EA;margin-bottom:24px">' +
@@ -576,10 +589,12 @@ function enviarCorreoAbono(body) {
     '</table>' +
     '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0">Cualquier duda, <a href="' + CONFIG.WHATSAPP + '" style="color:#C9A84C;font-weight:700;text-decoration:none">contáctanos por WhatsApp</a>.</p>';
 
-  var tituloEmail = esPrimero ? 'Tu sesión está apartada, ' + body.nombreCliente + '.' : 'Confirmación de pago';
-  var asunto = esPrimero
-    ? 'Tu sesión está apartada — ' + (body.folio || '')
-    : 'Confirmación de pago — ' + (body.folio || '');
+  var tituloEmail = liquidado ? 'Pago completo recibido' : (esPrimero ? 'Tu sesión está apartada, ' + nombreEsc + '.' : 'Confirmación de pago');
+  var asunto = liquidado
+    ? 'Pago completo recibido — ' + (body.folio || '')
+    : esPrimero
+      ? 'Tu sesión está apartada — ' + (body.folio || '')
+      : 'Confirmación de pago — ' + (body.folio || '');
 
   var html = htmlCorreo_(tituloEmail, cuerpo, 'VER MI COMPROBANTE', body.linkPortal);
   GmailApp.sendEmail(
@@ -592,7 +607,7 @@ function enviarCorreoAbono(body) {
 
 function enviarCorreoEntrega(body) {
   if (!body.correoCliente) return;
-  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + body.nombreCliente + '</strong>,</p>' +
+  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + escHtml_(body.nombreCliente) + '</strong>,</p>' +
     '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 20px">Tu material audiovisual ya está disponible para descarga. Puedes acceder desde el portal de tu contrato.</p>';
   var html = htmlCorreo_('Tu material está listo', cuerpo, 'Descargar material', body.linkPortal);
   GmailApp.sendEmail(
@@ -651,7 +666,7 @@ function notificarRevision(body) {
 
 function enviarRecordatorioPago(body) {
   if (!body.correoCliente) return;
-  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + body.nombreCliente + '</strong>,</p>' +
+  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + escHtml_(body.nombreCliente) + '</strong>,</p>' +
     '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 20px">Te recordamos que tienes un saldo pendiente.</p>' +
     '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F7F4;border-radius:8px;padding:16px 20px;margin-bottom:20px">' +
     '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Saldo pendiente</td>' +
@@ -679,7 +694,7 @@ function notificarUpsell(body) {
     ? '<ul style="margin:0 0 16px;padding-left:20px;color:#3A3A3C;font-size:13px;line-height:1.8">' +
       servicios.map(function(s) { return '<li>' + s + '</li>'; }).join('') + '</ul>'
     : '';
-  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + body.nombreCliente + '</strong>,</p>' +
+  var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + escHtml_(body.nombreCliente) + '</strong>,</p>' +
     '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 20px">Se han añadido servicios adicionales a tu contrato.</p>' +
     serviciosHtml +
     '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F7F4;border-radius:8px;padding:16px 20px;margin-bottom:20px">' +
@@ -776,7 +791,7 @@ function reagendarPropiedad(body) {
         nuevaFecha.setHours(parseInt(partes[0]), parseInt(partes[1] || 0), 0);
         var fin = new Date(nuevaFecha.getTime() + 2 * 3600 * 1000);
         evento.setTime(nuevaFecha, fin);
-        evento.setTitle(body.folioNuevo + ' IA ' + contrato.nombre_cliente + ' — ' + (propiedad.paquete || contrato.paquete_base || ''));
+        evento.setTitle(body.folioNuevo + ' · ' + contrato.nombre_cliente + ' — ' + (propiedad.paquete || contrato.paquete_base || ''));
         var de = {}; try { de = JSON.parse(propiedad.datos_especificos || '{}'); } catch(e) {}
         var mapsOkR = limpiarLinkMaps_(propiedad.link_maps);
         var nuevaDescripcion = [
@@ -812,7 +827,7 @@ function reagendarPropiedad(body) {
   }
 
   if (contrato.correo_cliente) {
-    var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + contrato.nombre_cliente + '</strong>,</p>' +
+    var cuerpo = '<p style="color:#1C1C1E;font-size:15px;margin:0 0 16px">Hola <strong>' + escHtml_(contrato.nombre_cliente) + '</strong>,</p>' +
       '<p style="color:#3A3A3C;font-size:14px;line-height:1.6;margin:0 0 20px">Tu sesión ha sido reagendada.</p>' +
       '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F9F7F4;border-radius:8px;padding:16px 20px;margin-bottom:20px">' +
       '<tr><td style="font-size:13px;color:#9B9B9F;padding:4px 0">Nueva fecha</td>' +
@@ -882,8 +897,10 @@ function crearEventoReservado(body) {
   var hoy = new Date();
   var fin = new Date(hoy.getTime() + 30 * 60 * 1000);
   var titulo = 'Reservado — ' + nombre;
+  // Texto neutral: este evento se crea tanto al recibir el primer abono COMO al
+  // reservar sin pago, así que no se afirma que hubo un abono.
   var descripcion = [
-    'Primer abono recibido. Sesión por agendar.',
+    'Contrato reservado. La sesión está en su fecha programada.',
     telefono ? 'Tel: ' + telefono : '',
     equipoUrl ? 'Equipo: ' + equipoUrl : ''
   ].filter(Boolean).join('\n');

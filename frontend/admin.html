@@ -4549,11 +4549,26 @@ async function reservarSinAnticipo() {
 }
 
 // Cancelar / reactivar contrato (acción explícita; reemplaza al viejo selector de 9 estatus)
+// Al reactivar, restaura un estatus COHERENTE con los datos (si ya estaba firmado/pagado/
+// entregado, no debe regresar a "Pendiente firma" — eso dejaba firmado y sin firmar a la vez).
+function estatusReactivar(c) {
+  if (!c) return 'Pendiente firma';
+  const precio = parseFloat(c.PrecioTotal) || 0;
+  const saldoRaw = parseFloat(c.SaldoPendiente);
+  const saldo = isNaN(saldoRaw) ? precio : saldoRaw;
+  if (c.FechaEntrega) return saldo <= 0 ? 'Completado' : 'Entregado';
+  if (precio > saldo)  return 'Reservado';   // hubo abonos reales
+  if (c.FechaFirma)    return 'Firmado';
+  return 'Pendiente firma';
+}
+
 async function cancelarContrato(cancelar) {
   const t = tokenActivo;
   if (!t) return;
   if (cancelar && !confirm('¿Cancelar este contrato? El cliente ya no podrá usar su portal hasta reactivarlo.')) return;
-  const estatus = cancelar ? 'Cancelado' : 'Pendiente firma';
+  const _c = (window._contratoActivo && window._contratoActivo.c)
+    || (todosContratos || []).find(x => x.Token === t);
+  const estatus = cancelar ? 'Cancelado' : estatusReactivar(_c);
   setMsg('msg-cancelar', cancelar ? 'Cancelando…' : 'Reactivando…', '');
   try {
     let data = await apiPost({ action: 'actualizarEstatus', token: t, estatus, forzar: true });
