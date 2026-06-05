@@ -645,6 +645,7 @@
 const API = 'https://contratos.inmueblesaudiovisuales.com/api';
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
 const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+const CONFIG = new URLSearchParams(location.search).get('config') === '1';
 const logic = window.IAVChecklistLogic;
 
 let meta = { folio: '', nombreCliente: '' };
@@ -883,6 +884,11 @@ function cargarDemo() {
 
 function render() {
   const app = document.getElementById('app');
+  if (CONFIG) {
+    if (!configGuiaOpen) return;
+    app.innerHTML = `<main class="content">${renderConfigGuia()}</main>`;
+    return;
+  }
   if (!laneReady()) {
     app.innerHTML = renderLaneEntry();
     app.classList.remove('has-thumb');
@@ -1763,7 +1769,7 @@ function renderMediaCapture() {
   <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
   <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
   ` : `
-  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}${guideMode ? '<button class="guide-gear-btn icon-btn" onclick="abrirConfigGuia()" aria-label="Configurar biblioteca"><i class="ti ti-settings"></i></button>' : ''}</div>
+  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}</div>
   <div class="cap-cam">
     <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
     <div class="cap-cam-copy">
@@ -2104,6 +2110,27 @@ async function abrirConfigGuia() {
 function cerrarConfigGuia() {
   configGuiaOpen = false;
   logic.applyGuideConfig(currentGuideConfig || {});
+  if (CONFIG) {
+    document.getElementById('app').innerHTML = '<div class="empty"><p>Biblioteca actualizada. Puedes cerrar esta pestaña.</p></div>';
+    return;
+  }
+  render();
+}
+
+async function iniciarConfigMode() {
+  try {
+    const r = await fetch('/api/obtenerConfigGuia');
+    const data = r.ok ? await r.json() : null;
+    if (data && data.guia) { currentGuideConfig = data.guia; logic.applyGuideConfig(data.guia); }
+  } catch (_) {}
+  const k = await ensureAdminKey();
+  if (!k) {
+    mostrarError('Se requiere la contrasena de administrador para editar la biblioteca.');
+    return;
+  }
+  guideConfigDraft = JSON.parse(JSON.stringify(currentGuideConfig || {}));
+  logic.applyGuideConfig(guideConfigDraft);
+  configGuiaOpen = true;
   render();
 }
 
@@ -3354,7 +3381,9 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && document.getElementById('overlay').classList.contains('visible')) cerrarModal();
 });
 
-if (DEMO) {
+if (CONFIG) {
+  iniciarConfigMode();
+} else if (DEMO) {
   cargarDemo();
 } else if (!TOKEN) {
   mostrarError('Este enlace no tiene un token de contrato. Usa el boton Checklist desde el panel de administracion.');
