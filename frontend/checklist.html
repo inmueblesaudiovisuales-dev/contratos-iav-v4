@@ -37,7 +37,7 @@
 
     html, body { min-height: 100%; background: var(--page); }
     body {
-      font-family: 'Montserrat', system-ui, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       color: var(--ink-1);
       -webkit-font-smoothing: antialiased;
     }
@@ -1375,12 +1375,20 @@ function iniciarSecuencia() {
   const camera = activeCamera();
   const input = document.getElementById('last-filename');
   if (!camera || !input || !input.value.trim()) return;
-  if (!logic.parseFilenameSequence(input.value.trim(), camera.kind)) return showToast('No encontramos un consecutivo en ese nombre');
+  const filename = input.value.trim();
+  if (!logic.parseFilenameSequence(filename, camera.kind)) return showToast('No encontramos un consecutivo en ese nombre');
   const current = logic.getCameraSequence(state, camera.id);
-  if (current.nextToken && !confirm(`Iniciar un nuevo tramo para ${camera.label}? El tramo actual termina antes de ${current.nextToken}.`)) return;
-  const next = logic.initializeCameraSequence(state, { cameraId: camera.id, lastFilename: input.value.trim() });
-  const nextToken = logic.getCameraSequence(next, camera.id).nextToken;
-  if ((state.mediaFiles || []).some((file) => file.cameraId === camera.id && file.fileToken === nextToken)) return showToast(`El siguiente archivo ${nextToken} ya esta registrado`);
+  if (current.nextToken) {
+    confirmSheet('Nuevo tramo', `El tramo actual de ${camera.label} termina antes de ${current.nextToken}. ¿Iniciar uno nuevo?`, 'Iniciar nuevo tramo', () => aplicarSecuencia(camera.id, filename));
+  } else {
+    aplicarSecuencia(camera.id, filename);
+  }
+}
+
+function aplicarSecuencia(cameraId, filename) {
+  const next = logic.initializeCameraSequence(state, { cameraId, lastFilename: filename });
+  const nextToken = logic.getCameraSequence(next, cameraId).nextToken;
+  if ((state.mediaFiles || []).some((file) => file.cameraId === cameraId && file.fileToken === nextToken)) return showToast(`El siguiente archivo ${nextToken} ya está registrado`);
   state = next;
   cerrarModal(); render(); scheduleSave();
 }
@@ -1452,17 +1460,19 @@ function toggleBuenaDesdeModal(mediaId, targetId) {
 }
 
 function insertarOmitido(mediaId) {
-  if (!confirm('Insertar un archivo antes y recorrer los consecutivos posteriores de esta camara?')) return;
-  state = logic.insertOmittedMediaFile(state, mediaId);
-  const inserted = state.mediaFiles.find((file, index) => state.mediaFiles[index + 1] && state.mediaFiles[index + 1].id === mediaId);
-  if (inserted) inserted.author = miNombre();
-  cerrarModal(); render(); scheduleSave();
+  confirmSheet('Insertar archivo olvidado', 'Se insertará un archivo antes de este y se recorrerán los consecutivos posteriores de esta cámara. ¿Continuar?', 'Insertar olvidado', () => {
+    state = logic.insertOmittedMediaFile(state, mediaId);
+    const inserted = state.mediaFiles.find((file, index) => state.mediaFiles[index + 1] && state.mediaFiles[index + 1].id === mediaId);
+    if (inserted) inserted.author = miNombre();
+    render(); scheduleSave();
+  });
 }
 
 function eliminarRegistroArchivo(mediaId) {
-  if (!confirm('Usa esto solamente si la camara NO creo un archivo. Se recorreran los consecutivos posteriores. Continuar?')) return;
-  state = logic.removeMediaFile(state, mediaId);
-  cerrarModal(); render(); scheduleSave();
+  confirmSheet('Eliminar registro', 'Usa esto solo si la cámara NO creó un archivo. Se recorrerán de vuelta los consecutivos posteriores. ¿Continuar?', 'Eliminar registro', () => {
+    state = logic.removeMediaFile(state, mediaId);
+    render(); scheduleSave();
+  }, true);
 }
 
 function agregarNotaArchivo(mediaId) {
@@ -1939,6 +1949,17 @@ function cerrarModal(event) {
   document.getElementById('overlay').classList.remove('visible');
   document.getElementById('app').inert = false;
   selectedAction = null;
+}
+
+function confirmSheet(titulo, mensaje, etiquetaSi, onSi, danger) {
+  abrirModal(`<div class="sheet-head"><h2>${esc(titulo)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <p class="sheet-note">${esc(mensaje)}</p>
+    <div class="action-stack">
+      <button class="${danger ? 'danger btn' : 'primary'} block" id="confirm-si" style="width:100%">${esc(etiquetaSi)}</button>
+      <button class="btn ghost" onclick="cerrarModal()" style="width:100%">Cancelar</button>
+    </div>`);
+  const btn = document.getElementById('confirm-si');
+  if (btn) btn.onclick = () => { cerrarModal(); onSi(); };
 }
 
 function showToast(message, undoHandler) {
