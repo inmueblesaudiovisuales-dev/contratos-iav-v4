@@ -610,6 +610,22 @@
     .cg-gloss-entry:last-of-type { border-bottom: none; }
     .cg-gloss-id { font-size: 11px; color: var(--ink-3); font-family: monospace; }
     .cg-gloss-hint { font-size: 12px; }
+    /* F15 — puente IA */
+    .guide-tag-ia { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 700; background: var(--gold-soft); color: var(--gold); border: 1px solid var(--gold-leaf); margin-left: 5px; vertical-align: middle; letter-spacing: .03em; }
+    .guide-ia-btn { flex: none; }
+    .propuesta-status { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--radius); background: var(--gold-soft); color: var(--gold); font-size: 13px; font-weight: 700; margin-bottom: 12px; border: 1px solid var(--gold-leaf); }
+    .propuesta-status i { font-size: 15px; }
+    .field-group { margin-bottom: 10px; }
+    .field-label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-2); margin-bottom: 5px; }
+    .field.ta { padding: 10px 12px; min-height: 80px; resize: vertical; font-weight: 400; line-height: 1.45; }
+    .propuesta-preview { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .propuesta-report { font-size: 13px; font-weight: 700; color: var(--ink-1); margin-bottom: 10px; }
+    .propuesta-cuarto { padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .propuesta-cuarto:last-of-type { border-bottom: none; }
+    .propuesta-cuarto-name { font-size: 14px; font-weight: 700; color: var(--ink-1); margin-bottom: 5px; }
+    .propuesta-shot { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; }
+    .propuesta-shot-name { font-size: 13px; font-weight: 600; color: var(--ink-1); }
+    .propuesta-shot-type { font-size: 11px; color: var(--ink-3); }
   </style>
 </head>
 <body>
@@ -653,6 +669,8 @@ let activeSugId = null;
 let configGuiaOpen = false;
 let guideConfigDraft = null;
 let currentGuideConfig = null;
+let propuestaIAText = '';
+let propuestaIAParsed = null;
 
 const SERVICE_UI = {
   foto: { label: 'Foto normal', short: 'Foto', verb: 'foto', help: 'Marca cobertura fotografica.' },
@@ -1684,7 +1702,7 @@ function renderMediaCapture() {
   let tomaSubLabel = '';
   if (guideMode) {
     if (activeSugId) {
-      const activeSug = logic.findSuggestion(activeSugId);
+      const activeSug = logic.findSuggestion(activeSugId, state);
       tomaSubLabel = activeSug ? '<span class="cap-toma-sub">' + esc(activeSug.nombre) + '</span>' : '';
     } else {
       tomaSubLabel = '<span class="cap-toma-sub">toma libre</span>';
@@ -1708,7 +1726,7 @@ function renderMediaCapture() {
   <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
   <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
   ` : `
-  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="guide-gear-btn icon-btn" onclick="abrirConfigGuia()" aria-label="Configurar biblioteca"><i class="ti ti-settings"></i></button>' : ''}</div>
+  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}${guideMode ? '<button class="guide-gear-btn icon-btn" onclick="abrirConfigGuia()" aria-label="Configurar biblioteca"><i class="ti ti-settings"></i></button>' : ''}</div>
   <div class="cap-cam">
     <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
     <div class="cap-cam-copy">
@@ -1788,10 +1806,7 @@ function seleccionarSugerencia(id) {
 function avanzarSugerencia(targetId, currentSugId) {
   const target = state.espacios.find((e) => e.id === targetId) || state.droneItems.find((e) => e.id === targetId);
   if (!target) { activeSugId = null; return; }
-  const isDrone = state.modoActual === 'drone';
-  const suggestions = isDrone
-    ? logic.suggestionsForDrone(state.guide && state.guide.tipoPropiedad)
-    : logic.suggestionsForSpace(categoriaDe(target), target.nombre);
+  const suggestions = logic.suggestionsForTarget(state, state.modoActual, target);
   if (!suggestions || !suggestions.length) { activeSugId = null; return; }
   const guideSkip = target.guideSkip || {};
   const currentIdx = suggestions.findIndex((s) => s.id === currentSugId);
@@ -1824,10 +1839,7 @@ function movementGlyph(movId) {
 }
 
 function renderGuideList(target) {
-  const isDrone = state.modoActual === 'drone';
-  const suggestions = isDrone
-    ? logic.suggestionsForDrone(state.guide && state.guide.tipoPropiedad)
-    : logic.suggestionsForSpace(categoriaDe(target), target.nombre);
+  const suggestions = logic.suggestionsForTarget(state, state.modoActual, target);
   if (!suggestions || !suggestions.length) {
     return `<div class="guide-list"><p class="cap-empty">Sin sugerencias para este espacio.</p></div>`;
   }
@@ -1838,6 +1850,7 @@ function renderGuideList(target) {
     const typeLabel = (shotTypes[s.shotType] || {}).label || s.shotType;
     const movLabel = (movements[s.movement] || {}).label || s.movement;
     const isActive = activeSugId === s.id;
+    const iaTag = s.id.startsWith('custom.ia.') ? `<span class="guide-tag-ia">IA</span>` : '';
     let stateHtml;
     if (progress.done) {
       const toks = (progress.files || []).map((f) => esc(f.fileToken)).join(' ');
@@ -1850,7 +1863,7 @@ function renderGuideList(target) {
     return `<div class="guide-row-wrap">
       <button class="guide-row${isActive ? ' active' : ''}" onclick="seleccionarSugerencia('${esc(s.id)}')">
         <div class="guide-row-body">
-          <div class="guide-row-name">${esc(s.nombre)}<span class="guide-row-type"> · ${esc(typeLabel)} / ${esc(movLabel)}</span></div>
+          <div class="guide-row-name">${esc(s.nombre)}${iaTag}<span class="guide-row-type"> · ${esc(typeLabel)} / ${esc(movLabel)}</span></div>
           <div class="guide-row-sub">${esc(s.enfoque)}</div>
         </div>
         <div class="guide-row-right">
@@ -1871,7 +1884,7 @@ function renderGuideList(target) {
     </div>`;
   }).join('');
   let tipoChipsHtml = '';
-  if (isDrone) {
+  if (state.modoActual === 'drone') {
     const droneLib = logic.getDroneGuide();
     const current = (state.guide && state.guide.tipoPropiedad) || 'casa';
     const chips = Object.keys(droneLib).map((key) => {
@@ -1904,6 +1917,129 @@ function setCategoriaSpace(targetId, catId) {
   cerrarModal();
   scheduleSave();
   render();
+}
+
+function abrirPropuestaIA() {
+  propuestaIAParsed = null;
+  renderPropuestaIA();
+}
+
+function renderPropuestaIA() {
+  const guide = state.guide || {};
+  const desc = guide.descripcion || '';
+  const proposal = guide.proposal;
+  const totalIA = proposal
+    ? Object.values(proposal.porCuarto || {}).reduce((n, arr) => n + arr.length, 0)
+    : 0;
+
+  const statusHtml = (proposal && totalIA > 0)
+    ? `<div class="propuesta-status"><i class="ti ti-check"></i>${totalIA} toma${totalIA === 1 ? '' : 's'} IA activa${totalIA === 1 ? '' : 's'}</div>`
+    : '';
+
+  let previewHtml = '';
+  if (propuestaIAParsed) {
+    const { proposal: parsed, report } = propuestaIAParsed;
+    const cuartoNames = {};
+    [...(state.espacios || []), ...(state.droneItems || [])].forEach((t) => { cuartoNames[t.id] = t.nombre; });
+    const shotTypes = logic.getShotTypes();
+    const movements = logic.getMovements();
+    const n = report.agregadas;
+    const ig = report.ignoradas;
+    const reportLine = `${n} toma${n === 1 ? '' : 's'} propuesta${n === 1 ? '' : 's'}${ig > 0 ? `, ${ig} ignorada${ig === 1 ? '' : 's'}` : ''}`;
+    const cuartosHtml = Object.entries(parsed.porCuarto || {}).map(([tid, shots]) => {
+      const nombre = cuartoNames[tid] || tid;
+      const shotRows = shots.map((s) => {
+        const tl = (shotTypes[s.shotType] || {}).label || s.shotType;
+        const ml = (movements[s.movement] || {}).label || s.movement;
+        return `<div class="propuesta-shot"><span class="propuesta-shot-name">${esc(s.nombre)}</span><span class="propuesta-shot-type">${esc(tl)} / ${esc(ml)}</span></div>`;
+      }).join('');
+      return `<div class="propuesta-cuarto"><div class="propuesta-cuarto-name">${esc(nombre)}</div>${shotRows}</div>`;
+    }).join('');
+    const applyBtn = n > 0
+      ? `<button class="btn primary" onclick="aplicarPropuestaIA()" style="margin-top:10px">Aplicar propuesta</button>`
+      : '';
+    previewHtml = `<div class="propuesta-preview">
+      <div class="propuesta-report">${esc(reportLine)}</div>
+      ${cuartosHtml}
+      ${applyBtn}
+      ${n === 0 ? `<p class="sheet-note" style="margin-top:8px">No se encontraron tomas validas para aplicar.</p>` : ''}
+    </div>`;
+  }
+
+  const quitarBtn = proposal
+    ? `<button class="btn ghost" onclick="quitarPropuestaIA()"><i class="ti ti-trash"></i>Quitar propuesta</button>`
+    : '';
+
+  abrirModal(`<div class="sheet-head"><h2>Propuesta IA</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    ${statusHtml}
+    <div class="field-group">
+      <label class="field-label">Destacados de la propiedad</label>
+      <textarea id="propuestaDescTA" class="field ta" rows="3" placeholder="Vista al lago, terraza amplia, cocina gourmet..." onchange="actualizarDescripcionGuia(this.value)">${esc(desc)}</textarea>
+    </div>
+    <div class="action-stack">
+      <button class="btn" onclick="copiarPromptIA()"><i class="ti ti-copy"></i>Copiar prompt</button>
+    </div>
+    <div class="field-group" style="margin-top:12px">
+      <label class="field-label">Pegar respuesta de la IA</label>
+      <textarea id="propuestaRespTA" class="field ta" rows="5" placeholder="Pega aqui la respuesta JSON...">${esc(propuestaIAText)}</textarea>
+    </div>
+    <div class="action-stack">
+      <button class="btn" onclick="analizarPropuestaIA()"><i class="ti ti-search"></i>Analizar</button>
+      ${quitarBtn}
+    </div>
+    ${previewHtml}`);
+}
+
+function actualizarDescripcionGuia(val) {
+  if (!state.guide) state.guide = {};
+  state.guide.descripcion = val;
+  scheduleSave();
+}
+
+function copiarPromptIA() {
+  const ta = document.getElementById('propuestaDescTA');
+  if (ta) actualizarDescripcionGuia(ta.value);
+  const prompt = logic.buildPropuestaPrompt(state);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(prompt)
+      .then(() => showToast('Prompt copiado'))
+      .catch(() => mostrarPromptFallback(prompt));
+  } else {
+    mostrarPromptFallback(prompt);
+  }
+}
+
+function mostrarPromptFallback(prompt) {
+  abrirModal(`<div class="sheet-head"><h2>Prompt</h2><button class="icon-btn" onclick="abrirPropuestaIA()"><i class="ti ti-x"></i></button></div>
+    <p class="sheet-note">Selecciona el texto y copialo manualmente.</p>
+    <textarea class="field ta" rows="10" onclick="this.select()" readonly style="min-height:200px">${esc(prompt)}</textarea>`);
+}
+
+function analizarPropuestaIA() {
+  const ta = document.getElementById('propuestaRespTA');
+  if (ta) propuestaIAText = ta.value;
+  propuestaIAParsed = logic.parsePropuesta(propuestaIAText, state);
+  renderPropuestaIA();
+}
+
+function aplicarPropuestaIA() {
+  if (!propuestaIAParsed || !propuestaIAParsed.proposal) return;
+  if (!state.guide) state.guide = {};
+  state.guide.proposal = propuestaIAParsed.proposal;
+  propuestaIAParsed = null;
+  scheduleSave();
+  render();
+  cerrarModal();
+  showToast('Propuesta aplicada');
+}
+
+function quitarPropuestaIA() {
+  if (state.guide) delete state.guide.proposal;
+  propuestaIAParsed = null;
+  scheduleSave();
+  render();
+  cerrarModal();
+  showToast('Propuesta eliminada');
 }
 
 async function ensureAdminKey() {
@@ -2540,7 +2676,7 @@ function registrarArchivo(targetId, kind, discardReason, guideCtx) {
   const previous = state;
   let suggFields = {};
   if (guideCtx && guideCtx.suggestionId) {
-    const sug = logic.findSuggestion(guideCtx.suggestionId);
+    const sug = logic.findSuggestion(guideCtx.suggestionId, state);
     suggFields = sug ? { suggestionId: sug.id, shotType: sug.shotType, movement: sug.movement } : {};
   }
   state = logic.registerMediaFile(state, { cameraId: camera.id, targetId, kind, discardReason, autor: miNombre(), now: new Date(), ...suggFields });
