@@ -1304,9 +1304,55 @@
       .iav-tabs { display: flex; }
       .iav-bottomnav { display: none; }
       .main-content { padding-bottom: 0; }
-      /* Hoy: columna editorial centrada (no estirar de orilla a orilla en pantallas anchas) */
-      #sec-hoy { max-width: 1040px; margin: 0 auto; }
-      #sec-hoy .hoy-nuevo-btn { max-width: 360px; }
+
+      /* ── Hoy: tablero de escritorio (rejilla, no columna móvil estirada) ── */
+      #sec-hoy { max-width: 1200px; margin: 0 auto; }
+
+      /* Cabecera como barra: saludo · por cobrar · nuevo */
+      #sec-hoy .hoy-head {
+        flex-wrap: nowrap; align-items: center; gap: 20px;
+        margin-bottom: 22px; padding-bottom: 18px;
+        border-bottom: 1px solid var(--border,#E7E2D6);
+      }
+      #sec-hoy .hoy-saludo { font-size: 28px; }
+      #sec-hoy .hoy-cobrar { margin-left: auto; }
+      #sec-hoy .hoy-nuevo-btn { width: auto; box-shadow: none; padding: 11px 22px; white-space: nowrap; }
+
+      /* Rejilla de paneles: radar full-width, luego 2 columnas */
+      #sec-hoy .hoy-grid {
+        display: grid; gap: 18px; align-items: start;
+        grid-template-columns: 1.55fr 1fr;
+        grid-template-areas:
+          "radar    radar"
+          "sesiones llamadas"
+          "sesiones cobrar";
+      }
+      .hoy-panel-radar    { grid-area: radar; }
+      .hoy-panel-sesiones { grid-area: sesiones; }
+      .hoy-panel-llamadas { grid-area: llamadas; }
+      .hoy-panel-cobrar   { grid-area: cobrar; }
+
+      /* Paneles tipo tarjeta sutil */
+      #sec-hoy .hoy-panel {
+        align-self: start;
+        background: var(--card,#FFFDF8);
+        border: 1px solid var(--border,#E7E2D6);
+        border-radius: 14px;
+        padding: 4px 18px 14px;
+      }
+      #sec-hoy .hoy-seccion-titulo {
+        margin: 14px 0 4px; padding-bottom: 12px;
+        border-bottom: 1px solid var(--page,#F2EEE4);
+        text-transform: uppercase; letter-spacing: .05em; font-size: 12px;
+      }
+      /* Filas dentro del panel: planas, separadas por línea (sin doble marco) */
+      #sec-hoy .hoy-panel .hoy-card {
+        border: none; border-bottom: 1px solid var(--page,#F2EEE4);
+        border-radius: 0; margin-bottom: 0; padding: 12px 4px;
+      }
+      #sec-hoy .hoy-panel .hoy-card:last-child { border-bottom: none; }
+      #sec-hoy .hoy-panel .hoy-card:hover { background: var(--page,#F7F4EC); }
+      #sec-hoy .hoy-vacio { padding: 14px 4px; }
     }
   </style>
 </head>
@@ -1388,21 +1434,30 @@
           <div class="hoy-cobrar-label">Por cobrar</div>
           <div class="hoy-cobrar-val" id="hoy-cobrar-val">—</div>
         </div>
+        <button class="hoy-nuevo-btn" onclick="irANuevo()"><i class="ti ti-plus"></i> Nuevo contrato</button>
       </div>
 
-      <button class="hoy-nuevo-btn" onclick="irANuevo()"><i class="ti ti-plus"></i> Nuevo contrato</button>
+      <div class="hoy-grid">
+        <section class="hoy-panel hoy-panel-radar">
+          <div class="hoy-seccion-titulo">Radar de sesiones</div>
+          <div class="hoy-filmstrip" id="hoy-filmstrip"></div>
+        </section>
 
-      <div class="hoy-seccion-titulo">Radar de sesiones</div>
-      <div class="hoy-filmstrip" id="hoy-filmstrip"></div>
+        <section class="hoy-panel hoy-panel-sesiones">
+          <div class="hoy-seccion-titulo">Sesiones de la semana</div>
+          <div id="hoy-sesiones"><div class="hoy-vacio">Cargando…</div></div>
+        </section>
 
-      <div class="hoy-seccion-titulo">Sesiones de la semana</div>
-      <div id="hoy-sesiones"><div class="hoy-vacio">Cargando…</div></div>
+        <section class="hoy-panel hoy-panel-llamadas">
+          <div class="hoy-seccion-titulo">Llamadas de hoy</div>
+          <div id="hoy-llamadas"><div class="hoy-vacio">Cargando…</div></div>
+        </section>
 
-      <div class="hoy-seccion-titulo">Llamadas de hoy</div>
-      <div id="hoy-llamadas"><div class="hoy-vacio">Cargando…</div></div>
-
-      <div class="hoy-seccion-titulo">Por cobrar</div>
-      <div id="hoy-porcobrar"><div class="hoy-vacio">Cargando…</div></div>
+        <section class="hoy-panel hoy-panel-cobrar">
+          <div class="hoy-seccion-titulo">Por cobrar</div>
+          <div id="hoy-porcobrar"><div class="hoy-vacio">Cargando…</div></div>
+        </section>
+      </div>
     </div>
 
     <!-- ── CONTRATOS ─────────────────────────────────── -->
