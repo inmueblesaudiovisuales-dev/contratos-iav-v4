@@ -6,17 +6,27 @@ window.IAVChecklistDemo = {
   build(logic) {
     let s = logic.createDefaultState();
     s.pisos = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades'];
+    s.guide = {
+      tipoPropiedad: 'casa',
+      descripcion: 'Casa de dos pisos con cocina de isla, sala con chimenea de piedra, doble altura en la entrada, suite principal con baño de tina y vista al jardín, alberca con camastros y palapas laterales.',
+      proposal: null,
+    };
     const defs = [
-      ['Fachada', 'Exterior', true, null],
-      ['Jardín', 'Exterior', false, null],
-      ['Sala', 'Piso 1', true, null],
-      ['Cocina', 'Piso 1', true, null],
-      ['Comedor', 'Piso 1', false, null],
-      ['Recámara principal', 'Piso 2', true, null],
-      ['Baño principal', 'Piso 2', false, 'Recámara principal'],
-      ['Clóset', 'Piso 2', false, 'Recámara principal'],
-      ['Alberca', 'Amenidades', true, null],
-      ['Gimnasio', 'Amenidades', false, null],
+      ['Fachada',            'Exterior',    true,  null],
+      ['Jardín',             'Exterior',    false, null],
+      ['Entrada / foyer',    'Piso 1',      true,  null],
+      ['Sala',               'Piso 1',      true,  null],
+      ['Cocina',             'Piso 1',      true,  null],
+      ['Comedor',            'Piso 1',      false, null],
+      ['Cuarto de lavado',   'Piso 1',      false, null],
+      ['Recámara principal', 'Piso 2',      true,  null],
+      ['Baño principal',     'Piso 2',      false, 'Recámara principal'],
+      ['Clóset',             'Piso 2',      false, 'Recámara principal'],
+      ['Recámara 2',         'Piso 2',      false, null],
+      ['Baño 2',             'Piso 2',      false, 'Recámara 2'],
+      ['Alberca',            'Amenidades',  true,  null],
+      ['Gimnasio',           'Amenidades',  false, null],
+      ['Roof garden',        'Amenidades',  false, null],
     ];
     const byName = {};
     defs.forEach((d, i) => {
@@ -34,10 +44,13 @@ window.IAVChecklistDemo = {
       byName[d[0]] = esp.id;
       s.espacios.push(esp);
     });
+
     // Algunos estados de cobertura para que foto/360 no se vean vacíos
-    s.espacios[2].estados.foto = { estado: 'hecho', autor: 'Fer' };   // Sala foto lista
-    s.espacios[3].estados.t360 = { estado: 'hecho', autor: 'Danna' }; // Cocina 360 listo
-    s.espacios[9].estados.foto = { estado: 'no_aplica' };             // Gimnasio foto no aplica
+    const idx = (n) => s.espacios.findIndex((e) => e.nombre === n);
+    s.espacios[idx('Sala')].estados.foto = { estado: 'hecho', autor: 'Fer' };
+    s.espacios[idx('Cocina')].estados.t360 = { estado: 'hecho', autor: 'Danna' };
+    s.espacios[idx('Gimnasio')].estados.foto = { estado: 'no_aplica' };
+    s.espacios[idx('Comedor')].estados.foto = { estado: 'hecho', autor: 'Fer' };
 
     // Secuencia de video Sony con 3 archivos en Recámara principal (reproduce el mockup)
     s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260520_PIB2815' });
@@ -47,6 +60,11 @@ window.IAVChecklistDemo = {
     s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: rec, kind: 'discard', discardReason: 'failed', autor: 'tú' }); // PIB2817
     s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: rec, kind: 'take', autor: 'tú' });    // PIB2818
 
+    // Tomas guiadas en Sala (modo guiado demo)
+    const sala = byName['Sala'];
+    s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: sala, kind: 'take', autor: 'tú', suggestionId: 'sala.wide', shotType: 'wide', movement: 'gimbal_walk' }); // PIB2819
+    s = logic.toggleMediaGood(s, s.mediaFiles[s.mediaFiles.length - 1].id);
+
     // Asesores: secuencias de ambas cámaras + un par de tomas en Introducción
     s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB4810' });
     s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260520_0090_D' });
@@ -55,6 +73,15 @@ window.IAVChecklistDemo = {
     s = logic.toggleMediaGood(s, s.mediaFiles[s.mediaFiles.length - 2].id);                // marca la Sony del par como buena
     s = logic.registerAsesorFile(s, { puntoId: intro, kind: 'discard', discardReason: 'failed', autor: 'tú' });
     s = logic.registerAsesorFile(s, { puntoId: intro, kind: 'take', autor: 'tú' });        // otra toma
+
+    // Drone: secuencia para casa
+    s = logic.initializeCameraSequence(s, { cameraId: 'drone-main', lastFilename: 'DJI_20260520_0120_D' });
+    if (s.droneItems && s.droneItems.length) {
+      const droneTarget = s.droneItems[0].id;
+      s = logic.registerMediaFile(s, { cameraId: 'drone-main', targetId: droneTarget, kind: 'take', autor: 'tú' }); // 0121
+      s = logic.toggleMediaGood(s, s.mediaFiles[s.mediaFiles.length - 1].id);
+    }
+
     return s;
   },
 };

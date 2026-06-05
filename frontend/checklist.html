@@ -398,6 +398,7 @@
     .ob-chev { font-size: 15px; color: rgba(255,255,255,.5); }
     .ob-sync { display: inline-flex; align-items: center; gap: 5px; color: rgba(255,255,255,.55); font-size: 10px; font-weight: 600; flex: none; }
     .ob-sync .dot { width: 7px; height: 7px; }
+    .demo-reset-btn { height: 28px; padding: 0 10px; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.75); font-size: 11px; font-weight: 600; flex: none; cursor: pointer; }
 
     /* ===== Pantalla de entrada (elegir lane) ===== */
     .lane-entry { padding: 22px 16px 32px; max-width: 560px; margin: 0 auto; }
@@ -920,9 +921,17 @@ function renderHeader() {
       <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span><span class="ob-folio">${esc(meta.folio || '')}</span></span>
     </span>
     <span class="ob-spacer"></span>
+    ${DEMO ? `<button class="demo-reset-btn" onclick="reiniciarDemo()">Reiniciar demo</button>` : ''}
     <button class="ob-lane" onclick="abrirLane()"><i class="ti ti-${laneIcon(state.modoActual)}"></i>${esc(lane)}<i class="ti ti-chevron-down ob-chev"></i></button>
     <span class="ob-sync"><span class="dot" id="sync-dot"></span><span id="sync-label">en vivo</span></span>
   </header>`;
+}
+
+function reiniciarDemo() {
+  const prefix = 'checklist_';
+  const suffix = '_demo';
+  Object.keys(localStorage).filter((k) => k.startsWith(prefix) && k.endsWith(suffix)).forEach((k) => localStorage.removeItem(k));
+  location.reload();
 }
 
 function renderLaneEntry() {
