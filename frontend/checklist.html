@@ -2458,10 +2458,11 @@ function abrirCambiarCuarto() {
     return;
   }
   const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(state.espacios.map((e) => e.piso || 'Sin piso'))];
+  const covMap = guideMode ? new Map(logic.guideCoverage(state, state.modoActual).map((c) => [c.target.id, c])) : null;
   const body = pisos.map((piso) => {
     const rooms = state.espacios.filter((e) => (e.piso || 'Sin piso') === piso).sort((a, b) => (a.orden || 0) - (b.orden || 0));
     if (!rooms.length) return '';
-    return `<div class="cuarto-piso">${esc(piso)}</div>${rooms.map((r) => cuartoRow(r, 'space')).join('')}`;
+    return `<div class="cuarto-piso">${esc(piso)}</div>${rooms.map((r) => cuartoRow(r, 'space', covMap)).join('')}`;
   }).join('');
   abrirModal(`<div class="sheet-head"><h2>Cambiar cuarto</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="cuarto-list">${body}</div>
@@ -2471,13 +2472,13 @@ function abrirCambiarCuarto() {
     </div>`);
 }
 
-function cuartoRow(item, type) {
+function cuartoRow(item, type, covMap) {
   const done = type === 'drone' ? item.estado === 'hecho' : (item.estados[state.modoActual] || {}).estado === 'hecho';
   const child = type === 'space' && item.parentId;
   const active = item.id === (activeTarget() || {}).id;
   let faltanBadge = '';
   if (guideMode && type === 'space') {
-    const cov = logic.guideCoverage(state, state.modoActual).find((c) => c.target.id === item.id);
+    const cov = covMap ? covMap.get(item.id) : logic.guideCoverage(state, state.modoActual).find((c) => c.target.id === item.id);
     const n = cov ? cov.must.faltan.length : 0;
     if (n > 0) faltanBadge = `<span class="cuarto-faltan">faltan ${n}</span>`;
   }
