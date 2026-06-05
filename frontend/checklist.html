@@ -1100,8 +1100,9 @@ function renderAsesorPairs(pairList) {
       ? `<span class="cap-badge fail"><i class="ti ti-x"></i>${esc(discardShort(pair[0]))}</span>`
       : good ? `<span class="cap-badge good"><i class="ti ti-star-filled"></i>buena</span>`
              : `<button class="cap-mark" onclick="toggleBuena('${target.id}')"><i class="ti ti-star"></i>Marcar buena</button>`;
+    const note = pair.map((f) => f.note).filter(Boolean)[0];
     return `<div class="cap-take${i === 0 ? ' latest' : ''}">
-      <div class="cap-take-main"><span class="cap-tok asesor-tok">${tokens}</span><span class="cap-take-meta">${sony ? 'Sony + Osmo' : 'Solo audio'}${pair[0].author ? ' · ' + esc(pair[0].author) : ''}</span></div>
+      <button class="cap-take-main" onclick="agregarNotaArchivo('${target.id}')"><span class="cap-tok asesor-tok">${tokens}</span><span class="cap-take-meta">${sony ? 'Sony + Osmo' : 'Solo audio'}${pair[0].author ? ' · ' + esc(pair[0].author) : ''}${note ? ' · ' + esc(note) : ''}</span></button>
       ${right}</div>`;
   }).join('');
 }
