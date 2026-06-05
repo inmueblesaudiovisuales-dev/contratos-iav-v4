@@ -502,6 +502,9 @@
     .asesor-cam-lbl { font-size: 13px; font-weight: 600; }
     .asesor-tok .pair-plus { color: var(--ink-3); font-weight: 400; margin: 0 3px; }
     .punto-voz { font-size: 10px; font-weight: 600; color: var(--gold); background: var(--gold-soft); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+    .setup-row-actions { display: flex; gap: 4px; flex: none; }
+    .cuarto-row-wrap { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+    .cuarto-row-wrap .cuarto-row { flex: 1; min-width: 0; margin-bottom: 0; }
   </style>
 </head>
 <body>
@@ -816,12 +819,12 @@ function renderLaneEntry() {
 }
 
 function abrirLane() {
-  const lanes = [['foto', 'Foto'], ['t360', '360'], ['video', 'Video'], ['drone', 'Drone']];
+  const lanes = activeServices();
   abrirModal(`<div class="sheet-head"><h2>Cambiar de servicio</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="lane-name" style="margin-bottom:12px"><label for="mi-nombre">Tu nombre</label>
       <input class="field" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" value="${esc(localStorage.getItem('checklist_nombre') || '')}" oninput="localStorage.setItem('checklist_nombre', this.value.trim())"></div>
-    <div class="action-stack">${lanes.map(([key, label]) => `
-      <button class="${state.modoActual === key ? 'primary' : 'btn'}" onclick="chooseLane('${key}')"><i class="ti ti-${laneIcon(key)}"></i> ${label}</button>`).join('')}
+    <div class="action-stack">${lanes.map((key) => `
+      <button class="${state.modoActual === key ? 'primary' : 'btn'}" onclick="chooseLane('${key}')"><i class="ti ti-${laneIcon(key)}"></i> ${esc(SERVICE_UI[key].short)}</button>`).join('')}
       <button class="btn ghost" onclick="abrirSetup()"><i class="ti ti-home-cog"></i> Armar cuartos</button>
       <button class="btn ghost" onclick="cerrarModal();abrirServicios()">Servicios contratados</button>
     </div>`);
@@ -911,11 +914,82 @@ function renderSetupList() {
 }
 
 function setupRoomRow(room) {
-  const subs = state.espacios.filter((e) => e.parentId === room.id);
+  const subs = state.espacios.filter((e) => e.parentId === room.id).sort((a, b) => (a.orden || 0) - (b.orden || 0));
   return `<div class="setup-room"><span class="setup-room-name">${esc(room.nombre)}</span>
-    <button class="setup-mini" onclick="addSubSetup('${room.id}')"><i class="ti ti-plus"></i>sub</button>
-    <button class="setup-mini del" onclick="delSetup('${room.id}')" aria-label="Borrar"><i class="ti ti-trash"></i></button></div>
-    ${subs.map((s) => `<div class="setup-room sub"><span class="setup-room-name">${esc(s.nombre)}</span><button class="setup-mini del" onclick="delSetup('${s.id}')" aria-label="Borrar"><i class="ti ti-trash"></i></button></div>`).join('')}`;
+    <div class="setup-row-actions">
+      <button class="setup-mini" onclick="moverEspacio('${room.id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
+      <button class="setup-mini" onclick="moverEspacio('${room.id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
+      <button class="setup-mini" onclick="accionesEspacio('${room.id}')" aria-label="Opciones"><i class="ti ti-dots-vertical"></i></button>
+    </div></div>
+    ${subs.map((s) => `<div class="setup-room sub"><span class="setup-room-name">${esc(s.nombre)}</span>
+      <div class="setup-row-actions">
+        <button class="setup-mini" onclick="moverEspacio('${s.id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
+        <button class="setup-mini" onclick="moverEspacio('${s.id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
+        <button class="setup-mini" onclick="accionesEspacio('${s.id}')" aria-label="Opciones"><i class="ti ti-dots-vertical"></i></button>
+      </div></div>`).join('')}`;
+}
+
+function accionesEspacio(id) {
+  const sp = state.espacios.find((e) => e.id === id);
+  if (!sp) return;
+  const esSub = !!sp.parentId;
+  abrirModal(`<div class="sheet-head"><h2>${esc(sp.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="action-stack">
+      <button class="btn" onclick="renombrarEspacio('${id}')"><i class="ti ti-pencil"></i> Cambiar nombre</button>
+      ${esSub ? '' : `<button class="btn" onclick="addSubSetup('${id}')"><i class="ti ti-plus"></i> Agregar sub-cuarto</button>`}
+      ${esSub ? '' : `<button class="btn" onclick="cambiarPisoEspacio('${id}')"><i class="ti ti-stairs"></i> Cambiar de piso</button>`}
+      <button class="danger btn" onclick="delSetup('${id}')"><i class="ti ti-trash"></i> Borrar</button>
+    </div>`);
+}
+
+function renombrarEspacio(id) {
+  const sp = state.espacios.find((e) => e.id === id);
+  if (!sp) return;
+  abrirModal(`<div class="sheet-head"><h2>Cambiar nombre</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="setup-add"><input class="field" id="rename-input" type="text" value="${esc(sp.nombre)}" autocomplete="off" onkeydown="if(event.key==='Enter')guardarNombreEspacio('${id}')"><button class="btn" onclick="guardarNombreEspacio('${id}')">Guardar</button></div>`);
+  setTimeout(() => { const i = document.getElementById('rename-input'); if (i) { i.focus(); i.select(); } }, 50);
+}
+
+function guardarNombreEspacio(id) {
+  const input = document.getElementById('rename-input');
+  const value = input && input.value.trim();
+  if (!value) return;
+  const sp = state.espacios.find((e) => e.id === id);
+  if (!sp) return;
+  sp.nombre = value;
+  (state.mediaFiles || []).forEach((f) => { if (f.targetId === id) { f.scene = value; f.scenePath = logic.getScenePath(state, id, 'video'); } });
+  cerrarModal(); scheduleSave(); render();
+}
+
+function moverEspacio(id, dir) {
+  const sp = state.espacios.find((e) => e.id === id);
+  if (!sp) return;
+  const hermanos = state.espacios
+    .filter((e) => (e.piso || '') === (sp.piso || '') && (e.parentId || null) === (sp.parentId || null))
+    .sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  hermanos.forEach((e, idx) => { e.orden = idx + 1; });
+  const i = hermanos.findIndex((e) => e.id === id);
+  const j = i + dir;
+  if (j < 0 || j >= hermanos.length) return;
+  const t = hermanos[i].orden; hermanos[i].orden = hermanos[j].orden; hermanos[j].orden = t;
+  scheduleSave(); render();
+}
+
+function cambiarPisoEspacio(id) {
+  const sp = state.espacios.find((e) => e.id === id);
+  if (!sp) return;
+  const pisos = state.pisos && state.pisos.length ? state.pisos : ['Piso 1'];
+  abrirModal(`<div class="sheet-head"><h2>Cambiar de piso</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="action-stack">${pisos.map((p) => `<button class="${sp.piso === p ? 'primary' : 'btn'}" onclick="aplicarPisoEspacio('${id}','${esc(p)}')">${esc(p)}</button>`).join('')}</div>`);
+}
+
+function aplicarPisoEspacio(id, piso) {
+  const sp = state.espacios.find((e) => e.id === id);
+  if (sp) {
+    sp.piso = piso;
+    state.espacios.filter((e) => e.parentId === id).forEach((s) => { s.piso = piso; });
+  }
+  cerrarModal(); scheduleSave(); render();
 }
 
 function nuevoEspacio(nombre, piso, zona, parentId) {
@@ -1122,7 +1196,7 @@ function registrarAsesor(puntoId, kind) {
 }
 
 function abrirCambiarPunto() {
-  const puntos = state.asesorPuntos || [];
+  const puntos = (state.asesorPuntos || []).slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0));
   abrirModal(`<div class="sheet-head"><h2>Cambiar punto</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="cuarto-list">${puntos.map(puntoRow).join('')}</div>
     <div class="action-stack" style="margin-top:12px">
@@ -1132,12 +1206,91 @@ function abrirCambiarPunto() {
 }
 
 function puntoRow(punto) {
-  const done = punto.estado === 'hecho';
-  const active = punto.id === (activeTarget() || {}).id;
-  return `<button class="cuarto-row${active ? ' active' : ''}" onclick="setActiveRoom('${punto.id}')">
-    <span class="cuarto-name">${esc(punto.nombre)}${punto.tipo === 'voz' ? ' <span class="punto-voz">voz</span>' : ''}</span>
-    ${done ? '<span class="cuarto-done"><i class="ti ti-check"></i>grabado</span>' : ''}
-  </button>`;
+  return listaRow('asesor', punto);
+}
+
+function listaDe(tipo) { return tipo === 'drone' ? state.droneItems : state.asesorPuntos; }
+
+function listaRow(tipo, item) {
+  const done = item.estado === 'hecho';
+  const active = item.id === (activeTarget() || {}).id;
+  return `<div class="cuarto-row-wrap">
+    <button class="cuarto-row${active ? ' active' : ''}" onclick="setActiveRoom('${item.id}')">
+      <span class="cuarto-name">${esc(item.nombre)}${item.tipo === 'voz' ? ' <span class="punto-voz">voz</span>' : ''}</span>
+      ${done ? '<span class="cuarto-done"><i class="ti ti-check"></i>grabado</span>' : ''}
+    </button>
+    <button class="setup-mini" onclick="moverLista('${tipo}','${item.id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
+    <button class="setup-mini" onclick="moverLista('${tipo}','${item.id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
+    <button class="setup-mini" onclick="accionesLista('${tipo}','${item.id}')" aria-label="Opciones"><i class="ti ti-dots-vertical"></i></button>
+  </div>`;
+}
+
+function moverLista(tipo, id, dir) {
+  const list = listaDe(tipo) || [];
+  const sorted = list.slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0));
+  sorted.forEach((e, idx) => { e.ordenLista = idx + 1; });
+  const i = sorted.findIndex((e) => e.id === id);
+  const j = i + dir;
+  if (j < 0 || j >= sorted.length) return;
+  const t = sorted[i].ordenLista; sorted[i].ordenLista = sorted[j].ordenLista; sorted[j].ordenLista = t;
+  scheduleSave();
+  tipo === 'drone' ? abrirCambiarCuarto() : abrirCambiarPunto();
+}
+
+function accionesLista(tipo, id) {
+  const item = (listaDe(tipo) || []).find((e) => e.id === id);
+  if (!item) return;
+  abrirModal(`<div class="sheet-head"><h2>${esc(item.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="action-stack">
+      <button class="btn" onclick="renombrarLista('${tipo}','${id}')"><i class="ti ti-pencil"></i> Cambiar nombre</button>
+      <button class="danger btn" onclick="delLista('${tipo}','${id}')"><i class="ti ti-trash"></i> Borrar</button>
+    </div>`);
+}
+
+function renombrarLista(tipo, id) {
+  const item = (listaDe(tipo) || []).find((e) => e.id === id);
+  if (!item) return;
+  abrirModal(`<div class="sheet-head"><h2>Cambiar nombre</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="setup-add"><input class="field" id="rename-input" type="text" value="${esc(item.nombre)}" autocomplete="off" onkeydown="if(event.key==='Enter')guardarNombreLista('${tipo}','${id}')"><button class="btn" onclick="guardarNombreLista('${tipo}','${id}')">Guardar</button></div>`);
+  setTimeout(() => { const i = document.getElementById('rename-input'); if (i) { i.focus(); i.select(); } }, 50);
+}
+
+function guardarNombreLista(tipo, id) {
+  const input = document.getElementById('rename-input');
+  const value = input && input.value.trim();
+  if (!value) return;
+  const item = (listaDe(tipo) || []).find((e) => e.id === id);
+  if (!item) return;
+  item.nombre = value;
+  (state.mediaFiles || []).forEach((f) => { if (f.targetId === id) { f.scene = value; f.scenePath = value; } });
+  cerrarModal(); scheduleSave();
+  tipo === 'drone' ? abrirCambiarCuarto() : abrirCambiarPunto();
+}
+
+function delLista(tipo, id) {
+  if ((state.mediaFiles || []).some((f) => f.targetId === id)) return showToast('Tiene tomas registradas');
+  if (tipo === 'drone') state.droneItems = state.droneItems.filter((e) => e.id !== id);
+  else state.asesorPuntos = (state.asesorPuntos || []).filter((e) => e.id !== id);
+  scheduleSave();
+  tipo === 'drone' ? abrirCambiarCuarto() : abrirCambiarPunto();
+}
+
+function agregarItemLista(tipo) {
+  abrirModal(`<div class="sheet-head"><h2>${tipo === 'drone' ? 'Nueva toma de drone' : 'Nuevo punto'}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="setup-add"><input class="field" id="lista-input" type="text" placeholder="${tipo === 'drone' ? 'Órbita, atardecer…' : 'Punto 1…'}" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarItemLista('${tipo}')"><button class="btn" onclick="confirmarItemLista('${tipo}')">Agregar</button></div>`);
+  setTimeout(() => { const i = document.getElementById('lista-input'); if (i) i.focus(); }, 50);
+}
+
+function confirmarItemLista(tipo) {
+  const input = document.getElementById('lista-input');
+  const value = input && input.value.trim();
+  if (!value) return;
+  const list = listaDe(tipo);
+  const id = (tipo === 'drone' ? 'drone-' : 'asesor-') + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  list.push({ id, nombre: value, tipo: 'normal', estado: 'pendiente', ordenLista: list.length + 1, noAplica: false });
+  activeRoomId = id;
+  scheduleSave();
+  tipo === 'drone' ? abrirCambiarCuarto() : abrirCambiarPunto();
 }
 
 function agregarPunto(esVoz) {
@@ -1303,8 +1456,10 @@ function noSirve(targetId) {
 
 function abrirCambiarCuarto() {
   if (state.modoActual === 'drone') {
+    const items = state.droneItems.slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0));
     abrirModal(`<div class="sheet-head"><h2>Cambiar toma</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
-      <div class="cuarto-list">${state.droneItems.map((item) => cuartoRow(item, 'drone')).join('')}</div>`);
+      <div class="cuarto-list">${items.map((item) => listaRow('drone', item)).join('')}</div>
+      <div class="action-stack" style="margin-top:12px"><button class="btn" onclick="agregarItemLista('drone')"><i class="ti ti-plus"></i> Agregar toma</button></div>`);
     return;
   }
   const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(state.espacios.map((e) => e.piso || 'Sin piso'))];
