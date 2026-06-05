@@ -11,7 +11,7 @@ Este archivo es el punto de entrada. Lee primero esto; el detalle vive en los do
 ## Reglas críticas (leer antes de tocar nada)
 
 - **Rama de trabajo:** salvo instrucción explícita, todo va a `main` (editar → commit → push). El push a `main` dispara el deploy a Cloudflare vía GitHub Actions (~1 min). **Nunca** correr `wrangler deploy` a mano.
-- **REGLA DEL ADAPTER:** cada vez que modifiques `adapter/AdapterScript4_v1.js` debes (1) documentarlo en `docs/RONDAS.md` con hora exacta de Monterrey — corre `TZ="America/Monterrey" date "+%Y-%m-%d %H:%M:%S %Z"`, sin "aprox"; (2) indicar qué función se tocó; (3) avisar que **requiere despliegue manual** en script.google.com (Bruno pega el archivo y publica nueva versión).
+- **REGLA DEL ADAPTER:** cada vez que modifiques `adapter/AdapterScript4_v1.js` debes (1) documentarlo en `docs/RONDAS.md` con hora exacta de Monterrey — corre `TZ="America/Monterrey" date "+%Y-%m-%d %H:%M:%S %Z"`, sin "aprox"; (2) indicar qué función se tocó; (3) avisar que **requiere despliegue manual** en script.google.com (Bruno pega el archivo y publica nueva versión); (4) **SIEMPRE actualizar el comentario de header del propio archivo** (la línea `// Ultima modificacion: …`) con la **fecha y HORA de Monterrey + número de ronda (Rxx) + qué cambió**. El header es la única forma de saber, de un vistazo, si una copia pegada en Apps Script está al día — nunca lo dejes desactualizado.
 - **D1 no soporta foreign keys** (`PRAGMA foreign_keys` se ignora). Las cascadas se hacen a mano en código con `db.batch()`.
 - **Estilo:** sin emojis en el producto, CSS mobile-first, respetar el modelo de datos y los flujos existentes.
 - Si el objetivo no está claro, **pregunta antes** de explorar o cambiar archivos.
