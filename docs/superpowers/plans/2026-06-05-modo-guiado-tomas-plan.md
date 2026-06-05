@@ -1005,3 +1005,32 @@ Fases (continúan la numeración como G1..G5; un commit por fase, mismas reglas 
 - **G3 · UI: ordenar recorrido por piso.** `abrirOrdenarRecorrido` agrupa por piso (encabezado por piso), se ordena **dentro** de cada piso, y el recorrido global = pisos en su orden + cuartos en su orden dentro del piso. El piso es visible. Ajustar `moverRecorrido`/`recorridoTargets` para respetar el piso (no mover un cuarto fuera de su piso).
 - **G4 · Demo: reinicio fácil.** Botón **"Reiniciar demo"** visible solo con `?demo=1` que limpia el estado demo de localStorage y recarga datos frescos. Enriquecer un poco la data demo (más cuartos/escenarios).
 - **G5 · Config sin token + quitar engrane.** Modo `?config=1` (sin token) que arranca directo el **editor de biblioteca**: carga `obtenerConfigGuia`, `applyGuideConfig`, renderiza el panel de config full-screen, gated por `ensureAdminKey`. **Quita** el engrane/`abrirConfigGuia` del checklist de campo (modo guiado). El editor reusa `renderConfigGuia` existente.
+
+---
+
+# RONDAS 3-5 — Mejoras post-campo (consolidacion + captura + delegar)
+
+Orden: calidad → velocidad/no-regrabar → delegar. El loop de aprendizaje (app de Mac + Sheet
+`UsoTomas`, buzón listo en R90) queda al FINAL como proyecto aparte.
+
+## RONDA 3 — Consolidacion (fija calidad antes de seguir)
+- **Codigo muerto:** elimina la regla CSS `.guide-gear-btn` y la funcion `abrirConfigGuia` (huerfanas tras G5; el editor de biblioteca ahora vive en `?config=1`).
+- **Rendimiento:** `guideCoverage` se recalcula por fila en `cuartoRow` (O(N^2)). Calcula la cobertura UNA vez por render y pasa un indice/mapa por `targetId`.
+- **Calidad:** corre `/code-review` y `/simplify` sobre el diff acumulado del feature; aplica los findings de alta confianza (sin cambiar comportamiento).
+- **Tests:** donde sea razonable, extrae a `checklist-logic.js` (helpers puros) la logica testeable que hoy vive en funciones de UI, y agrega tests. Test DOM completo = backlog.
+
+## RONDA 4 — Captura + cobertura (velocidad / no regrabar)
+- **Boton Toma por sugerencia:** cada fila de `renderGuideList` tiene su propio boton "Toma" (1 toque registra ESA toma ya ligada con su tipo/movimiento). El boton grande queda para toma libre.
+- **Gate de salida global:** resumen de TODA la propiedad (todos los cuartos + lanes) con los must faltantes, accesible desde el header del modo guiado ("listo para irte?"). Reusa `guideCoverage` por lane.
+- **Reintentar toma:** en la ultima toma, marcarla mala + re-grabar la MISMA sugerencia en un toque.
+- **Buena inline:** estrellita en la fila de la ultima toma para marcar buena sin abrir modal.
+- **Aviso 3 capas:** avisar si un cuarto solo tiene wides y le falta medio/detalle (regla wide+medio+detalle).
+
+## RONDA 5 — Delegar
+- **Modo aprendiz:** wizard que lleva al operador cuarto por cuarto en orden de recorrido, mostrando la siguiente toma must con su glifo grande + "en que enfocarte".
+- **Cheatsheet PDF:** shot-list imprimible/PDF que el junior trae offline.
+- **Ejemplos por tipo de toma:** descripcion mas rica por shotType (no solo el glifo).
+- **Guion de edicion legible:** `guionEdicion` como documento legible (PDF/print) que el editor abre directo.
+
+## Backlog (al final)
+- **Aprender de la edicion:** spec + construccion del paso nuevo en `iav-metadata-app` (lee secuencia final de Premiere, cruza tokens, POST a `registrarUsoTomas`). El buzon del adapter ya existe (R90).
