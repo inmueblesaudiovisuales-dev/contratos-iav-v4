@@ -937,6 +937,64 @@
     return state.bitacora.filter((entry) => entry.tipo === filter);
   }
 
+  function describirArchivo(servicio, file) {
+    if (file.kind === 'take') return servicio + ' · ' + (file.good ? 'toma buena' : 'toma');
+    if (file.kind === 'omitted') return servicio + ' · sin identificar';
+    const motivos = { failed: 'descarte: toma fallida', unrelated: 'descarte: no relacionado', empty: 'descarte: vacío/accidental' };
+    return servicio + ' · ' + (motivos[file.discardReason] || 'descarte');
+  }
+
+  // Exportación estable para el programa de metadatos de Premiere.
+  // Solo incluye ARCHIVOS de cámara (video/drone/asesor); foto/360 son cobertura, no archivos.
+  function buildExport(state, meta) {
+    meta = meta || {};
+    const camById = (id) => (state.cameras || []).find((c) => c.id === id) || {};
+    const segById = (id) => (state.sequenceSegments || []).find((s) => s.id === id) || {};
+    const archivos = (state.mediaFiles || []).map((f) => {
+      const cam = camById(f.cameraId);
+      const seg = segById(f.segmentId);
+      const servicio = cam.mode || 'video';
+      const espacio = (servicio === 'drone' || servicio === 'asesor') ? null : (state.espacios || []).find((e) => e.id === f.targetId);
+      return {
+        archivo: f.fileToken,
+        consecutivo: f.fileCounter,
+        ancho: seg.counterWidth || null,
+        ejemploNombre: seg.exampleFilename || null,
+        camara: cam.label || f.cameraId,
+        camaraId: f.cameraId,
+        camaraTipo: cam.kind || null,
+        servicio: servicio,
+        escena: f.scene || null,
+        escenaRuta: f.scenePath || null,
+        piso: espacio ? (espacio.piso || null) : null,
+        toma: f.shotNumber || null,
+        tipo: f.kind,
+        motivoDescarte: f.discardReason || null,
+        buena: !!f.good,
+        nota: f.note || '',
+        par: f.pairId || null,
+        autor: f.author || '',
+        hora: f.createdAt || null,
+        premiere: {
+          Scene: f.scenePath || f.scene || '',
+          Shot: f.shotNumber ? String(f.shotNumber) : '',
+          'Camera Roll': cam.label || '',
+          Good: !!f.good,
+          Comment: f.note || '',
+          Description: describirArchivo(servicio, f),
+        },
+      };
+    });
+    return {
+      version: 1,
+      folio: meta.folio || '',
+      cliente: meta.nombreCliente || '',
+      exportadoEn: new Date().toISOString(),
+      totalArchivos: archivos.length,
+      archivos: archivos,
+    };
+  }
+
   return {
     SERVICES_DEFAULT,
     SERVICE_LABELS,
@@ -966,5 +1024,6 @@
     undoLastLog,
     getPendingSummary,
     filterLog,
+    buildExport,
   };
 });

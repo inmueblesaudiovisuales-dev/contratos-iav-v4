@@ -529,6 +529,12 @@
     .cov-foco-state.no_aplica { background: var(--muted); color: var(--ink-3); }
     .cov-foco-prog { margin-top: 12px; font-size: 13px; color: var(--ink-3); }
     .cov-vertodos { background: none; border: 0; color: var(--gold); font-weight: 600; font-size: 13px; text-decoration: underline; }
+    /* ===== Barra de exportar (Edición) ===== */
+    .export-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; margin-bottom: 9px; border: 1px solid var(--gold-leaf); background: var(--gold-soft); border-radius: var(--radius); }
+    .export-copy strong { display: block; font-size: 14px; font-weight: 600; }
+    .export-copy span { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+    .export-bar .primary { display: inline-flex; align-items: center; gap: 7px; flex: none; }
+    .export-bar .primary i { font-size: 18px; }
   </style>
 </head>
 <body>
@@ -2236,6 +2242,29 @@ function renderNormalPending(summary) {
   return lines.length ? lines.slice(0, 14).map((line) => `<p class="line">${esc(line)}</p>`).join('') : '<p class="line">Sin faltantes normales.</p>';
 }
 
+function renderExportBar() {
+  const n = (state.mediaFiles || []).length;
+  return `<div class="export-bar">
+    <div class="export-copy"><strong>Exportar para edición</strong><span>${n} archivo${n === 1 ? '' : 's'} · JSON para el programa de metadatos</span></div>
+    <button class="primary" onclick="exportarBitacora()"><i class="ti ti-download"></i> Exportar</button>
+  </div>`;
+}
+
+function exportarBitacora() {
+  const data = logic.buildExport(state, meta);
+  if (!data.totalArchivos) return showToast('Aún no hay archivos para exportar');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bitacora-' + ((meta.folio || 'checklist').replace(/[^\w.-]+/g, '_')) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('Exportados ' + data.totalArchivos + ' archivos');
+}
+
 function renderEditView() {
   if ((state.mediaFiles || []).length) return renderMediaEditView();
   const video = primarySequence('video');
@@ -2244,6 +2273,7 @@ function renderEditView() {
   const notes = state.bitacora.filter((entry) => entry.nota || entry.bandera);
   const amenities = state.espacios.filter((space) => space.zona === 'amenidades');
   return `<div class="edit-list">
+    ${renderExportBar()}
     <section class="panel"><h3>Video principal</h3>${renderSequence(video, 'Sin video registrado.')}</section>
     <section class="panel"><h3>Drone principal</h3>${renderSequence(drone, 'Sin drone registrado.')}</section>
     <section class="panel"><h3>Repetidas / extras</h3>${repeated.length ? repeated.map((entry) => `<div class="review-item"><strong>${SERVICE_UI[entry.tipo].short} ${String(entry.orden || '').padStart(2, '0')}</strong><div>${esc(entry.nombre)} · ${esc(entry.intencion)}</div></div>`).join('') : '<p class="line">Sin repetidas ni extras.</p>'}</section>
@@ -2257,7 +2287,7 @@ function renderMediaEditView() {
   const groups = logic.getMediaSceneGroups(state);
   const cameraLabel = (id) => ((state.cameras || []).find((camera) => camera.id === id) || {}).label || id;
   const legacy = state.bitacora.filter((entry) => entry.tipo === 'video' || entry.tipo === 'drone');
-  return `<div class="edit-list">${groups.map((group) => {
+  return `<div class="edit-list">${renderExportBar()}${groups.map((group) => {
     const items = group.files;
     const good = items.filter((file) => file.kind === 'take' && file.good);
     const other = items.filter((file) => file.kind === 'take' && !file.good);

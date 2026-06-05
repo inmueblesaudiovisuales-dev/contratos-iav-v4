@@ -524,6 +524,45 @@ test('registerAsesorFile on a voz point uses only the Osmo audio', () => {
   assert.equal(s.mediaFiles[0].fileToken, '0246');
 });
 
+test('buildExport produces file records with premiere metadata mapping', () => {
+  let s = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  s.espacios[0].piso = 'Piso 1';
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: s.espacios[0].id, kind: 'take', autor: 'Bruno' });
+  s = logic.toggleMediaGood(s, s.mediaFiles[0].id);
+  s = logic.updateMediaFile(s, s.mediaFiles[0].id, { note: 'se trabó' });
+
+  const exp = logic.buildExport(s, { folio: 'IAV-1', nombreCliente: 'Cliente X' });
+  assert.equal(exp.folio, 'IAV-1');
+  assert.equal(exp.totalArchivos, 1);
+  const a = exp.archivos[0];
+  assert.equal(a.archivo, 'PIB2819');
+  assert.equal(a.consecutivo, 2819);
+  assert.equal(a.ancho, 4);
+  assert.equal(a.servicio, 'video');
+  assert.equal(a.escena, 'Sala');
+  assert.equal(a.piso, 'Piso 1');
+  assert.equal(a.toma, 1);
+  assert.equal(a.buena, true);
+  assert.equal(a.premiere.Scene, 'Sala');
+  assert.equal(a.premiere.Shot, '1');
+  assert.equal(a.premiere['Camera Roll'], 'Sony principal');
+  assert.equal(a.premiere.Good, true);
+  assert.equal(a.premiere.Comment, 'se trabó');
+  assert.equal(a.premiere.Description, 'video · toma buena');
+});
+
+test('buildExport links asesor pairs with the same par id', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB4810' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260520_0090_D' });
+  s = logic.registerAsesorFile(s, { puntoId: s.asesorPuntos[0].id, kind: 'take', autor: 'Fer' });
+  const exp = logic.buildExport(s, {});
+  assert.equal(exp.archivos.length, 2);
+  assert.equal(exp.archivos[0].par, exp.archivos[1].par);
+  assert.equal(exp.archivos[0].servicio, 'asesor');
+});
+
 test('asesor pair keeps independent consecutives across two takes', () => {
   let s = logic.createDefaultState();
   s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
