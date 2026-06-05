@@ -535,6 +535,25 @@
     .export-copy span { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
     .export-bar .primary { display: inline-flex; align-items: center; gap: 7px; flex: none; }
     .export-bar .primary i { font-size: 18px; }
+
+    /* ===== Modo Guiado — F8a ===== */
+    .guide-toggle { margin-top: 10px; margin-bottom: 4px; }
+    .guide-list { padding: 14px 0 4px; }
+    .guide-list-hd { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: none; letter-spacing: .03em; margin-bottom: 8px; }
+    .guide-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 6px; box-shadow: var(--shadow); cursor: pointer; width: 100%; text-align: left; }
+    .guide-row.active { border-color: var(--gold-leaf); box-shadow: 0 0 0 1px var(--gold-soft), var(--shadow); }
+    .guide-row-body { flex: 1; min-width: 0; }
+    .guide-row-name { font-size: 14px; font-weight: 600; color: var(--ink-1); line-height: 1.3; }
+    .guide-row-type { font-size: 12px; color: var(--ink-3); font-weight: 400; }
+    .guide-row-sub { font-size: 12px; color: var(--ink-2); margin-top: 3px; line-height: 1.35; }
+    .guide-row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: none; padding-top: 1px; }
+    .guide-badge-must { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--gold-soft); color: var(--gold); border: 1px solid var(--gold-leaf); white-space: nowrap; }
+    .guide-state-done { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--green); }
+    .guide-state-done i { font-size: 14px; }
+    .guide-state-tok { font-family: var(--font-mono); font-size: 10px; color: var(--green); }
+    .guide-state-pending { font-size: 11px; color: var(--ink-3); }
+    .cat-chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border: 1px solid var(--line-2, #D2C9B3); border-radius: 999px; background: var(--card); color: var(--ink-2); font-size: 11px; font-weight: 600; margin-top: 5px; cursor: pointer; }
+    .cat-chip i { font-size: 13px; }
   </style>
 </head>
 <body>
@@ -1605,6 +1624,7 @@ function renderMediaCapture() {
       <div class="cap-focus-copy">
         <span class="cap-floor"><i class="ti ti-stairs-up"></i>${esc(piso)}</span>
         <h2 class="cap-room">${parentName ? `<span class="cap-parent">${esc(parentName)}</span>` : ''}${esc(target.nombre)}</h2>
+        ${guideMode && state.modoActual === 'video' ? catChipHtml(target) : ''}
       </div>
       <button class="cap-focus-opts" onclick="abrirAccionesFoco()" aria-label="Opciones del cuarto"><i class="ti ti-dots-vertical"></i></button>
     </div>
@@ -1614,6 +1634,7 @@ function renderMediaCapture() {
   <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
   <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
   ` : `
+  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div></div>
   <div class="cap-cam">
     <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
     <div class="cap-cam-copy">
@@ -1623,6 +1644,7 @@ function renderMediaCapture() {
     <button class="cap-swap" aria-label="Cambiar o iniciar cámara" onclick="${state.modoActual === 'video' ? 'abrirCamaras()' : 'abrirSecuencia()'}"><i class="ti ti-switch-horizontal"></i></button>
   </div>
   ${renderCapNav(isDrone ? 'toma' : 'cuarto', 'abrirCambiarCuarto()')}
+  ${guideMode ? renderGuideList(target) : ''}
   <section class="cap-takes">
     <div class="cap-takes-hd"><span>Tomas en ${isDrone ? 'esta toma' : 'este cuarto'}</span><span class="cap-takes-n">${files.length} · ${good.length} buena${good.length === 1 ? '' : 's'}</span></div>
     ${files.length ? renderCapTakes(files) : `<p class="cap-empty">Aún no registras nada aquí. Da Toma cuando grabes.</p>`}
@@ -1631,6 +1653,88 @@ function renderMediaCapture() {
     <button class="cap-btn-toma" onclick="registrarArchivo('${target.id}','take')"><span class="cap-toma-lbl">Toma</span>${nextTok ? `<span class="cap-toma-sub">+1 · ${esc(nextTok)}</span>` : ''}</button>
     <button class="cap-btn-no" onclick="noSirve('${target.id}')"><i class="ti ti-circle-x"></i><span>No sirve</span></button>
   </div>`}`;
+}
+
+function categoriaDe(space) {
+  return space.categoria || logic.detectCategoria(space.nombre);
+}
+
+function catChipHtml(target) {
+  const cats = logic.getRoomCategories();
+  const catId = categoriaDe(target);
+  const cat = cats.find((c) => c.id === catId);
+  return `<button class="cat-chip" onclick="abrirCategoriaSheet('${esc(target.id)}')"><i class="ti ti-tag"></i>${esc(cat ? cat.label : catId)}</button>`;
+}
+
+function toggleGuideMode() {
+  guideMode = !guideMode;
+  localStorage.setItem('checklist_guide_' + (TOKEN || 'demo'), guideMode ? '1' : '0');
+  activeSugId = null;
+  render();
+}
+
+function seleccionarSugerencia(id) {
+  activeSugId = id;
+  render();
+}
+
+function renderGuideList(target) {
+  const isDrone = state.modoActual === 'drone';
+  const suggestions = isDrone
+    ? logic.suggestionsForDrone(state.guide && state.guide.tipoPropiedad)
+    : logic.suggestionsForSpace(categoriaDe(target), target.nombre);
+  if (!suggestions || !suggestions.length) {
+    return `<div class="guide-list"><p class="cap-empty">Sin sugerencias para este espacio.</p></div>`;
+  }
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+  const rows = suggestions.map((s) => {
+    const progress = logic.suggestionProgress(state, state.modoActual, target.id, s.id);
+    const typeLabel = (shotTypes[s.shotType] || {}).label || s.shotType;
+    const movLabel = (movements[s.movement] || {}).label || s.movement;
+    const isActive = activeSugId === s.id;
+    let stateHtml;
+    if (progress.done) {
+      const toks = (progress.files || []).map((f) => esc(f.fileToken)).join(' ');
+      stateHtml = `<span class="guide-state-done"><i class="ti ti-check"></i>${toks ? `<span class="guide-state-tok">${toks}</span>` : ''}</span>`;
+    } else {
+      stateHtml = `<span class="guide-state-pending">pendiente</span>`;
+    }
+    return `<button class="guide-row${isActive ? ' active' : ''}" onclick="seleccionarSugerencia('${esc(s.id)}')">
+      <div class="guide-row-body">
+        <div class="guide-row-name">${esc(s.nombre)}<span class="guide-row-type"> · ${esc(typeLabel)} / ${esc(movLabel)}</span></div>
+        <div class="guide-row-sub">${esc(s.enfoque)}</div>
+      </div>
+      <div class="guide-row-right">
+        ${s.priority === 'must' ? `<span class="guide-badge-must">clave</span>` : ''}
+        ${stateHtml}
+      </div>
+    </button>`;
+  }).join('');
+  return `<div class="guide-list"><div class="guide-list-hd">sugerencias</div>${rows}</div>`;
+}
+
+function abrirCategoriaSheet(targetId) {
+  const space = state.espacios.find((e) => e.id === targetId);
+  if (!space) return;
+  const cats = logic.getRoomCategories();
+  const current = space.categoria || '';
+  const chips = [`<button class="chip${!current ? ' active' : ''}" onclick="setCategoriaSpace('${esc(targetId)}',null)">Auto</button>`]
+    .concat(cats.map((c) => `<button class="chip${current === c.id ? ' active' : ''}" onclick="setCategoriaSpace('${esc(targetId)}','${esc(c.id)}')">${esc(c.label)}</button>`))
+    .join('');
+  abrirModal(`<div class="sheet-head"><h2>Categoria del cuarto</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <p class="sheet-note">Determina las tomas sugeridas. "Auto" la detecta del nombre.</p>
+    <div class="chips" style="padding-bottom:12px">${chips}</div>`);
+}
+
+function setCategoriaSpace(targetId, catId) {
+  const space = state.espacios.find((e) => e.id === targetId);
+  if (!space) return;
+  if (catId) space.categoria = catId;
+  else delete space.categoria;
+  cerrarModal();
+  scheduleSave();
+  render();
 }
 
 function abrirAccionesFoco() {
