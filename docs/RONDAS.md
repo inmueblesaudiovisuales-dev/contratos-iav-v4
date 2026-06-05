@@ -8,6 +8,22 @@
 
 ---
 
+### Ronda 62 — Correo de reservación al "Apartar fecha" (2026-06-05 09:14:04 CST)
+
+**Objetivo:** al apartar la fecha desde admin ("Apartar fecha (reservar sin abono)") no se enviaba ningún correo al cliente. Ahora se manda un correo de "Tu sesión está apartada" —del estilo del de abono pero **sin afirmar que se recibió dinero**—, se cambia el estatus a Reservado (ya lo hacía), y si después dan un abono **no se repite** ese mensaje.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R62-01 | `adapter/AdapterScript4_v1.js` | Nueva función `enviarCorreoReserva` (registrada en `handlers`): correo "Tu sesión está apartada — folio" con saldo pendiente y CTA al portal, sin mencionar pago. **Requiere despliegue manual en script.google.com.** |
+| R62-02 | `worker/src/routes/contratos.js` | `reservarContrato`: tras marcar Reservado, llama `enviarCorreoReserva` (nombre, correo, folio, saldo, link portal). |
+| R62-03 | `worker/src/routes/abonos.js` | El correo de abono usa el encuadre "Tu sesión está apartada" solo si `seActivaReservado` (este abono es el que recién reserva). Si ya estaba Reservado por "Apartar fecha", el abono cae en "Confirmación de pago" — **no se repite** el aviso de reservación. |
+
+**Decisión:** se descartó la idea de auto-reservar contratos $0 al firmar; la reservación sigue siendo manual desde admin.
+
+**Adapter:** R62-01 agrega `enviarCorreoReserva`. **Requiere que Bruno pegue el archivo en script.google.com y publique una versión nueva** (el push a `main` NO lo despliega).
+
+---
+
 ### Ronda 61 — Copy de anticipo $0: dejar de enfatizar que no hay que pagar (2026-06-05 08:59:52 CST)
 
 **Objetivo:** cuando un contrato tiene anticipo $0 (pero sí tiene precio), el portal y el correo dejaban demasiado obvio que no había nada que pagar ("Sin anticipo", "$0", "Tu fecha está confirmada"). Se suaviza el copy sin mentir: no se afirma que deben pagar, solo se quitan las señales de "es gratis".

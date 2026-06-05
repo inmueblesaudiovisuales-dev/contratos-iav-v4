@@ -507,6 +507,17 @@ export async function handleContratos(request, env, ctx, action) {
         equipoUrl: `https://contratos.inmueblesaudiovisuales.com/equipo.html?token=${token}`
       });
     }
+    // Avisar al cliente que su fecha quedó apartada (sin afirmar que hubo pago).
+    // El estatus ya pasó a Reservado, así que un abono posterior NO repetirá el
+    // mensaje de "sesión apartada" (abonos.js lo condiciona a seActivaReservado).
+    callAdapter(ctx, env, 'enviarCorreoReserva', {
+      token,
+      nombreCliente: contrato.nombre_cliente,
+      correoCliente: contrato.correo_cliente,
+      folio: contrato.folio,
+      saldoPendiente: contrato.saldo_pendiente,
+      linkPortal: `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`
+    });
     return ok({ ok: true, estatus: 'Reservado' });
   }
 

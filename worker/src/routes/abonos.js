@@ -98,7 +98,11 @@ export async function handleAbonos(request, env, ctx, action) {
       nuevoSaldo,
       anticipo: contrato.anticipo,
       precioTotal: nuevoPrecioTotal,
-      esPrimerAbono,
+      // El mensaje "Tu sesión está apartada" se usa solo si ESTE abono es el que
+      // recién reserva el contrato. Si ya estaba Reservado (p. ej. por "Apartar
+      // fecha" desde admin, que ya mandó ese correo), seActivaReservado es false
+      // y el correo cae en "Confirmación de pago" — así no se repite el aviso.
+      esPrimerAbono: seActivaReservado,
       linkPortal: `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`
     });
 
