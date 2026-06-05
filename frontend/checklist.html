@@ -505,6 +505,10 @@
     .setup-row-actions { display: flex; gap: 4px; flex: none; }
     .cuarto-row-wrap { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
     .cuarto-row-wrap .cuarto-row { flex: 1; min-width: 0; margin-bottom: 0; }
+    .cap-focus-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .cap-focus-copy { min-width: 0; }
+    .cap-focus-opts { width: 38px; height: 38px; flex: none; margin-top: 4px; border-radius: 8px; border: 1px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
+    .cap-focus-opts i { font-size: 20px; }
   </style>
 </head>
 <body>
@@ -1132,8 +1136,13 @@ function renderAsesorCapture() {
   const nextLabel = esVoz ? (osmo.nextToken || '—') : `${sony.nextToken || '—'} + ${osmo.nextToken || '—'}`;
   return `
   <section class="cap-focus">
-    <span class="cap-floor"><i class="ti ti-microphone-2"></i>${esVoz ? 'Voz en off · solo audio' : 'Punto · Sony + Osmo'}</span>
-    <h2 class="cap-room">${esc(punto.nombre)}</h2>
+    <div class="cap-focus-head">
+      <div class="cap-focus-copy">
+        <span class="cap-floor"><i class="ti ti-microphone-2"></i>${esVoz ? 'Voz en off · solo audio' : 'Punto · Sony + Osmo'}</span>
+        <h2 class="cap-room">${esc(punto.nombre)}</h2>
+      </div>
+      <button class="cap-focus-opts" onclick="abrirAccionesFoco()" aria-label="Opciones del punto"><i class="ti ti-dots-vertical"></i></button>
+    </div>
   </section>
   <div class="cap-cam asesor-cam">
     ${esVoz ? '' : asesorCamRow('Sony FX30', 'video', sony, 'sony-asesor')}
@@ -1192,7 +1201,12 @@ function registrarAsesor(puntoId, kind) {
   state = logic.registerAsesorFile(state, { puntoId, kind, discardReason: kind === 'discard' ? 'failed' : null, autor: miNombre(), now: new Date() });
   if (state === prev) return showToast('Inicia las secuencias primero');
   render(); scheduleSave();
-  showToast(kind === 'discard' ? 'Descarte registrado' : 'Toma registrada');
+  const last = state.mediaFiles[state.mediaFiles.length - 1];
+  if (kind === 'discard') {
+    showToast('Fallida registrada', () => abrirMotivoDescarte(last.id), '¿qué fue?');
+  } else {
+    showToast('Toma registrada', () => { state = prev; render(); scheduleSave(); }, 'Deshacer');
+  }
 }
 
 function abrirCambiarPunto() {
@@ -1405,11 +1419,22 @@ function renderMediaCapture() {
   const good = files.filter((f) => f.kind === 'take' && f.good);
   const piso = isDrone ? 'Drone' : (target.piso || 'Sin piso');
   const parentName = !isDrone && target.parentId ? (state.espacios.find((e) => e.id === target.parentId) || {}).nombre : '';
+  const noAplicaVideo = state.modoActual === 'video' && target.estados && (target.estados.video || {}).estado === 'no_aplica';
   return `
   <section class="cap-focus">
-    <span class="cap-floor"><i class="ti ti-stairs-up"></i>${esc(piso)}</span>
-    <h2 class="cap-room">${parentName ? `<span class="cap-parent">${esc(parentName)}</span>` : ''}${esc(target.nombre)}</h2>
+    <div class="cap-focus-head">
+      <div class="cap-focus-copy">
+        <span class="cap-floor"><i class="ti ti-stairs-up"></i>${esc(piso)}</span>
+        <h2 class="cap-room">${parentName ? `<span class="cap-parent">${esc(parentName)}</span>` : ''}${esc(target.nombre)}</h2>
+      </div>
+      <button class="cap-focus-opts" onclick="abrirAccionesFoco()" aria-label="Opciones del cuarto"><i class="ti ti-dots-vertical"></i></button>
+    </div>
   </section>
+  ${noAplicaVideo ? `
+  <button class="cap-change" onclick="abrirCambiarCuarto()"><span class="cap-change-l"><i class="ti ti-arrows-exchange"></i>Cambiar cuarto</span><i class="ti ti-chevron-right cap-change-chev"></i></button>
+  <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
+  <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
+  ` : `
   <div class="cap-cam">
     <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
     <div class="cap-cam-copy">
@@ -1429,7 +1454,42 @@ function renderMediaCapture() {
   <div class="cap-thumb">
     <button class="cap-btn-toma" onclick="registrarArchivo('${target.id}','take')"><span class="cap-toma-lbl">Toma</span>${nextTok ? `<span class="cap-toma-sub">+1 · ${esc(nextTok)}</span>` : ''}</button>
     <button class="cap-btn-no" onclick="noSirve('${target.id}')"><i class="ti ti-circle-x"></i><span>No sirve</span></button>
-  </div>`;
+  </div>`}`;
+}
+
+function abrirAccionesFoco() {
+  const target = activeTarget();
+  if (!target) return;
+  const tipo = state.modoActual;
+  const noAplica = tipo === 'video' && (target.estados.video || {}).estado === 'no_aplica';
+  abrirModal(`<div class="sheet-head"><h2>${esc(target.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="action-stack">
+      <button class="btn" onclick="renombrarFoco()"><i class="ti ti-pencil"></i> Cambiar nombre</button>
+      ${tipo === 'video' ? `<button class="btn" onclick="toggleNoAplicaVideo()"><i class="ti ti-${noAplica ? 'video' : 'video-off'}"></i> ${noAplica ? 'Reactivar video aquí' : 'Este cuarto no lleva video'}</button>` : ''}
+    </div>`);
+}
+
+function renombrarFoco() {
+  const target = activeTarget();
+  if (!target) return;
+  cerrarModal();
+  if (state.modoActual === 'drone') renombrarLista('drone', target.id);
+  else if (state.modoActual === 'asesor') renombrarLista('asesor', target.id);
+  else renombrarEspacio(target.id);
+}
+
+function toggleNoAplicaVideo() {
+  const sp = activeTarget();
+  if (!sp || state.modoActual !== 'video') return;
+  const cur = (sp.estados.video || {}).estado;
+  sp.estados.video = cur === 'no_aplica' ? { estado: 'pendiente' } : { estado: 'no_aplica' };
+  cerrarModal(); scheduleSave(); render();
+}
+
+function reactivarVideoFoco() {
+  const sp = activeTarget();
+  if (sp) sp.estados.video = { estado: 'pendiente' };
+  scheduleSave(); render();
 }
 
 function renderCapTakes(files) {
@@ -1709,7 +1769,11 @@ function registrarArchivo(targetId, kind, discardReason) {
   if (state === previous) return showToast('Reactiva este elemento antes de registrar');
   render(); scheduleSave();
   const file = state.mediaFiles[state.mediaFiles.length - 1];
-  showToast(`${file.fileToken} registrado`);
+  if (kind === 'discard') {
+    showToast(`Fallida · ${file.fileToken}`, () => abrirMotivoDescarte(file.id), '¿qué fue?');
+  } else {
+    showToast(`${file.fileToken} registrado`, () => { state = previous; render(); scheduleSave(); }, 'Deshacer');
+  }
 }
 
 function abrirDescarte(targetId) {
@@ -2270,13 +2334,39 @@ function confirmSheet(titulo, mensaje, etiquetaSi, onSi, danger) {
   if (btn) btn.onclick = () => { cerrarModal(); onSi(); };
 }
 
-function showToast(message, undoHandler) {
+function showToast(message, actionHandler, actionLabel) {
   const toast = document.getElementById('toast');
-  toast.innerHTML = `<span>${esc(message)}</span>${undoHandler ? '<button id="undo-btn">Deshacer</button>' : ''}`;
+  toast.innerHTML = `<span>${esc(message)}</span>${actionHandler ? `<button id="undo-btn">${esc(actionLabel || 'Deshacer')}</button>` : ''}`;
   toast.classList.add('visible');
   clearTimeout(toastTimer);
-  if (undoHandler) document.getElementById('undo-btn').onclick = () => { undoHandler(); toast.classList.remove('visible'); };
-  toastTimer = setTimeout(() => toast.classList.remove('visible'), 3400);
+  if (actionHandler) document.getElementById('undo-btn').onclick = () => { actionHandler(); toast.classList.remove('visible'); };
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 4200);
+}
+
+function abrirMotivoDescarte(fileId) {
+  abrirModal(`<div class="sheet-head"><h2>¿Qué fue?</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <p class="sheet-note">Para que el conteo cuadre con la tarjeta.</p>
+    <div class="action-stack">
+      <button class="btn" onclick="cambiarMotivo('${fileId}','failed')"><i class="ti ti-player-stop"></i> Toma fallida</button>
+      <button class="btn" onclick="cambiarMotivo('${fileId}','unrelated')"><i class="ti ti-paw"></i> No relacionado (perrito, persona)</button>
+      <button class="btn" onclick="cambiarMotivo('${fileId}','empty')"><i class="ti ti-circle-dashed"></i> Vacío / accidental</button>
+      <button class="danger btn" onclick="quitarRegistro('${fileId}')"><i class="ti ti-trash"></i> No se grabó (quitar)</button>
+    </div>`);
+}
+
+function paresDe(fileId) {
+  const file = (state.mediaFiles || []).find((f) => f.id === fileId);
+  return file && file.pairId ? state.mediaFiles.filter((f) => f.pairId === file.pairId).map((f) => f.id) : [fileId];
+}
+
+function cambiarMotivo(fileId, reason) {
+  paresDe(fileId).forEach((id) => { state = logic.updateMediaFile(state, id, { kind: 'discard', discardReason: reason }); });
+  cerrarModal(); render(); scheduleSave();
+}
+
+function quitarRegistro(fileId) {
+  paresDe(fileId).forEach((id) => { state = logic.removeMediaFile(state, id); });
+  cerrarModal(); render(); scheduleSave();
 }
 
 function mostrarError(message) {
