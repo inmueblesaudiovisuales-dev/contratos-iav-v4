@@ -591,7 +591,6 @@
     .faltantes-shot { display: flex; align-items: baseline; gap: 6px; padding: 4px 0; }
     .faltantes-shot-name { font-size: 13px; font-weight: 600; color: var(--ink-1); }
     .faltantes-shot-type { font-size: 11px; color: var(--ink-3); }
-    .guide-gear-btn { flex: none; }
     .cg-head { display: flex; align-items: center; justify-content: space-between; }
     .cg-cat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
     .cg-cat-head .setup-lbl { margin-bottom: 0; }
@@ -2096,15 +2095,6 @@ async function ensureAdminKey() {
   } catch (_) {}
   showToast('Contraseña incorrecta');
   return null;
-}
-
-async function abrirConfigGuia() {
-  const k = await ensureAdminKey();
-  if (!k) return;
-  guideConfigDraft = JSON.parse(JSON.stringify(currentGuideConfig || {}));
-  logic.applyGuideConfig(guideConfigDraft);
-  configGuiaOpen = true;
-  render();
 }
 
 function cerrarConfigGuia() {
