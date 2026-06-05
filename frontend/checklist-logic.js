@@ -574,6 +574,37 @@
     return null;
   }
 
+  function suggestionProgress(state, mode, targetId, suggestionId) {
+    const cameraIds = new Set(
+      (state.cameras || []).filter((c) => c.mode === mode).map((c) => c.id)
+    );
+    const files = (state.mediaFiles || []).filter(
+      (f) => f.kind === 'take' && f.targetId === targetId && f.suggestionId === suggestionId && cameraIds.has(f.cameraId)
+    );
+    return { done: files.length > 0, count: files.length, files };
+  }
+
+  function guideCoverage(state, mode) {
+    const targets = mode === 'drone' ? (state.droneItems || []) : (state.espacios || []);
+    return targets.map((target) => {
+      let suggestions;
+      if (mode === 'drone') {
+        suggestions = suggestionsForDrone(state.guide ? state.guide.tipoPropiedad : null);
+      } else {
+        const cat = target.categoria || detectCategoria(target.nombre);
+        suggestions = suggestionsForSpace(cat, target.nombre);
+      }
+      const guideSkip = target.guideSkip || {};
+      const mustSugs = suggestions.filter((s) => s.priority === 'must');
+      const niceSugs = suggestions.filter((s) => s.priority === 'nice');
+      const mustHechas = mustSugs.filter((s) => suggestionProgress(state, mode, target.id, s.id).done).length;
+      const mustFaltan = mustSugs.filter((s) => !suggestionProgress(state, mode, target.id, s.id).done && !guideSkip[s.id]);
+      const niceHechas = niceSugs.filter((s) => suggestionProgress(state, mode, target.id, s.id).done).length;
+      const niceFaltan = niceSugs.filter((s) => !suggestionProgress(state, mode, target.id, s.id).done && !guideSkip[s.id]);
+      return { target, must: { hechas: mustHechas, faltan: mustFaltan }, nice: { hechas: niceHechas, faltan: niceFaltan } };
+    });
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   function clone(value) {
@@ -624,7 +655,7 @@
 
   function createDefaultState() {
     return {
-      version: 2,
+      version: 3,
       servicios: clone(SERVICES_DEFAULT),
       pisos: PISOS_DEFAULT.slice(),
       modoActual: 'video',
@@ -637,6 +668,7 @@
       activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
       sequenceSegments: [],
       mediaFiles: [],
+      guide: { tipoPropiedad: null, descripcion: '', proposal: null },
     };
   }
 
@@ -646,9 +678,10 @@
   }
 
   function normalizeChecklistData(data) {
-    if (data && data.version === 2) {
+    if (data && (data.version === 2 || data.version === 3)) {
       const normalized = Object.assign(createDefaultState(), clone(data));
       normalized.servicios = Object.assign(clone(SERVICES_DEFAULT), normalized.servicios || {});
+      normalized.guide = Object.assign({ tipoPropiedad: null, descripcion: '', proposal: null }, normalized.guide || {});
       normalized.espacios = (normalized.espacios || []).map((space, index) => ({
         id: space.id || makeId('esp'),
         nombre: space.nombre || 'Espacio sin nombre',
@@ -658,6 +691,8 @@
         zona: normalizeZone(space.zona),
         piso: space.piso || pisoFromZona(normalizeZone(space.zona)),
         estados: Object.assign(blankEstados(), space.estados || {}),
+        categoria: space.categoria || undefined,
+        guideSkip: space.guideSkip || undefined,
       }));
       normalized.pisos = Array.isArray(data.pisos) && data.pisos.length ? data.pisos.slice() : derivePisos(normalized.espacios);
       normalized.droneItems = (normalized.droneItems && normalized.droneItems.length ? normalized.droneItems : createDroneItems())
@@ -701,12 +736,16 @@
           file.good = false;
           file.shotNumber = null;
         }
+        file.shotType = file.shotType || null;
+        file.movement = file.movement || null;
+        file.suggestionId = file.suggestionId || null;
       });
       normalized.sequenceSegments.forEach((segment) => {
         const counters = normalized.mediaFiles.filter((file) => file.segmentId === segment.id).map((file) => file.fileCounter);
         if (counters.length) segment.counterNext = Math.max(segment.counterNext || 0, Math.max(...counters) + 1);
       });
       if (normalized.mediaFiles.length) repairDerivedMediaState(normalized);
+      normalized.version = 3;
       return normalized;
     }
 
@@ -939,6 +978,9 @@
       note: options.note || '',
       author: options.autor || 'Anonimo',
       createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
+      shotType: options.shotType || null,
+      movement: options.movement || null,
+      suggestionId: options.suggestionId || null,
     });
     const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
     activeSegment.counterNext++;
@@ -981,6 +1023,9 @@
         role: camera.role,
         author: options.autor || 'Anonimo',
         createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
+        shotType: null,
+        movement: null,
+        suggestionId: null,
       });
       const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
       activeSegment.counterNext++;
@@ -1046,6 +1091,9 @@
     if (changes.kind) file.kind = changes.kind;
     if (changes.discardReason !== undefined) file.discardReason = changes.discardReason;
     if (changes.note !== undefined) file.note = changes.note;
+    if (changes.shotType !== undefined) file.shotType = changes.shotType;
+    if (changes.movement !== undefined) file.movement = changes.movement;
+    if (changes.suggestionId !== undefined) file.suggestionId = changes.suggestionId;
     if (file.kind === 'discard' && file.discardReason === 'unrelated') {
       file.targetId = null;
       file.scene = 'Sin escena';
@@ -1428,6 +1476,8 @@
     suggestionsForSpace,
     suggestionsForDrone,
     findSuggestion,
+    suggestionProgress,
+    guideCoverage,
     createDefaultState,
     normalizeChecklistData,
     parseSpacesText,

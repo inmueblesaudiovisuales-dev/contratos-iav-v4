@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const logic = require('./checklist-logic.js');
 
-test('migrates legacy checklist format to version 2 with active services and drone defaults', () => {
+test('migrates legacy checklist format to version 3 with active services and drone defaults', () => {
   const migrated = logic.normalizeChecklistData({
     cuartos: [
       { nombre: 'Sala', foto: 'Ana', video: 'Bruno', t360: false },
@@ -12,7 +12,7 @@ test('migrates legacy checklist format to version 2 with active services and dro
     columnas: { foto: true, video: true, t360: false },
   });
 
-  assert.equal(migrated.version, 2);
+  assert.equal(migrated.version, 3);
   assert.deepEqual(migrated.servicios, { foto: true, t360: false, video: true, drone: true });
   assert.equal(migrated.espacios.length, 2);
   assert.equal(migrated.espacios[0].estados.foto.estado, 'hecho');
@@ -786,4 +786,175 @@ test('F2: findSuggestion encuentra shots de drone y amenidad', () => {
   assert.ok(droneShot !== null, 'debe encontrar drone.casa.fachada');
   const amenityShot = logic.findSuggestion('amenity.alberca.wide');
   assert.ok(amenityShot !== null, 'debe encontrar amenity.alberca.wide');
+});
+
+// ─── F3: modelo mediaFile + migración estado v3 ──────────────────────────────
+
+test('F3: registerMediaFile persiste shotType, movement y suggestionId', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+    shotType: 'wide',
+    movement: 'gimbal_walk',
+    suggestionId: 'sala.wide',
+  });
+
+  assert.equal(state.mediaFiles.length, 1);
+  assert.equal(state.mediaFiles[0].shotType, 'wide');
+  assert.equal(state.mediaFiles[0].movement, 'gimbal_walk');
+  assert.equal(state.mediaFiles[0].suggestionId, 'sala.wide');
+});
+
+test('F3: suggestionProgress reporta done:true y count:1 tras grabar sugerencia', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+    suggestionId: 'sala.wide',
+    shotType: 'wide',
+    movement: 'gimbal_walk',
+  });
+
+  const progress = logic.suggestionProgress(state, 'video', salaId, 'sala.wide');
+  assert.equal(progress.done, true);
+  assert.equal(progress.count, 1);
+  assert.equal(progress.files.length, 1);
+});
+
+test('F3: toma libre (suggestionId null) deja el espacio en estado hecho via deriveMediaTargetState', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+  });
+
+  assert.equal(state.mediaFiles[0].suggestionId, null);
+  assert.equal(state.espacios[0].estados.video.estado, 'hecho');
+});
+
+test('F3: removeMediaFile de toma ligada hace que suggestionProgress.done vuelva a false', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+    suggestionId: 'sala.wide',
+  });
+
+  const mediaId = state.mediaFiles[0].id;
+  const before = logic.suggestionProgress(state, 'video', salaId, 'sala.wide');
+  assert.equal(before.done, true);
+
+  state = logic.removeMediaFile(state, mediaId);
+  const after = logic.suggestionProgress(state, 'video', salaId, 'sala.wide');
+  assert.equal(after.done, false);
+  assert.equal(after.count, 0);
+});
+
+test('F3: normalizeChecklistData migra blob v2 a v3 con campos de mediaFiles en null y guide presente', () => {
+  const normalized = logic.normalizeChecklistData({
+    version: 2,
+    espacios: [{ id: 'esp1', nombre: 'Sala', zona: 'interior' }],
+    mediaFiles: [
+      {
+        id: 'mf1',
+        cameraId: 'sony-main',
+        targetId: 'esp1',
+        kind: 'take',
+        fileToken: 'PIB0001',
+        fileCounter: 1,
+        good: false,
+      },
+    ],
+  });
+
+  assert.equal(normalized.version, 3);
+  assert.ok(normalized.guide, 'debe existir normalized.guide');
+  assert.equal(normalized.guide.tipoPropiedad, null);
+  assert.equal(normalized.guide.descripcion, '');
+  assert.equal(normalized.guide.proposal, null);
+  assert.ok(Array.isArray(normalized.mediaFiles));
+  assert.equal(normalized.mediaFiles[0].shotType, null);
+  assert.equal(normalized.mediaFiles[0].movement, null);
+  assert.equal(normalized.mediaFiles[0].suggestionId, null);
+});
+
+test('F3: normalizeChecklistData round-trip de blob v3 sin perdida', () => {
+  const blob = {
+    version: 3,
+    espacios: [{ id: 'esp1', nombre: 'Cocina', zona: 'interior', piso: 'Piso 1', estados: {} }],
+    mediaFiles: [
+      {
+        id: 'mf1',
+        cameraId: 'sony-main',
+        targetId: 'esp1',
+        kind: 'take',
+        fileToken: 'PIB0001',
+        fileCounter: 1,
+        good: false,
+        shotType: 'wide',
+        movement: 'gimbal_walk',
+        suggestionId: 'cocina.wide',
+      },
+    ],
+    guide: { tipoPropiedad: 'casa', descripcion: 'Casa amplia', proposal: null },
+  };
+
+  const normalized = logic.normalizeChecklistData(blob);
+  assert.equal(normalized.version, 3);
+  assert.equal(normalized.guide.tipoPropiedad, 'casa');
+  assert.equal(normalized.guide.descripcion, 'Casa amplia');
+  assert.equal(normalized.mediaFiles[0].shotType, 'wide');
+  assert.equal(normalized.mediaFiles[0].movement, 'gimbal_walk');
+  assert.equal(normalized.mediaFiles[0].suggestionId, 'cocina.wide');
+});
+
+test('F3: guideCoverage reporta must.faltan correctamente', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+
+  const before = logic.guideCoverage(state, 'video');
+  const salaBefore = before.find((entry) => entry.target.id === salaId);
+  assert.ok(salaBefore.must.faltan.length > 0, 'debe haber must pendientes antes de grabar');
+
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+    suggestionId: 'sala.wide',
+  });
+
+  const after = logic.guideCoverage(state, 'video');
+  const salaAfter = after.find((entry) => entry.target.id === salaId);
+  const faltanIds = salaAfter.must.faltan.map((s) => s.id);
+  assert.ok(!faltanIds.includes('sala.wide'), 'sala.wide no debe estar en faltan despues de grabar');
+  assert.equal(salaAfter.must.hechas, 1);
+});
+
+test('F3: guideCoverage respeta guideSkip (excluye sugerencias marcadas no aplica)', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state.espacios[0].guideSkip = { 'sala.wide': true };
+
+  const coverage = logic.guideCoverage(state, 'video');
+  const salaCoverage = coverage.find((entry) => entry.target.id === salaId);
+  const faltanIds = salaCoverage.must.faltan.map((s) => s.id);
+  assert.ok(!faltanIds.includes('sala.wide'), 'sala.wide con guideSkip no debe aparecer en faltan');
 });
