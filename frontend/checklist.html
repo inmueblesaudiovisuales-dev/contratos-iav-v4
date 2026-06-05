@@ -618,6 +618,15 @@
     .cg-gloss-entry:last-of-type { border-bottom: none; }
     .cg-gloss-id { font-size: 11px; color: var(--ink-3); font-family: monospace; }
     .cg-gloss-hint { font-size: 12px; }
+    /* R102 — gate de salida global */
+    .gate-salida-btn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--ink-3); background: transparent; color: var(--ink-2); }
+    .gate-verdict { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--radius); font-size: 14px; font-weight: 700; margin-bottom: 16px; }
+    .gate-verdict.ok { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); }
+    .gate-verdict.bad { background: var(--red-soft); color: var(--red); border: 1px solid var(--red); }
+    .gate-verdict i { font-size: 18px; flex: none; }
+    .gate-lane-head { font-size: 12px; font-weight: 700; color: var(--ink-3); letter-spacing: .04em; margin: 12px 0 4px; }
+    /* R103 — aviso 3 capas */
+    .guide-capas-aviso { font-size: 12px; color: var(--gold); font-weight: 600; padding: 4px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
     /* F15 — puente IA */
     .guide-tag-ia { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 700; background: var(--gold-soft); color: var(--gold); border: 1px solid var(--gold-leaf); margin-left: 5px; vertical-align: middle; letter-spacing: .03em; }
     .guide-ia-btn { flex: none; }
@@ -1780,7 +1789,7 @@ function renderMediaCapture() {
   <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
   <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
   ` : `
-  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}</div>
+  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="gate-salida-btn" onclick="abrirGateSalida()">listo para irte?</button>' : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}</div>
   <div class="cap-cam">
     <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
     <div class="cap-cam-copy">
@@ -1850,6 +1859,49 @@ function abrirFaltantes() {
     }).join('');
   }
   abrirModal(`<div class="sheet-head"><h2>Tomas clave pendientes</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>${body}`);
+}
+
+function abrirGateSalida() {
+  const videoCoverage = logic.guideCoverage(state, 'video');
+  const droneCoverage = logic.guideCoverage(state, 'drone');
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+
+  const videoFaltan = videoCoverage.filter((c) => c.must.faltan.length > 0);
+  const droneFaltan = droneCoverage.filter((c) => c.must.faltan.length > 0);
+  const totalFaltan = videoFaltan.reduce((n, c) => n + c.must.faltan.length, 0) +
+                      droneFaltan.reduce((n, c) => n + c.must.faltan.length, 0);
+  const espaciosFaltan = videoFaltan.length + droneFaltan.length;
+
+  let verdictHtml;
+  if (totalFaltan === 0) {
+    verdictHtml = `<div class="gate-verdict ok"><i class="ti ti-circle-check"></i>Listo para irte — todas las tomas clave cubiertas</div>`;
+  } else {
+    verdictHtml = `<div class="gate-verdict bad"><i class="ti ti-alert-circle"></i>Faltan ${totalFaltan} toma${totalFaltan === 1 ? '' : 's'} clave en ${espaciosFaltan} espacio${espaciosFaltan === 1 ? '' : 's'}</div>`;
+  }
+
+  function renderLane(coverageFaltan, lane) {
+    if (!coverageFaltan.length) return '';
+    const items = coverageFaltan.map((c) => {
+      const shots = c.must.faltan.map((s) => {
+        const typeLabel = (shotTypes[s.shotType] || {}).label || s.shotType;
+        const movLabel = (movements[s.movement] || {}).label || s.movement;
+        return `<div class="faltantes-shot"><span class="faltantes-shot-name">${esc(s.nombre)}</span><span class="faltantes-shot-type">${esc(typeLabel)} / ${esc(movLabel)}</span></div>`;
+      }).join('');
+      const jumpBtn = lane === 'video'
+        ? `<button class="faltantes-target-jump" onclick="setActiveRoom('${c.target.id}');cerrarModal()"><i class="ti ti-corner-down-right"></i>ir</button>`
+        : '';
+      return `<div class="faltantes-target"><div class="faltantes-target-head"><span class="faltantes-target-name">${esc(c.target.nombre)}</span>${jumpBtn}</div>${shots}</div>`;
+    }).join('');
+    const laneLabel = lane === 'video' ? 'Video' : 'Drone';
+    return `<div class="gate-lane-head">${esc(laneLabel)}</div>${items}`;
+  }
+
+  const body = (totalFaltan === 0)
+    ? '<p class="sheet-note">Todas las tomas clave de la propiedad estan cubiertas.</p>'
+    : renderLane(videoFaltan, 'video') + renderLane(droneFaltan, 'drone');
+
+  abrirModal(`<div class="sheet-head"><h2>Resumen de la propiedad</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>${verdictHtml}${body}`);
 }
 
 function seleccionarSugerencia(id) {
@@ -1938,6 +1990,23 @@ function renderGuideList(target) {
       </details>
     </div>`;
   }).join('');
+  let capasAvisoHtml = '';
+  if (state.modoActual === 'video') {
+    const hasTakes = (state.mediaFiles || []).some((f) => {
+      if (f.kind !== 'take' || f.targetId !== target.id) return false;
+      const cameraIds = new Set((state.cameras || []).filter((c) => c.mode === 'video').map((c) => c.id));
+      return cameraIds.has(f.cameraId);
+    });
+    if (hasTakes) {
+      const capas = logic.capasCubiertas(state, 'video', target.id);
+      const faltanCapas = [];
+      if (!capas.medio) faltanCapas.push('toma media');
+      if (!capas.detalle) faltanCapas.push('toma de detalle');
+      if (faltanCapas.length) {
+        capasAvisoHtml = `<div class="guide-capas-aviso">falta ${faltanCapas.join(' y ')}</div>`;
+      }
+    }
+  }
   let tipoChipsHtml = '';
   if (state.modoActual === 'drone') {
     const droneLib = logic.getDroneGuide();
@@ -1948,7 +2017,7 @@ function renderGuideList(target) {
     }).join('');
     tipoChipsHtml = `<div class="guide-tipo"><span class="guide-tipo-lbl">Tipo de propiedad</span><div class="chips">${chips}</div></div>`;
   }
-  return `<div class="guide-list">${tipoChipsHtml}<div class="guide-list-hd">sugerencias</div>${rows}</div>`;
+  return `<div class="guide-list">${tipoChipsHtml}<div class="guide-list-hd">sugerencias</div>${capasAvisoHtml}${rows}</div>`;
 }
 
 function registrarSugerencia(btn) {
