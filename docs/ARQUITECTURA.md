@@ -5,6 +5,61 @@
 
 ---
 
+## Mapa de relaciones (qué habla con qué)
+
+Cómo fluye una petición: **frontend** (`.html`) → `fetch` a `/api/<accion>` → `worker/src/index.js`
+enruta la acción al **handler** correspondiente en `worker/src/routes/` → el handler lee/escribe **D1**
+y, si hace falta, llama al **adapter** de Apps Script de forma asíncrona (`ctx.waitUntil`, el usuario no espera).
+
+### Frontend → handler del Worker
+
+| Frontend | Para qué sirve | Handler(s) en `worker/src/routes/` | Acciones `/api/` que llama |
+|---|---|---|---|
+| `admin.html` | Panel de administración (todo el back-office) | `contratos.js`, `abonos.js`, `paquetes.js`, `archivos.js`, `equipo.js`, `clientes.js`, `trabajos.js`, `actividades.js`, `config.js`, `stats.js` | `crearContrato`, `listarContratos`, `obtenerContrato`, `actualizarEstatus`, `guardarEntrega`, `reagendarPropiedad`, `reservarContrato`, `registrarAbono`, `listarPaquetes`, `crearPaquete`, `editarPaquete`, `togglePaquete`, `subirArchivo(Admin/Cliente)`, `listarArchivosCliente`, `obtenerEquipo`, `crearCliente`, `listarClientes`, `obtenerCliente`, `actualizarCliente`, `crearTrabajo`, `listarTrabajos`, `agendarLlamada(Rapida)`, `agregarNota`, `listarActividades`, `marcarActividad`, `obtenerConfig(Admin)`, `guardarConfig` |
+| `portal.html` | Portal del cliente: firma, pagos, reseña, revisión | `portal.js`, `archivos.js`, `config.js` | `obtenerPortal`, `firmaCliente`, `guardarResena`, `subirArchivo`, `obtenerConfig` |
+| `equipo.html` | Portal de equipo (fotógrafo/camarógrafo): solo lectura + estatus de producción | `equipo.js`, `actividades.js` | `obtenerEquipo`, `marcarProduccion`, `agregarNota` |
+| `checklist.html` | Bitácora de producción / checklist de rodaje | `checklist.js`, `actividades.js` | `obtenerChecklist`, `guardarChecklist`, `agregarNota` |
+| `revision.html` | Notas de revisión de video del cliente | `revision.js` | `obtenerRevision`, `guardarRevision` |
+
+> `portal.html`, `equipo.html` y `checklist.html` autentican con el **token del contrato** en la URL (`?token=`).
+> `admin.html` autentica con el header `X-Admin-Key`. `frontend/checklist-logic.js` es lógica pura (con tests en `checklist-logic.test.js`) que usa `checklist.html`.
+
+### Handler del Worker → D1 → adapter
+
+| Handler (`routes/`) | Tablas D1 que toca | Acciones del adapter que dispara (async) |
+|---|---|---|
+| `contratos.js` | `contratos`, `propiedades`, `tokens` | `notificarUpsell`, `enviarCorreoEntrega`, `reagendarPropiedad`, `enviarRecordatorioPago` |
+| `portal.js` | `contratos`, `propiedades`, `tokens` | `procesarFirma` (→ Drive + PDF + Calendar), `obtenerLogoCliente` |
+| `abonos.js` | `abonos`, `contratos` | `enviarCorreoAbono` |
+| `revision.js` | `revisiones_video`, `contratos` | `notificarRevision` |
+| `equipo.js` | `contratos`, `propiedades` | — (solo lectura/escritura D1) |
+| `checklist.js` | `checklist` | — |
+| `archivos.js` | `propiedades`, `clientes` | `subirArchivo`, `subirArchivoAdmin`, `subirArchivoCliente`, `listarArchivosCliente` |
+| `clientes.js` | `clientes`, `contratos` | — |
+| `trabajos.js` | `trabajos`, `clientes`, `contratos` | `agendarLlamadaCliente` |
+| `actividades.js` | `actividades`, `trabajos`, `clientes` | `agendarLlamadaCliente` |
+| `paquetes.js` | `paquetes` | — |
+| `config.js` | `config` | — |
+| `stats.js` | `contratos`, `abonos` | — |
+| `prospectos.js` | `prospectos` | `agendarLlamadaProspecto` |
+| `cron.js` (Cron Trigger horario) | lee todas las tablas | `syncBackup` (→ Sheets) |
+
+> Dos acciones del adapter **no** las dispara un handler directamente: `procesarPDFsPendientes` corre por un **trigger de Apps Script** (cada minuto) y `primerAbono` es **fallback legacy** (ver más abajo).
+> El adapter llama de vuelta al Worker (`actualizarCarpeta`, `actualizarCalendarEvent`, `actualizarPdfUrl`) para guardar los IDs de Google en D1.
+
+### Soporte compartido del Worker
+
+| Archivo | Lo usan |
+|---|---|
+| `index.js` | Entry point: enruta cada acción al handler. Edítalo al **agregar un endpoint nuevo**. |
+| `auth.js` | `requireAdmin()`, `ok()`, `err()` — todos los handlers. |
+| `db.js` | `query/queryOne/run/batch`, `normalizarTel` — todos los handlers. |
+| `tokens.js` | Tokens de portal — `contratos.js`, `portal.js`. |
+| `folios.js` | Folios `IAV-YYMM.DD-A` — `contratos.js`. |
+| `google.js` | `callAdapter()` async / `callAdapterSync()` — cualquier handler que hable con el adapter. |
+
+---
+
 ## Base de datos D1
 
 ### Tablas

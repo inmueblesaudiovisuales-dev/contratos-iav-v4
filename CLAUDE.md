@@ -37,6 +37,7 @@ git fetch origin <rama> && git show <sha>:ruta/al/archivo
 | Necesitas… | Lee |
 |---|---|
 | Entender qué es el proyecto, URLs, estructura | `docs/PROYECTO.md` |
+| Saber qué `.html` habla con qué ruta/tabla/adapter | `docs/ARQUITECTURA.md` → "Mapa de relaciones" |
 | Arquitectura: D1, paquetes, flujos, adapter, backup, pendientes, comandos | `docs/ARQUITECTURA.md` |
 | Claves, IDs, URLs internas (sensibles) | `docs/CREDENCIALES.md` |
 | Historial de cambios ronda por ronda | `docs/RONDAS.md` |
