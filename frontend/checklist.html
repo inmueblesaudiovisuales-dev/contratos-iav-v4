@@ -572,6 +572,9 @@
     @keyframes mov-shrink { 0%,100% { transform: scale(1); } 50% { transform: scale(.72); } }
     @keyframes mov-orbit { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) { .mov-anim { animation: none !important; } }
+    /* F11 — tipo propiedad drone */
+    .guide-tipo { padding-bottom: 10px; }
+    .guide-tipo-lbl { display: block; font-size: 11px; font-weight: 700; color: var(--ink-3); margin-bottom: 6px; letter-spacing: .03em; }
     /* F10 — faltantes en sitio */
     .guide-toggle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .guide-missing-chip { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--red, #D94F3B); background: var(--red-soft, #FFF0EE); color: var(--red, #D94F3B); }
@@ -1842,7 +1845,17 @@ function renderGuideList(target) {
       </details>
     </div>`;
   }).join('');
-  return `<div class="guide-list"><div class="guide-list-hd">sugerencias</div>${rows}</div>`;
+  let tipoChipsHtml = '';
+  if (isDrone) {
+    const droneLib = logic.getDroneGuide();
+    const current = (state.guide && state.guide.tipoPropiedad) || 'casa';
+    const chips = Object.keys(droneLib).map((key) => {
+      const label = (droneLib[key].label || key).split('/')[0].trim();
+      return `<button class="chip${current === key ? ' active' : ''}" onclick="setTipoPropiedadDrone('${esc(key)}')">${esc(label)}</button>`;
+    }).join('');
+    tipoChipsHtml = `<div class="guide-tipo"><span class="guide-tipo-lbl">Tipo de propiedad</span><div class="chips">${chips}</div></div>`;
+  }
+  return `<div class="guide-list">${tipoChipsHtml}<div class="guide-list-hd">sugerencias</div>${rows}</div>`;
 }
 
 function abrirCategoriaSheet(targetId) {
@@ -1941,7 +1954,10 @@ function abrirCambiarCuarto() {
   }).join('');
   abrirModal(`<div class="sheet-head"><h2>Cambiar cuarto</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="cuarto-list">${body}</div>
-    <div class="action-stack" style="margin-top:12px"><button class="btn ghost" onclick="abrirOrdenarRecorrido()"><i class="ti ti-list-numbers"></i> Ordenar recorrido</button></div>`);
+    <div class="action-stack" style="margin-top:12px">
+      <button class="btn ghost" onclick="abrirOrdenarRecorrido()"><i class="ti ti-list-numbers"></i> Ordenar recorrido</button>
+      <div class="setup-add"><input class="field" id="cuarto-rapido-input" placeholder="Cuarto nuevo y Enter" onkeydown="if(event.key==='Enter')agregarCuartoRapido()"><button class="btn" onclick="agregarCuartoRapido()">Agregar</button></div>
+    </div>`);
 }
 
 function cuartoRow(item, type) {
@@ -1967,6 +1983,24 @@ function setActiveRoom(id) {
   cerrarModal();
   render();
   if (prev && prev.id !== id) promptBuena(prev);
+}
+
+function agregarCuartoRapido() {
+  const el = document.getElementById('cuarto-rapido-input');
+  const v = el && el.value.trim();
+  if (!v) return;
+  const piso = (activeTarget() || {}).piso || (state.pisos && state.pisos[0]) || 'Piso 1';
+  nuevoEspacio(v, piso, 'interior');
+  const nuevo = state.espacios[state.espacios.length - 1];
+  activeRoomId = nuevo.id; localStorage.setItem(roomKey(), nuevo.id);
+  scheduleSave(); abrirCambiarCuarto();
+}
+
+function setTipoPropiedadDrone(tipo) {
+  if (!state.guide) state.guide = {};
+  state.guide.tipoPropiedad = tipo;
+  scheduleSave();
+  render();
 }
 
 function promptBuena(target) {
