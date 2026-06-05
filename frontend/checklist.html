@@ -362,6 +362,8 @@
     .cap-badge.fail { background: var(--red-soft); color: var(--red); }
     .cap-mark { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 8px; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); font-size: 12px; font-weight: 600; }
     .cap-mark i { font-size: 16px; color: var(--gold); }
+    .cap-mark.active { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+    .cap-mark.active i { color: var(--green); }
     .cap-thumb { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-width: 960px; margin: 0 auto; padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1.7fr 1fr; gap: 10px; background: linear-gradient(to top, var(--page) 74%, rgba(247,244,236,0)); }
     .cap-btn-toma { min-height: 64px; border: 0; border-radius: 14px; background: var(--gold-leaf); color: var(--black); box-shadow: 0 1px 0 var(--gold), 0 6px 16px rgba(176,141,46,.18); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
     .cap-toma-lbl { font-size: 18px; font-weight: 700; }
@@ -2448,8 +2450,8 @@ function renderCapTakes(files) {
     const latest = index === 0;
     const right = file.kind === 'take'
       ? (file.good
-        ? `<span class="cap-badge good"><i class="ti ti-star-filled"></i>buena</span>`
-        : `<button class="cap-mark" onclick="toggleBuena('${file.id}')"><i class="ti ti-star"></i>Marcar buena</button>`)
+        ? `<button class="cap-mark active" onclick="toggleBuena('${file.id}')"><i class="ti ti-star-filled"></i>buena</button>`
+        : `<button class="cap-mark" onclick="toggleBuena('${file.id}')"><i class="ti ti-star"></i>buena</button>`)
       : `<span class="cap-badge fail"><i class="ti ti-x"></i>${esc(discardShort(file))}</span>`;
     return `<div class="cap-take${latest ? ' latest' : ''}">
       <button class="cap-take-main" onclick="abrirArchivo('${file.id}')">
