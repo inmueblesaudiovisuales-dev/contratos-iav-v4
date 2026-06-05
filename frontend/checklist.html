@@ -1141,12 +1141,14 @@ function aplicarPisoEspacio(id, piso) {
 }
 
 function nuevoEspacio(nombre, piso, zona, parentId) {
-  state.espacios.push({
+  const espacio = {
     id: 'esp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
     nombre: nombre.trim(), piso, zona: zona || 'interior', parentId: parentId || null,
     clave: false, orden: state.espacios.length + 1,
     estados: { foto: { estado: 'pendiente' }, t360: { estado: 'pendiente' }, video: { estado: 'pendiente' } },
-  });
+  };
+  state.espacios.push(espacio);
+  return espacio;
 }
 
 function setSetupTipo(t) { setupTipo = t; render(); }
@@ -1673,12 +1675,15 @@ function abrirOrdenarRecorrido() {
     });
     let globalNum = 0;
     body = pisos.filter((p) => byPiso[p] && byPiso[p].length).map((p) => {
-      const rows = byPiso[p].map((id) => {
+      const ids = byPiso[p];
+      const rows = ids.map((id, idx) => {
         globalNum++;
+        const isFirst = idx === 0;
+        const isLast = idx === ids.length - 1;
         return `<div class="cuarto-row-wrap">
           <span class="cuarto-row"><span class="cuarto-name"><span class="rec-num">${globalNum}</span>${esc(nombre(id))}</span></span>
-          <button class="setup-mini" onclick="moverRecorrido('${id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
-          <button class="setup-mini" onclick="moverRecorrido('${id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
+          <button class="setup-mini" onclick="moverRecorrido('${id}',-1)" aria-label="Subir"${isFirst ? ' disabled' : ''}><i class="ti ti-chevron-up"></i></button>
+          <button class="setup-mini" onclick="moverRecorrido('${id}',1)" aria-label="Bajar"${isLast ? ' disabled' : ''}><i class="ti ti-chevron-down"></i></button>
         </div>`;
       }).join('');
       return `<div class="rec-piso-label">${esc(p)}</div>${rows}`;
@@ -1686,8 +1691,8 @@ function abrirOrdenarRecorrido() {
   } else {
     body = orden.map((id, i) => `<div class="cuarto-row-wrap">
       <span class="cuarto-row"><span class="cuarto-name"><span class="rec-num">${i + 1}</span>${esc(nombre(id))}</span></span>
-      <button class="setup-mini" onclick="moverRecorrido('${id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
-      <button class="setup-mini" onclick="moverRecorrido('${id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
+      <button class="setup-mini" onclick="moverRecorrido('${id}',-1)" aria-label="Subir"${i === 0 ? ' disabled' : ''}><i class="ti ti-chevron-up"></i></button>
+      <button class="setup-mini" onclick="moverRecorrido('${id}',1)" aria-label="Bajar"${i === orden.length - 1 ? ' disabled' : ''}><i class="ti ti-chevron-down"></i></button>
     </div>`).join('');
   }
 
@@ -2502,8 +2507,7 @@ function agregarCuartoRapido() {
   const v = el && el.value.trim();
   if (!v) return;
   const piso = (activeTarget() || {}).piso || (state.pisos && state.pisos[0]) || 'Piso 1';
-  nuevoEspacio(v, piso, 'interior');
-  const nuevo = state.espacios[state.espacios.length - 1];
+  const nuevo = nuevoEspacio(v, piso, 'interior');
   activeRoomId = nuevo.id; localStorage.setItem(roomKey(), nuevo.id);
   scheduleSave(); abrirCambiarCuarto();
 }
