@@ -4556,9 +4556,10 @@ function estatusReactivar(c) {
   const precio = parseFloat(c.PrecioTotal) || 0;
   const saldoRaw = parseFloat(c.SaldoPendiente);
   const saldo = isNaN(saldoRaw) ? precio : saldoRaw;
-  if (c.FechaEntrega) return saldo <= 0 ? 'Completado' : 'Entregado';
-  if (precio > saldo)  return 'Reservado';   // hubo abonos reales
-  if (c.FechaFirma)    return 'Firmado';
+  if (saldo <= 0 && precio > 0) return 'Completado';  // pagado por completo
+  if (c.FechaEntrega)           return 'Entregado';   // entregado, con saldo
+  if (precio > saldo)           return 'Reservado';   // hubo abonos parciales
+  if (c.FechaFirma)             return 'Firmado';
   return 'Pendiente firma';
 }
 
