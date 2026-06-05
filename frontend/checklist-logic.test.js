@@ -719,6 +719,15 @@ test('F1: EDIT_ORDER tiene todos los shotTypes y valores numericos', () => {
   });
 });
 
+test('F2: detectCategoria — medio_bano detectable', () => {
+  assert.equal(logic.detectCategoria('Medio baño'), 'medio_bano');
+  assert.equal(logic.detectCategoria('Medio bano'), 'medio_bano');
+  assert.equal(logic.detectCategoria('Baño de visitas'), 'medio_bano');
+  assert.equal(logic.detectCategoria('Baño completo'), 'bano');
+  assert.equal(logic.detectCategoria('Baño'), 'bano');
+  assert.equal(logic.detectCategoria('Baño principal'), 'bano');
+});
+
 test('F2: detectCategoria — lavado, bano, recamara y fallback', () => {
   assert.equal(logic.detectCategoria('Cuarto de lavado'), 'lavado');
   assert.equal(logic.detectCategoria('Lavanderia'), 'lavado');

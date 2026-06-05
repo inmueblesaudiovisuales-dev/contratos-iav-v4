@@ -449,8 +449,8 @@
   });
 
   const ROOM_CATEGORIES = Object.freeze([
-    { id: 'bano',        label: 'Bano completo',          keywords: ['bano', 'wc', 'toilet', 'sanitario'] },
     { id: 'medio_bano',  label: 'Medio bano',             keywords: ['medio bano', 'visitas'] },
+    { id: 'bano',        label: 'Bano completo',          keywords: ['bano', 'wc', 'toilet', 'sanitario'] },
     { id: 'lavado',      label: 'Cuarto de lavado',       keywords: ['lavado', 'lavanderia'] },
     { id: 'bodega',      label: 'Bodega/servicio',        keywords: ['bodega', 'servicio', 'almacen'] },
     { id: 'vestidor',    label: 'Vestidor/closet',        keywords: ['vestidor', 'closet', 'walk-in'] },
@@ -516,7 +516,13 @@
     for (const cat of ROOM_CATEGORIES) {
       for (const kw of cat.keywords) {
         const kwNorm = normNombre(kw);
-        if (kwNorm.includes(' ') ? n.includes(kwNorm) : words.has(kwNorm)) return cat.id;
+        if (kwNorm.includes(' ') && n.includes(kwNorm)) return cat.id;
+      }
+    }
+    for (const cat of ROOM_CATEGORIES) {
+      for (const kw of cat.keywords) {
+        const kwNorm = normNombre(kw);
+        if (!kwNorm.includes(' ') && words.has(kwNorm)) return cat.id;
       }
     }
     return 'generico';
