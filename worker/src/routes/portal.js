@@ -102,14 +102,20 @@ export async function handlePortal(request, env, ctx, action) {
       }
     }
 
-    let logoPrecargadoUrl = null;
-    if (contratoFinal.correo_cliente) {
+    // Logo: primero busca en clientes.logo_url (rápido, sin adapter).
+    // Fallback: adapter obtenerLogoCliente (busca en carpeta Logos de Drive).
+    let logoClienteUrl = null;
+    if (contratoFinal.cliente_id) {
+      const cliLogo = await queryOne(db, 'SELECT logo_url FROM clientes WHERE id = ?', [contratoFinal.cliente_id]);
+      logoClienteUrl = cliLogo?.logo_url || null;
+    }
+    if (!logoClienteUrl && contratoFinal.correo_cliente) {
       try {
         const logoData = await Promise.race([
           callAdapterSync(env, 'obtenerLogoCliente', { correo: contratoFinal.correo_cliente }),
           new Promise(resolve => setTimeout(() => resolve(null), 3000))
         ]);
-        logoPrecargadoUrl = logoData?.logoPrecargadoUrl || null;
+        logoClienteUrl = logoData?.logoPrecargadoUrl || null;
       } catch (e) {
         console.error('Error obteniendo logo cliente:', e.message);
       }
@@ -176,7 +182,7 @@ export async function handlePortal(request, env, ctx, action) {
       tarjeta: '5544 9206 0686 5310',
       clipLink: 'https://linkdenegocio.mx/@inmueblesaudiovisuales/pagar',
       waLink: 'https://wa.me/5218127174207',
-      logoPrecargadoUrl
+      logoClienteUrl
     });
   }
 
@@ -271,6 +277,12 @@ export async function handlePortal(request, env, ctx, action) {
     const results = await batch(db, statements);
     if (!results[0]?.meta?.changes) return err('El contrato ya fue firmado', 409);
 
+    // Persistir logo en clientes para que el próximo contrato lo reutilice
+    const logoUrlFirma = propsCliente?.find(p => p.logoUrl)?.logoUrl || '';
+    if (logoUrlFirma && contrato.cliente_id) {
+      await run(db, 'UPDATE clientes SET logo_url = ? WHERE id = ?', [logoUrlFirma, contrato.cliente_id]);
+    }
+
     // Sync estatus to trabajos and fire Reservado calendar event if needed
     const trabajoFirma = await queryOne(db,
       'SELECT id, cliente_id FROM trabajos WHERE token=?', [token]);
@@ -321,7 +333,8 @@ export async function handlePortal(request, env, ctx, action) {
       },
       linkPortal: `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`,
       propiedades: propiedadesFirma.map(p => ({ ...p, paquete: pkMap[p.paquete] || p.paquete })),
-      entregables: entregablesAdapter
+      entregables: entregablesAdapter,
+      logoClienteUrl: logoUrlFirma
     });
 
     return ok({ ok: true, estatus: nuevoEstatus, total: precioTotal, anticipo, folio: contrato.folio });

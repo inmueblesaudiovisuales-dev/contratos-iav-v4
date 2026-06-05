@@ -1,9 +1,9 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-05 09:14:04 CST (R62) — nueva función enviarCorreoReserva:
-//   correo "Tu sesión está apartada" al apartar fecha desde admin, sin afirmar pago.
-//   Previo R61: correo con anticipo $0 ya no muestra "Anticipo acordado (0%) $0 MXN".
+// Ultima modificacion: 2026-06-05 10:03:36 CST (R63) — procesarFirma: clona logo del cliente
+//   a la carpeta Control Interno del contrato nuevo si body.logoClienteUrl está presente.
+//   Previo R62: nueva función enviarCorreoReserva.
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -131,6 +131,16 @@ function procesarFirma(body) {
     var carpetaEntregables = getOrCreateFolder_(carpetaProyecto, 'Entregables');
     var carpetaEntregablesId = carpetaEntregables.getId();
     var carpetaUrl = carpetaControl.getUrl();
+
+    // Clonar logo del cliente a la carpeta Control Interno
+    if (body.logoClienteUrl) {
+      try {
+        var logoMatch = body.logoClienteUrl.match(/\/d\/([^\/\?&]+)/) || body.logoClienteUrl.match(/[?&]id=([^&]+)/);
+        if (logoMatch && logoMatch[1]) {
+          DriveApp.getFileById(logoMatch[1]).makeCopy('logo-' + (contrato.nombre_cliente || 'cliente'), carpetaControl);
+        }
+      } catch (eLogo) { console.error('procesarFirma: error clonando logo:', eLogo.message); }
+    }
 
     // Guardar en PropertiesService y notificar al Worker
     for (var i = 0; i < propiedades.length; i++) {

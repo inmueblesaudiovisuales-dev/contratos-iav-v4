@@ -8,6 +8,21 @@
 
 ---
 
+### Ronda 63 — Logo persistente por cliente (2026-06-05 10:03:36 CST)
+
+**Objetivo:** si un cliente subió su logo en un contrato anterior, en el siguiente contrato el portal ya lo muestra como "Logo registrado" (con thumbnail), lo auto-usa sin que el cliente haga nada, y lo clona físicamente a la carpeta Control Interno del nuevo contrato en Drive. El cliente puede opcionalmente subir otro.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R63-01 | `worker/src/routes/portal.js` | `obtenerPortal`: consulta `clientes.logo_url` en BD primero (sin latencia de adapter). Si está vacío, cae al adapter `obtenerLogoCliente` como antes. Retorna `logoClienteUrl` (antes `logoPrecargadoUrl`). |
+| R63-02 | `worker/src/routes/portal.js` | `firmaCliente`: al firmar, si alguna propiedad tiene `logoUrl` y el contrato tiene `cliente_id`, guarda la URL en `clientes.logo_url`. También pasa `logoClienteUrl` al adapter `procesarFirma`. |
+| R63-03 | `adapter/AdapterScript4_v1.js` | `procesarFirma`: si recibe `body.logoClienteUrl`, extrae el file ID del URL de Drive y clona el archivo a la carpeta Control Interno con nombre `logo-{nombreCliente}`. Error silencioso si falla. **Requiere despliegue manual en script.google.com.** |
+| R63-04 | `frontend/portal.html` | Si `portalData.logoClienteUrl` existe: muestra thumbnail del logo + texto "Logo registrado" + botón "Subir otro" en lugar del campo de subida normal. El logo anterior se auto-usa en `archivosSubidos`. |
+
+**Adapter:** R63-03 toca `procesarFirma`. **Requiere que Bruno pegue el archivo en script.google.com y publique una versión nueva** (el push a `main` NO lo despliega).
+
+---
+
 ### Ronda 62 — Correo de reservación al "Apartar fecha" (2026-06-05 09:14:04 CST)
 
 **Objetivo:** al apartar la fecha desde admin ("Apartar fecha (reservar sin abono)") no se enviaba ningún correo al cliente. Ahora se manda un correo de "Tu sesión está apartada" —del estilo del de abono pero **sin afirmar que se recibió dinero**—, se cambia el estatus a Reservado (ya lo hacía), y si después dan un abono **no se repite** ese mensaje.

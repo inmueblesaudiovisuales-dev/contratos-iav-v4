@@ -1162,7 +1162,29 @@ function renderEtapa1() {
   // --- Archivos del proyecto ---
   html += '<div class="card"><p class="section-title">Archivos del proyecto</p>';
   html += '<p class="upload-hint" style="margin-bottom:16px">Opcional. Puedes subir estos archivos ahora o enviárnoslos por WhatsApp después. No bloquean la firma.</p>';
-  html += renderUploadField('logo', 0, 'Logo de la agencia o cliente', 'Opcional. PNG con fondo transparente y buena resolución.');
+  if (portalData.logoClienteUrl) {
+    html += '<div class="upload-field">' +
+      '<span class="upload-label">Logo de la agencia o cliente</span>' +
+      '<p class="upload-hint">Ya tenemos tu logo de un trabajo anterior. Lo usaremos automáticamente.</p>' +
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">' +
+        '<img src="' + portalData.logoClienteUrl + '" alt="Logo" ' +
+          'style="height:48px;max-width:110px;object-fit:contain;border:1px solid var(--border,#e0ddd8);border-radius:6px;padding:4px;background:#fff" ' +
+          'onerror="this.style.display=\'none\'">' +
+        '<span style="font-size:12px;color:#3a7a3a;font-weight:600">Logo registrado</span>' +
+      '</div>' +
+      '<div class="upload-row">' +
+        '<label for="upload-input-logo-0" class="btn-upload" style="font-size:11px">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+          'Subir otro' +
+        '</label>' +
+        '<input type="file" id="upload-input-logo-0" accept="image/*" style="display:none" ' +
+          'onchange="subirArchivoPortal(\'logo\',0,this)">' +
+        '<span class="upload-status" id="upload-status-logo-0"></span>' +
+      '</div>' +
+    '</div>';
+  } else {
+    html += renderUploadField('logo', 0, 'Logo de la agencia o cliente', 'Opcional. PNG con fondo transparente y buena resolución.');
+  }
   html += '</div>';
 
   // --- Firma ---
@@ -1215,17 +1237,15 @@ function renderEtapa1() {
   document.getElementById('btn-limpiar').addEventListener('click', limpiarFirma);
   document.getElementById('btn-firmar').addEventListener('click', validarYFirmar);
 
-  // Pre-rellenar logo de sesión anterior (B3: se ejecuta en CADA re-render)
-  if (portalData.logoPrecargadoUrl) {
-    if (!archivosSubidos['logo-0']) {
-      archivosSubidos['logo-0'] = portalData.logoPrecargadoUrl;
-    }
-    if (archivosSubidos['logo-0'] === portalData.logoPrecargadoUrl) {
-      setUploadStatus('logo', 0, 'ok', 'Logo de sesión anterior');
+  // Auto-usar logo existente (DB o Drive) y restaurar status tras re-render
+  var logoRef = portalData.logoClienteUrl || portalData.logoPrecargadoUrl || '';
+  if (logoRef) {
+    if (!archivosSubidos['logo-0']) archivosSubidos['logo-0'] = logoRef;
+    if (archivosSubidos['logo-0'] === logoRef) {
+      setUploadStatus('logo', 0, 'ok', portalData.logoClienteUrl ? 'Logo registrado' : 'Logo de trabajo anterior');
     }
   }
-  // Fix B5: restaurar status de logo subido por el cliente tras re-render
-  if (archivosSubidos['logo-0'] && archivosSubidos['logo-0'] !== (portalData.logoPrecargadoUrl || '')) {
+  if (archivosSubidos['logo-0'] && archivosSubidos['logo-0'] !== logoRef) {
     setUploadStatus('logo', 0, 'ok', 'Logo subido');
   }
 }
