@@ -894,10 +894,12 @@
       const guideSkip = target.guideSkip || {};
       const mustSugs = suggestions.filter((s) => s.priority === 'must');
       const niceSugs = suggestions.filter((s) => s.priority === 'nice');
-      const mustHechas = mustSugs.filter((s) => suggestionProgress(state, mode, target.id, s.id).done).length;
-      const mustFaltan = mustSugs.filter((s) => !suggestionProgress(state, mode, target.id, s.id).done && !guideSkip[s.id]);
-      const niceHechas = niceSugs.filter((s) => suggestionProgress(state, mode, target.id, s.id).done).length;
-      const niceFaltan = niceSugs.filter((s) => !suggestionProgress(state, mode, target.id, s.id).done && !guideSkip[s.id]);
+      const mustProg = mustSugs.map((s) => ({ s, done: suggestionProgress(state, mode, target.id, s.id).done }));
+      const mustHechas = mustProg.filter((p) => p.done).length;
+      const mustFaltan = mustProg.filter((p) => !p.done && !guideSkip[p.s.id]).map((p) => p.s);
+      const niceProg = niceSugs.map((s) => ({ s, done: suggestionProgress(state, mode, target.id, s.id).done }));
+      const niceHechas = niceProg.filter((p) => p.done).length;
+      const niceFaltan = niceProg.filter((p) => !p.done && !guideSkip[p.s.id]).map((p) => p.s);
       return { target, must: { hechas: mustHechas, faltan: mustFaltan }, nice: { hechas: niceHechas, faltan: niceFaltan } };
     });
   }
