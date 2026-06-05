@@ -589,6 +589,18 @@
     .faltantes-shot { display: flex; align-items: baseline; gap: 6px; padding: 4px 0; }
     .faltantes-shot-name { font-size: 13px; font-weight: 600; color: var(--ink-1); }
     .faltantes-shot-type { font-size: 11px; color: var(--ink-3); }
+    .guide-gear-btn { flex: none; }
+    .cg-head { display: flex; align-items: center; justify-content: space-between; }
+    .cg-cat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .cg-cat-head .setup-lbl { margin-bottom: 0; }
+    .cg-shot-card { border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 6px; box-shadow: var(--shadow); }
+    .cg-shot-row { display: flex; gap: 8px; }
+    .cg-shot-fields { flex: 1; min-width: 0; display: grid; gap: 6px; }
+    .cg-shot-nombre { font-weight: 600; }
+    .cg-priority { margin-top: 2px; }
+    .cg-shot-actions { display: flex; flex-direction: column; gap: 6px; flex: none; padding-top: 2px; }
+    .cg-actions { margin-top: 24px; padding-bottom: 20px; display: grid; gap: 8px; }
+    .cg-section .chip.add { font-size: 12px; height: 30px; padding: 0 10px; }
   </style>
 </head>
 <body>
@@ -629,6 +641,9 @@ let toastTimer = null;
 let syncStatus = 'ok';
 let guideMode = localStorage.getItem('checklist_guide_' + (TOKEN || 'demo')) === '1';
 let activeSugId = null;
+let configGuiaOpen = false;
+let guideConfigDraft = null;
+let currentGuideConfig = null;
 
 const SERVICE_UI = {
   foto: { label: 'Foto normal', short: 'Foto', verb: 'foto', help: 'Marca cobertura fotografica.' },
@@ -846,10 +861,11 @@ function render() {
     return;
   }
   const showSetup = setupOpen || !state.espacios.length;
+  const showConfig = configGuiaOpen;
   app.innerHTML = `
     ${renderHeader()}
-    ${state.espacios.length && !showSetup ? renderTabs() : ''}
-    <main class="content">${showSetup ? renderSetup() : renderActiveView()}</main>
+    ${state.espacios.length && !showSetup && !showConfig ? renderTabs() : ''}
+    <main class="content">${showConfig ? renderConfigGuia() : showSetup ? renderSetup() : renderActiveView()}</main>
   `;
   app.classList.toggle('has-thumb', !!app.querySelector('.cap-thumb'));
   bindNameInput();
@@ -1683,7 +1699,7 @@ function renderMediaCapture() {
   <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
   <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
   ` : `
-  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}</div>
+  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="guide-gear-btn icon-btn" onclick="abrirConfigGuia()" aria-label="Configurar biblioteca"><i class="ti ti-settings"></i></button>' : ''}</div>
   <div class="cap-cam">
     <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
     <div class="cap-cam-copy">
@@ -1879,6 +1895,176 @@ function setCategoriaSpace(targetId, catId) {
   cerrarModal();
   scheduleSave();
   render();
+}
+
+async function ensureAdminKey() {
+  let key = localStorage.getItem('iav_admin_auth');
+  if (key) return key;
+  key = prompt('Contraseña de admin para editar la biblioteca');
+  if (!key) return null;
+  try {
+    const r = await fetch('/api/obtenerConfigAdmin', { headers: { 'X-Admin-Key': key } });
+    if (r.ok) { localStorage.setItem('iav_admin_auth', key); return key; }
+  } catch (_) {}
+  showToast('Contraseña incorrecta');
+  return null;
+}
+
+async function abrirConfigGuia() {
+  const k = await ensureAdminKey();
+  if (!k) return;
+  guideConfigDraft = JSON.parse(JSON.stringify(currentGuideConfig || {}));
+  logic.applyGuideConfig(guideConfigDraft);
+  configGuiaOpen = true;
+  render();
+}
+
+function cerrarConfigGuia() {
+  configGuiaOpen = false;
+  logic.applyGuideConfig(currentGuideConfig || {});
+  render();
+}
+
+function renderConfigGuia() {
+  const lib = logic.getGuideLibrary();
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+  const cats = logic.getRoomCategories();
+  const draftCats = (guideConfigDraft && guideConfigDraft.categorias) || {};
+  const sections = cats
+    .filter((c) => lib[c.id])
+    .map((cat) => {
+      const catDef = lib[cat.id];
+      const hasOverride = !!draftCats[cat.id];
+      const shots = catDef.shots.map((s) => renderConfigShot(cat.id, s, shotTypes, movements)).join('');
+      return `<div class="setup-block cg-section">
+        <div class="cg-cat-head">
+          <label class="setup-lbl">${esc(catDef.label)}</label>
+          ${hasOverride ? `<button class="setup-mini" onclick="restaurarSeccionGuia('${esc(cat.id)}')"><i class="ti ti-rotate-clockwise"></i> restaurar</button>` : ''}
+        </div>
+        ${shots}
+        <button class="chip add" style="margin-top:8px" onclick="agregarShotConfig('${esc(cat.id)}')"><i class="ti ti-plus"></i>agregar toma</button>
+      </div>`;
+    })
+    .join('');
+  return `<section class="setup">
+    <div class="setup-hd">
+      <div class="cg-head">
+        <h2>Biblioteca de tomas</h2>
+        <button class="icon-btn" onclick="cerrarConfigGuia()" aria-label="Cerrar"><i class="ti ti-x"></i></button>
+      </div>
+      <p>Edita las sugerencias de cada categoria. Solo se guardan los cambios respecto al default.</p>
+    </div>
+    ${sections}
+    <div class="cg-actions">
+      <button class="primary" style="width:100%" onclick="guardarConfigGuia()"><i class="ti ti-check"></i> Guardar cambios</button>
+      <button class="btn" style="width:100%" onclick="cerrarConfigGuia()">Cancelar</button>
+    </div>
+  </section>`;
+}
+
+function renderConfigShot(catId, shot, shotTypes, movements) {
+  const isCustom = shot.id.startsWith('custom.');
+  const sid = esc(shot.id);
+  const cid = esc(catId);
+  const stOpts = Object.entries(shotTypes)
+    .map(([k, v]) => `<option value="${esc(k)}"${shot.shotType === k ? ' selected' : ''}>${esc(v.label)}</option>`)
+    .join('');
+  const movOpts = Object.entries(movements)
+    .map(([k, v]) => `<option value="${esc(k)}"${shot.movement === k ? ' selected' : ''}>${esc(v.label)}</option>`)
+    .join('');
+  return `<div class="cg-shot-card">
+    <div class="cg-shot-row">
+      <div class="cg-shot-fields">
+        <input class="field cg-shot-nombre" value="${esc(shot.nombre)}" placeholder="Nombre" onchange="editarShotConfig('${cid}','${sid}','nombre',this.value)">
+        <select class="field" onchange="editarShotConfig('${cid}','${sid}','shotType',this.value)">${stOpts}</select>
+        <select class="field" onchange="editarShotConfig('${cid}','${sid}','movement',this.value)">${movOpts}</select>
+        <input class="field" value="${esc(shot.enfoque)}" placeholder="En que enfocarse" onchange="editarShotConfig('${cid}','${sid}','enfoque',this.value)">
+        <div class="chips cg-priority">
+          <button class="chip${shot.priority === 'must' ? ' active' : ''}" onclick="editarShotConfig('${cid}','${sid}','priority','must')">clave</button>
+          <button class="chip${shot.priority === 'nice' ? ' active' : ''}" onclick="editarShotConfig('${cid}','${sid}','priority','nice')">opcional</button>
+        </div>
+      </div>
+      <div class="cg-shot-actions">
+        ${isCustom
+          ? `<button class="setup-mini del" onclick="eliminarShotConfig('${cid}','${sid}')" title="Eliminar"><i class="ti ti-trash"></i></button>`
+          : `<button class="setup-mini" onclick="ocultarShotConfig('${cid}','${sid}')" title="Ocultar"><i class="ti ti-eye-off"></i></button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function editarShotConfig(catId, shotId, field, value) {
+  if (!guideConfigDraft.categorias) guideConfigDraft.categorias = {};
+  if (!guideConfigDraft.categorias[catId]) guideConfigDraft.categorias[catId] = {};
+  const catOver = guideConfigDraft.categorias[catId];
+  if (!catOver.shots) catOver.shots = [];
+  let over = catOver.shots.find((s) => s.id === shotId);
+  if (!over) { over = { id: shotId }; catOver.shots.push(over); }
+  over[field] = value;
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
+}
+
+function ocultarShotConfig(catId, shotId) {
+  if (!guideConfigDraft.categorias) guideConfigDraft.categorias = {};
+  if (!guideConfigDraft.categorias[catId]) guideConfigDraft.categorias[catId] = {};
+  const catOver = guideConfigDraft.categorias[catId];
+  if (!catOver.shots) catOver.shots = [];
+  let over = catOver.shots.find((s) => s.id === shotId);
+  if (!over) { over = { id: shotId }; catOver.shots.push(over); }
+  over.removed = true;
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
+}
+
+function eliminarShotConfig(catId, shotId) {
+  const catOver = guideConfigDraft.categorias && guideConfigDraft.categorias[catId];
+  if (!catOver || !catOver.shots) return;
+  catOver.shots = catOver.shots.filter((s) => s.id !== shotId);
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
+}
+
+function agregarShotConfig(catId) {
+  if (!guideConfigDraft.categorias) guideConfigDraft.categorias = {};
+  if (!guideConfigDraft.categorias[catId]) guideConfigDraft.categorias[catId] = {};
+  const catOver = guideConfigDraft.categorias[catId];
+  if (!catOver.shots) catOver.shots = [];
+  const rand = Math.random().toString(36).slice(2, 7);
+  catOver.shots.push({ id: 'custom.' + catId + '-' + rand, nombre: 'Nueva toma', shotType: 'wide', movement: 'static', enfoque: '', priority: 'nice' });
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
+}
+
+function restaurarSeccionGuia(catId) {
+  if (guideConfigDraft.categorias && guideConfigDraft.categorias[catId]) {
+    delete guideConfigDraft.categorias[catId];
+  }
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
+}
+
+async function guardarConfigGuia() {
+  const key = await ensureAdminKey();
+  if (!key) return;
+  try {
+    const r = await fetch('/api/guardarConfig', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': key },
+      body: JSON.stringify({ clave: 'guia_config', valor: JSON.stringify(guideConfigDraft) }),
+    });
+    if (r.ok) {
+      currentGuideConfig = JSON.parse(JSON.stringify(guideConfigDraft));
+      logic.applyGuideConfig(guideConfigDraft);
+      showToast('Guardado');
+      render();
+    } else {
+      showToast('Error al guardar');
+    }
+  } catch (_) {
+    showToast('Error de red');
+  }
 }
 
 function abrirAccionesFoco() {
@@ -2868,7 +3054,7 @@ if (DEMO) {
   cargar();
   fetch('/api/obtenerConfigGuia?token=' + encodeURIComponent(TOKEN))
     .then((r) => r.ok ? r.json() : null)
-    .then((data) => { if (data && data.guia) { logic.applyGuideConfig(data.guia); render(); } })
+    .then((data) => { if (data && data.guia) { currentGuideConfig = data.guia; logic.applyGuideConfig(data.guia); render(); } })
     .catch(() => {});
 }
   </script>
