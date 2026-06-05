@@ -1618,6 +1618,20 @@ function renderMediaCapture() {
   const piso = isDrone ? 'Drone' : (target.piso || 'Sin piso');
   const parentName = !isDrone && target.parentId ? (state.espacios.find((e) => e.id === target.parentId) || {}).nombre : '';
   const noAplicaVideo = state.modoActual === 'video' && target.estados && (target.estados.video || {}).estado === 'no_aplica';
+  const tomaOnclick = guideMode
+    ? "registrarArchivo('" + target.id + "','take',undefined," + (activeSugId ? "{suggestionId:'" + esc(activeSugId) + "'}" : 'null') + ')'
+    : "registrarArchivo('" + target.id + "','take')";
+  let tomaSubLabel = '';
+  if (guideMode) {
+    if (activeSugId) {
+      const activeSug = logic.findSuggestion(activeSugId);
+      tomaSubLabel = activeSug ? '<span class="cap-toma-sub">' + esc(activeSug.nombre) + '</span>' : '';
+    } else {
+      tomaSubLabel = '<span class="cap-toma-sub">toma libre</span>';
+    }
+  } else {
+    tomaSubLabel = nextTok ? '<span class="cap-toma-sub">+1 · ' + esc(nextTok) + '</span>' : '';
+  }
   return `
   <section class="cap-focus">
     <div class="cap-focus-head">
@@ -1650,7 +1664,7 @@ function renderMediaCapture() {
     ${files.length ? renderCapTakes(files) : `<p class="cap-empty">Aún no registras nada aquí. Da Toma cuando grabes.</p>`}
   </section>
   <div class="cap-thumb">
-    <button class="cap-btn-toma" onclick="registrarArchivo('${target.id}','take')"><span class="cap-toma-lbl">Toma</span>${nextTok ? `<span class="cap-toma-sub">+1 · ${esc(nextTok)}</span>` : ''}</button>
+    <button class="cap-btn-toma" onclick="${tomaOnclick}"><span class="cap-toma-lbl">Toma</span>${tomaSubLabel}</button>
     <button class="cap-btn-no" onclick="noSirve('${target.id}')"><i class="ti ti-circle-x"></i><span>No sirve</span></button>
   </div>`}`;
 }
@@ -1676,6 +1690,21 @@ function toggleGuideMode() {
 function seleccionarSugerencia(id) {
   activeSugId = id;
   render();
+}
+
+function avanzarSugerencia(targetId, currentSugId) {
+  const target = state.espacios.find((e) => e.id === targetId) || state.droneItems.find((e) => e.id === targetId);
+  if (!target) { activeSugId = null; return; }
+  const isDrone = state.modoActual === 'drone';
+  const suggestions = isDrone
+    ? logic.suggestionsForDrone(state.guide && state.guide.tipoPropiedad)
+    : logic.suggestionsForSpace(categoriaDe(target), target.nombre);
+  if (!suggestions || !suggestions.length) { activeSugId = null; return; }
+  const guideSkip = target.guideSkip || {};
+  const currentIdx = suggestions.findIndex((s) => s.id === currentSugId);
+  const after = currentIdx >= 0 ? suggestions.slice(currentIdx + 1) : suggestions;
+  const next = after.find((s) => !logic.suggestionProgress(state, state.modoActual, targetId, s.id).done && !guideSkip[s.id]);
+  activeSugId = next ? next.id : null;
 }
 
 function renderGuideList(target) {
@@ -2042,13 +2071,19 @@ function aplicarSecuencia(cameraId, filename) {
   cerrarModal(); render(); scheduleSave();
 }
 
-function registrarArchivo(targetId, kind, discardReason) {
+function registrarArchivo(targetId, kind, discardReason, guideCtx) {
   const camera = activeCamera();
   if (!camera || !logic.getCameraSequence(state, camera.id).nextToken) return abrirSecuencia();
   const previous = state;
-  state = logic.registerMediaFile(state, { cameraId: camera.id, targetId, kind, discardReason, autor: miNombre(), now: new Date() });
+  let suggFields = {};
+  if (guideCtx && guideCtx.suggestionId) {
+    const sug = logic.findSuggestion(guideCtx.suggestionId);
+    suggFields = sug ? { suggestionId: sug.id, shotType: sug.shotType, movement: sug.movement } : {};
+  }
+  state = logic.registerMediaFile(state, { cameraId: camera.id, targetId, kind, discardReason, autor: miNombre(), now: new Date(), ...suggFields });
   if (state === previous) return showToast('Reactiva este elemento antes de registrar');
   activeRoomId = targetId; localStorage.setItem(roomKey(), targetId);
+  if (guideCtx && guideCtx.suggestionId) avanzarSugerencia(targetId, guideCtx.suggestionId);
   render(); scheduleSave();
   const file = state.mediaFiles[state.mediaFiles.length - 1];
   if (kind === 'discard') {
