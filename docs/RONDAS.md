@@ -8,6 +8,21 @@
 
 ---
 
+### Ronda 65 — Reconciliar schema.sql con producción (2026-06-05 10:56:59 CST)
+
+**Objetivo:** `worker/schema.sql` estaba desfasado del D1 real. Se volcó el schema de producción (`SELECT sql FROM sqlite_master`) y se compararon todas las tablas. Se agregaron a `schema.sql` las columnas y la tabla que existían en prod pero no estaban declaradas (todas legacy de features abandonados, sin uso en el worker actual), para que el archivo refleje la realidad y un D1 nuevo nazca idéntico a producción. **No toca producción** (schema.sql solo se usa para BDs nuevas).
+
+| ID | Tabla / objeto | Cambio en `schema.sql` |
+|----|----------------|------------------------|
+| R65-01 | `contratos` | Agregadas `origen TEXT DEFAULT 'admin'` y `penalizacion_reagendamiento REAL DEFAULT 0` (legacy). |
+| R65-02 | `propiedades` | Agregadas `cajones_estacionamiento TEXT`, `fotos_listas INTEGER DEFAULT 0`, `video_listo INTEGER DEFAULT 0` (legacy). Corregido default de `ocultar_formato_video` a `0` (prod), antes decía `1`. |
+| R65-03 | `whatsapp_sesiones` | Tabla completa agregada (legacy, bot de WhatsApp; el worker no la toca). |
+| R65-04 | `trabajos` | `estatus` pasa de `TEXT NOT NULL DEFAULT 'nuevo'` a `TEXT DEFAULT 'nuevo'` para igualar prod (cosmético). |
+
+**Nota:** las columnas/tabla legacy se marcaron con comentario `-- legacy` en el archivo. No se eliminan de producción (no hay necesidad y borrar columnas en SQLite/D1 es costoso). Sin impacto en deploy.
+
+---
+
 ### Ronda 64 — Hasta 3 versiones de logo (2026-06-05 10:39:26 CST)
 
 **Objetivo:** el cliente puede subir hasta 3 versiones de su logo en el portal. La UI no pone 3 campos: tras subir el primero aparece un enlace discreto "+ Agregar otra versión" (desaparece al llegar a 3). Cada versión queda guardada en BD y se clona a Drive. `logo_url` sigue siendo el principal (primera versión) por compatibilidad; la nueva columna `logos_json` guarda el array completo.
