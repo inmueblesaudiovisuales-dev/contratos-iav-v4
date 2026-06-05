@@ -1444,3 +1444,48 @@ test('F14: guideCoverage incluye toma IA must en must.faltan hasta que se liga',
   assert.ok(!salaAfter.must.faltan.some((s) => s.id === 'custom.ia.cov001'), 'toma IA ligada no debe estar en faltan');
   assert.ok(salaAfter.must.hechas >= 1, 'toma IA ligada debe contar como hecha');
 });
+
+// ─── R96: C1 hardening tests ──────────────────────────────────────────────────
+
+test('C1: parsePropuesta genera IDs deterministas estables entre dos parseos del mismo texto', () => {
+  const state = makeStateWithProposal();
+  const salaId = state.espacios[0].id;
+  const texto = JSON.stringify({
+    porCuarto: {
+      [salaId]: [
+        { nombre: 'Wide entrada', shotType: 'wide', movement: 'static', enfoque: 'foco', priority: 'must' },
+        { nombre: 'Orbital mesa', shotType: 'medio', movement: 'orbit', enfoque: 'foco2', priority: 'nice' },
+      ],
+    },
+  });
+
+  const r1 = logic.parsePropuesta(texto, state);
+  const r2 = logic.parsePropuesta(texto, state);
+
+  const shots1 = r1.proposal.porCuarto[salaId];
+  const shots2 = r2.proposal.porCuarto[salaId];
+  assert.equal(shots1.length, 2, 'debe parsear 2 tomas');
+  assert.equal(shots1[0].id, shots2[0].id, 'primer ID debe ser identico en ambos parseos');
+  assert.equal(shots1[1].id, shots2[1].id, 'segundo ID debe ser identico en ambos parseos');
+  assert.ok(shots1[0].id.startsWith('custom.ia.'), 'ID debe empezar con custom.ia.');
+});
+
+test('C1: applyGuideConfig con una seccion invalida conserva las secciones validas', () => {
+  logic.applyGuideConfig(null);
+
+  const badCategorias = {};
+  Object.defineProperty(badCategorias, 'sala', {
+    enumerable: true,
+    get() { throw new Error('seccion rota'); },
+  });
+
+  assert.doesNotThrow(() => logic.applyGuideConfig({
+    categorias: badCategorias,
+    movements: { pan: { label: 'Paneo modificado R96' } },
+  }), 'no debe lanzar con seccion invalida');
+
+  const movements = logic.getMovements();
+  assert.equal(movements.pan.label, 'Paneo modificado R96', 'la seccion movements valida debe conservarse');
+  const lib = logic.getGuideLibrary();
+  assert.ok(lib.sala, 'sala debe existir como defaults tras fallo de categorias');
+});

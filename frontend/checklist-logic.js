@@ -533,6 +533,8 @@
       } else {
         _effectiveShotTypes = null;
       }
+    } catch (_) { _effectiveShotTypes = null; }
+    try {
       if (config.movements && typeof config.movements === 'object') {
         const m = Object.assign({}, MOVEMENTS);
         for (const [id, ov] of Object.entries(config.movements)) {
@@ -542,6 +544,8 @@
       } else {
         _effectiveMovements = null;
       }
+    } catch (_) { _effectiveMovements = null; }
+    try {
       if (config.categorias && typeof config.categorias === 'object') {
         const m = {};
         for (const [catId, catDef] of Object.entries(GUIDE_LIBRARY)) {
@@ -559,6 +563,8 @@
       } else {
         _effectiveGuideLibrary = null;
       }
+    } catch (_) { _effectiveGuideLibrary = null; }
+    try {
       if (config.drone && typeof config.drone === 'object') {
         const m = {};
         for (const [tipo, tipoDef] of Object.entries(DRONE_GUIDE)) {
@@ -571,6 +577,8 @@
       } else {
         _effectiveDroneGuide = null;
       }
+    } catch (_) { _effectiveDroneGuide = null; }
+    try {
       if (config.amenidades && typeof config.amenidades === 'object') {
         const m = {};
         for (const [amenId, amenDef] of Object.entries(AMENITY_GUIDE)) {
@@ -583,14 +591,14 @@
       } else {
         _effectiveAmenityGuide = null;
       }
+    } catch (_) { _effectiveAmenityGuide = null; }
+    try {
       if (Array.isArray(config.roomCategories) && config.roomCategories.length > 0) {
         _effectiveRoomCategories = config.roomCategories;
       } else {
         _effectiveRoomCategories = null;
       }
-    } catch (_) {
-      resetGuideConfig();
-    }
+    } catch (_) { _effectiveRoomCategories = null; }
   }
 
   function resetGuideConfig() {
@@ -623,7 +631,7 @@
   ]);
 
   function normNombre(s) {
-    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   }
 
   function detectCategoria(nombre) {
@@ -865,7 +873,7 @@
           }
           const priority = (toma.priority === 'must' || toma.priority === 'nice') ? toma.priority : 'nice';
           validShots.push({
-            id: 'custom.ia.' + Math.random().toString(36).slice(2, 10),
+            id: 'custom.ia.' + targetId + '.' + validShots.length,
             nombre: String(toma.nombre || ''),
             shotType: toma.shotType,
             movement: toma.movement,
