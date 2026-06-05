@@ -105,7 +105,7 @@ wrangler d1 execute contratos-iav-v4 --remote --command="SELECT token, folio, no
 | ADD-ASESOR | Asesor en Video | $500 | Adicional |
 | ADD-EXPRESS | Entrega Express | $1,000 | Adicional |
 
-Todos los adicionales tienen columna `alcance` en D1. Desde R14, **todos** son `por_propiedad` — ADD-EXPRESS ya no es caso especial.
+Todos los adicionales tienen columna `alcance` en D1. Desde R14, **todos** son `por_propiedad` — ADD-EXPRESS ya no es caso especial. (Nota: `worker/seed-paquetes.sql` aún muestra ADD-EXPRESS como `global` porque es el seed original; la D1 de producción se actualizó a `por_propiedad` por comando directo en R14.)
 
 Además, el admin permite crear **add-ons personalizados** (nombre + precio libre) por propiedad. Se guardan en `adicionales_json` como `{ nombre: "...", precio: X, ofrecido: true, numPropiedad?: N }`.
 
@@ -122,8 +122,8 @@ Además, el admin permite crear **add-ons personalizados** (nombre + precio libr
 
 ### 2. Firma del cliente (portal)
 - Cliente abre `portal.html?token=<token>` (token permanece en la URL para poder copiarla/compartirla)
-- Selecciona adicionales si los hay, llena datos (incluyendo orientación), dibuja firma → `POST /api/firmaCliente`
-- Worker actualiza contrato en D1 (estatus → "Firmado" o "En produccion" si prepagado)
+- Selecciona adicionales si los hay, llena datos (formato de video, acceso/caseta), dibuja firma → `POST /api/firmaCliente`
+- Worker actualiza contrato en D1: estatus → **"Firmado"**. **Modelo de saldo (R60):** el anticipo es un primer pago *sugerido*, no un pago hecho — firmar **NO** resta el anticipo del saldo. El `saldo_pendiente` queda igual al `precio_total` y solo baja con abonos reales.
 - Protección anti-doble-firma: `WHERE token=? AND estatus='Pendiente firma'` + check `meta.changes`
 - **Async:** Apps Script guarda la firma en Drive, registra un PDF pendiente en PropertiesService
 - **Async (mismo call):** Apps Script crea carpetas Drive (año/mes de la sesión, no de hoy) para TODAS las propiedades, genera PDF de referencias y eventos Calendar; llama de vuelta al Worker con `carpetaControlId`, `carpetaEntregablesId`, `calendarEventId`
@@ -131,7 +131,8 @@ Además, el admin permite crear **add-ons personalizados** (nombre + precio libr
 
 ### 3. Primer abono
 - Bruno registra el abono en admin → `POST /api/registrarAbono`
-- Worker actualiza saldo en D1, cambia estatus a "Anticipo recibido"
+- Worker baja el `saldo_pendiente` en D1 y ajusta estatus: **"Reservado"** en el primer abono o pago parcial; **"Completado"** si el saldo llega a 0 (no regresa de un estatus más avanzado)
+- Si el abono activa "Reservado" por primera vez, dispara `crearEventoReservado` (Calendar)
 - Devuelve `totalAbonado` en la respuesta para actualizar UI
 - Guard: si ya existe `carpeta_control_id` en propiedades, no se llama `primerAbono` — **`primerAbono` es fallback legacy** para contratos firmados antes de esta versión
 - **Async:** Apps Script envía correo de confirmación al cliente
@@ -199,7 +200,7 @@ Apps Script llama de vuelta al Worker para guardar IDs de Google en D1:
 
 ## Backup automático
 
-Un Cron Trigger de Cloudflare ejecuta `syncToSheets()` cada hora (`:00`). Sincroniza las 4 tablas principales (contratos, abonos, propiedades, paquetes) a la hoja `1YLscbVQJEm_SF77lfiZXyDHc0_gy543P5yitPX_KpnY` en tabs: Contratos4, Abonos4, Propiedades4, Paquetes4.
+Un Cron Trigger de Cloudflare (`"0 * * * *"`) ejecuta `syncToSheets()` cada hora (`:00`). Sincroniza **7 tablas** (`contratos`, `abonos`, `propiedades`, `paquetes`, `clientes`, `trabajos`, `actividades`) al Sheets de backup (ver `docs/CREDENCIALES.md`) en tabs: `Contratos4`, `Abonos4`, `Propiedades4`, `Paquetes4`, `Clientes4`, `Trabajos4`, `Actividades4`.
 
 Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
@@ -207,49 +208,21 @@ Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
 ## Diferencias clave con v3.0
 
-| Aspecto | v3.0 | v4.0 |
-|---------|------|------|
-| Backend | Google Apps Script | Cloudflare Workers |
-| Base de datos | Google Sheets | Cloudflare D1 (SQLite) |
-| Velocidad | 2-4s (frío) | < 200ms |
-| Routing | `?action=nombreAccion` | `/api/nombreAccion` |
-| Auth admin | `?adminKey=framedock` | Header `X-Admin-Key: framedock` |
-| Campos DB | PascalCase (Sheets columns) | snake_case (D1 columns) |
-| Google services | Síncrono (bloquea respuesta) | Asíncrono (`ctx.waitUntil`) |
-| PDF | Síncrono en la firma | Pendiente en PropertiesService, trigger separado |
-| Backup | Sheets es la DB | Sheets es solo backup horario |
-
----
-
-## Próximo trabajo sugerido
-
-### Portal de producción para el equipo (R31 — completado)
-
-Reemplazar el PDF que se genera desde Drive por una página web dinámica accesible con token. Objetivo: que el fotógrafo/camarógrafo llegue el día de la sesión y tenga toda la información sin depender de un PDF.
-
-**URL propuesta:** `equipo.html?token=<token_equipo>` — token de solo lectura, diferente al del cliente.
-
-**Contenido mínimo:**
-- Dirección + enlace a Google Maps
-- Datos de acceso/caseta (del bloque ya capturado en portal)
-- Archivos subidos (QR, invitación, fachada)
-- Vínculo directo a `checklist.html?token=<token>`
-- Estado de producción: botón para marcar "Fotos listas" / "Video listo" que actualice D1
-
-**Meta futura (no implementar aún):**
-- Opción desde `admin.html` para crear evento de Calendar para llamadas con clientes (separado del evento de sesión)
+Ver la tabla comparativa en `docs/PROYECTO.md` → "Diferencias clave con v3.0".
 
 ---
 
 ---
 
-## Estado de despliegue actual
+## Despliegue y migraciones
 
-| Capa | Versión | Estado |
-|------|---------|--------|
-| Worker + Frontend | R35 | Mergeado a `main` en `d6b3545`; el push a `main` dispara despliegue por GitHub Actions. |
-| D1 Schema | R35 | `schema.sql` completo actualizado. D1 producción ya contiene columnas previas; aplicar `worker/migrations/r35-clientes-trabajos.sql` si faltan tablas CRM. |
-| Adapter Apps Script | R35 | Sí hubo cambios en R35: `agendarLlamadaCliente` y sync CRM a Sheets. Sigue pendiente pegar/desplegar manualmente `adapter/AdapterScript4_v1.js` en script.google.com. |
+| Capa | Cómo se despliega |
+|------|-------------------|
+| Worker + Frontend | Push a `main` → GitHub Actions corre `wrangler deploy` (~1 min). Nunca a mano. |
+| D1 (schema) | `worker/schema.sql` es la referencia. Los cambios reales se aplican con migraciones manuales en `worker/migrations/*.sql` vía `wrangler d1 execute ... --remote --file=...`. Migraciones existentes: `r35-clientes-trabajos.sql`, `r36-v5-schema.sql`, `r37-backfill-trabajos.sql`, `r58-rediseno.sql`. |
+| Adapter Apps Script | **Manual:** Bruno pega `adapter/AdapterScript4_v1.js` en script.google.com y publica nueva versión. Obligatorio cada vez que cambie el adapter (ver REGLA DEL ADAPTER en `CLAUDE.md`). |
+
+> El estado "última versión desplegada" no se documenta aquí porque caduca: la fuente de verdad es el historial de `git log` en `main` y la última entrada de `docs/RONDAS.md`.
 
 ---
 
@@ -287,16 +260,17 @@ Features descartadas explícitamente. No incluirlas en ningún plan ni sugerirla
 
 ---
 
-## Pendientes conocidos
+## Pendientes y gotchas conocidos
 
-- [x] Adapter desplegado (2026-05-30).
-- [x] Migraciones D1 de R17 y R18 ejecutadas manualmente (2026-06-02).
-- [ ] **Adapter Apps Script:** desplegar nueva versión de `AdapterScript4_v1.js` en script.google.com si aún no se pegó — incluye `notificarRevision` (R18), cambios Calendar de acceso/caseta (R29/R34) y cambios R35 (`agendarLlamadaCliente`, `contratoToken`, `syncBackup` de `Clientes4`/`Trabajos4`/`Actividades4`).
-- [x] **Merge a main:** R35 mergeado a `main` en `d6b3545` (2026-06-02 22:41 CST). GitHub Actions debe desplegar a Cloudflare tras el push.
-- [ ] **D1 R35:** confirmar/aplicar `worker/migrations/r35-clientes-trabajos.sql` si producción no tiene `clientes`, `trabajos`, `actividades` e índices CRM.
-- [ ] `procesarPDFsPendientes` en Apps Script requiere trigger automático — verificar que esté configurado en script.google.com para correr cada minuto.
-- [ ] Cuando el correo del cliente está vacío al crear el contrato, no llega ningún correo en la firma. El cliente debe llenarlo en el portal antes de firmar.
-- [ ] El folio solo se genera para contratos estándar con fecha de sesión. Contratos particulares no tienen folio hasta configurar la propiedad.
+Comportamientos vigentes a tener en cuenta (no son bugs, son limitaciones de diseño):
+
+- **El adapter requiere despliegue manual** tras cada cambio (ver REGLA DEL ADAPTER en `CLAUDE.md`). Si algo que toca Drive/Calendar/correos "no pasa", el primer sospechoso es que la última versión del adapter no se publicó en script.google.com.
+- **`procesarPDFsPendientes` depende de un trigger de Apps Script** (cada minuto). Si no se generan/envían PDFs, verificar que el trigger siga activo en script.google.com.
+- **Correo vacío al crear contrato:** si el cliente no tiene correo al crearse el contrato, no llega correo al firmar. El cliente debe llenarlo en el portal antes de firmar.
+- **Folio:** solo se genera para contratos estándar con fecha de sesión. Los contratos particulares no tienen folio hasta configurar la propiedad.
+- **Migraciones D1 son manuales:** al agregar columnas/tablas hay que correr la migración en remoto; el push a `main` no toca D1.
+
+> Esta lista es de limitaciones estables. Los pendientes puntuales de cada cambio viven en su entrada de `docs/RONDAS.md`.
 
 ---
 
@@ -332,9 +306,9 @@ wrangler d1 execute contratos-iav-v4 --remote --command="SELECT folio, nombre_cl
 # Ver tokens activos
 wrangler d1 execute contratos-iav-v4 --remote --command="SELECT * FROM tokens WHERE usado=0 ORDER BY rowid DESC LIMIT 10"
 
-# Verificar API
-curl -H "X-Admin-Key: framedock" "https://contratos.inmueblesaudiovisuales.com/api/listarContratos"
+# Verificar API (la clave admin está en docs/CREDENCIALES.md)
+curl -H "X-Admin-Key: <clave-admin>" "https://contratos.inmueblesaudiovisuales.com/api/listarContratos"
 
-# Redesplegar
-cd "/Users/brunogutierrez/Documents/CLAUDE CODE/Inmuebles WEBSITE/02. contratos/06. VERSION 4.0/worker" && wrangler deploy
+# Desplegar: NO se corre wrangler deploy a mano. Solo push a main:
+git push origin main   # GitHub Actions hace el deploy
 ```
