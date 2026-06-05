@@ -1226,6 +1226,16 @@ function renderEtapa1() {
 
 // ── LOGO: hasta 3 versiones, se acumulan en slots logo-0..logo-2 ──────────────
 var logoSeedHecho = false;
+var logoPreviews = {};   // clave "logo-N" → data URL local (preview instantáneo de lo recién subido)
+
+// Drive no sirve la imagen por el URL /file/d/.../view; hay que usar el endpoint de thumbnail.
+// Para lo recién subido en esta sesión usamos el preview local (data URL), que es instantáneo.
+function logoThumbSrc(slot, url) {
+  if (logoPreviews['logo-' + slot]) return logoPreviews['logo-' + slot];
+  var m = (url || '').match(/\/d\/([^\/?&]+)/) || (url || '').match(/[?&]id=([^&]+)/);
+  if (m && m[1]) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w240';
+  return url;
+}
 
 function getLogosSubidos() {
   var arr = [];
@@ -1248,11 +1258,12 @@ function renderLogoSection() {
     html += '<p class="upload-hint">' + (esRegistrado
       ? 'Ya tenemos tu logo de un trabajo anterior. Lo usaremos automáticamente. Puedes agregar otras versiones.'
       : 'Logo listo. Puedes agregar hasta 3 versiones.') + '</p>';
-    html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px">';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px">';
     logos.forEach(function(l) {
-      html += '<div style="position:relative">' +
-        '<img src="' + l.url + '" alt="Logo" style="height:48px;max-width:110px;object-fit:contain;border:1px solid var(--border,#e0ddd8);border-radius:6px;padding:4px;background:#fff" onerror="this.style.display=\'none\'">' +
-        '<button type="button" onclick="quitarVersionLogo(' + l.slot + ')" title="Quitar" style="position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;border:none;background:#c0392b;color:#fff;font-size:12px;line-height:16px;cursor:pointer;padding:0">&times;</button>' +
+      html += '<div style="position:relative;width:96px;height:64px;border:1px solid var(--border,#e0ddd8);border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden">' +
+        '<span style="position:absolute;font-size:10px;color:#9b9b9f">Logo</span>' +
+        '<img src="' + logoThumbSrc(l.slot, l.url) + '" alt="Logo" style="position:relative;max-height:60px;max-width:92px;object-fit:contain" onerror="this.style.display=\'none\'">' +
+        '<button type="button" onclick="quitarVersionLogo(' + l.slot + ')" title="Quitar" style="position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;border:2px solid #fff;background:#c0392b;color:#fff;font-size:13px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center">&times;</button>' +
       '</div>';
     });
     html += '</div>';
@@ -1279,6 +1290,7 @@ function renderLogoSection() {
 
 function quitarVersionLogo(slot) {
   delete archivosSubidos['logo-' + slot];
+  delete logoPreviews['logo-' + slot];
   renderLogoSection();
 }
 
@@ -2815,6 +2827,7 @@ function subirArchivoPortal(tipo, propIndex, inputEl) {
   setUploadStatus(tipo, propIndex, 'loading', '');
   var reader = new FileReader();
   reader.onload = function(e) {
+    if (tipo === 'logo') logoPreviews[clave] = e.target.result;  // preview instantáneo
     apiPost({
       action       : 'subirArchivo',
       token        : token,

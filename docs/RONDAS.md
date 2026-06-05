@@ -8,6 +8,18 @@
 
 ---
 
+### Ronda 66 — Preview visible de logos en portal (2026-06-05 11:10:54 CST)
+
+**Objetivo:** las miniaturas de logo no se veían: el `<img>` apuntaba al URL `/file/d/.../view` de Drive (que no renderiza por hotlink), el `onerror` ocultaba la imagen y solo quedaban los botones `×` encimados. Fix en `frontend/portal.html`:
+
+| ID | Cambio |
+|----|--------|
+| R66-01 | `logoThumbSrc(slot, url)`: usa el endpoint `https://drive.google.com/thumbnail?id=ID&sz=w240` (sí renderiza para archivos compartidos ANYONE_WITH_LINK, que es como se suben). |
+| R66-02 | Preview instantáneo: al subir un logo se guarda el data URL local (`logoPreviews`) y se muestra de inmediato, sin esperar a Drive. Se limpia al quitar la versión. |
+| R66-03 | Caja de miniatura de tamaño fijo (96×64) que no colapsa si la imagen falla (muestra un placeholder "Logo"); el botón `×` queda anclado a la esquina y ya no se encima. |
+
+---
+
 ### Ronda 65 — Reconciliar schema.sql con producción (2026-06-05 10:56:59 CST)
 
 **Objetivo:** `worker/schema.sql` estaba desfasado del D1 real. Se volcó el schema de producción (`SELECT sql FROM sqlite_master`) y se compararon todas las tablas. Se agregaron a `schema.sql` las columnas y la tabla que existían en prod pero no estaban declaradas (todas legacy de features abandonados, sin uso en el worker actual), para que el archivo refleje la realidad y un D1 nuevo nazca idéntico a producción. **No toca producción** (schema.sql solo se usa para BDs nuevas).
