@@ -491,6 +491,9 @@
     /* el toast oculto NO debe asomar al fondo ni interceptar toques */
     .toast { transform: translateY(calc(100% + 32px)); visibility: hidden; pointer-events: none; }
     .toast.visible { transform: translateY(0); visibility: visible; pointer-events: auto; }
+    /* en captura, el aviso flota ARRIBA de los botones Toma/No sirve, no encima */
+    .app.has-thumb ~ .toast { bottom: calc(100px + env(safe-area-inset-bottom)); }
+    @media (min-width: 760px) { .app.has-thumb ~ .toast { bottom: calc(104px + env(safe-area-inset-bottom)); } }
 
     /* ===== Asesores (par de cámaras) ===== */
     .cap-cam.asesor-cam { flex-direction: column; align-items: stretch; gap: 0; padding: 4px 12px; }
@@ -757,6 +760,7 @@ function render() {
   const app = document.getElementById('app');
   if (!laneReady()) {
     app.innerHTML = renderLaneEntry();
+    app.classList.remove('has-thumb');
     bindNameInput();
     return;
   }
@@ -766,6 +770,7 @@ function render() {
     ${state.espacios.length && !showSetup ? renderTabs() : ''}
     <main class="content">${showSetup ? renderSetup() : renderActiveView()}</main>
   `;
+  app.classList.toggle('has-thumb', !!app.querySelector('.cap-thumb'));
   bindNameInput();
   const search = document.getElementById('space-search');
   if (search) {
