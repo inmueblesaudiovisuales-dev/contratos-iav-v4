@@ -167,6 +167,327 @@
     quinta: TEMPLATE_DEFS.quinta.spaces,
   };
 
+  // ─── Biblioteca de tomas guiadas (F1) ────────────────────────────────────────
+
+  const SHOT_TYPES = Object.freeze({
+    wide:         { label: 'Plano abierto',             hint: 'Encuadre amplio del espacio completo.' },
+    general:      { label: 'Plano general',             hint: 'Cuarto entero con distribucion y flujo.' },
+    medio:        { label: 'Plano medio',               hint: 'Zona o feature clave (mesa, isla, sillon).' },
+    detalle:      { label: 'Detalle/inserto',           hint: 'Aislar un elemento: grifo, textura, herraje.' },
+    transicion:   { label: 'Transicion/puente',         hint: 'Toma puente para conectar dos espacios.' },
+    pov:          { label: 'Punto de vista/recorrido',  hint: 'Camara a la vista avanzando como el comprador.' },
+    contrapicado: { label: 'Contrapicado para amplitud',hint: 'Camara baja inclinada hacia arriba.' },
+    ventana:      { label: 'Plano de ventana/vista',    hint: 'Prioriza la ventana y la vista exterior.' },
+    reveal:       { label: 'Revelacion',                hint: 'El espacio se descubre progresivamente.' },
+    simetrica:    { label: 'Toma simetrica',            hint: 'Composicion centrada sobre el eje del cuarto.' },
+    textura:      { label: 'Acercamiento de textura',   hint: 'Macro de material: piedra, madera, tela.' },
+    exterior:     { label: 'Exterior/fachada',          hint: 'Vistas exteriores, fachada y entorno.' },
+  });
+
+  const MOVEMENTS = Object.freeze({
+    static:      { label: 'Fija/estatica',                hint: 'Camara inmovil en tripie o gimbal bloqueado.' },
+    pan:         { label: 'Paneo',                        hint: 'Giro horizontal sobre eje fijo.' },
+    tilt:        { label: 'Cabeceo/tilt',                 hint: 'Giro vertical (piso a techo).' },
+    dolly:       { label: 'Travelling/dolly',             hint: 'Desplazamiento fisico de la camara.' },
+    push_in:     { label: 'Acercamiento',                 hint: 'Avanzar lento hacia un foco.' },
+    pull_out:    { label: 'Alejamiento',                  hint: 'Retroceder lento revelando contexto.' },
+    gimbal_walk: { label: 'Caminata con gimbal',          hint: 'Ninja walk: rodillas flexionadas, paso suave.' },
+    orbit:       { label: 'Orbital',                      hint: 'Movimiento circular alrededor de un punto.' },
+    umbral:      { label: 'Revelacion tras umbral',       hint: 'Cruzar una puerta para descubrir el cuarto.' },
+    parallax:    { label: 'Parallax',                     hint: 'Objeto en primer plano cruza mas rapido que el fondo.' },
+    tilt_up:     { label: 'Revelacion vertical',          hint: 'Empezar bajo y subir para descubrir altura.' },
+    slider:      { label: 'Slider lateral',               hint: 'Desplazamiento horizontal corto y suave.' },
+    tracking:    { label: 'Seguimiento',                  hint: 'Acompanar un eje del cuarto avanzando.' },
+    pedestal:    { label: 'Pies a cabeza',                hint: 'Tilt desde el piso subiendo para presentar.' },
+    whip:        { label: 'Whip pan/transicion',          hint: 'Paneo rapido desenfocado entre cuartos.' },
+  });
+
+  const GUIDE_LIBRARY = Object.freeze({
+    entrada: { label: 'Entrada/recibidor', shots: Object.freeze([
+      { id: 'entrada.push_in',    nombre: 'Push-in desde la puerta',           shotType: 'pov',         movement: 'gimbal_walk', enfoque: 'Encara la puerta y avanza para transicionar de afuera hacia adentro.',      priority: 'must' },
+      { id: 'entrada.general',    nombre: 'Plano general del foyer',           shotType: 'general',     movement: 'static',      enfoque: 'Muestra el flujo hacia las demas areas; manten lineas rectas.',             priority: 'must' },
+      { id: 'entrada.tilt_candil',nombre: 'Revelacion vertical de techo',      shotType: 'contrapicado',movement: 'tilt_up',     enfoque: 'Si hay doble altura o lampara, empieza bajo y sube.',                       priority: 'nice' },
+      { id: 'entrada.detalle',    nombre: 'Detalle de acabado de entrada',     shotType: 'detalle',     movement: 'push_in',     enfoque: 'Herreria, puerta, consola o piso de entrada.',                              priority: 'nice' },
+    ]) },
+    sala: { label: 'Sala/estancia', shots: Object.freeze([
+      { id: 'sala.wide',     nombre: 'Establecimiento de la sala',         shotType: 'wide',    movement: 'gimbal_walk', enfoque: 'Captura todo el cuarto para que imaginen sus muebles dentro.',       priority: 'must' },
+      { id: 'sala.orbit',    nombre: 'Orbital sobre la zona de estar',     shotType: 'medio',   movement: 'orbit',       enfoque: 'Gira alrededor del foco (sillon o chimenea) manteniendo el centro.', priority: 'must' },
+      { id: 'sala.ventana',  nombre: 'Plano de ventanas y luz',            shotType: 'ventana', movement: 'pan',         enfoque: 'Protege las altas luces de la ventana; vende la luz natural.',        priority: 'must' },
+      { id: 'sala.parallax', nombre: 'Parallax con mueble en primer plano',shotType: 'general', movement: 'parallax',    enfoque: 'Deja un sillon cerca del lente para dar profundidad.',               priority: 'nice' },
+      { id: 'sala.detalle',  nombre: 'Detalle de feature (chimenea)',      shotType: 'detalle', movement: 'push_in',     enfoque: 'Resalta el elemento estrella de la sala.',                           priority: 'nice' },
+    ]) },
+    comedor: { label: 'Comedor', shots: Object.freeze([
+      { id: 'comedor.wide',       nombre: 'Establecimiento con la mesa',       shotType: 'wide',        movement: 'static',  enfoque: 'Composicion simetrica sobre el eje de la mesa.',           priority: 'must' },
+      { id: 'comedor.orbit',      nombre: 'Orbital alrededor de la mesa',      shotType: 'medio',       movement: 'orbit',   enfoque: 'Mantiene el centro de mesa como punto focal.',             priority: 'must' },
+      { id: 'comedor.tilt_candil',nombre: 'Revelacion vertical del candil',    shotType: 'contrapicado',movement: 'tilt_up', enfoque: 'Si hay lampara colgante, subela como protagonista.',        priority: 'nice' },
+      { id: 'comedor.detalle',    nombre: 'Detalle de mesa puesta',            shotType: 'detalle',     movement: 'push_in', enfoque: 'Vende el estilo de vida, no solo el mueble.',              priority: 'nice' },
+    ]) },
+    cocina: { label: 'Cocina', shots: Object.freeze([
+      { id: 'cocina.wide',        nombre: 'Establecimiento de la cocina',      shotType: 'wide',   movement: 'gimbal_walk', enfoque: 'Gran angular; manten verticales rectas.',                       priority: 'must' },
+      { id: 'cocina.orbit_isla',  nombre: 'Orbital sobre la isla',             shotType: 'medio',  movement: 'orbit',       enfoque: 'La isla como punto focal; camara a la altura del pecho.',      priority: 'must' },
+      { id: 'cocina.push_estufa', nombre: 'Push-in a estufa y campana',        shotType: 'medio',  movement: 'push_in',     enfoque: 'Feature principal y electrodomesticos de gama.',               priority: 'must' },
+      { id: 'cocina.textura',     nombre: 'Detalle de acabados',               shotType: 'textura',movement: 'pan',         enfoque: 'Cubierta, backsplash, herrajes, grifo.',                       priority: 'nice' },
+      { id: 'cocina.ventana',     nombre: 'Plano de ventana sobre el fregadero',shotType: 'ventana',movement: 'static',     enfoque: 'Exposicion cuidada hacia la ventana.',                          priority: 'nice' },
+    ]) },
+    recamara: { label: 'Recamara principal', shots: Object.freeze([
+      { id: 'recamara.reveal',     nombre: 'Revelacion entrando a la recamara',shotType: 'reveal',    movement: 'umbral',      enfoque: 'Cruza la puerta para descubrir la recamara.',                     priority: 'must' },
+      { id: 'recamara.wide',       nombre: 'Establecimiento del cuarto',       shotType: 'wide',      movement: 'gimbal_walk', enfoque: 'Muestra amplitud y luz; suficientes angulos en la suite.',        priority: 'must' },
+      { id: 'recamara.orbit_cama', nombre: 'Orbital o push-in hacia la cama',  shotType: 'medio',     movement: 'orbit',       enfoque: 'Cama como foco; encuadre limpio y simetrico.',                    priority: 'must' },
+      { id: 'recamara.ventana',    nombre: 'Plano de ventana y vista',         shotType: 'ventana',   movement: 'pan',         enfoque: 'Vende la vista y la luz matinal.',                                priority: 'nice' },
+      { id: 'recamara.transicion', nombre: 'Transicion hacia bano o vestidor', shotType: 'transicion',movement: 'tracking',    enfoque: 'Toma larga para conectar la suite en el edit.',                   priority: 'nice' },
+    ]) },
+    recamara_sec: { label: 'Recamara secundaria', shots: Object.freeze([
+      { id: 'recamara_sec.wide',   nombre: 'Establecimiento del cuarto',shotType: 'wide',   movement: 'static', enfoque: 'Solo 2-3 tomas; muestra tamano y luz.',            priority: 'must' },
+      { id: 'recamara_sec.pan',    nombre: 'Paneo desde la esquina',    shotType: 'general',movement: 'pan',    enfoque: 'Camara baja para ver mas piso y menos techo.',     priority: 'must' },
+      { id: 'recamara_sec.ventana',nombre: 'Plano de ventana',          shotType: 'ventana',movement: 'static', enfoque: 'Luz natural; expone para la ventana.',             priority: 'nice' },
+    ]) },
+    bano: { label: 'Bano completo', shots: Object.freeze([
+      { id: 'bano.general',        nombre: 'Paneo desde tripode',                  shotType: 'general',movement: 'static',  enfoque: 'Usa tripie (no gimbal) para evitar aparecer en espejos.',    priority: 'must' },
+      { id: 'bano.detalle_feature',nombre: 'Detalle de tina, regadera o lavabo',   shotType: 'detalle',movement: 'push_in', enfoque: 'El elemento estrella del bano.',                              priority: 'must' },
+      { id: 'bano.textura',        nombre: 'Detalle de acabados',                  shotType: 'textura',movement: 'pan',     enfoque: 'Azulejo, grifos, herrajes; agachate para evitar reflejos.',  priority: 'nice' },
+    ]) },
+    medio_bano: { label: 'Medio bano', shots: Object.freeze([
+      { id: 'medio_bano.general',nombre: 'Plano general unico',  shotType: 'general',movement: 'static',  enfoque: 'Una sola toma limpia; cuida el espejo. Omite si no aporta valor.',priority: 'must' },
+      { id: 'medio_bano.detalle',nombre: 'Detalle de acabado',   shotType: 'detalle',movement: 'push_in', enfoque: 'Solo si el lavabo o tapiz es excepcional.',                       priority: 'nice' },
+    ]) },
+    vestidor: { label: 'Vestidor/closet', shots: Object.freeze([
+      { id: 'vestidor.reveal',nombre: 'Revelacion entrando al vestidor',shotType: 'reveal', movement: 'push_in', enfoque: 'El closet debe verse organizado, no vacio.',               priority: 'must' },
+      { id: 'vestidor.pan',   nombre: 'Paneo mostrando capacidad',      shotType: 'general',movement: 'pan',     enfoque: 'Resalta tamano y sistema de almacenamiento.',             priority: 'nice' },
+      { id: 'vestidor.detalle',nombre: 'Detalle de organizacion',       shotType: 'detalle',movement: 'tilt',    enfoque: 'Solo si es walk-in destacado; salta closets comunes.',    priority: 'nice' },
+    ]) },
+    estudio: { label: 'Estudio/home office', shots: Object.freeze([
+      { id: 'estudio.wide',  nombre: 'Establecimiento del espacio',   shotType: 'wide',   movement: 'gimbal_walk',enfoque: 'Vende funcionalidad y luz para trabajar.',                   priority: 'must' },
+      { id: 'estudio.ventana',nombre: 'Plano de ventana y escritorio',shotType: 'ventana',movement: 'pan',        enfoque: 'Luz natural sobre el area de trabajo.',                     priority: 'nice' },
+      { id: 'estudio.detalle',nombre: 'Detalle de built-ins',         shotType: 'detalle',movement: 'tilt_up',    enfoque: 'Estanteria empotrada o acabados de carpinteria.',           priority: 'nice' },
+    ]) },
+    lavado: { label: 'Cuarto de lavado', shots: Object.freeze([
+      { id: 'lavado.general',nombre: 'Plano general',       shotType: 'general',movement: 'static', enfoque: 'Layout, lavadora/secadora y almacenamiento; manten orden.',           priority: 'must' },
+      { id: 'lavado.detalle',nombre: 'Detalle de tarja',    shotType: 'detalle',movement: 'push_in',enfoque: 'Solo si tiene acabados o capacidad por encima del promedio.',          priority: 'nice' },
+    ]) },
+    pasillo: { label: 'Pasillo/escaleras', shots: Object.freeze([
+      { id: 'pasillo.tracking',   nombre: 'Seguimiento por el pasillo',        shotType: 'transicion',  movement: 'tracking',    enfoque: 'Movimiento lento y controlado; toma larga para el edit.',         priority: 'must' },
+      { id: 'pasillo.escaleras',  nombre: 'Subida de escaleras',               shotType: 'transicion',  movement: 'gimbal_walk', enfoque: 'Muestra los escalones y empieza a subir; corta antes del tramo.', priority: 'must' },
+      { id: 'pasillo.tilt_hueco', nombre: 'Revelacion vertical del hueco',     shotType: 'contrapicado',movement: 'tilt_up',     enfoque: 'Doble altura, barandal o candil sobre la escalera.',             priority: 'nice' },
+      { id: 'pasillo.simetrica',  nombre: 'Toma simetrica del pasillo',        shotType: 'simetrica',   movement: 'slider',      enfoque: 'Centra el eje; lineas rectas y limpias.',                         priority: 'nice' },
+    ]) },
+    family: { label: 'Family room/sala de TV', shots: Object.freeze([
+      { id: 'family.wide',      nombre: 'Establecimiento del cuarto',          shotType: 'wide',      movement: 'gimbal_walk',enfoque: 'Amplitud y como conecta con cocina o sala.',            priority: 'must' },
+      { id: 'family.orbit',     nombre: 'Orbital sobre la zona de estar',      shotType: 'medio',     movement: 'orbit',      enfoque: 'Punto focal en el sillon o centro de entretenimiento.', priority: 'must' },
+      { id: 'family.parallax',  nombre: 'Parallax con mueble en primer plano', shotType: 'general',   movement: 'parallax',   enfoque: 'Profundidad y sensacion de espacio.',                   priority: 'nice' },
+      { id: 'family.transicion',nombre: 'Transicion hacia espacio contiguo',   shotType: 'transicion',movement: 'tracking',   enfoque: 'Liga el concepto abierto en el edit.',                  priority: 'nice' },
+    ]) },
+    terraza: { label: 'Terraza/balcon', shots: Object.freeze([
+      { id: 'terraza.reveal',  nombre: 'Revelacion saliendo al exterior',     shotType: 'reveal',  movement: 'umbral',  enfoque: 'Pasa de interior a exterior cuidando la exposicion.',      priority: 'must' },
+      { id: 'terraza.vista',   nombre: 'Plano general del exterior y vista',  shotType: 'ventana', movement: 'pan',     enfoque: 'Vende la vista, jardin o paisaje.',                        priority: 'must' },
+      { id: 'terraza.detalle', nombre: 'Detalle de feature exterior',         shotType: 'detalle', movement: 'push_in', enfoque: 'Mobiliario, asador, jardineria o piso de terraza.',        priority: 'nice' },
+      { id: 'terraza.parallax',nombre: 'Parallax con barandal o planta',      shotType: 'general', movement: 'parallax',enfoque: 'Profundidad entre balcon y horizonte.',                    priority: 'nice' },
+    ]) },
+    garaje: { label: 'Garaje/cochera', shots: Object.freeze([
+      { id: 'garaje.general',nombre: 'Plano general del garaje',shotType: 'general',  movement: 'static',      enfoque: 'Capacidad (numero de autos), limpio y despejado.',        priority: 'must' },
+      { id: 'garaje.tracking',nombre: 'Seguimiento de entrada', shotType: 'transicion',movement: 'gimbal_walk', enfoque: 'Conexion del garaje con el acceso interior.',             priority: 'nice' },
+    ]) },
+    bodega: { label: 'Bodega/cuarto de servicio', shots: Object.freeze([
+      { id: 'bodega.general',nombre: 'Plano general',            shotType: 'general',movement: 'static', enfoque: 'Capacidad de almacenamiento; orden y limpieza. Omite si no aporta valor.',priority: 'must' },
+      { id: 'bodega.detalle',nombre: 'Detalle de instalaciones', shotType: 'detalle',movement: 'push_in',enfoque: 'Solo si tiene equipo o acabados relevantes.',                               priority: 'nice' },
+    ]) },
+    generico: { label: 'Espacio generico', shots: Object.freeze([
+      { id: 'generico.wide',nombre: 'Plano abierto del espacio',shotType: 'wide',movement: 'static',enfoque: 'Captura el espacio completo para dar contexto.',priority: 'must' },
+    ]) },
+  });
+
+  const DRONE_GUIDE = Object.freeze({
+    casa: { label: 'Casa', shots: Object.freeze([
+      { id: 'drone.casa.fachada',    nombre: 'Establecimiento de fachada',  shotType: 'exterior',movement: 'static',  enfoque: 'Encuadra la propiedad completa desde altura media.',             priority: 'must' },
+      { id: 'drone.casa.orbit',      nombre: 'Orbita 360 grados',           shotType: 'exterior',movement: 'orbit',   enfoque: 'Orbita completa alrededor de la propiedad.',                     priority: 'must' },
+      { id: 'drone.casa.cenital',    nombre: 'Cenital del lote',            shotType: 'exterior',movement: 'static',  enfoque: 'Top-down mostrando dimension y distribucion del terreno.',        priority: 'must' },
+      { id: 'drone.casa.fly_in',     nombre: 'Acercamiento a la entrada',   shotType: 'exterior',movement: 'push_in', enfoque: 'Desciende hacia la puerta principal.',                            priority: 'nice' },
+      { id: 'drone.casa.vecindario', nombre: 'Vista de vecindario',         shotType: 'exterior',movement: 'pan',     enfoque: 'Contexto de plusvalia y entorno inmediato.',                      priority: 'nice' },
+    ]) },
+    lujo: { label: 'Lujo/acreage', shots: Object.freeze([
+      { id: 'drone.lujo.reveal',    nombre: 'Revelacion de la finca',      shotType: 'reveal',  movement: 'tilt_up', enfoque: 'Tilt ascendente que descubre la propiedad completa.',             priority: 'must' },
+      { id: 'drone.lujo.orbit',     nombre: 'Orbita amplia',               shotType: 'exterior',movement: 'orbit',   enfoque: 'Radio mayor para mostrar toda la extension.',                    priority: 'must' },
+      { id: 'drone.lujo.cenital',   nombre: 'Cenital de amenidades',       shotType: 'exterior',movement: 'static',  enfoque: 'Top-down sobre alberca, jardin y areas sociales.',               priority: 'must' },
+      { id: 'drone.lujo.flythrough',nombre: 'Fly-through de amenidades',   shotType: 'pov',     movement: 'dolly',   enfoque: 'Vuela a baja altura entre amenidades.',                           priority: 'nice' },
+      { id: 'drone.lujo.pullout',   nombre: 'Pull-out final',              shotType: 'exterior',movement: 'pull_out',enfoque: 'Aleja ascendiendo para el plano de cierre.',                      priority: 'nice' },
+      { id: 'drone.lujo.parallax',  nombre: 'Parallax de acceso',          shotType: 'exterior',movement: 'parallax',enfoque: 'Vuela paralelo al camino de acceso.',                             priority: 'nice' },
+    ]) },
+    departamento: { label: 'Departamento/torre', shots: Object.freeze([
+      { id: 'drone.departamento.ascenso', nombre: 'Ascenso frente al edificio',shotType: 'exterior',movement: 'tilt_up',enfoque: 'Comienza bajo y sube siguiendo la fachada de la torre.',      priority: 'must' },
+      { id: 'drone.departamento.vista',   nombre: 'Revelacion de la vista',    shotType: 'reveal',  movement: 'pan',    enfoque: 'Vende las vistas panoramicas como argumento principal.',      priority: 'must' },
+      { id: 'drone.departamento.orbit',   nombre: 'Orbita del balcon',         shotType: 'exterior',movement: 'orbit',  enfoque: 'Orbita cerrada al nivel del penthouse o balcon.',             priority: 'nice' },
+      { id: 'drone.departamento.urbano',  nombre: 'Contexto urbano',           shotType: 'exterior',movement: 'pan',    enfoque: 'Paneo desde altura mostrando la ubicacion en la ciudad.',     priority: 'nice' },
+    ]) },
+    waterfront: { label: 'Waterfront/frente al agua', shots: Object.freeze([
+      { id: 'drone.waterfront.reveal',   nombre: 'Revelacion del agua',          shotType: 'reveal',  movement: 'tilt_up', enfoque: 'Tilt desde la propiedad hacia el cuerpo de agua.',               priority: 'must' },
+      { id: 'drone.waterfront.orbit',    nombre: 'Orbita con agua de fondo',     shotType: 'exterior',movement: 'orbit',   enfoque: 'Orbita para que el agua aparezca siempre al fondo.',             priority: 'must' },
+      { id: 'drone.waterfront.cenital',  nombre: 'Cenital de muelle y acceso',   shotType: 'exterior',movement: 'static',  enfoque: 'Top-down mostrando muelle, embarcadero o acceso al agua.',       priority: 'must' },
+      { id: 'drone.waterfront.paralelo', nombre: 'Vuelo paralelo a la costa',    shotType: 'exterior',movement: 'tracking',enfoque: 'Vuela a lo largo de la orilla manteniendo altura constante.',     priority: 'nice' },
+      { id: 'drone.waterfront.dronie',   nombre: 'Dronie sobre el agua',         shotType: 'reveal',  movement: 'pull_out',enfoque: 'Pull-out alejandose con la propiedad al fondo.',                  priority: 'nice' },
+    ]) },
+    terreno: { label: 'Terreno/lote', shots: Object.freeze([
+      { id: 'drone.terreno.cenital',         nombre: 'Cenital de limites',         shotType: 'exterior',movement: 'static',  enfoque: 'Top-down mostrando la forma y dimension del lote.',           priority: 'must' },
+      { id: 'drone.terreno.establecimiento', nombre: 'Establecimiento desde altura',shotType: 'exterior',movement: 'static',  enfoque: 'Muestra el terreno en su contexto de vecindario.',           priority: 'must' },
+      { id: 'drone.terreno.paneo',           nombre: 'Paneo de contexto',          shotType: 'exterior',movement: 'pan',     enfoque: 'Muestra entorno, vialidades y plusvalia del sector.',         priority: 'must' },
+      { id: 'drone.terreno.perimetro',       nombre: 'Vuelo de perimetro',         shotType: 'exterior',movement: 'tracking',enfoque: 'Recorre el perimetro del lote de cerca.',                     priority: 'nice' },
+      { id: 'drone.terreno.caracteristicas', nombre: 'Cenital de caracteristicas', shotType: 'exterior',movement: 'static',  enfoque: 'Top-down sobre hitos relevantes del lote.',                  priority: 'nice' },
+    ]) },
+    quinta: { label: 'Quinta/rancho/finca', shots: Object.freeze([
+      { id: 'drone.quinta.establecimiento',nombre: 'Establecimiento del conjunto',  shotType: 'exterior',movement: 'static',  enfoque: 'Encuadre amplio que muestre la totalidad de la finca.',    priority: 'must' },
+      { id: 'drone.quinta.cenital',        nombre: 'Cenital de la extension',       shotType: 'exterior',movement: 'static',  enfoque: 'Top-down mostrando toda la dimension del predio.',         priority: 'must' },
+      { id: 'drone.quinta.orbit',          nombre: 'Orbita de la casa principal',   shotType: 'exterior',movement: 'orbit',   enfoque: 'Orbita cerrada alrededor de la edificacion principal.',    priority: 'must' },
+      { id: 'drone.quinta.agua',           nombre: 'Vuelo hacia fuentes de agua',   shotType: 'exterior',movement: 'dolly',   enfoque: 'Avanza hacia rio, lago, manantial o alberca exterior.',    priority: 'nice' },
+      { id: 'drone.quinta.pullout',        nombre: 'Pull-out panoramico',           shotType: 'exterior',movement: 'pull_out',enfoque: 'Aleja ascendiendo para el plano de cierre.',               priority: 'nice' },
+    ]) },
+    comercial: { label: 'Comercial/industrial', shots: Object.freeze([
+      { id: 'drone.comercial.cenital',         nombre: 'Cenital del predio',           shotType: 'exterior',movement: 'static',  enfoque: 'Top-down mostrando ubicacion y dimension del inmueble.',    priority: 'must' },
+      { id: 'drone.comercial.establecimiento', nombre: 'Establecimiento con acceso',   shotType: 'exterior',movement: 'static',  enfoque: 'Fachada, acceso vehicular y peatonal.',                     priority: 'must' },
+      { id: 'drone.comercial.orbit',           nombre: 'Orbita del inmueble',          shotType: 'exterior',movement: 'orbit',   enfoque: 'Orbita completa del edificio o local.',                     priority: 'must' },
+      { id: 'drone.comercial.contexto',        nombre: 'Contexto de infraestructura',  shotType: 'exterior',movement: 'pan',     enfoque: 'Vialidades, accesos, estacionamiento y zona comercial.',   priority: 'must' },
+      { id: 'drone.comercial.logistica',       nombre: 'Vuelo de logistica',           shotType: 'exterior',movement: 'tracking',enfoque: 'Muestra accesos de carga, patio de maniobras o bodega.',   priority: 'nice' },
+    ]) },
+  });
+
+  const AMENITY_GUIDE = Object.freeze({
+    alberca: { label: 'Alberca/piscina', shots: Object.freeze([
+      { id: 'amenity.alberca.reveal',  nombre: 'Reveal del agua',             shotType: 'reveal',    movement: 'pull_out', enfoque: 'Reflejo y color del agua; empieza en el detalle y abre a la alberca completa.',priority: 'must' },
+      { id: 'amenity.alberca.tracking',nombre: 'Recorrido del borde',         shotType: 'transicion',movement: 'tracking', enfoque: 'Continuidad y tamano real del vaso.',                                        priority: 'must' },
+      { id: 'amenity.alberca.wide',    nombre: 'Wide ambiental',              shotType: 'wide',      movement: 'static',   enfoque: 'Luz, amplitud y entorno; ideal al atardecer.',                               priority: 'must' },
+      { id: 'amenity.alberca.orbit',   nombre: 'Orbital de tumbonas',         shotType: 'medio',     movement: 'orbit',    enfoque: 'Estilo de vida, mobiliario, sombra.',                                        priority: 'nice' },
+      { id: 'amenity.alberca.detalle', nombre: 'Detalle de agua y escalones', shotType: 'detalle',   movement: 'static',   enfoque: 'Textura del agua, acabado de piso antiderrapante.',                         priority: 'nice' },
+    ]) },
+    jacuzzi: { label: 'Jacuzzi', shots: Object.freeze([
+      { id: 'amenity.jacuzzi.reveal',nombre: 'Reveal con tilt up',shotType: 'reveal',movement: 'tilt_up',enfoque: 'Burbujas, vapor, vista que acompana.',                priority: 'must' },
+      { id: 'amenity.jacuzzi.detalle',nombre: 'Detalle de jets', shotType: 'detalle',movement: 'static', enfoque: 'Sensacion de relajacion, acabados.',                 priority: 'must' },
+      { id: 'amenity.jacuzzi.orbit',  nombre: 'Orbital corto',   shotType: 'medio',  movement: 'orbit',  enfoque: 'Integracion con terraza o alberca.',                 priority: 'nice' },
+    ]) },
+    gimnasio: { label: 'Gimnasio', shots: Object.freeze([
+      { id: 'amenity.gimnasio.recorrido',nombre: 'Recorrido de entrada',        shotType: 'pov',      movement: 'gimbal_walk',enfoque: 'Amplitud, equipamiento completo.',           priority: 'must' },
+      { id: 'amenity.gimnasio.tracking', nombre: 'Tracking frente a maquinas', shotType: 'transicion',movement: 'tracking',   enfoque: 'Variedad y estado del equipo.',              priority: 'must' },
+      { id: 'amenity.gimnasio.wide',     nombre: 'Wide con espejo y ventanal',  shotType: 'wide',     movement: 'static',     enfoque: 'Luz natural, sensacion de espacio.',         priority: 'must' },
+      { id: 'amenity.gimnasio.detalle',  nombre: 'Detalle de pesas y cardio',   shotType: 'detalle',  movement: 'static',     enfoque: 'Calidad de marca del equipo.',               priority: 'nice' },
+    ]) },
+    salon_eventos: { label: 'Salon de eventos', shots: Object.freeze([
+      { id: 'amenity.salon_eventos.reveal',   nombre: 'Reveal de apertura',          shotType: 'reveal',      movement: 'pull_out',enfoque: 'Capacidad y altura desde la puerta.',       priority: 'must' },
+      { id: 'amenity.salon_eventos.recorrido',nombre: 'Recorrido central',           shotType: 'pov',         movement: 'gimbal_walk',enfoque: 'Flexibilidad del espacio vacio.',        priority: 'must' },
+      { id: 'amenity.salon_eventos.detalle',  nombre: 'Detalle de cocineta y barra', shotType: 'detalle',     movement: 'static',  enfoque: 'Servicios incluidos del salon.',            priority: 'nice' },
+      { id: 'amenity.salon_eventos.tilt',     nombre: 'Tilt up a doble altura',      shotType: 'contrapicado',movement: 'tilt_up', enfoque: 'Elegancia, altura libre.',                 priority: 'nice' },
+    ]) },
+    lobby: { label: 'Lobby/recepcion', shots: Object.freeze([
+      { id: 'amenity.lobby.push_in',nombre: 'Push-in de ingreso',       shotType: 'pov',         movement: 'gimbal_walk',enfoque: 'Primera impresion, doble altura al cruzar la puerta.',priority: 'must' },
+      { id: 'amenity.lobby.orbit',  nombre: 'Orbital del area de estar',shotType: 'medio',       movement: 'orbit',      enfoque: 'Acabados, lujo, limpieza.',                           priority: 'must' },
+      { id: 'amenity.lobby.detalle',nombre: 'Detalle de mostrador',     shotType: 'detalle',     movement: 'static',     enfoque: 'Marmol, madera, herreria, logo.',                     priority: 'nice' },
+      { id: 'amenity.lobby.tilt',   nombre: 'Tilt up del vestibulo',    shotType: 'contrapicado',movement: 'tilt_up',    enfoque: 'Altura y diseno arquitectonico.',                     priority: 'nice' },
+    ]) },
+    roof_garden: { label: 'Roof garden/terraza azotea', shots: Object.freeze([
+      { id: 'amenity.roof_garden.reveal',  nombre: 'Reveal de la vista',       shotType: 'reveal',movement: 'pull_out',   enfoque: 'Vista panoramica como argumento de venta.',          priority: 'must' },
+      { id: 'amenity.roof_garden.recorrido',nombre: 'Recorrido del deck',      shotType: 'transicion',movement: 'tracking',enfoque: 'Mobiliario, fogata, areas de estar.',              priority: 'must' },
+      { id: 'amenity.roof_garden.orbit',   nombre: 'Orbital de la zona lounge',shotType: 'medio', movement: 'orbit',      enfoque: 'Ambiente, estilo de vida al atardecer.',             priority: 'must' },
+      { id: 'amenity.roof_garden.detalle', nombre: 'Detalle de pergola',       shotType: 'detalle',movement: 'static',    enfoque: 'Acabados de exterior.',                              priority: 'nice' },
+    ]) },
+    jardin: { label: 'Jardin/areas verdes', shots: Object.freeze([
+      { id: 'amenity.jardin.recorrido',nombre: 'Recorrido por sendero',       shotType: 'transicion',movement: 'gimbal_walk',enfoque: 'Tamano y mantenimiento del verde.',          priority: 'must' },
+      { id: 'amenity.jardin.wide',     nombre: 'Wide del area completa',      shotType: 'wide',      movement: 'pan',        enfoque: 'Extension de las areas verdes.',            priority: 'must' },
+      { id: 'amenity.jardin.reveal',   nombre: 'Reveal a traves de vegetacion',shotType: 'reveal',   movement: 'parallax',   enfoque: 'Profundidad, frescura.',                    priority: 'nice' },
+      { id: 'amenity.jardin.detalle',  nombre: 'Detalle de jardineria',       shotType: 'detalle',   movement: 'static',     enfoque: 'Cuidado y diseno paisajista.',              priority: 'nice' },
+    ]) },
+    asadores: { label: 'Asadores/BBQ', shots: Object.freeze([
+      { id: 'amenity.asadores.recorrido',nombre: 'Recorrido de la zona', shotType: 'transicion',movement: 'tracking', enfoque: 'Numero de estaciones, equipamiento.',                     priority: 'must' },
+      { id: 'amenity.asadores.detalle', nombre: 'Detalle del asador',    shotType: 'detalle',   movement: 'static',   enfoque: 'Calidad del equipo, acabado en piedra.',                  priority: 'must' },
+      { id: 'amenity.asadores.reveal',  nombre: 'Reveal con mesas',      shotType: 'reveal',    movement: 'pull_out', enfoque: 'Convivencia, capacidad del comedor exterior.',             priority: 'nice' },
+    ]) },
+    cancha: { label: 'Cancha (tenis/padel)', shots: Object.freeze([
+      { id: 'amenity.cancha.wide',     nombre: 'Wide de cancha completa', shotType: 'wide',      movement: 'static',  enfoque: 'Dimensiones reglamentarias, estado.',            priority: 'must' },
+      { id: 'amenity.cancha.recorrido',nombre: 'Recorrido perimetral',    shotType: 'transicion',movement: 'tracking',enfoque: 'Iluminacion, mallas, superficie.',               priority: 'must' },
+      { id: 'amenity.cancha.detalle',  nombre: 'Detalle de superficie',   shotType: 'detalle',  movement: 'static',  enfoque: 'Calidad del piso o cristales (padel).',           priority: 'nice' },
+      { id: 'amenity.cancha.reveal',   nombre: 'Reveal desde acceso',     shotType: 'reveal',   movement: 'push_in', enfoque: 'Sorpresa de la amenidad al entrar.',              priority: 'nice' },
+    ]) },
+    area_infantil: { label: 'Area infantil/juegos', shots: Object.freeze([
+      { id: 'amenity.area_infantil.wide',     nombre: 'Wide del area de juegos', shotType: 'wide',      movement: 'static',     enfoque: 'Variedad de juegos, seguridad.',          priority: 'must' },
+      { id: 'amenity.area_infantil.recorrido',nombre: 'Recorrido entre juegos',  shotType: 'transicion',movement: 'gimbal_walk',enfoque: 'Piso amortiguante, mantenimiento.',        priority: 'must' },
+      { id: 'amenity.area_infantil.detalle',  nombre: 'Detalle de juego',        shotType: 'detalle',   movement: 'static',     enfoque: 'Materiales, color, estado.',              priority: 'nice' },
+    ]) },
+    business_center: { label: 'Business center/coworking', shots: Object.freeze([
+      { id: 'amenity.business_center.recorrido',nombre: 'Recorrido de entrada',          shotType: 'pov',       movement: 'gimbal_walk',enfoque: 'Ambiente profesional, mobiliario.',  priority: 'must' },
+      { id: 'amenity.business_center.tracking', nombre: 'Tracking de estaciones',        shotType: 'transicion',movement: 'tracking',   enfoque: 'Conectividad, salas privadas.',      priority: 'must' },
+      { id: 'amenity.business_center.detalle',  nombre: 'Detalle de sala de juntas',     shotType: 'detalle',   movement: 'static',     enfoque: 'Privacidad, tecnologia.',            priority: 'nice' },
+    ]) },
+    spa: { label: 'Spa/sauna', shots: Object.freeze([
+      { id: 'amenity.spa.reveal',   nombre: 'Reveal de ingreso',        shotType: 'reveal',    movement: 'pull_out',   enfoque: 'Ambiente de relajacion al abrir el area humeda.',      priority: 'must' },
+      { id: 'amenity.spa.detalle',  nombre: 'Detalle de sauna y vapor', shotType: 'detalle',   movement: 'static',     enfoque: 'Madera, calidad, iluminacion; cuidar lente con vapor.', priority: 'must' },
+      { id: 'amenity.spa.recorrido',nombre: 'Recorrido de cabinas',     shotType: 'transicion',movement: 'gimbal_walk',enfoque: 'Privacidad, lujo.',                                    priority: 'nice' },
+    ]) },
+    estacionamiento: { label: 'Estacionamiento', shots: Object.freeze([
+      { id: 'amenity.estacionamiento.recorrido',nombre: 'Recorrido por el pasillo',  shotType: 'transicion',movement: 'tracking', enfoque: 'Amplitud de cajones, iluminacion.',        priority: 'must' },
+      { id: 'amenity.estacionamiento.wide',     nombre: 'Wide del nivel',            shotType: 'wide',      movement: 'static',   enfoque: 'Numero de cajones, orden, senalizacion.',   priority: 'must' },
+      { id: 'amenity.estacionamiento.detalle',  nombre: 'Detalle de cajon',          shotType: 'detalle',   movement: 'static',   enfoque: 'Medida del cajon, demarcacion.',            priority: 'nice' },
+      { id: 'amenity.estacionamiento.reveal',   nombre: 'Reveal de rampa y acceso',  shotType: 'reveal',    movement: 'push_in',  enfoque: 'Facilidad de maniobra.',                    priority: 'nice' },
+    ]) },
+    elevadores: { label: 'Elevadores/accesos', shots: Object.freeze([
+      { id: 'amenity.elevadores.push_in',nombre: 'Push-in al elevador',         shotType: 'pov',       movement: 'gimbal_walk',enfoque: 'Acabados, limpieza, capacidad.',                priority: 'must' },
+      { id: 'amenity.elevadores.acceso', nombre: 'Recorrido de control de acceso',shotType: 'transicion',movement: 'tracking',  enfoque: 'Seguridad, casetas, torniquetes.',              priority: 'must' },
+      { id: 'amenity.elevadores.detalle',nombre: 'Detalle de botonera',         shotType: 'detalle',   movement: 'static',     enfoque: 'Numero de niveles, tecnologia.',               priority: 'nice' },
+    ]) },
+    palapa: { label: 'Palapa', shots: Object.freeze([
+      { id: 'amenity.palapa.reveal',nombre: 'Reveal con tilt up',          shotType: 'reveal',movement: 'tilt_up', enfoque: 'Altura y artesania del techo de palma.',              priority: 'must' },
+      { id: 'amenity.palapa.orbit', nombre: 'Orbital de la zona social',   shotType: 'medio', movement: 'orbit',   enfoque: 'Convivencia, frescura, sombra.',                      priority: 'must' },
+      { id: 'amenity.palapa.detalle',nombre: 'Detalle de palma y vigas',   shotType: 'detalle',movement: 'tilt_up',enfoque: 'Autenticidad y estado del techo.',                    priority: 'nice' },
+      { id: 'amenity.palapa.vista', nombre: 'Reveal hacia la vista exterior',shotType: 'reveal',movement: 'pull_out',enfoque: 'Integracion con alberca o naturaleza.',              priority: 'nice' },
+    ]) },
+    area_mascotas: { label: 'Area de mascotas', shots: Object.freeze([
+      { id: 'amenity.area_mascotas.wide',     nombre: 'Wide del area',             shotType: 'wide',      movement: 'static',  enfoque: 'Tamano del area canina, cercado.',         priority: 'must' },
+      { id: 'amenity.area_mascotas.recorrido',nombre: 'Recorrido perimetral',      shotType: 'transicion',movement: 'tracking',enfoque: 'Superficie, sombra, agua.',                priority: 'must' },
+      { id: 'amenity.area_mascotas.detalle',  nombre: 'Detalle de estacion de lavado',shotType: 'detalle',movement: 'static',  enfoque: 'Servicios extra (pet spa).',               priority: 'nice' },
+    ]) },
+  });
+
+  const PROPERTY_FOCUS = Object.freeze({
+    casa:         'Amplitud y luz: abre cada cuarto y liga espacios.',
+    departamento: 'Vistas y amenidades del edificio.',
+    terreno:      'Dimension y ubicacion: perimetro y panoramicas a pie.',
+    quinta:       'Recreo: areas sociales, naturaleza, palapa, alberca, capilla, establos.',
+    comercial:    'Fachada, flujo, escaparate, areas de cliente.',
+  });
+
+  const ROOM_CATEGORIES = Object.freeze([
+    { id: 'bano',        label: 'Bano completo',          keywords: ['bano', 'wc', 'toilet', 'sanitario'] },
+    { id: 'medio_bano',  label: 'Medio bano',             keywords: ['medio bano', 'visitas'] },
+    { id: 'lavado',      label: 'Cuarto de lavado',       keywords: ['lavado', 'lavanderia'] },
+    { id: 'bodega',      label: 'Bodega/servicio',        keywords: ['bodega', 'servicio', 'almacen'] },
+    { id: 'vestidor',    label: 'Vestidor/closet',        keywords: ['vestidor', 'closet', 'walk-in'] },
+    { id: 'cocina',      label: 'Cocina',                 keywords: ['cocina', 'kitchen', 'cocineta'] },
+    { id: 'comedor',     label: 'Comedor',                keywords: ['comedor', 'antecomedor'] },
+    { id: 'sala',        label: 'Sala/estancia',          keywords: ['sala', 'living', 'estar'] },
+    { id: 'family',      label: 'Family room/sala de TV', keywords: ['family', 'tv', 'entretenimiento'] },
+    { id: 'estudio',     label: 'Estudio/home office',    keywords: ['estudio', 'oficina', 'office', 'despacho'] },
+    { id: 'recamara',    label: 'Recamara',               keywords: ['recamara', 'habitacion', 'dormitorio', 'alcoba', 'suite'] },
+    { id: 'garaje',      label: 'Garaje/cochera',         keywords: ['garaje', 'cochera', 'garage'] },
+    { id: 'pasillo',     label: 'Pasillo/escaleras',      keywords: ['pasillo', 'escalera', 'hall', 'vestibulo'] },
+    { id: 'entrada',     label: 'Entrada/recibidor',      keywords: ['entrada', 'recibidor', 'foyer', 'acceso'] },
+    { id: 'terraza',     label: 'Terraza/balcon',         keywords: ['terraza', 'balcon', 'patio', 'roof'] },
+    { id: 'exterior',    label: 'Exterior/jardin',        keywords: ['fachada', 'jardin', 'exterior', 'frente'] },
+  ]);
+
+  const EDIT_ORDER = Object.freeze({
+    exterior:     10,
+    wide:         10,
+    pov:          20,
+    transicion:   20,
+    general:      30,
+    reveal:       30,
+    contrapicado: 35,
+    medio:        40,
+    simetrica:    40,
+    ventana:      45,
+    detalle:      50,
+    textura:      50,
+  });
+
+  function getShotTypes() { return SHOT_TYPES; }
+  function getMovements()  { return MOVEMENTS; }
+  function getGuideLibrary() { return GUIDE_LIBRARY; }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
@@ -1002,6 +1323,17 @@
     DRONE_DEFAULTS,
     TEMPLATE_DEFS,
     SPACE_SUGGESTIONS,
+    SHOT_TYPES,
+    MOVEMENTS,
+    GUIDE_LIBRARY,
+    DRONE_GUIDE,
+    AMENITY_GUIDE,
+    PROPERTY_FOCUS,
+    ROOM_CATEGORIES,
+    EDIT_ORDER,
+    getShotTypes,
+    getMovements,
+    getGuideLibrary,
     createDefaultState,
     normalizeChecklistData,
     parseSpacesText,

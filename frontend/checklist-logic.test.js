@@ -574,3 +574,147 @@ test('asesor pair keeps independent consecutives across two takes', () => {
   assert.equal(logic.getCameraSequence(s, 'osmo-asesor').nextToken, '0248');
   assert.equal(s.mediaFiles.filter((f) => f.cameraId === 'sony-asesor').length, 2);
 });
+
+// ─── F1: biblioteca de datos ──────────────────────────────────────────────────
+
+const REQUIRED_SHOT_FIELDS = ['id', 'nombre', 'shotType', 'movement', 'enfoque', 'priority'];
+
+function collectAllShots() {
+  const shots = [];
+  const gl = logic.getGuideLibrary();
+  Object.values(gl).forEach((cat) => cat.shots.forEach((s) => shots.push(s)));
+  const dg = logic.DRONE_GUIDE;
+  Object.values(dg).forEach((tipo) => tipo.shots.forEach((s) => shots.push(s)));
+  const ag = logic.AMENITY_GUIDE;
+  Object.values(ag).forEach((am) => am.shots.forEach((s) => shots.push(s)));
+  return shots;
+}
+
+test('F1: SHOT_TYPES tiene todos los campos requeridos', () => {
+  const st = logic.getShotTypes();
+  assert.ok(typeof st === 'object' && st !== null);
+  ['wide', 'general', 'medio', 'detalle', 'transicion', 'pov', 'contrapicado',
+   'ventana', 'reveal', 'simetrica', 'textura', 'exterior'].forEach((k) => {
+    assert.ok(k in st, 'falta shotType: ' + k);
+    assert.ok(typeof st[k].label === 'string' && st[k].label.length > 0, 'label vacio en shotType: ' + k);
+  });
+});
+
+test('F1: MOVEMENTS tiene todos los campos requeridos', () => {
+  const mv = logic.getMovements();
+  assert.ok(typeof mv === 'object' && mv !== null);
+  ['static', 'pan', 'tilt', 'dolly', 'push_in', 'pull_out', 'gimbal_walk',
+   'orbit', 'umbral', 'parallax', 'tilt_up', 'slider', 'tracking', 'pedestal', 'whip'].forEach((k) => {
+    assert.ok(k in mv, 'falta movement: ' + k);
+    assert.ok(typeof mv[k].label === 'string' && mv[k].label.length > 0, 'label vacio en movement: ' + k);
+  });
+});
+
+test('F1: getGuideLibrary devuelve el mismo objeto que GUIDE_LIBRARY', () => {
+  assert.strictEqual(logic.getGuideLibrary(), logic.GUIDE_LIBRARY);
+});
+
+test('F1: getShotTypes y getMovements devuelven SHOT_TYPES y MOVEMENTS', () => {
+  assert.strictEqual(logic.getShotTypes(), logic.SHOT_TYPES);
+  assert.strictEqual(logic.getMovements(), logic.MOVEMENTS);
+});
+
+test('F1: cada shot tiene los 6 campos requeridos', () => {
+  const shots = collectAllShots();
+  assert.ok(shots.length > 0, 'no se encontraron shots');
+  shots.forEach((shot) => {
+    REQUIRED_SHOT_FIELDS.forEach((field) => {
+      assert.ok(field in shot, 'falta campo "' + field + '" en shot id=' + shot.id);
+      assert.ok(shot[field] !== undefined && shot[field] !== null && shot[field] !== '',
+        'campo vacio "' + field + '" en shot id=' + shot.id);
+    });
+  });
+});
+
+test('F1: todos los ids de shots son unicos', () => {
+  const shots = collectAllShots();
+  const ids = shots.map((s) => s.id);
+  const unique = new Set(ids);
+  assert.equal(unique.size, ids.length, 'ids duplicados: ' + ids.filter((id, i) => ids.indexOf(id) !== i).join(', '));
+});
+
+test('F1: shotType de cada shot existe en SHOT_TYPES', () => {
+  const shots = collectAllShots();
+  const st = logic.getShotTypes();
+  shots.forEach((shot) => {
+    assert.ok(shot.shotType in st, 'shotType desconocido "' + shot.shotType + '" en id=' + shot.id);
+  });
+});
+
+test('F1: movement de cada shot existe en MOVEMENTS', () => {
+  const shots = collectAllShots();
+  const mv = logic.getMovements();
+  shots.forEach((shot) => {
+    assert.ok(shot.movement in mv, 'movement desconocido "' + shot.movement + '" en id=' + shot.id);
+  });
+});
+
+test('F1: priority de cada shot es must o nice', () => {
+  const shots = collectAllShots();
+  shots.forEach((shot) => {
+    assert.ok(shot.priority === 'must' || shot.priority === 'nice',
+      'priority invalido "' + shot.priority + '" en id=' + shot.id);
+  });
+});
+
+test('F1: GUIDE_LIBRARY tiene todas las categorias requeridas', () => {
+  const gl = logic.GUIDE_LIBRARY;
+  ['entrada', 'sala', 'comedor', 'cocina', 'recamara', 'recamara_sec', 'bano',
+   'medio_bano', 'vestidor', 'estudio', 'lavado', 'pasillo', 'family',
+   'terraza', 'garaje', 'bodega', 'generico'].forEach((cat) => {
+    assert.ok(cat in gl, 'falta categoria: ' + cat);
+    assert.ok(Array.isArray(gl[cat].shots) && gl[cat].shots.length > 0, 'shots vacio en categoria: ' + cat);
+  });
+});
+
+test('F1: DRONE_GUIDE tiene todos los tipos de propiedad requeridos', () => {
+  const dg = logic.DRONE_GUIDE;
+  ['casa', 'lujo', 'departamento', 'waterfront', 'terreno', 'quinta', 'comercial'].forEach((tipo) => {
+    assert.ok(tipo in dg, 'falta tipo en DRONE_GUIDE: ' + tipo);
+    assert.ok(Array.isArray(dg[tipo].shots) && dg[tipo].shots.length > 0, 'shots vacio en drone tipo: ' + tipo);
+  });
+});
+
+test('F1: AMENITY_GUIDE tiene todas las amenidades requeridas', () => {
+  const ag = logic.AMENITY_GUIDE;
+  ['alberca', 'jacuzzi', 'gimnasio', 'salon_eventos', 'lobby', 'roof_garden',
+   'jardin', 'asadores', 'cancha', 'area_infantil', 'business_center', 'spa',
+   'estacionamiento', 'elevadores', 'palapa', 'area_mascotas'].forEach((am) => {
+    assert.ok(am in ag, 'falta amenidad: ' + am);
+    assert.ok(Array.isArray(ag[am].shots) && ag[am].shots.length > 0, 'shots vacio en amenidad: ' + am);
+  });
+});
+
+test('F1: ROOM_CATEGORIES es un array con todos los ids requeridos', () => {
+  const rc = logic.ROOM_CATEGORIES;
+  assert.ok(Array.isArray(rc) && rc.length > 0);
+  ['bano', 'medio_bano', 'lavado', 'bodega', 'vestidor', 'cocina', 'comedor',
+   'sala', 'family', 'estudio', 'recamara', 'garaje', 'pasillo', 'entrada',
+   'terraza', 'exterior'].forEach((id) => {
+    assert.ok(rc.some((c) => c.id === id), 'falta id en ROOM_CATEGORIES: ' + id);
+  });
+  rc.forEach((cat) => {
+    assert.ok(Array.isArray(cat.keywords) && cat.keywords.length > 0, 'keywords vacio en categoria: ' + cat.id);
+  });
+});
+
+test('F1: PROPERTY_FOCUS tiene todas las propiedades requeridas', () => {
+  const pf = logic.PROPERTY_FOCUS;
+  ['casa', 'departamento', 'terreno', 'quinta', 'comercial'].forEach((k) => {
+    assert.ok(k in pf, 'falta propiedad en PROPERTY_FOCUS: ' + k);
+    assert.ok(typeof pf[k] === 'string' && pf[k].length > 0, 'enfoque vacio en: ' + k);
+  });
+});
+
+test('F1: EDIT_ORDER tiene todos los shotTypes y valores numericos', () => {
+  const eo = logic.EDIT_ORDER;
+  Object.keys(logic.SHOT_TYPES).forEach((k) => {
+    assert.ok(k in eo, 'falta shotType en EDIT_ORDER: ' + k);
+    assert.ok(typeof eo[k] === 'number', 'valor no numerico en EDIT_ORDER[' + k + ']');
+  });
+});
