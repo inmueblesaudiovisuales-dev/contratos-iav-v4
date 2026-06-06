@@ -539,8 +539,10 @@
     .export-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; margin-bottom: 9px; border: 1px solid var(--gold-leaf); background: var(--gold-soft); border-radius: var(--radius); }
     .export-copy strong { display: block; font-size: 14px; font-weight: 600; }
     .export-copy span { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
-    .export-bar .primary { display: inline-flex; align-items: center; gap: 7px; flex: none; }
-    .export-bar .primary i { font-size: 18px; }
+    .export-btns { display: flex; gap: 8px; flex: none; flex-wrap: wrap; }
+    .export-bar .primary, .export-bar .secondary { display: inline-flex; align-items: center; gap: 7px; flex: none; }
+    .export-bar .primary i, .export-bar .secondary i { font-size: 18px; }
+    .export-bar .secondary { background: var(--card); border: 1.5px solid var(--line-2); color: var(--ink-1); }
 
     /* ===== Modo Guiado — F8a ===== */
     .guide-toggle { margin-top: 10px; margin-bottom: 4px; }
@@ -3373,7 +3375,10 @@ function renderExportBar() {
   const n = (state.mediaFiles || []).length;
   return `<div class="export-bar">
     <div class="export-copy"><strong>Exportar para edición</strong><span>${n} archivo${n === 1 ? '' : 's'} · JSON para el programa de metadatos</span></div>
-    <button class="primary" onclick="exportarBitacora()"><i class="ti ti-download"></i> Exportar</button>
+    <div class="export-btns">
+      <button class="secondary" onclick="imprimirGuionEdicion()"><i class="ti ti-files"></i> Guion de edicion</button>
+      <button class="primary" onclick="exportarBitacora()"><i class="ti ti-download"></i> Exportar</button>
+    </div>
   </div>`;
 }
 
@@ -3390,6 +3395,66 @@ function exportarBitacora() {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   showToast('Exportados ' + data.totalArchivos + ' archivos');
+}
+
+function imprimirGuionEdicion() {
+  const data = logic.buildExport(state, meta);
+  if (!data.totalArchivos) return showToast('Aún no hay archivos para exportar');
+  const guion = data.guionEdicion || {};
+  const clips = guion.clips || [];
+  const folio = meta.folio || '';
+  const cliente = meta.nombreCliente || '';
+
+  function escHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  // Group clips by escena preserving order
+  const groups = [];
+  const seen = new Map();
+  clips.forEach((c) => {
+    const key = c.escena || '';
+    if (!seen.has(key)) { seen.set(key, []); groups.push({ escena: key, items: seen.get(key) }); }
+    seen.get(key).push(c);
+  });
+
+  const groupsHtml = groups.map((g) => {
+    const rows = g.items.map((c) => {
+      const buenaMark = c.buena ? '<strong>[buena]</strong> ' : '';
+      const tipo = [c.tipo, c.movimiento].filter(Boolean).join(' / ');
+      const orden = c.ordenEdicion != null ? `<span class="orden">[E${c.ordenEdicion}]</span> ` : '';
+      return `<tr><td>${orden}${escHtml(c.archivo)}</td><td>${escHtml(tipo)}</td><td>${buenaMark ? buenaMark : ''}</td></tr>`;
+    }).join('');
+    return `<div class="scene"><h3>${escHtml(g.escena || '(sin escena)')}</h3><table><thead><tr><th>Archivo</th><th>Tipo / Movimiento</th><th>Estado</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+
+  const html = [
+    '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">',
+    `<title>Guion de edicion${folio ? ' \xb7 ' + folio : ''}</title>`,
+    '<style>',
+    'body{font-family:system-ui,sans-serif;font-size:13px;color:#111;margin:24px}',
+    'h1{font-size:16px;margin:0 0 4px}',
+    '.sub{font-size:12px;color:#666;margin-bottom:4px}',
+    '.ctx{font-size:12px;color:#444;font-style:italic;margin-bottom:20px;border-left:3px solid #ccc;padding-left:8px}',
+    'h3{font-size:13px;margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:3px}',
+    'table{width:100%;border-collapse:collapse;margin-bottom:6px}',
+    'th{text-align:left;font-size:11px;color:#555;border-bottom:1px solid #ccc;padding-bottom:3px}',
+    'td{vertical-align:top;padding:3px 6px 3px 0;font-size:12px;border-bottom:1px solid #f0f0f0}',
+    'td:first-child{width:35%}td:nth-child(2){width:35%;color:#444}',
+    '.orden{color:#888;font-size:11px}',
+    'strong{font-weight:700}',
+    '@media print{body{margin:12px}}',
+    '</style></head><body>',
+    `<h1>Guion de edicion${folio ? ' \xb7 ' + escHtml(folio) : ''}</h1>`,
+    cliente ? `<div class="sub">${escHtml(cliente)}</div>` : '',
+    guion.contexto ? `<div class="ctx">${escHtml(guion.contexto)}</div>` : '',
+    groupsHtml || '<p>Sin clips registrados.</p>',
+    '<script>window.onload=function(){window.print();}<\/script>',
+    '</body></html>',
+  ].join('');
+
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
 }
 
 function renderEditView() {
