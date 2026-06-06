@@ -684,9 +684,7 @@
   <script>
 const API = 'https://contratos.inmueblesaudiovisuales.com/api';
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
-const DEMO_PARAM = new URLSearchParams(location.search).get('demo') || '';
-const DEMO = DEMO_PARAM === '1' || DEMO_PARAM === 'nuevo';
-const DEMO_FRESH = DEMO_PARAM === 'nuevo';
+const DEMO = new URLSearchParams(location.search).get('demo') === '1';
 const CONFIG = new URLSearchParams(location.search).get('config') === '1';
 const logic = window.IAVChecklistLogic;
 
@@ -744,9 +742,9 @@ function stateKey() { return 'checklist_state_' + (TOKEN || 'demo'); }
 function hasLane() { return !!localStorage.getItem(laneKey()); }
 function laneReady() {
   if (new URLSearchParams(location.search).get('screen') === 'entry') return false;
-  // El primer arranque (?demo=nuevo) replica el flujo real: pasa por la
-  // pantalla de lane antes de armar cuartos. El demo sembrado la salta.
-  return (DEMO && !DEMO_FRESH) || hasLane();
+  // El demo arranca en primer arranque: pasa por la pantalla de lane y
+  // Armar cuartos igual que un contrato real recién creado.
+  return hasLane();
 }
 function chooseLane(lane) {
   state.modoActual = lane;
@@ -918,13 +916,8 @@ function cargarDemo() {
   const s = document.createElement('script');
   s.src = './checklist-demo.js';
   s.onload = () => {
-    if (DEMO_FRESH) {
-      meta = window.IAVChecklistDemo.metaFresh;
-      state = window.IAVChecklistDemo.buildFresh(logic);
-    } else {
-      meta = window.IAVChecklistDemo.meta;
-      state = window.IAVChecklistDemo.build(logic);
-    }
+    meta = window.IAVChecklistDemo.meta;
+    state = window.IAVChecklistDemo.build(logic);
     ensureActiveMode();
     const screen = new URLSearchParams(location.search).get('screen');
     if (['captura', 'cierre', 'edicion'].includes(screen)) activeView = screen;
@@ -984,10 +977,7 @@ function renderHeader() {
       <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span><span class="ob-folio">${esc(meta.folio || '')}</span></span>
     </span>
     <span class="ob-spacer"></span>
-    ${DEMO ? `${DEMO_FRESH
-      ? `<button class="demo-reset-btn" onclick="location.search='?demo=1'">Ver demo con datos</button>`
-      : `<button class="demo-reset-btn" onclick="location.search='?demo=nuevo'">Primer arranque</button>`}
-      <button class="demo-reset-btn" onclick="reiniciarDemo()">Reiniciar demo</button>` : ''}
+    ${DEMO ? `<button class="demo-reset-btn" onclick="reiniciarDemo()">Reiniciar demo</button>` : ''}
     <button class="ob-lane" onclick="abrirLane()"><i class="ti ti-${laneIcon(state.modoActual)}"></i>${esc(lane)}<i class="ti ti-chevron-down ob-chev"></i></button>
     <span class="ob-sync"><span class="dot" id="sync-dot"></span><span id="sync-label">en vivo</span></span>
   </header>`;
