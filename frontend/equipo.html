@@ -443,6 +443,15 @@ function esc(s) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+// Devuelve siempre un href de Maps usable: si link ya es URL la respeta;
+// si es texto/coordenadas (o viene vacio) arma una busqueda con la direccion.
+function buildMapsHref(link, direccion) {
+  var v = (link || '').toString().trim();
+  if (/^https?:\/\//i.test(v)) return v;
+  var q = v || (direccion || '').toString().trim();
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+}
+
 function datoRow(label, valHtml) {
   return '<div class="dato-row"><div class="dato-label">' + esc(label) +
     '</div><div class="dato-val">' + valHtml + '</div></div>';
@@ -671,7 +680,7 @@ function renderPropiedad(p) {
   // Ubicacion
   html += '<div class="prop-sec-titulo">Ubicacion</div>';
   if (p.direccion) {
-    const mapsHref = p.linkMaps || ('https://maps.google.com/?q=' + encodeURIComponent(p.direccion));
+    const mapsHref = buildMapsHref(p.linkMaps, p.direccion);
     html += '<div class="dato-row"><div class="dato-label">Direccion</div><div class="dato-val">' +
       esc(p.direccion) + '<br><a class="maps-link" href="' + esc(mapsHref) + '" target="_blank" rel="noopener">Ver en Google Maps &rarr;</a></div></div>';
   }

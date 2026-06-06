@@ -4055,7 +4055,7 @@ function renderPanel(data) {
       ${fechatxt    ? `<div class="prop-dato"><span class="lbl">Fecha</span>${esc(fechatxt)}</div>` : ''}
       ${entregaISO  ? `<div class="prop-dato"><span class="lbl">Entrega</span>${esc(fmxnFecha(entregaISO))}</div>` : ''}
       ${p.Direccion ? `<div class="prop-dato"><span class="lbl">Dirección</span>${esc(p.Direccion)}</div>` : ''}
-      ${p.LinkMaps  ? `<div class="prop-dato"><a class="maps-link" href="${safeHref(p.LinkMaps)}" target="_blank" rel="noopener">Ver en Maps &rarr;</a></div>` : ''}
+      ${(p.LinkMaps || p.Direccion) ? `<div class="prop-dato"><a class="maps-link" href="${esc(buildMapsHref(p.LinkMaps, p.Direccion))}" target="_blank" rel="noopener">Ver en Maps &rarr;</a></div>` : ''}
       ${p.SobreLaPropiedad ? `<div class="prop-dato"><span class="lbl">Características</span><span id="sobre-prop-${numProp}" style="white-space:pre-wrap">${esc(p.SobreLaPropiedad)}</span></div>` : ''}
       ${renderAccesoCaseta(p)}
       ${p.DatosEspecificos && p.DatosEspecificos.comentarios ? `<div style="background:var(--gold-dim);border-radius:6px;padding:6px 8px;margin-top:6px;font-size:12px;line-height:1.5"><span style="font-size:10px;font-weight:700;color:var(--gold-dark)">Comentarios del cliente </span><span style="white-space:pre-wrap">${esc(p.DatosEspecificos.comentarios)}</span></div>` : ''}
@@ -5207,6 +5207,16 @@ function safeHref(url) {
   if (!url) return '#';
   var u = String(url).trim();
   return /^https?:\/\//i.test(u) ? esc(u) : '';
+}
+
+// Devuelve siempre un href de Maps usable: si link ya es URL la respeta;
+// si es texto/coordenadas arma una busqueda. Evita href="" o enlaces relativos rotos.
+function buildMapsHref(link, direccion) {
+  var v = (link || '').toString().trim();
+  if (/^https?:\/\//i.test(v)) return v;
+  var q = v || (direccion || '').toString().trim();
+  if (!q) return '';
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
 }
 
 function badgeEstatus(estatus) {
