@@ -269,6 +269,7 @@ Comportamientos vigentes a tener en cuenta (no son bugs, son limitaciones de dis
 - **Correo vacío al crear contrato:** si el cliente no tiene correo al crearse el contrato, no llega correo al firmar. El cliente debe llenarlo en el portal antes de firmar.
 - **Folio:** solo se genera para contratos estándar con fecha de sesión. Los contratos particulares no tienen folio hasta configurar la propiedad.
 - **Migraciones D1 son manuales:** al agregar columnas/tablas hay que correr la migración en remoto; el push a `main` no toca D1.
+- **Modo guiado de tomas (checklist):** capa opt-in sobre `checklist.html` con biblioteca/resolver/config/IA y export enriquecido (`version:1` intacto). La biblioteca global vive en la tabla `config` (clave `guia_config`); se edita en `checklist.html?config=1` (admin). El adapter `registrarUsoTomas` (buzón al Sheet `UsoTomas`) **requiere despliegue manual**. Detalle y estado en `docs/MODO_GUIADO_HANDOFF.md`.
 
 > Esta lista es de limitaciones estables. Los pendientes puntuales de cada cambio viven en su entrada de `docs/RONDAS.md`.
 

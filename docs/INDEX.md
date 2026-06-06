@@ -16,6 +16,7 @@ Guia rapida para encontrar specs, planes, handoffs y reportes del repo. Si algun
 
 | Documento | Para que sirve |
 |---|---|
+| `docs/MODO_GUIADO_HANDOFF.md` | Handoff vivo del **modo guiado de tomas** (checklist): qué es, dónde vive cada pieza, estado y pendientes. Retomar el feature desde aquí. |
 | `docs/EXPORT_METADATA_HANDOFF.md` | Contrato del programa local que tomara el JSON exportado por checklist y escribira metadatos compatibles con Premiere via exiftool. |
 | `docs/CHAT_PRODUCCION.md` | Guia para convertir `frontend/chat.html` de mockup a chat productivo: seguridad, modelo de datos, webhooks y endurecimiento. |
 
@@ -30,6 +31,7 @@ Guia rapida para encontrar specs, planes, handoffs y reportes del repo. Si algun
 | `2026-06-03-bitacora-produccion-2-1-ui-design.md` | Ajustes UI 2.1 para una bitacora mas compacta y accionable en campo. |
 | `2026-06-03-bitacora-archivos-metadatos-design.md` | Registro de archivos Video/Drone y estructura preparada para metadatos de Premiere. |
 | `2026-06-04-checklist-rediseno-design.md` | Rediseño de `checklist.html` al sistema Dossier, video-first y con app de camara. |
+| `2026-06-06-iav-metadata-app-4-funciones.md` | Roadmap de la app de Mac `iav-metadata-app` a 4 funciones (metadatos/uso/ingesta/proxies). |
 
 ## Planes en `docs/superpowers/plans`
 
@@ -44,6 +46,7 @@ Guia rapida para encontrar specs, planes, handoffs y reportes del repo. Si algun
 | `2026-06-03-bitacora-produccion-2-1-ui.md` | Plan UI 2.1 para header compacto, vistas operativas y documentacion. |
 | `2026-06-03-bitacora-archivos-metadatos.md` | Plan para secuencias de camara, archivos, descartes, conciliacion y export listo para metadatos. |
 | `2026-06-04-checklist-rediseno-fase1.md` | Plan de rediseño fase 1 de checklist a Dossier, preservando backend y motor. |
+| `2026-06-05-modo-guiado-tomas-plan.md` | Plan completo del **modo guiado de tomas** (biblioteca, resolver, config, IA, eficiencia) + Rondas 2-5. Ver `docs/MODO_GUIADO_HANDOFF.md` para el estado. |
 
 ## Planes historicos en `docs/plans`
 
