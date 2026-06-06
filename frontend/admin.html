@@ -990,6 +990,17 @@
     /* ── PROP DATO ────────────────────────────────────── */
     .prop-dato { display: flex; align-items: baseline; gap: 6px; font-size: 13px; padding: 4px 0; }
     .prop-dato .lbl { font-size: 10px; font-weight: 700; color: var(--ink-3); min-width: 58px; flex-shrink: 0; }
+    /* Enlace a Google Maps: chip tocable con estado :active claro en movil */
+    .maps-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--gold-dim); border: 1px solid rgba(176,141,46,0.4);
+      color: var(--gold-dark); border-radius: 999px; padding: 5px 12px;
+      font-size: 12px; font-weight: 600; text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .12s ease, transform .06s ease;
+    }
+    .maps-link:hover  { background: rgba(176,141,46,0.22); }
+    .maps-link:active { background: rgba(176,141,46,0.30); transform: scale(0.97); }
     .prop-card-titulo { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
 
     /* ── RESULTADO CREACION CONTRATO ──────────────────── */
@@ -4044,7 +4055,7 @@ function renderPanel(data) {
       ${fechatxt    ? `<div class="prop-dato"><span class="lbl">Fecha</span>${esc(fechatxt)}</div>` : ''}
       ${entregaISO  ? `<div class="prop-dato"><span class="lbl">Entrega</span>${esc(fmxnFecha(entregaISO))}</div>` : ''}
       ${p.Direccion ? `<div class="prop-dato"><span class="lbl">Dirección</span>${esc(p.Direccion)}</div>` : ''}
-      ${p.LinkMaps  ? `<div class="prop-dato"><a href="${safeHref(p.LinkMaps)}" target="_blank" rel="noopener" style="color:var(--gold);font-size:12px;font-weight:600">Ver en Maps</a></div>` : ''}
+      ${p.LinkMaps  ? `<div class="prop-dato"><a class="maps-link" href="${safeHref(p.LinkMaps)}" target="_blank" rel="noopener">Ver en Maps &rarr;</a></div>` : ''}
       ${p.SobreLaPropiedad ? `<div class="prop-dato"><span class="lbl">Características</span><span id="sobre-prop-${numProp}" style="white-space:pre-wrap">${esc(p.SobreLaPropiedad)}</span></div>` : ''}
       ${renderAccesoCaseta(p)}
       ${p.DatosEspecificos && p.DatosEspecificos.comentarios ? `<div style="background:var(--gold-dim);border-radius:6px;padding:6px 8px;margin-top:6px;font-size:12px;line-height:1.5"><span style="font-size:10px;font-weight:700;color:var(--gold-dark)">Comentarios del cliente </span><span style="white-space:pre-wrap">${esc(p.DatosEspecificos.comentarios)}</span></div>` : ''}

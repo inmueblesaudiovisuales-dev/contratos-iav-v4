@@ -136,6 +136,17 @@
     .dato-val { font-size: 13.5px; font-weight: 500; color: var(--ink-1); line-height: 1.5; min-width: 0; word-break: break-word; }
     .dato-val a { color: var(--gold-d); text-decoration: none; font-weight: 600; }
     .dato-val a:hover { text-decoration: underline; }
+    /* Enlace a Google Maps: chip tocable con estado :active claro en movil */
+    a.maps-link {
+      display: inline-flex; align-items: center; gap: 5px; margin-top: 5px;
+      background: rgba(201,168,76,0.13); border: 1px solid rgba(201,168,76,0.42);
+      color: var(--gold-d); border-radius: 999px; padding: 5px 12px;
+      font-size: 12px; font-weight: 600; text-decoration: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .12s ease, transform .06s ease;
+    }
+    a.maps-link:hover  { background: rgba(201,168,76,0.22); text-decoration: none; }
+    a.maps-link:active { background: rgba(201,168,76,0.32); transform: scale(0.97); }
 
     /* ===== BLOQUE ACCESO ===== */
     .acceso-bloque {
@@ -662,7 +673,7 @@ function renderPropiedad(p) {
   if (p.direccion) {
     const mapsHref = p.linkMaps || ('https://maps.google.com/?q=' + encodeURIComponent(p.direccion));
     html += '<div class="dato-row"><div class="dato-label">Direccion</div><div class="dato-val">' +
-      esc(p.direccion) + '<br><a href="' + esc(mapsHref) + '" target="_blank" rel="noopener">Ver en Google Maps &rarr;</a></div></div>';
+      esc(p.direccion) + '<br><a class="maps-link" href="' + esc(mapsHref) + '" target="_blank" rel="noopener">Ver en Google Maps &rarr;</a></div></div>';
   }
   if (p.referencias)      html += '<div class="dato-row"><div class="dato-label">Como llegar</div><div class="dato-val">' + esc(p.referencias) + '</div></div>';
   if (p.sobreLaPropiedad) html += '<div class="dato-row"><div class="dato-label">Notas</div><div class="dato-val">' + esc(p.sobreLaPropiedad) + '</div></div>';
