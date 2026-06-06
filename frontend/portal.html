@@ -1114,7 +1114,6 @@ function renderEtapa1() {
 
         // Opción 1 — Solo redes sociales
         html += '<div class="fmt-wrap">' +
-          '<span class="fmt-badge-over">Recomendado</span>' +
           '<div class="formato-btn' + (fmtActual === 'vertical_nativo' ? ' activo' : '') + '" id="fmt-v-' + n + '" data-prop="' + n + '" data-valor="vertical_nativo">' +
             '<div class="fmt-mockup-zone"><div class="fmt-phone"><div class="fmt-fill"></div></div></div>' +
             '<div class="fmt-text">' +
@@ -1139,19 +1138,6 @@ function renderEtapa1() {
           '</div>' +
         '</div>';
 
-        // Opción 3 — Los dos formatos
-        html += '<div class="fmt-wrap">' +
-          '<div class="formato-btn' + (fmtActual === 'doble_nativo' ? ' activo' : '') + '" id="fmt-d-' + n + '" data-prop="' + n + '" data-valor="doble_nativo">' +
-            '<div class="fmt-mockup-zone"><div class="fmt-phone"><div class="fmt-fill"></div></div><div class="fmt-screen"><div class="fmt-screen-fill"></div></div></div>' +
-            '<div class="fmt-text">' +
-              '<div class="fmt-desc fmt-canal">Redes + web · Calidad nativa en ambos</div>' +
-              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en ambos formatos</div>' +
-              '<div class="fmt-desc fmt-nota" style="margin-top:3px">Dos grabaciones en la misma visita</div>' +
-              '<div class="fmt-precio">+$1,500</div>' +
-            '</div>' +
-            '<div class="fmt-sel"></div>' +
-          '</div>' +
-        '</div>';
 
         html += '</div></div>';
       }
