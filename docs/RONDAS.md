@@ -14,8 +14,8 @@
 
 - **Nuevo modo `?demo=nuevo` (primer arranque).** Igual que un contrato recién creado pero sin token ni backend (en memoria): arranca en `createDefaultState()` (sin cuartos, sin secuencias de cámara) y replica el flujo real completo — pantalla de lane → **Armar cuartos** → input del último archivo (`last-filename`) → capturar. El demo sembrado (`?demo=1`) no cambia.
   - `checklist-demo.js`: nuevos `metaFresh` y `buildFresh(logic)` (devuelve `createDefaultState()`).
-  - `checklist.html`: parseo `DEMO_PARAM`/`DEMO`/`DEMO_FRESH` (DEMO acepta `1` y `nuevo`); `laneReady()` ya no salta la pantalla de lane cuando `DEMO_FRESH` (replica el flujo real); `cargarDemo()` elige `buildFresh`/`metaFresh` en fresh.
-  - `admin.html`: botón "Abrir primer arranque" en Ajustes → Bitácora de producción.
+  - `checklist.html`: parseo `DEMO_PARAM`/`DEMO`/`DEMO_FRESH` (DEMO acepta `1` y `nuevo`); `laneReady()` ya no salta la pantalla de lane cuando `DEMO_FRESH` (replica el flujo real); `cargarDemo()` elige `buildFresh`/`metaFresh` en fresh. El acceso al primer arranque vive **dentro del demo** (botón en el header, junto a "Reiniciar demo"): en `?demo=1` un botón "Primer arranque" → `?demo=nuevo`, y de vuelta "Ver demo con datos" → `?demo=1`.
+  - `admin.html`: sin botón aparte; solo el "Abrir modo demo" existente (su descripción menciona que adentro está el primer arranque).
 - **Sin zoom por double-tap (global).** `* { touch-action: manipulation; }` en el reset CSS + `user-scalable=no` en el viewport. Tocar/golpear rápido (p. ej. el botón Toma) ya no hace zoom a la página. Aplica a todo el checklist (real, demo y sandbox); el scroll y el pinch quedan intactos.
 - Tests de lógica sin cambios: `node --test frontend/checklist-logic.test.js` → 116/116.
 

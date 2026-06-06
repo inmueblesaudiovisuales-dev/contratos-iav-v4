@@ -984,7 +984,10 @@ function renderHeader() {
       <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span><span class="ob-folio">${esc(meta.folio || '')}</span></span>
     </span>
     <span class="ob-spacer"></span>
-    ${DEMO ? `<button class="demo-reset-btn" onclick="reiniciarDemo()">Reiniciar demo</button>` : ''}
+    ${DEMO ? `${DEMO_FRESH
+      ? `<button class="demo-reset-btn" onclick="location.search='?demo=1'">Ver demo con datos</button>`
+      : `<button class="demo-reset-btn" onclick="location.search='?demo=nuevo'">Primer arranque</button>`}
+      <button class="demo-reset-btn" onclick="reiniciarDemo()">Reiniciar demo</button>` : ''}
     <button class="ob-lane" onclick="abrirLane()"><i class="ti ti-${laneIcon(state.modoActual)}"></i>${esc(lane)}<i class="ti ti-chevron-down ob-chev"></i></button>
     <span class="ob-sync"><span class="dot" id="sync-dot"></span><span id="sync-label">en vivo</span></span>
   </header>`;
