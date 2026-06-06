@@ -1819,7 +1819,7 @@ function renderMediaCapture() {
   <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
   <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
   ` : `
-  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="gate-salida-btn" onclick="abrirGateSalida()">listo para irte?</button>' : ''}${guideMode ? '<button class="guide-aprendiz-btn seg-btn" onclick="iniciarAprendiz()">Aprendiz</button>' : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}</div>
+  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="gate-salida-btn" onclick="abrirGateSalida()">listo para irte?</button>' : ''}${guideMode ? '<button class="guide-aprendiz-btn seg-btn" onclick="iniciarAprendiz()">Aprendiz</button>' : ''}${guideMode ? '<button class="icon-btn" onclick="imprimirGuia()" aria-label="Imprimir guia"><i class="ti ti-printer"></i></button>' : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}</div>
   <div class="cap-cam">
     <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
     <div class="cap-cam-copy">
@@ -1932,6 +1932,69 @@ function abrirGateSalida() {
     : renderLane(videoFaltan, 'video') + renderLane(droneFaltan, 'drone');
 
   abrirModal(`<div class="sheet-head"><h2>Resumen de la propiedad</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>${verdictHtml}${body}`);
+}
+
+function imprimirGuia() {
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+  const folio = meta.folio || '';
+  const cliente = meta.nombreCliente || '';
+
+  function escHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function buildLane(servicio, titulo) {
+    const ids = recorridoTargets(servicio);
+    if (!ids.length) return '';
+    const targets = ids.map((id) =>
+      servicio === 'drone'
+        ? state.droneItems.find((x) => x.id === id)
+        : state.espacios.find((x) => x.id === id)
+    ).filter(Boolean);
+
+    const roomBlocks = targets.map((t) => {
+      const sugs = logic.suggestionsForTarget(state, servicio, t) || [];
+      if (!sugs.length) return '';
+      const rows = sugs.map((s) => {
+        const typeLabel = (shotTypes[s.shotType] || {}).label || s.shotType;
+        const movLabel = (movements[s.movement] || {}).label || s.movement;
+        const mustMark = s.priority === 'must' ? '<strong>[clave]</strong> ' : '';
+        return `<tr><td>${mustMark}${escHtml(s.nombre)}</td><td>${escHtml(typeLabel)} / ${escHtml(movLabel)}</td><td>${escHtml(s.enfoque)}</td></tr>`;
+      }).join('');
+      return `<div class="room"><h3>${escHtml(t.nombre || t.id)}</h3><table><thead><tr><th>Toma</th><th>Tipo / Movimiento</th><th>Enfoque</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }).join('');
+
+    if (!roomBlocks) return '';
+    return `<section><h2>${escHtml(titulo)}</h2>${roomBlocks}</section>`;
+  }
+
+  const html = [
+    '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">',
+    `<title>Guia de tomas${folio ? ' \xb7 ' + folio : ''}</title>`,
+    '<style>',
+    'body{font-family:system-ui,sans-serif;font-size:13px;color:#111;margin:24px}',
+    'h1{font-size:16px;margin:0 0 4px}',
+    '.sub{font-size:12px;color:#666;margin-bottom:20px}',
+    'h2{font-size:14px;border-bottom:1.5px solid #111;padding-bottom:3px;margin:20px 0 10px}',
+    'h3{font-size:13px;margin:14px 0 6px}',
+    'table{width:100%;border-collapse:collapse;margin-bottom:8px}',
+    'th{text-align:left;font-size:11px;color:#555;border-bottom:1px solid #ccc;padding-bottom:3px}',
+    'td{vertical-align:top;padding:4px 6px 4px 0;font-size:12px;border-bottom:1px solid #eee}',
+    'td:first-child{width:30%}td:nth-child(2){width:25%;color:#444}',
+    'strong{font-weight:700}',
+    '@media print{body{margin:12px}}',
+    '</style></head><body>',
+    `<h1>Guia de tomas${folio ? ' \xb7 ' + escHtml(folio) : ''}</h1>`,
+    cliente ? `<div class="sub">${escHtml(cliente)}</div>` : '',
+    buildLane('video', 'Video'),
+    buildLane('drone', 'Drone'),
+    '<script>window.onload=function(){window.print();}<\/script>',
+    '</body></html>',
+  ].join('');
+
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
 }
 
 function seleccionarSugerencia(id) {
