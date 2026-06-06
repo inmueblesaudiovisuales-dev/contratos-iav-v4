@@ -1005,3 +1005,6 @@ ALTER TABLE contratos ADD COLUMN origen TEXT DEFAULT 'admin'
 | `periodo` faltante en stats | `stats.js` | Agregado al response |
 
 ---
+## R105 — F5A: Modo aprendiz (2026-06-05 18:14:59 CST)
+
+Wizard paso a paso para operador junior: botón "Aprendiz" en la barra del modo Guiado abre una vista full-screen que recorre los cuartos del lane actual en orden de recorrido, mostrando una a una las tomas must pendientes con glifo de movimiento grande, nombre, tipo · movimiento y enfoque bien visible. Botón "Toma" registra la sugerencia (llama `registrarArchivo` con `suggestionId`); "Saltar" la marca en `guideSkip` y pasa a la siguiente. Al agotar los musts de un cuarto avanza al siguiente; al terminar todos los cuartos muestra "Listo, cobertura clave completa". Progreso visible "Cuarto X de N · clave Y de Z". Con Guiado apagado el botón no aparece. Sin lógica nueva en checklist-logic.js.

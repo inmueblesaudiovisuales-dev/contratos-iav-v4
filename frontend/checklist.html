@@ -643,6 +643,26 @@
     .propuesta-shot { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; }
     .propuesta-shot-name { font-size: 13px; font-weight: 600; color: var(--ink-1); }
     .propuesta-shot-type { font-size: 11px; color: var(--ink-3); }
+    /* R105 — modo aprendiz */
+    .aprendiz-screen { display: flex; flex-direction: column; min-height: calc(100vh - 56px); }
+    .aprendiz-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line-2); }
+    .aprendiz-progress { flex: 1; font-size: 13px; color: var(--ink-2); font-weight: 600; text-align: center; }
+    .aprendiz-room { padding: 20px 20px 10px; }
+    .aprendiz-piso { font-size: 12px; color: var(--ink-3); letter-spacing: .04em; }
+    .aprendiz-room-name { margin: 4px 0 0; font-size: 22px; font-weight: 700; color: var(--ink-1); }
+    .aprendiz-sug { padding: 18px 20px; text-align: center; flex: 1; }
+    .aprendiz-glyph svg { width: 72px; height: 72px; display: block; margin: 0 auto; color: var(--gold-leaf); }
+    .aprendiz-sug-name { font-size: 21px; font-weight: 700; margin-top: 14px; color: var(--ink-1); }
+    .aprendiz-sug-type { font-size: 13px; color: var(--ink-3); margin-top: 5px; }
+    .aprendiz-sug-enfoque { font-size: 15px; color: var(--ink-2); margin-top: 14px; line-height: 1.5; border-top: 1px solid var(--line-2); padding-top: 14px; text-align: left; }
+    .aprendiz-actions { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .aprendiz-toma-btn { min-height: 64px; border: 0; border-radius: 14px; background: var(--gold-leaf); color: var(--black); box-shadow: 0 1px 0 var(--gold), 0 6px 16px rgba(176,141,46,.18); font-size: 18px; font-weight: 700; cursor: pointer; }
+    .aprendiz-saltar-btn { height: 46px; border: 1.5px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--ink-2); font-weight: 600; font-size: 14px; cursor: pointer; }
+    .aprendiz-done { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 48px 24px; text-align: center; flex: 1; }
+    .aprendiz-done-icon { font-size: 52px; color: var(--green, #2a9d5c); line-height: 1; }
+    .aprendiz-done h2 { font-size: 20px; font-weight: 700; color: var(--ink-1); }
+    .aprendiz-done p { color: var(--ink-2); font-size: 15px; line-height: 1.5; }
+    .guide-aprendiz-btn { white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -684,6 +704,8 @@ let toastTimer = null;
 let syncStatus = 'ok';
 let guideMode = localStorage.getItem('checklist_guide_' + (TOKEN || 'demo')) === '1';
 let activeSugId = null;
+let aprendizOpen = false;
+let aprendizSpaceIdx = 0;
 let configGuiaOpen = false;
 let guideConfigDraft = null;
 let currentGuideConfig = null;
@@ -906,6 +928,12 @@ function render() {
   }
   if (!laneReady()) {
     app.innerHTML = renderLaneEntry();
+    app.classList.remove('has-thumb');
+    bindNameInput();
+    return;
+  }
+  if (aprendizOpen) {
+    app.innerHTML = `${renderHeader()}<main class="content">${renderAprendiz()}</main>`;
     app.classList.remove('has-thumb');
     bindNameInput();
     return;
@@ -1789,7 +1817,7 @@ function renderMediaCapture() {
   <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
   <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
   ` : `
-  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="gate-salida-btn" onclick="abrirGateSalida()">listo para irte?</button>' : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}</div>
+  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="gate-salida-btn" onclick="abrirGateSalida()">listo para irte?</button>' : ''}${guideMode ? '<button class="guide-aprendiz-btn seg-btn" onclick="iniciarAprendiz()">Aprendiz</button>' : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}</div>
   <div class="cap-cam">
     <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
     <div class="cap-cam-copy">
@@ -1919,6 +1947,135 @@ function avanzarSugerencia(targetId, currentSugId) {
   const after = currentIdx >= 0 ? suggestions.slice(currentIdx + 1) : suggestions;
   const next = after.find((s) => !logic.suggestionProgress(state, state.modoActual, targetId, s.id).done && !guideSkip[s.id]);
   activeSugId = next ? next.id : null;
+}
+
+// ===== Modo aprendiz =====
+function aprendizGetTarget(idx) {
+  const ids = recorridoTargets(state.modoActual);
+  const id = ids[idx];
+  if (!id) return null;
+  return state.espacios.find((e) => e.id === id) || state.droneItems.find((e) => e.id === id) || null;
+}
+
+function aprendizPendingMusts(target) {
+  const sugs = logic.suggestionsForTarget(state, state.modoActual, target) || [];
+  const skip = target.guideSkip || {};
+  return sugs.filter((s) => s.priority === 'must' && !skip[s.id] && !logic.suggestionProgress(state, state.modoActual, target.id, s.id).done);
+}
+
+function iniciarAprendiz() {
+  aprendizOpen = true;
+  const ids = recorridoTargets(state.modoActual);
+  aprendizSpaceIdx = 0;
+  for (let i = 0; i < ids.length; i++) {
+    const t = aprendizGetTarget(i);
+    if (t && aprendizPendingMusts(t).length > 0) { aprendizSpaceIdx = i; break; }
+  }
+  render();
+}
+
+function cerrarAprendiz() {
+  aprendizOpen = false;
+  render();
+}
+
+function aprendizToma(targetId, sugId) {
+  registrarArchivo(targetId, 'take', undefined, { suggestionId: sugId });
+  // registrarArchivo calls render() which calls renderAprendiz(); the scan-forward inside
+  // renderAprendiz handles advancing to next pending must automatically.
+}
+
+function aprendizSaltar(targetId, sugId) {
+  const target = state.espacios.find((e) => e.id === targetId) || state.droneItems.find((e) => e.id === targetId);
+  if (!target) return;
+  if (!target.guideSkip) target.guideSkip = {};
+  target.guideSkip[sugId] = true;
+  scheduleSave();
+  render();
+}
+
+function renderAprendiz() {
+  const mode = state.modoActual;
+  const ids = recorridoTargets(mode);
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+
+  // Scan forward from aprendizSpaceIdx to find first target with pending musts
+  let currentTarget = null;
+  for (let i = aprendizSpaceIdx; i < ids.length; i++) {
+    const t = aprendizGetTarget(i);
+    if (t && aprendizPendingMusts(t).length > 0) {
+      currentTarget = t;
+      aprendizSpaceIdx = i;
+      break;
+    }
+  }
+
+  // Count spaces that have any non-skipped musts (for N in progress)
+  const targetsWithMusts = ids.map((id) => {
+    const t = state.espacios.find((e) => e.id === id) || state.droneItems.find((e) => e.id === id);
+    if (!t) return null;
+    const sugs = logic.suggestionsForTarget(state, mode, t) || [];
+    const skip = t.guideSkip || {};
+    return sugs.some((s) => s.priority === 'must' && !skip[s.id]) ? t : null;
+  }).filter(Boolean);
+  const N = targetsWithMusts.length;
+  const X = currentTarget ? (targetsWithMusts.findIndex((t) => t.id === currentTarget.id) + 1) : N;
+
+  if (!currentTarget) {
+    return `<div class="aprendiz-screen">
+      <div class="aprendiz-header">
+        <button class="icon-btn" onclick="cerrarAprendiz()" aria-label="Salir"><i class="ti ti-x"></i></button>
+        <span class="aprendiz-progress">completado</span>
+      </div>
+      <div class="aprendiz-done">
+        <div class="aprendiz-done-icon"><i class="ti ti-circle-check-filled"></i></div>
+        <h2>Listo, cobertura clave completa</h2>
+        <p>Todas las tomas clave han sido registradas o descartadas.</p>
+        <button class="btn" onclick="cerrarAprendiz()">Salir del modo aprendiz</button>
+      </div>
+    </div>`;
+  }
+
+  const allMusts = (() => {
+    const sugs = logic.suggestionsForTarget(state, mode, currentTarget) || [];
+    const skip = currentTarget.guideSkip || {};
+    return sugs.filter((s) => s.priority === 'must' && !skip[s.id]);
+  })();
+  const pendingMusts = allMusts.filter((s) => !logic.suggestionProgress(state, mode, currentTarget.id, s.id).done);
+  const sug = pendingMusts[0];
+  const Z = allMusts.length;
+  const Y = (allMusts.length - pendingMusts.length) + 1;
+
+  if (!sug) return `<div class="aprendiz-screen"></div>`;
+
+  const typeLabel = (shotTypes[sug.shotType] || {}).label || sug.shotType || '';
+  const movLabel = (movements[sug.movement] || {}).label || sug.movement || '';
+  const piso = mode === 'drone' ? 'Drone' : (currentTarget.piso || '');
+
+  return `<div class="aprendiz-screen">
+    <div class="aprendiz-header">
+      <button class="icon-btn" onclick="cerrarAprendiz()" aria-label="Salir"><i class="ti ti-x"></i></button>
+      <span class="aprendiz-progress">Cuarto ${X} de ${N} · clave ${Y} de ${Z}</span>
+    </div>
+    <div class="aprendiz-room">
+      ${piso ? `<span class="aprendiz-piso">${esc(piso)}</span>` : ''}
+      <h2 class="aprendiz-room-name">${esc(currentTarget.nombre)}</h2>
+    </div>
+    <div class="aprendiz-sug">
+      <div class="aprendiz-glyph">${movementGlyph(sug.movement)}</div>
+      <div class="aprendiz-sug-name">${esc(sug.nombre)}</div>
+      <div class="aprendiz-sug-type">${esc(typeLabel)} · ${esc(movLabel)}</div>
+      <div class="aprendiz-sug-enfoque">${esc(sug.enfoque)}</div>
+    </div>
+    <div class="aprendiz-actions">
+      <button class="aprendiz-toma-btn" onclick="aprendizToma('${esc(currentTarget.id)}','${esc(sug.id)}')">
+        <span class="cap-toma-lbl">Toma</span>
+        <span class="cap-toma-sub">${esc(sug.nombre)}</span>
+      </button>
+      <button class="aprendiz-saltar-btn" onclick="aprendizSaltar('${esc(currentTarget.id)}','${esc(sug.id)}')">Saltar</button>
+    </div>
+  </div>`;
 }
 
 function movementGlyph(movId) {
