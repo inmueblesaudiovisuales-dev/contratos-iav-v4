@@ -600,6 +600,13 @@ test('F1: SHOT_TYPES tiene todos los campos requeridos', () => {
   });
 });
 
+test('R106: cada SHOT_TYPES tiene campo ejemplo no vacio', () => {
+  const st = logic.getShotTypes();
+  Object.entries(st).forEach(([k, v]) => {
+    assert.ok(typeof v.ejemplo === 'string' && v.ejemplo.length > 0, 'ejemplo vacio en shotType: ' + k);
+  });
+});
+
 test('F1: MOVEMENTS tiene todos los campos requeridos', () => {
   const mv = logic.getMovements();
   assert.ok(typeof mv === 'object' && mv !== null);

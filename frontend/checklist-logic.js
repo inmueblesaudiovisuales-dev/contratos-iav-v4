@@ -170,18 +170,18 @@
   // ─── Biblioteca de tomas guiadas (F1) ────────────────────────────────────────
 
   const SHOT_TYPES = Object.freeze({
-    wide:         { label: 'Plano abierto',             hint: 'Encuadre amplio del espacio completo.' },
-    general:      { label: 'Plano general',             hint: 'Cuarto entero con distribucion y flujo.' },
-    medio:        { label: 'Plano medio',               hint: 'Zona o feature clave (mesa, isla, sillon).' },
-    detalle:      { label: 'Detalle/inserto',           hint: 'Aislar un elemento: grifo, textura, herraje.' },
-    transicion:   { label: 'Transicion/puente',         hint: 'Toma puente para conectar dos espacios.' },
-    pov:          { label: 'Punto de vista/recorrido',  hint: 'Camara a la vista avanzando como el comprador.' },
-    contrapicado: { label: 'Contrapicado para amplitud',hint: 'Camara baja inclinada hacia arriba.' },
-    ventana:      { label: 'Plano de ventana/vista',    hint: 'Prioriza la ventana y la vista exterior.' },
-    reveal:       { label: 'Revelacion',                hint: 'El espacio se descubre progresivamente.' },
-    simetrica:    { label: 'Toma simetrica',            hint: 'Composicion centrada sobre el eje del cuarto.' },
-    textura:      { label: 'Acercamiento de textura',   hint: 'Macro de material: piedra, madera, tela.' },
-    exterior:     { label: 'Exterior/fachada',          hint: 'Vistas exteriores, fachada y entorno.' },
+    wide:         { label: 'Plano abierto',             hint: 'Encuadre amplio del espacio completo.',         ejemplo: 'de pared a pared, camara baja ~1.2m, verticales rectas' },
+    general:      { label: 'Plano general',             hint: 'Cuarto entero con distribucion y flujo.',       ejemplo: 'cuarto completo en el frame incluyendo piso y techo; muestra el layout' },
+    medio:        { label: 'Plano medio',               hint: 'Zona o feature clave (mesa, isla, sillon).',    ejemplo: 'feature en el centro del frame; orbita lentamente o avanza hacia el' },
+    detalle:      { label: 'Detalle/inserto',           hint: 'Aislar un elemento: grifo, textura, herraje.',  ejemplo: 'acercate hasta que el objeto ocupe 80% del frame; movimiento minimo' },
+    transicion:   { label: 'Transicion/puente',         hint: 'Toma puente para conectar dos espacios.',       ejemplo: 'toma continua cruzando el umbral o el pasillo; larga para el editor' },
+    pov:          { label: 'Punto de vista/recorrido',  hint: 'Camara a la vista avanzando como el comprador.',ejemplo: 'ninja walk desde la puerta al centro del cuarto; camara a la altura de la vista' },
+    contrapicado: { label: 'Contrapicado para amplitud',hint: 'Camara baja inclinada hacia arriba.',           ejemplo: 'camara al ras del piso o ~30cm apuntando al techo, vigas o candil' },
+    ventana:      { label: 'Plano de ventana/vista',    hint: 'Prioriza la ventana y la vista exterior.',      ejemplo: 'ventana en el encuadre; expone para el exterior, no para el interior' },
+    reveal:       { label: 'Revelacion',                hint: 'El espacio se descubre progresivamente.',       ejemplo: 'empieza detras de la puerta o mueble; cruza el umbral sin cortar' },
+    simetrica:    { label: 'Toma simetrica',            hint: 'Composicion centrada sobre el eje del cuarto.',ejemplo: 'centra el eje del pasillo o la cocina; lineas arquitectonicas paralelas' },
+    textura:      { label: 'Acercamiento de textura',   hint: 'Macro de material: piedra, madera, tela.',     ejemplo: 'macro del material hasta que llene todo el frame; desplazamiento muy lento' },
+    exterior:     { label: 'Exterior/fachada',          hint: 'Vistas exteriores, fachada y entorno.',        ejemplo: 'propiedad completa desde altura media; cielo solo en el tercio superior' },
   });
 
   const MOVEMENTS = Object.freeze({

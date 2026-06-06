@@ -575,6 +575,7 @@
     .guide-mov-glyph { flex: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
     .guide-mov-label { font-size: 12px; font-weight: 600; color: var(--ink-1); }
     .guide-mov-hint { font-size: 11px; color: var(--ink-2); margin-top: 2px; line-height: 1.35; }
+    .guide-mov-ejemplo { font-size: 11px; color: var(--ink-3); margin-top: 4px; font-style: italic; line-height: 1.35; }
     @keyframes mov-slide-h { 0%,100% { transform: translateX(-4px); } 50% { transform: translateX(4px); } }
     @keyframes mov-slide-v { 0%,100% { transform: translateY(-4px); } 50% { transform: translateY(4px); } }
     @keyframes mov-grow { 0%,100% { transform: scale(.72); } 50% { transform: scale(1); } }
@@ -655,6 +656,7 @@
     .aprendiz-sug-name { font-size: 21px; font-weight: 700; margin-top: 14px; color: var(--ink-1); }
     .aprendiz-sug-type { font-size: 13px; color: var(--ink-3); margin-top: 5px; }
     .aprendiz-sug-enfoque { font-size: 15px; color: var(--ink-2); margin-top: 14px; line-height: 1.5; border-top: 1px solid var(--line-2); padding-top: 14px; text-align: left; }
+    .aprendiz-sug-ejemplo { font-size: 13px; color: var(--ink-3); margin-top: 10px; font-style: italic; line-height: 1.45; text-align: left; }
     .aprendiz-actions { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
     .aprendiz-toma-btn { min-height: 64px; border: 0; border-radius: 14px; background: var(--gold-leaf); color: var(--black); box-shadow: 0 1px 0 var(--gold), 0 6px 16px rgba(176,141,46,.18); font-size: 18px; font-weight: 700; cursor: pointer; }
     .aprendiz-saltar-btn { height: 46px; border: 1.5px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--ink-2); font-weight: 600; font-size: 14px; cursor: pointer; }
@@ -2051,6 +2053,7 @@ function renderAprendiz() {
 
   const typeLabel = (shotTypes[sug.shotType] || {}).label || sug.shotType || '';
   const movLabel = (movements[sug.movement] || {}).label || sug.movement || '';
+  const shotDef = shotTypes[sug.shotType] || {};
   const piso = mode === 'drone' ? 'Drone' : (currentTarget.piso || '');
 
   return `<div class="aprendiz-screen">
@@ -2067,6 +2070,7 @@ function renderAprendiz() {
       <div class="aprendiz-sug-name">${esc(sug.nombre)}</div>
       <div class="aprendiz-sug-type">${esc(typeLabel)} · ${esc(movLabel)}</div>
       <div class="aprendiz-sug-enfoque">${esc(sug.enfoque)}</div>
+      ${shotDef.ejemplo ? `<div class="aprendiz-sug-ejemplo">${esc(shotDef.ejemplo)}</div>` : ''}
     </div>
     <div class="aprendiz-actions">
       <button class="aprendiz-toma-btn" onclick="aprendizToma('${esc(currentTarget.id)}','${esc(sug.id)}')">
@@ -2122,7 +2126,9 @@ function renderGuideList(target) {
       stateHtml = `<span class="guide-state-pending">pendiente</span>`;
     }
     const movDef = movements[s.movement] || {};
+    const shotDef = shotTypes[s.shotType] || {};
     const movHint = movDef.hint ? `<div class="guide-mov-hint">${esc(movDef.hint)}</div>` : '';
+    const shotEjemplo = shotDef.ejemplo ? `<div class="guide-mov-ejemplo">${esc(shotDef.ejemplo)}</div>` : '';
     return `<div class="guide-row-wrap">
       <button class="guide-row${isActive ? ' active' : ''}" onclick="seleccionarSugerencia('${esc(s.id)}')">
         <div class="guide-row-body">
@@ -2142,6 +2148,7 @@ function renderGuideList(target) {
           <div class="guide-mov-info">
             <div class="guide-mov-label">${esc(movLabel)}</div>
             ${movHint}
+            ${shotEjemplo}
           </div>
         </div>
       </details>
