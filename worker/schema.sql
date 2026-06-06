@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS contratos (
   tiene_recorrido INTEGER DEFAULT 1,
   entrega_revocada TEXT,
   entrega_express INTEGER DEFAULT 0,
+  origen TEXT DEFAULT 'admin',                  -- legacy: presente en prod, sin uso en el worker actual
+  penalizacion_reagendamiento REAL DEFAULT 0,   -- legacy: presente en prod, sin uso en el worker actual
   cliente_id TEXT DEFAULT ''
 );
 
@@ -74,13 +76,17 @@ CREATE TABLE IF NOT EXISTS propiedades (
   perimetro_url TEXT,
   datos_especificos TEXT DEFAULT '{}',
   logo_url TEXT,
+  logos_json TEXT DEFAULT '',
   carpeta_control_id TEXT,
   calendar_event_id TEXT,
   carpeta_entregables_id TEXT,
   nota_interna TEXT,
   formato_video TEXT DEFAULT 'vertical_nativo',
-  ocultar_formato_video INTEGER DEFAULT 1,
+  ocultar_formato_video INTEGER DEFAULT 0,
   requiere_acceso INTEGER DEFAULT 0,
+  cajones_estacionamiento TEXT,                 -- legacy: presente en prod, sin uso en el worker actual
+  fotos_listas INTEGER DEFAULT 0,               -- legacy: presente en prod, sin uso en el worker actual
+  video_listo INTEGER DEFAULT 0,                -- legacy: presente en prod (el estatus real vive en contratos.video_listo)
   PRIMARY KEY (contrato_token, num_propiedad)
 );
 
@@ -128,7 +134,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 CREATE TABLE IF NOT EXISTS trabajos (
   id TEXT PRIMARY KEY,
   cliente_id TEXT NOT NULL,
-  estatus TEXT NOT NULL DEFAULT 'nuevo',
+  estatus TEXT DEFAULT 'nuevo',
   interes TEXT DEFAULT '',
   paquetes_cotizados_json TEXT DEFAULT '[]',
   portafolio_links_json TEXT DEFAULT '[]',
@@ -168,6 +174,19 @@ CREATE TABLE IF NOT EXISTS revisiones_video (
   minuto_segundo TEXT,
   descripcion_ajuste TEXT NOT NULL,
   fecha TEXT NOT NULL
+);
+
+-- legacy: presente en prod, sin uso en el worker actual (bot de WhatsApp)
+CREATE TABLE IF NOT EXISTS whatsapp_sesiones (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  telefono TEXT NOT NULL UNIQUE,
+  canal TEXT DEFAULT 'whatsapp',
+  mensajes_json TEXT DEFAULT '[]',
+  resumen_historico TEXT,
+  modo_manual INTEGER DEFAULT 0,
+  agente_asignado TEXT,
+  estatus_chat TEXT DEFAULT 'activo',
+  ultima_actualizacion TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_contratos_cliente ON contratos(cliente_id);

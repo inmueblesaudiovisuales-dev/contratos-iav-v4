@@ -167,6 +167,7 @@ export async function handlePortal(request, env, ctx, action) {
         perimetroUrl: p.perimetro_url,
         datosEspecificos: JSON.parse(p.datos_especificos || '{}'),
         logoUrl: p.logo_url,
+        logosUrls: (() => { try { return JSON.parse(p.logos_json || '[]'); } catch (e) { return []; } })(),
         carpetaControlId: p.carpeta_control_id,
         formatoVideo: p.formato_video || 'vertical_nativo',
         requiereAcceso: p.requiere_acceso ? 1 : 0,
@@ -260,15 +261,18 @@ export async function handlePortal(request, env, ctx, action) {
     ];
     if (propsCliente?.length) {
       for (const p of propsCliente) {
+        // logos: array de hasta 3 versiones. logo_url = principal (primera) por compatibilidad.
+        const logosArr = Array.isArray(p.logosUrls) ? p.logosUrls.filter(Boolean).slice(0, 3) : [];
+        if (!logosArr.length && p.logoUrl) logosArr.push(p.logoUrl);
         statements.push({
           sql: `UPDATE propiedades SET direccion=?, link_maps=?, orientacion=?, sobre_la_propiedad=?,
-                referencias=?, fachada_url=?, perimetro_url=?, datos_especificos=?, logo_url=?,
+                referencias=?, fachada_url=?, perimetro_url=?, datos_especificos=?, logo_url=?, logos_json=?,
                 formato_video=?, requiere_acceso=?
                 WHERE contrato_token=? AND num_propiedad=?
                   AND EXISTS (SELECT 1 FROM contratos WHERE token=? AND fecha_firma=?)`,
           params: [p.direccion || '', limpiarLinkMaps(p.linkMaps || ''), p.orientacion || '', p.sobreLaPropiedad || '',
                    p.referencias || '', p.fachadaUrl || '', p.perimetroUrl || '',
-                   JSON.stringify(p.datosEspecificos || {}), p.logoUrl || '',
+                   JSON.stringify(p.datosEspecificos || {}), logosArr[0] || '', JSON.stringify(logosArr),
                    p.formatoVideo || 'vertical_nativo', p.requiereAcceso || 0,
                    token, p.numPropiedad, token, firmaNow]
         });
@@ -277,10 +281,14 @@ export async function handlePortal(request, env, ctx, action) {
     const results = await batch(db, statements);
     if (!results[0]?.meta?.changes) return err('El contrato ya fue firmado', 409);
 
-    // Persistir logo en clientes para que el próximo contrato lo reutilice
-    const logoUrlFirma = propsCliente?.find(p => p.logoUrl)?.logoUrl || '';
-    if (logoUrlFirma && contrato.cliente_id) {
-      await run(db, 'UPDATE clientes SET logo_url = ? WHERE id = ?', [logoUrlFirma, contrato.cliente_id]);
+    // Persistir todas las versiones de logo en clientes para que el próximo contrato las reutilice
+    const propConLogos = propsCliente?.find(p => (Array.isArray(p.logosUrls) && p.logosUrls.filter(Boolean).length) || p.logoUrl);
+    const logosClienteUrls = propConLogos
+      ? (Array.isArray(propConLogos.logosUrls) ? propConLogos.logosUrls.filter(Boolean).slice(0, 3) : [])
+      : [];
+    if (!logosClienteUrls.length && propConLogos?.logoUrl) logosClienteUrls.push(propConLogos.logoUrl);
+    if (logosClienteUrls.length && contrato.cliente_id) {
+      await run(db, 'UPDATE clientes SET logo_url = ? WHERE id = ?', [logosClienteUrls[0], contrato.cliente_id]);
     }
 
     // Sync estatus to trabajos and fire Reservado calendar event if needed
@@ -334,7 +342,7 @@ export async function handlePortal(request, env, ctx, action) {
       linkPortal: `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`,
       propiedades: propiedadesFirma.map(p => ({ ...p, paquete: pkMap[p.paquete] || p.paquete })),
       entregables: entregablesAdapter,
-      logoClienteUrl: logoUrlFirma
+      logosClienteUrls
     });
 
     return ok({ ok: true, estatus: nuevoEstatus, total: precioTotal, anticipo, folio: contrato.folio });

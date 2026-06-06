@@ -175,7 +175,7 @@ export async function handleContratos(request, env, ctx, action) {
                  p.direccion || '', p.linkMaps || '', p.orientacion || '',
                  p.sobreLaPropiedad || '', p.referencias || '', p.fachadaUrl || '',
                  p.perimetroUrl || '', p.logoUrl || '', JSON.stringify(p.datosEspecificos || {}),
-                 p.formatoVideo || 'vertical_nativo', p.ocultarFormatoVideo ?? 1]
+                 p.formatoVideo || 'vertical_nativo', p.ocultarFormatoVideo ?? 0]
       })),
 	      {
 	        sql: 'INSERT INTO tokens (token, contrato_id, tipo, expira, usado) VALUES (?, ?, ?, ?, 0)',

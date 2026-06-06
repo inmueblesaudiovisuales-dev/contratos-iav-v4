@@ -4,7 +4,9 @@
 // Ultima modificacion: 2026-06-05 16:35:22 CST (R90) — nueva función registrarUsoTomas:
 //   anexa al Sheet maestro (tab "UsoTomas" en SHEETS_BACKUP_ID) una fila por toma con su
 //   archivo y si se usó en el video final; idempotente por folio. Banco de datos de aprendizaje.
-//   Registrada en el router doPost. Previo R63: procesarFirma clona logo del cliente a Control Interno.
+//   Registrada en el router doPost.
+//   Previo R64 (main): procesarFirma clona hasta 3 versiones de logo (body.logosClienteUrls[])
+//   a Control Interno con sufijo -v1/-v2/-v3; compatible con body.logoClienteUrl único de R63.
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -134,14 +136,18 @@ function procesarFirma(body) {
     var carpetaEntregablesId = carpetaEntregables.getId();
     var carpetaUrl = carpetaControl.getUrl();
 
-    // Clonar logo del cliente a la carpeta Control Interno
-    if (body.logoClienteUrl) {
+    // Clonar logo(s) del cliente a la carpeta Control Interno (hasta 3 versiones)
+    var logosAClonar = body.logosClienteUrls || (body.logoClienteUrl ? [body.logoClienteUrl] : []);
+    for (var li = 0; li < logosAClonar.length; li++) {
       try {
-        var logoMatch = body.logoClienteUrl.match(/\/d\/([^\/\?&]+)/) || body.logoClienteUrl.match(/[?&]id=([^&]+)/);
+        var logoUrlClon = logosAClonar[li];
+        if (!logoUrlClon) continue;
+        var logoMatch = logoUrlClon.match(/\/d\/([^\/\?&]+)/) || logoUrlClon.match(/[?&]id=([^&]+)/);
         if (logoMatch && logoMatch[1]) {
-          DriveApp.getFileById(logoMatch[1]).makeCopy('logo-' + (contrato.nombre_cliente || 'cliente'), carpetaControl);
+          var sufijo = logosAClonar.length > 1 ? '-v' + (li + 1) : '';
+          DriveApp.getFileById(logoMatch[1]).makeCopy('logo-' + (contrato.nombre_cliente || 'cliente') + sufijo, carpetaControl);
         }
-      } catch (eLogo) { console.error('procesarFirma: error clonando logo:', eLogo.message); }
+      } catch (eLogo) { console.error('procesarFirma: error clonando logo ' + (li + 1) + ':', eLogo.message); }
     }
 
     // Guardar en PropertiesService y notificar al Worker

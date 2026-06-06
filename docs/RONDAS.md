@@ -53,6 +53,52 @@
 
 **Tests:** 88 pruebas en `frontend/checklist-logic.test.js` al cierre de R79, todas en verde.
 
+**Nota de numeración:** la rama del modo guiado usó R64–R110 en paralelo a `main`, que también usó R64–R66 (logos/schema/preview, abajo). Los números coinciden pero refieren a cambios distintos; cada entrada aclara su alcance.
+
+---
+
+### Ronda 66 — Preview visible de logos en portal (2026-06-05 11:10:54 CST)
+
+**Objetivo:** las miniaturas de logo no se veían: el `<img>` apuntaba al URL `/file/d/.../view` de Drive (que no renderiza por hotlink), el `onerror` ocultaba la imagen y solo quedaban los botones `×` encimados. Fix en `frontend/portal.html`:
+
+| ID | Cambio |
+|----|--------|
+| R66-01 | `logoThumbSrc(slot, url)`: usa el endpoint `https://drive.google.com/thumbnail?id=ID&sz=w240` (sí renderiza para archivos compartidos ANYONE_WITH_LINK, que es como se suben). |
+| R66-02 | Preview instantáneo: al subir un logo se guarda el data URL local (`logoPreviews`) y se muestra de inmediato, sin esperar a Drive. Se limpia al quitar la versión. |
+| R66-03 | Caja de miniatura de tamaño fijo (96×64) que no colapsa si la imagen falla (muestra un placeholder "Logo"); el botón `×` queda anclado a la esquina y ya no se encima. |
+
+---
+
+### Ronda 65 — Reconciliar schema.sql con producción (2026-06-05 10:56:59 CST)
+
+**Objetivo:** `worker/schema.sql` estaba desfasado del D1 real. Se volcó el schema de producción (`SELECT sql FROM sqlite_master`) y se compararon todas las tablas. Se agregaron a `schema.sql` las columnas y la tabla que existían en prod pero no estaban declaradas (todas legacy de features abandonados, sin uso en el worker actual), para que el archivo refleje la realidad y un D1 nuevo nazca idéntico a producción. **No toca producción** (schema.sql solo se usa para BDs nuevas).
+
+| ID | Tabla / objeto | Cambio en `schema.sql` |
+|----|----------------|------------------------|
+| R65-01 | `contratos` | Agregadas `origen TEXT DEFAULT 'admin'` y `penalizacion_reagendamiento REAL DEFAULT 0` (legacy). |
+| R65-02 | `propiedades` | Agregadas `cajones_estacionamiento TEXT`, `fotos_listas INTEGER DEFAULT 0`, `video_listo INTEGER DEFAULT 0` (legacy). Corregido default de `ocultar_formato_video` a `0` (prod), antes decía `1`. |
+| R65-03 | `whatsapp_sesiones` | Tabla completa agregada (legacy, bot de WhatsApp; el worker no la toca). |
+| R65-04 | `trabajos` | `estatus` pasa de `TEXT NOT NULL DEFAULT 'nuevo'` a `TEXT DEFAULT 'nuevo'` para igualar prod (cosmético). |
+
+**Nota:** las columnas/tabla legacy se marcaron con comentario `-- legacy` en el archivo. No se eliminan de producción (no hay necesidad y borrar columnas en SQLite/D1 es costoso). Sin impacto en deploy.
+
+---
+
+### Ronda 64 — Hasta 3 versiones de logo (2026-06-05 10:39:26 CST)
+
+**Objetivo:** el cliente puede subir hasta 3 versiones de su logo en el portal. La UI no pone 3 campos: tras subir el primero aparece un enlace discreto "+ Agregar otra versión" (desaparece al llegar a 3). Cada versión queda guardada en BD y se clona a Drive. `logo_url` sigue siendo el principal (primera versión) por compatibilidad; la nueva columna `logos_json` guarda el array completo.
+
+| ID | Archivo | Cambio |
+|----|---------|--------|
+| R64-01 | `worker/migrations/r64-logos-multiples.sql` | Nueva columna `propiedades.logos_json TEXT DEFAULT ''` (aditiva). **Aplicar en D1 remoto.** |
+| R64-02 | `worker/schema.sql` | `CREATE TABLE propiedades` incluye `logos_json` (para BDs nuevas). |
+| R64-03 | `worker/src/routes/portal.js` | `obtenerPortal`: devuelve `logosUrls` (parseo de `logos_json`) por propiedad. `firmaCliente`: guarda el array en `logos_json` (máx 3), `logo_url`=primera, y persiste la primera en `clientes.logo_url`. Pasa `logosClienteUrls[]` al adapter. |
+| R64-04 | `adapter/AdapterScript4_v1.js` | `procesarFirma`: clona cada URL de `body.logosClienteUrls[]` a Control Interno (sufijo `-v1/-v2/-v3` si hay varias). Compatible con `logoClienteUrl` único de R63. **Requiere despliegue manual en script.google.com.** |
+| R64-05 | `frontend/portal.html` | Sección de logo auto-renderizada (`renderLogoSection`): thumbnails de las versiones subidas con botón quitar (×), y enlace "+ Agregar otra versión" mientras haya < 3. Slots `logo-0..logo-2`. El logo registrado se auto-usa como antes. |
+
+**Adapter:** R64-04 toca `procesarFirma`. **Requiere que Bruno pegue el archivo en script.google.com y publique una versión nueva** (el push a `main` NO lo despliega).
+**D1:** R64-01 requiere correr la migración en producción (ver comando abajo).
+
 ---
 
 ### Ronda 63 — Logo persistente por cliente (2026-06-05 10:03:36 CST)

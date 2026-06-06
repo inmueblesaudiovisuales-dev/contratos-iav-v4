@@ -180,6 +180,54 @@
     .fmt-nota { font-size: 11px; line-height: 1.45; }
     .fmt-precio { padding-top: 0; font-size: 14px; }
     .fmt-precio.placeholder { visibility: hidden; }
+    .fmt-sel { display: none; }
+  }
+  /* Selector de formato — mejoras visuales mobile */
+  .fmt-precio.placeholder { display: none; }
+  .formato-btn { position: relative; }
+  .formato-btn:active { transform: scale(0.985); }
+  .formato-btn.activo {
+    border-color: var(--gold-leaf);
+    border-left: 3px solid var(--gold-leaf);
+    padding-left: 14px;
+    background: var(--gold-dim);
+    box-shadow: 0 4px 18px rgba(176,141,46,0.14);
+  }
+  .fmt-sel {
+    position: absolute; top: 13px; right: 13px;
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    background: var(--white); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.25s, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .formato-btn.activo .fmt-sel {
+    background: var(--gold-leaf); border-color: var(--gold-leaf);
+    box-shadow: 0 0 0 4px var(--gold-dim);
+    transform: scale(1.12);
+  }
+  .fmt-sel::after {
+    content: '';
+    width: 4px; height: 8px;
+    border-right: 2px solid var(--charcoal);
+    border-bottom: 2px solid var(--charcoal);
+    transform: rotate(45deg) translateY(-1px) scale(0);
+    transition: transform 0.15s 0.06s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .formato-btn.activo .fmt-sel::after { transform: rotate(45deg) translateY(-1px) scale(1); }
+  .fmt-letterbox {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 6px; font-size: 10.5px; color: var(--concrete); line-height: 1.45;
+  }
+  .fmt-letterbox-icon {
+    flex-shrink: 0; width: 24px; height: 15px;
+    border: 1.5px solid currentColor; border-radius: 2px;
+    display: flex; flex-direction: column; overflow: hidden; opacity: 0.7;
+  }
+  .fmt-letterbox-bar { height: 3px; background: currentColor; }
+  .fmt-letterbox-mid { flex: 1; background: transparent; }
+  @media (max-width: 1023px) {
+    .formato-btn { padding-right: 42px; }
   }
   /* Acceso/caseta */
   .acceso-grid { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -943,7 +991,7 @@ function renderEtapa1() {
       '<div class="total-fila"><span>Precio base</span><span id="tb-base">' + formatMXN(precioBase) + '</span></div>' +
       '<div id="tb-addons-list"></div>' +
       '<div class="total-fila principal separador"><span>Total</span><span id="tb-total">' + formatMXN(precioBase) + '</span></div>' +
-      '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' +
+      (anticipo0 > 0 ? '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' : '') +
     '</div>';
   } else if (props.length > 1) {
     // Multi-prop: keep static total/anticipo lines (add-ons card is separate)
@@ -951,12 +999,12 @@ function renderEtapa1() {
       html += '<div class="resumen-fila"><span class="resumen-label">Precio base</span><span class="resumen-valor" id="txt-precio-base">' + esc(formatMXN(precioBase)) + '</span></div>';
     }
     html += '<div class="resumen-fila"><span class="resumen-label">Total</span><span class="resumen-valor gold" id="txt-total">' + esc(formatMXN(precioBase)) + '</span></div>';
-    html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label" id="txt-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span class="resumen-valor" id="txt-anticipo" style="color:var(--gold);font-size:15px">' + esc(formatMXN(anticipo0)) + '</span></div>';
+    if (anticipo0 > 0) html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label" id="txt-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span class="resumen-valor" id="txt-anticipo" style="color:var(--gold);font-size:15px">' + esc(formatMXN(anticipo0)) + '</span></div>';
   }
   // 1-prop without add-ons or multi-prop with no add-ons: always show total/anticipo
   if (props.length === 1 && addonsGlobal.length === 0) {
     html += '<div class="resumen-fila"><span class="resumen-label">Total</span><span class="resumen-valor gold" id="txt-total">' + esc(formatMXN(precioBase)) + '</span></div>';
-    html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label" id="txt-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span class="resumen-valor" id="txt-anticipo" style="color:var(--gold);font-size:15px">' + esc(formatMXN(anticipo0)) + '</span></div>';
+    if (anticipo0 > 0) html += '<div class="resumen-fila" style="border-bottom:none"><span class="resumen-label" id="txt-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span class="resumen-valor" id="txt-anticipo" style="color:var(--gold);font-size:15px">' + esc(formatMXN(anticipo0)) + '</span></div>';
   }
   if (d.notasContrato) {
     html += '<div class="resumen-fila" style="border-bottom:none;margin-top:8px"><span class="resumen-label">Notas</span><span class="resumen-valor" style="font-size:12px;color:var(--concrete);text-align:right;white-space:pre-wrap;line-height:1.5">' + esc(d.notasContrato) + '</span></div>';
@@ -1003,7 +1051,7 @@ function renderEtapa1() {
       '<div class="total-fila"><span>Precio base</span><span id="tb-base">' + formatMXN(precioBase) + '</span></div>' +
       '<div id="tb-addons-list"></div>' +
       '<div class="total-fila principal separador"><span>Total</span><span id="tb-total">' + formatMXN(precioBase) + '</span></div>' +
-      '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' +
+      (anticipo0 > 0 ? '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' : '') +
     '</div>';
     html += '</details></div>';
   } else if (addonsPorProp.length > 0) {
@@ -1012,7 +1060,7 @@ function renderEtapa1() {
       '<div class="total-fila"><span>Precio base</span><span id="tb-base">' + formatMXN(precioBase) + '</span></div>' +
       '<div id="tb-addons-list"></div>' +
       '<div class="total-fila principal separador"><span>Total</span><span id="tb-total">' + formatMXN(precioBase) + '</span></div>' +
-      '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' +
+      (anticipo0 > 0 ? '<div class="total-fila anticipo"><span id="tb-anticipo-label">Anticipo (' + pctAnticipo0 + '%)</span><span id="tb-anticipo">' + formatMXN(anticipo0) + '</span></div>' : '') +
     '</div></div>';
   }
   } // end if props.length > 1
@@ -1066,15 +1114,14 @@ function renderEtapa1() {
 
         // Opción 1 — Solo redes sociales
         html += '<div class="fmt-wrap">' +
-          '<span class="fmt-badge-over">Recomendado</span>' +
           '<div class="formato-btn' + (fmtActual === 'vertical_nativo' ? ' activo' : '') + '" id="fmt-v-' + n + '" data-prop="' + n + '" data-valor="vertical_nativo">' +
             '<div class="fmt-mockup-zone"><div class="fmt-phone"><div class="fmt-fill"></div></div></div>' +
             '<div class="fmt-text">' +
               '<div class="fmt-desc fmt-canal">Instagram · TikTok · Reels · Shorts</div>' +
-              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en vertical</div>' +
-              '<div class="fmt-desc fmt-nota" style="margin-top:3px">No incluye versión horizontal</div>' +
-              '<div class="fmt-precio placeholder">$0</div>' +
+              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en vertical nativo</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">Sin franjas negras · máxima calidad en redes</div>' +
             '</div>' +
+            '<div class="fmt-sel"></div>' +
           '</div>' +
         '</div>';
 
@@ -1085,24 +1132,12 @@ function renderEtapa1() {
             '<div class="fmt-text">' +
               '<div class="fmt-desc fmt-canal">YouTube · Sitio web</div>' +
               '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en horizontal</div>' +
-              '<div class="fmt-desc fmt-nota" style="margin-top:3px">En redes se verá con franjas negras</div>' +
-              '<div class="fmt-precio placeholder">$0</div>' +
+              '<div class="fmt-desc fmt-nota" style="margin-top:3px">En Instagram y TikTok se verá con franjas negras arriba y abajo</div>' +
             '</div>' +
+            '<div class="fmt-sel"></div>' +
           '</div>' +
         '</div>';
 
-        // Opción 3 — Los dos formatos
-        html += '<div class="fmt-wrap">' +
-          '<div class="formato-btn' + (fmtActual === 'doble_nativo' ? ' activo' : '') + '" id="fmt-d-' + n + '" data-prop="' + n + '" data-valor="doble_nativo">' +
-            '<div class="fmt-mockup-zone"><div class="fmt-phone"><div class="fmt-fill"></div></div><div class="fmt-screen"><div class="fmt-screen-fill"></div></div></div>' +
-            '<div class="fmt-text">' +
-              '<div class="fmt-desc fmt-canal">Redes + web · Calidad nativa en ambos</div>' +
-              '<div class="fmt-desc fmt-grabado" style="margin-top:3px">Grabado en ambos formatos</div>' +
-              '<div class="fmt-desc fmt-nota" style="margin-top:3px">Se graba dos veces en la misma visita</div>' +
-              '<div class="fmt-precio">+$1,500</div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
 
         html += '</div></div>';
       }
@@ -1162,29 +1197,7 @@ function renderEtapa1() {
   // --- Archivos del proyecto ---
   html += '<div class="card"><p class="section-title">Archivos del proyecto</p>';
   html += '<p class="upload-hint" style="margin-bottom:16px">Opcional. Puedes subir estos archivos ahora o enviárnoslos por WhatsApp después. No bloquean la firma.</p>';
-  if (portalData.logoClienteUrl) {
-    html += '<div class="upload-field">' +
-      '<span class="upload-label">Logo de la agencia o cliente</span>' +
-      '<p class="upload-hint">Ya tenemos tu logo de un trabajo anterior. Lo usaremos automáticamente.</p>' +
-      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">' +
-        '<img src="' + portalData.logoClienteUrl + '" alt="Logo" ' +
-          'style="height:48px;max-width:110px;object-fit:contain;border:1px solid var(--border,#e0ddd8);border-radius:6px;padding:4px;background:#fff" ' +
-          'onerror="this.style.display=\'none\'">' +
-        '<span style="font-size:12px;color:#3a7a3a;font-weight:600">Logo registrado</span>' +
-      '</div>' +
-      '<div class="upload-row">' +
-        '<label for="upload-input-logo-0" class="btn-upload" style="font-size:11px">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
-          'Subir otro' +
-        '</label>' +
-        '<input type="file" id="upload-input-logo-0" accept="image/*" style="display:none" ' +
-          'onchange="subirArchivoPortal(\'logo\',0,this)">' +
-        '<span class="upload-status" id="upload-status-logo-0"></span>' +
-      '</div>' +
-    '</div>';
-  } else {
-    html += renderUploadField('logo', 0, 'Logo de la agencia o cliente', 'Opcional. PNG con fondo transparente y buena resolución.');
-  }
+  html += '<div id="logo-section"></div>';
   html += '</div>';
 
   // --- Firma ---
@@ -1237,17 +1250,83 @@ function renderEtapa1() {
   document.getElementById('btn-limpiar').addEventListener('click', limpiarFirma);
   document.getElementById('btn-firmar').addEventListener('click', validarYFirmar);
 
-  // Auto-usar logo existente (DB o Drive) y restaurar status tras re-render
-  var logoRef = portalData.logoClienteUrl || portalData.logoPrecargadoUrl || '';
-  if (logoRef) {
-    if (!archivosSubidos['logo-0']) archivosSubidos['logo-0'] = logoRef;
-    if (archivosSubidos['logo-0'] === logoRef) {
-      setUploadStatus('logo', 0, 'ok', portalData.logoClienteUrl ? 'Logo registrado' : 'Logo de trabajo anterior');
-    }
+  // Auto-usar logo existente (DB o Drive). Solo en el primer render, no si el cliente ya quitó/cambió.
+  if (!logoSeedHecho) {
+    var logoRef = portalData.logoClienteUrl || portalData.logoPrecargadoUrl || '';
+    if (logoRef && !archivosSubidos['logo-0']) archivosSubidos['logo-0'] = logoRef;
+    logoSeedHecho = true;
   }
-  if (archivosSubidos['logo-0'] && archivosSubidos['logo-0'] !== logoRef) {
-    setUploadStatus('logo', 0, 'ok', 'Logo subido');
+  renderLogoSection();
+}
+
+// ── LOGO: hasta 3 versiones, se acumulan en slots logo-0..logo-2 ──────────────
+var logoSeedHecho = false;
+var logoPreviews = {};   // clave "logo-N" → data URL local (preview instantáneo de lo recién subido)
+
+// Drive no sirve la imagen por el URL /file/d/.../view; hay que usar el endpoint de thumbnail.
+// Para lo recién subido en esta sesión usamos el preview local (data URL), que es instantáneo.
+function logoThumbSrc(slot, url) {
+  if (logoPreviews['logo-' + slot]) return logoPreviews['logo-' + slot];
+  var m = (url || '').match(/\/d\/([^\/?&]+)/) || (url || '').match(/[?&]id=([^&]+)/);
+  if (m && m[1]) return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w240';
+  return url;
+}
+
+function getLogosSubidos() {
+  var arr = [];
+  for (var s = 0; s < 3; s++) {
+    if (archivosSubidos['logo-' + s]) arr.push({ slot: s, url: archivosSubidos['logo-' + s] });
   }
+  return arr;
+}
+
+function renderLogoSection() {
+  var cont = document.getElementById('logo-section');
+  if (!cont) return;
+  var logos = getLogosSubidos();
+  var esRegistrado = !!(portalData.logoClienteUrl && archivosSubidos['logo-0'] === portalData.logoClienteUrl);
+  var primerSlotLibre = -1;
+  for (var s = 0; s < 3; s++) { if (!archivosSubidos['logo-' + s]) { primerSlotLibre = s; break; } }
+
+  var html = '<div class="upload-field"><span class="upload-label">Logo de la agencia o cliente</span>';
+  if (logos.length) {
+    html += '<p class="upload-hint">' + (esRegistrado
+      ? 'Ya tenemos tu logo de un trabajo anterior. Lo usaremos automáticamente. Puedes agregar otras versiones.'
+      : 'Logo listo. Puedes agregar hasta 3 versiones.') + '</p>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px">';
+    logos.forEach(function(l) {
+      html += '<div style="position:relative;width:96px;height:64px;border:1px solid var(--border,#e0ddd8);border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden">' +
+        '<span style="position:absolute;font-size:10px;color:#9b9b9f">Logo</span>' +
+        '<img src="' + logoThumbSrc(l.slot, l.url) + '" alt="Logo" style="position:relative;max-height:60px;max-width:92px;object-fit:contain" onerror="this.style.display=\'none\'">' +
+        '<button type="button" onclick="quitarVersionLogo(' + l.slot + ')" title="Quitar" style="position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;border:2px solid #fff;background:#c0392b;color:#fff;font-size:13px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center">&times;</button>' +
+      '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<p class="upload-hint">Opcional. PNG con fondo transparente y buena resolución.</p>';
+  }
+
+  if (primerSlotLibre !== -1) {
+    var idInput = 'upload-input-logo-' + primerSlotLibre;
+    var idStatus = 'upload-status-logo-' + primerSlotLibre;
+    var etiqueta = logos.length ? '+ Agregar otra versión' : 'Seleccionar';
+    html += '<div class="upload-row">' +
+      '<label for="' + idInput + '" class="btn-upload"' + (logos.length ? ' style="font-size:11px"' : '') + '>' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+        etiqueta +
+      '</label>' +
+      '<input type="file" id="' + idInput + '" accept="image/*" style="display:none" onchange="subirArchivoPortal(\'logo\',' + primerSlotLibre + ',this)">' +
+      '<span class="upload-status" id="' + idStatus + '"></span>' +
+    '</div>';
+  }
+  html += '</div>';
+  cont.innerHTML = html;
+}
+
+function quitarVersionLogo(slot) {
+  delete archivosSubidos['logo-' + slot];
+  delete logoPreviews['logo-' + slot];
+  renderLogoSection();
 }
 
 /* ── ADD-ONS ────────────────────────────────────────────────────────────────── */
@@ -1694,7 +1773,8 @@ function validarYRevisar() {
       requiereAcceso   : accesoCaseta[n] || 0,
       sobreLaPropiedad : (document.getElementById('inp-sobre-' + n) || {value:''}).value.trim(),
       datosEspecificos : datosEsp,
-      logoUrl          : archivosSubidos['logo-0'] || '',
+      logoUrl          : (getLogosSubidos()[0] || {}).url || '',
+      logosUrls        : getLogosSubidos().map(function(l){ return l.url; }),
       fachadaUrl       : archivosSubidos['fachada-' + i] || '',
       perimetroUrl     : archivosSubidos['perimetro-' + i] || '',
     });
@@ -1807,7 +1887,8 @@ function validarYFirmar() {
       requiereAcceso   : accesoCaseta[n] || 0,
       sobreLaPropiedad : (document.getElementById('inp-sobre-' + n) || {value:''}).value.trim(),
       datosEspecificos : datosEsp,
-      logoUrl          : archivosSubidos['logo-0'] || '',
+      logoUrl          : (getLogosSubidos()[0] || {}).url || '',
+      logosUrls        : getLogosSubidos().map(function(l){ return l.url; }),
       fachadaUrl       : archivosSubidos['fachada-' + i] || '',
       perimetroUrl     : archivosSubidos['perimetro-' + i] || '',
     });
@@ -2781,6 +2862,7 @@ function subirArchivoPortal(tipo, propIndex, inputEl) {
   setUploadStatus(tipo, propIndex, 'loading', '');
   var reader = new FileReader();
   reader.onload = function(e) {
+    if (tipo === 'logo') logoPreviews[clave] = e.target.result;  // preview instantáneo
     apiPost({
       action       : 'subirArchivo',
       token        : token,
@@ -2794,6 +2876,7 @@ function subirArchivoPortal(tipo, propIndex, inputEl) {
       if (data.ok) {
         if (data.url) archivosSubidos[clave] = data.url;
         setUploadStatus(tipo, propIndex, 'ok', file.name);
+        if (tipo === 'logo') renderLogoSection();
       } else {
         var msg = data.error || 'Error al subir';
         // Token expirado: mostrar error legible para que el cliente no quede atascado.
