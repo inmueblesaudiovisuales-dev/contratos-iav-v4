@@ -1,8 +1,16 @@
-/* Modo demo de checklist.html — SOLO se carga con ?demo=1.
-   Provee datos de ejemplo y desactiva la red, para capturar pantallas
-   sin token ni backend. No afecta producción. */
+/* Modo demo de checklist.html — se carga con ?demo=1 (datos de ejemplo)
+   o ?demo=nuevo (primer arranque: empieza vacío, como un contrato recién
+   creado). Ambos desactivan la red y trabajan en memoria, sin token ni
+   backend. No afectan producción. */
 window.IAVChecklistDemo = {
   meta: { folio: 'IAV-0428', nombreCliente: 'Casa Cumbres · Sra. Martínez' },
+  metaFresh: { folio: 'NUEVO', nombreCliente: 'Primer arranque (sandbox)' },
+  // Primer arranque: estado idéntico al de un checklist real recién creado
+  // (sin cuartos, sin secuencias de cámara). Lleva al flujo completo:
+  // elegir lane -> armar cuartos -> input del último archivo -> capturar.
+  buildFresh(logic) {
+    return logic.createDefaultState();
+  },
   build(logic) {
     let s = logic.createDefaultState();
     s.pisos = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades'];

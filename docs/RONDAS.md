@@ -8,6 +8,19 @@
 
 ---
 
+### R112 — Checklist: modo primer arranque (sandbox) + sin zoom por double-tap (2026-06-05 20:05:14 CST)
+
+**Archivos:** `frontend/checklist-demo.js`, `frontend/checklist.html`, `frontend/admin.html`. Solo frontend; sin cambios en worker, lógica ni adapter.
+
+- **Nuevo modo `?demo=nuevo` (primer arranque).** Igual que un contrato recién creado pero sin token ni backend (en memoria): arranca en `createDefaultState()` (sin cuartos, sin secuencias de cámara) y replica el flujo real completo — pantalla de lane → **Armar cuartos** → input del último archivo (`last-filename`) → capturar. El demo sembrado (`?demo=1`) no cambia.
+  - `checklist-demo.js`: nuevos `metaFresh` y `buildFresh(logic)` (devuelve `createDefaultState()`).
+  - `checklist.html`: parseo `DEMO_PARAM`/`DEMO`/`DEMO_FRESH` (DEMO acepta `1` y `nuevo`); `laneReady()` ya no salta la pantalla de lane cuando `DEMO_FRESH` (replica el flujo real); `cargarDemo()` elige `buildFresh`/`metaFresh` en fresh.
+  - `admin.html`: botón "Abrir primer arranque" en Ajustes → Bitácora de producción.
+- **Sin zoom por double-tap (global).** `* { touch-action: manipulation; }` en el reset CSS + `user-scalable=no` en el viewport. Tocar/golpear rápido (p. ej. el botón Toma) ya no hace zoom a la página. Aplica a todo el checklist (real, demo y sandbox); el scroll y el pinch quedan intactos.
+- Tests de lógica sin cambios: `node --test frontend/checklist-logic.test.js` → 116/116.
+
+---
+
 ### Ronda 90 — Adapter: registrarUsoTomas (banco de datos de aprendizaje) (2026-06-05 16:35:22 CST)
 
 **Archivo:** `adapter/AdapterScript4_v1.js` — **requiere despliegue manual** en script.google.com (Bruno pega el archivo y publica nueva versión).

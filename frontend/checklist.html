@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Bitacora de Produccion</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +11,7 @@
   <link rel="icon" href="data:,">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * { touch-action: manipulation; }
 
     :root {
       --black: #101010;
@@ -683,7 +684,9 @@
   <script>
 const API = 'https://contratos.inmueblesaudiovisuales.com/api';
 const TOKEN = new URLSearchParams(location.search).get('token') || '';
-const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+const DEMO_PARAM = new URLSearchParams(location.search).get('demo') || '';
+const DEMO = DEMO_PARAM === '1' || DEMO_PARAM === 'nuevo';
+const DEMO_FRESH = DEMO_PARAM === 'nuevo';
 const CONFIG = new URLSearchParams(location.search).get('config') === '1';
 const logic = window.IAVChecklistLogic;
 
@@ -741,7 +744,9 @@ function stateKey() { return 'checklist_state_' + (TOKEN || 'demo'); }
 function hasLane() { return !!localStorage.getItem(laneKey()); }
 function laneReady() {
   if (new URLSearchParams(location.search).get('screen') === 'entry') return false;
-  return DEMO || hasLane();
+  // El primer arranque (?demo=nuevo) replica el flujo real: pasa por la
+  // pantalla de lane antes de armar cuartos. El demo sembrado la salta.
+  return (DEMO && !DEMO_FRESH) || hasLane();
 }
 function chooseLane(lane) {
   state.modoActual = lane;
@@ -913,8 +918,13 @@ function cargarDemo() {
   const s = document.createElement('script');
   s.src = './checklist-demo.js';
   s.onload = () => {
-    meta = window.IAVChecklistDemo.meta;
-    state = window.IAVChecklistDemo.build(logic);
+    if (DEMO_FRESH) {
+      meta = window.IAVChecklistDemo.metaFresh;
+      state = window.IAVChecklistDemo.buildFresh(logic);
+    } else {
+      meta = window.IAVChecklistDemo.meta;
+      state = window.IAVChecklistDemo.build(logic);
+    }
     ensureActiveMode();
     const screen = new URLSearchParams(location.search).get('screen');
     if (['captura', 'cierre', 'edicion'].includes(screen)) activeView = screen;
