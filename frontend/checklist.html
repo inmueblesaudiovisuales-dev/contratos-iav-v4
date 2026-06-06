@@ -1211,6 +1211,7 @@ function agregarCuartoEscrito() {
   const input = document.getElementById('setup-input');
   const value = input && input.value.trim();
   if (!value) return;
+  setupOpen = true;
   nuevoEspacio(value, getFocusPiso(), 'interior');
   scheduleSave();
   render();
@@ -1219,6 +1220,7 @@ function agregarCuartoEscrito() {
 }
 
 function agregarCuartoSugerido(nombre, zona) {
+  setupOpen = true;
   nuevoEspacio(nombre, getFocusPiso(), zona);
   scheduleSave();
   render();
