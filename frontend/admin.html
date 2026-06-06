@@ -1810,6 +1810,9 @@
         <button id="atab-plantillas" class="ajustes-tab" onclick="setAjustesTab('plantillas')">
           <i class="ti ti-message-2"></i> Plantillas
         </button>
+        <button id="atab-bitacora" class="ajustes-tab" onclick="setAjustesTab('bitacora')">
+          <i class="ti ti-clipboard-list"></i> Bitácora de producción
+        </button>
       </div>
 
       <!-- Pane: Métricas -->
@@ -1868,6 +1871,24 @@
           <div class="campo"><label>Reagendar sesión</label><textarea id="cfg-wa-reagendar" rows="2"></textarea></div>
           <button class="btn-primario gold" style="width:100%;margin-top:6px" onclick="guardarPlantillas()"><i class="ti ti-device-floppy"></i> Guardar plantillas</button>
           <div id="cfg-wa-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+        </div>
+      </div>
+
+      <!-- Pane: Bitácora de producción -->
+      <div id="apane-bitacora" class="ajustes-pane">
+        <div class="form-card" style="max-width:560px">
+          <h2>Bitácora de producción</h2>
+          <p class="form-desc">Herramientas de la app de captura (checklist), sin necesidad de un contrato.</p>
+          <div class="campo">
+            <label>Modo demo</label>
+            <p class="form-desc">Abre el checklist con datos de ejemplo, sin token ni backend, para probar o capacitar. Incluye un botón para reiniciar el demo.</p>
+            <button class="btn-secundario" onclick="window.open('checklist.html?demo=1','_blank')"><i class="ti ti-flask"></i> Abrir modo demo</button>
+          </div>
+          <div class="campo">
+            <label>Editar biblioteca de tomas</label>
+            <p class="form-desc">Edita las tomas, movimientos y categorías sugeridas del modo guiado. Pide tu contraseña de administrador al guardar.</p>
+            <button class="btn-secundario" onclick="window.open('checklist.html?config=1','_blank')"><i class="ti ti-settings"></i> Abrir editor de biblioteca</button>
+          </div>
         </div>
       </div>
 
