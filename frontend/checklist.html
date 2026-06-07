@@ -405,6 +405,71 @@
     .ob-sync .dot { width: 7px; height: 7px; }
     .demo-reset-btn { height: 28px; padding: 0 10px; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.75); font-size: 11px; font-weight: 600; flex: none; cursor: pointer; }
 
+    /* ===== Chip de rol (F5) ===== */
+    .rolechip { display: inline-flex; align-items: center; gap: 7px; flex: none; cursor: pointer;
+      background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px; padding: 4px 9px 4px 4px; }
+    .rc-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--gold-leaf); color: var(--black);
+      font-family: var(--font-display); font-weight: 600; font-size: 10px; display: flex; align-items: center; justify-content: center; flex: none; }
+    .rc-avatar.lg { width: 44px; height: 44px; font-size: 15px; }
+    .rc-avatar.sm { width: 22px; height: 22px; font-size: 9px; }
+    .rc-text { display: flex; flex-direction: column; line-height: 1.1; text-align: left; }
+    .rc-text b { font-size: 12px; font-weight: 600; color: #fff; }
+    .rc-text span { font-size: 9.5px; color: rgba(255,255,255,.55); }
+    .rc-caret { font-size: 14px; color: rgba(255,255,255,.5); }
+
+    /* ===== Selector de rol (F5) ===== */
+    .role-select { padding: 28px 16px 40px; max-width: 520px; margin: 0 auto; }
+    .role-hd h1 { font-family: var(--font-display); font-weight: 500; font-size: 28px; line-height: 1.1; margin-top: 14px; }
+    .role-hd p { color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+    .role-hd .role-hint { color: var(--ink-3); font-size: 12.5px; margin-top: 10px; }
+    .role-opts { display: grid; gap: 10px; margin-top: 22px; }
+    .role-opt { display: flex; align-items: center; gap: 13px; width: 100%; padding: 13px 14px; text-align: left;
+      border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); cursor: pointer; }
+    .role-opt-copy { flex: 1; min-width: 0; }
+    .role-opt-copy strong { display: block; font-size: 16px; font-weight: 600; }
+    .role-opt-copy span { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+    .role-opt-chev { font-size: 20px; color: var(--ink-3); flex: none; }
+
+    /* ===== Landing en la propiedad: lista de cuartos por piso (F5) ===== */
+    .landing { padding: 8px 0 16px; }
+    .floor { margin-top: 14px; }
+    .floor-h { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px;
+      color: var(--gold); font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+    .floor-cnt { color: var(--ink-3); font-weight: 500; font-family: var(--font-mono); font-size: 10.5px; }
+    .room { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+      background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; margin-top: 8px; cursor: pointer; text-align: left; }
+    .room:active { transform: scale(.995); }
+    .room.sub { margin-left: 16px; }
+    .room-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .room-name { font-family: var(--font-display); font-size: 16px; font-weight: 500; }
+    .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .rpill { font-size: 10.5px; font-family: var(--font-mono); padding: 2px 7px; border-radius: 999px;
+      border: 1px solid var(--line); color: var(--ink-3); background: var(--page); }
+    .rpill.good { color: var(--ok); border-color: #bfe0cd; background: #eef7f1; }
+    .rpill.fav { color: #7a5a12; border-color: #e4d39a; background: #f7efd8; }
+    .rpill.pend { color: var(--warn); border-color: #e7cdb0; background: #f8efe4; }
+    .room-chev { color: var(--line); font-size: 20px; flex: none; }
+    .addroom { width: 100%; margin-top: 14px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 13px;
+      text-align: center; color: var(--ink-3); font-size: 13px; font-weight: 600; background: transparent; cursor: pointer; }
+    .back-prop { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 2px; border: none; background: transparent;
+      color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 2px; }
+    .back-prop i { font-size: 18px; }
+
+    /* ===== Barra inferior (F5) ===== */
+    .botnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 35; max-width: 960px; margin: 0 auto;
+      display: flex; background: var(--card); border-top: 1px solid var(--line);
+      padding-bottom: env(safe-area-inset-bottom); }
+    .botnav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 9px 0 11px; border: none; background: transparent; color: var(--ink-3); font-size: 11px; font-weight: 600; cursor: pointer; position: relative; }
+    .botnav-tab.active { color: var(--ink-1); }
+    .botnav-tab.active .botnav-ic { color: var(--gold); }
+    .botnav-tab.active::after { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 2px; background: var(--gold); border-radius: 2px; }
+    .botnav-ic { display: flex; color: var(--ink-3); }
+    .botnav-ic svg { width: 22px; height: 22px; }
+    .app.has-botnav .content { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+    .app.has-botnav.has-thumb .cap-thumb { bottom: calc(60px + env(safe-area-inset-bottom)); }
+
     /* ===== Pantalla de entrada (elegir lane) ===== */
     .lane-entry { padding: 22px 16px 32px; max-width: 560px; margin: 0 auto; }
     .lane-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 13px; font-weight: 500; }
@@ -716,6 +781,42 @@ let guideConfigDraft = null;
 let currentGuideConfig = null;
 let propuestaIAText = '';
 let propuestaIAParsed = null;
+let capturaScreen = 'lista';
+
+// ===== Rol por celular (F5) =====
+// Cada celular recuerda su rol. El rol define la vista y la herramienta.
+const ROLE_DEF = {
+  fernanda: { service: 'foto', label: 'Fernanda', sub: 'Foto', initials: 'FE' },
+  danna: { service: 't360', label: 'Danna', sub: 'Recorrido 360', initials: 'DA' },
+  bruno: { service: 'video', label: 'Bruno', sub: 'Video + Drone', initials: 'BG' },
+};
+const ROLE_ORDER = ['fernanda', 'danna', 'bruno'];
+function roleKey() { return 'checklist_role_' + (TOKEN || 'demo'); }
+function getRole() {
+  const r = localStorage.getItem(roleKey());
+  return ROLE_DEF[r] ? r : null;
+}
+function roleReady() {
+  if (new URLSearchParams(location.search).get('screen') === 'entry') return false;
+  return !!getRole();
+}
+function isBruno() { return getRole() === 'bruno'; }
+// Aplica el servicio del rol activo a un estado (preserva el plumbing por servicio).
+function applyRoleServiceOn(target) {
+  const role = getRole();
+  if (!role || !target) return;
+  target.modoActual = ROLE_DEF[role].service;
+}
+function applyRoleService() { applyRoleServiceOn(state); }
+function setRole(role) {
+  if (!ROLE_DEF[role]) return;
+  localStorage.setItem(roleKey(), role);
+  applyRoleService();
+  capturaScreen = 'lista';
+  activeView = 'captura';
+  cerrarModal();
+  render();
+}
 
 const SERVICE_UI = {
   foto: { label: 'Foto normal', short: 'Foto', verb: 'foto', help: 'Marca cobertura fotografica.' },
@@ -864,6 +965,7 @@ async function cargar() {
     if (savedLane && state.servicios[savedLane]) state.modoActual = savedLane;
     activeRoomId = localStorage.getItem(roomKey()) || null;
     ensureActiveMode();
+    if (getRole()) applyRoleService();
     render();
     iniciarPolling();
   } catch (_) {
@@ -877,6 +979,7 @@ async function cargar() {
         if (savedLane && state.servicios[savedLane]) state.modoActual = savedLane;
         activeRoomId = localStorage.getItem(roomKey()) || null;
         ensureActiveMode();
+        if (getRole()) applyRoleService();
         dirty = true;
         render();
         iniciarPolling();
@@ -898,6 +1001,7 @@ async function poll() {
     const next = logic.normalizeChecklistData(payload);
     next.modoActual = state.modoActual;
     next.activeCameraByMode = state.activeCameraByMode;
+    if (getRole()) { applyRoleServiceOn(next); }
     if (JSON.stringify(next) !== JSON.stringify(state)) {
       state = next;
       ensureActiveMode();
@@ -919,6 +1023,7 @@ function cargarDemo() {
     meta = window.IAVChecklistDemo.meta;
     state = window.IAVChecklistDemo.build(logic);
     ensureActiveMode();
+    if (getRole()) applyRoleService();
     const screen = new URLSearchParams(location.search).get('screen');
     if (['captura', 'cierre', 'edicion'].includes(screen)) activeView = screen;
     render();
@@ -933,26 +1038,41 @@ function render() {
     app.innerHTML = `<main class="content">${renderConfigGuia()}</main>`;
     return;
   }
-  if (!laneReady()) {
-    app.innerHTML = renderLaneEntry();
+  // Sin rol: selector discreto una sola vez (reemplaza la pantalla de servicios).
+  if (!roleReady()) {
+    app.innerHTML = renderRoleSelect();
     app.classList.remove('has-thumb');
+    app.classList.remove('has-botnav');
     bindNameInput();
     return;
   }
   if (aprendizOpen) {
-    app.innerHTML = `${renderHeader()}<main class="content">${renderAprendiz()}</main>`;
+    app.innerHTML = `${renderShellHeader()}<main class="content">${renderAprendiz()}</main>`;
     app.classList.remove('has-thumb');
+    app.classList.remove('has-botnav');
     bindNameInput();
     return;
   }
   const showSetup = setupOpen || !state.espacios.length;
   const showConfig = configGuiaOpen;
+  const bruno = isBruno();
+  // La app abre EN LA PROPIEDAD. Para Bruno: landing = lista de cuartos por piso
+  // (capturaScreen 'lista') o el loop del cuarto ('cuarto'). Cierre/Edicion via barra.
+  const enLanding = bruno && activeView === 'captura' && capturaScreen === 'lista' && !showSetup && !showConfig;
+  let bodyHtml;
+  if (showConfig) bodyHtml = renderConfigGuia();
+  else if (showSetup) bodyHtml = renderSetup();
+  else if (enLanding) bodyHtml = renderPropertyLanding();
+  else if (bruno) bodyHtml = renderActiveView();
+  else bodyHtml = renderCoverageForRole();
+  const showBotnav = bruno && !showSetup && !showConfig;
   app.innerHTML = `
-    ${renderHeader()}
-    ${state.espacios.length && !showSetup && !showConfig ? renderTabs() : ''}
-    <main class="content">${showConfig ? renderConfigGuia() : showSetup ? renderSetup() : renderActiveView()}</main>
+    ${renderShellHeader()}
+    <main class="content">${bodyHtml}</main>
+    ${showBotnav ? renderBottomNav() : ''}
   `;
   app.classList.toggle('has-thumb', !!app.querySelector('.cap-thumb'));
+  app.classList.toggle('has-botnav', showBotnav);
   bindNameInput();
   const search = document.getElementById('space-search');
   if (search) {
@@ -988,6 +1108,146 @@ function reiniciarDemo() {
   const suffix = '_demo';
   Object.keys(localStorage).filter((k) => k.startsWith(prefix) && k.endsWith(suffix)).forEach((k) => localStorage.removeItem(k));
   location.reload();
+}
+
+// ===== Shell nuevo (F5): header de propiedad + chip de rol =====
+function renderShellHeader() {
+  const role = getRole();
+  const def = role ? ROLE_DEF[role] : null;
+  return `<header class="topbar-onyx">
+    <span class="ob-brand"><span class="ob-logo">IAV</span>
+      <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span><span class="ob-folio">${esc(meta.folio || '')}</span></span>
+    </span>
+    <span class="ob-spacer"></span>
+    ${DEMO ? `<button class="demo-reset-btn" onclick="reiniciarDemo()">Reiniciar demo</button>` : ''}
+    ${def ? `<button class="rolechip" onclick="abrirCambiarRol()" title="Tocar para cambiar de rol">
+      <span class="rc-avatar">${esc(def.initials)}</span>
+      <span class="rc-text"><b>${esc(def.label)}</b><span>${esc(def.sub)}</span></span>
+      <i class="ti ti-chevron-down rc-caret"></i>
+    </button>` : ''}
+    <span class="ob-sync"><span class="dot" id="sync-dot"></span><span id="sync-label">en vivo</span></span>
+  </header>`;
+}
+
+function renderRoleSelect() {
+  return `<div class="role-select">
+    <div class="role-hd">
+      <span class="lane-brand"><span class="ob-logo">IAV</span>bitácora</span>
+      <h1>¿Quién eres?</h1>
+      ${meta.nombreCliente ? `<p>${esc(meta.nombreCliente)}${meta.folio ? ' · ' + esc(meta.folio) : ''}</p>` : ''}
+      <p class="role-hint">Lo recordamos en este celular. Puedes cambiarlo después desde el chip de arriba.</p>
+    </div>
+    <div class="role-opts">${ROLE_ORDER.map((r) => {
+      const d = ROLE_DEF[r];
+      return `<button class="role-opt" onclick="setRole('${r}')">
+        <span class="rc-avatar lg">${esc(d.initials)}</span>
+        <span class="role-opt-copy"><strong>${esc(d.label)}</strong><span>${esc(d.sub)}</span></span>
+        <i class="ti ti-chevron-right role-opt-chev"></i>
+      </button>`;
+    }).join('')}</div>
+  </div>`;
+}
+
+function abrirCambiarRol() {
+  const cur = getRole();
+  abrirModal(`<div class="sheet-head"><h2>Cambiar de rol</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="action-stack">${ROLE_ORDER.map((r) => {
+      const d = ROLE_DEF[r];
+      return `<button class="${cur === r ? 'primary' : 'btn'}" onclick="setRole('${r}')"><span class="rc-avatar sm">${esc(d.initials)}</span> ${esc(d.label)} · ${esc(d.sub)}</button>`;
+    }).join('')}
+      <button class="btn ghost" onclick="abrirSetup()"><i class="ti ti-home-cog"></i> Armar cuartos</button>
+    </div>`);
+}
+
+// ===== Landing en la propiedad (lista de cuartos por piso) — vista de Bruno =====
+function roomPills(room) {
+  const files = (state.mediaFiles || []).filter((f) => f.targetId === room.id && f.kind === 'take');
+  if (!files.length) return '<span class="rpill pend">sin tomas</span>';
+  const good = files.filter((f) => f.good).length;
+  const fav = files.filter((f) => f.favorite).length;
+  let html = `<span class="rpill">${files.length} toma${files.length === 1 ? '' : 's'}</span>`;
+  if (good) html += `<span class="rpill good">${good} buena${good === 1 ? '' : 's'}</span>`;
+  if (fav) html += `<span class="rpill fav">${fav} favorita${fav === 1 ? '' : 's'}</span>`;
+  return html;
+}
+
+function renderPropertyLanding() {
+  if (!state.espacios.length) {
+    return `<div class="empty"><h2>Sin cuartos todavía</h2><p>Arma la lista de cuartos para empezar a capturar.</p><button class="primary" onclick="abrirSetup()" style="margin-top:12px">Armar cuartos</button></div>`;
+  }
+  const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(state.espacios.map((e) => e.piso || 'Sin piso'))];
+  const groups = pisos.map((p) => {
+    const rooms = state.espacios.filter((e) => (e.piso || 'Sin piso') === p && !e.parentId).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    if (!rooms.length) return '';
+    return `<section class="floor">
+      <div class="floor-h"><span>${esc(p)}</span><span class="floor-cnt">${rooms.length} cuarto${rooms.length === 1 ? '' : 's'}</span></div>
+      ${rooms.map(landingRoomRow).join('')}
+    </section>`;
+  }).join('');
+  return `<div class="landing">
+    ${groups}
+    <button class="addroom" onclick="abrirSetup()"><i class="ti ti-plus"></i> Agregar cuarto · Modo cuartos</button>
+  </div>`;
+}
+
+function landingRoomRow(room) {
+  const subs = state.espacios.filter((e) => e.parentId === room.id).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  return `<button class="room" onclick="entrarCuarto('${room.id}')">
+    <span class="room-info"><span class="room-name">${esc(room.nombre)}</span><span class="pills">${roomPills(room)}</span></span>
+    <i class="ti ti-chevron-right room-chev"></i>
+  </button>
+  ${subs.map((s) => `<button class="room sub" onclick="entrarCuarto('${s.id}')">
+    <span class="room-info"><span class="room-name">${esc(s.nombre)}</span><span class="pills">${roomPills(s)}</span></span>
+    <i class="ti ti-chevron-right room-chev"></i>
+  </button>`).join('')}`;
+}
+
+function entrarCuarto(id) {
+  activeRoomId = id;
+  localStorage.setItem(roomKey(), id);
+  capturaScreen = 'cuarto';
+  activeView = 'captura';
+  render();
+}
+
+function salirCuarto() {
+  capturaScreen = 'lista';
+  render();
+}
+
+// ===== Barra inferior (solo Bruno): Captura · Cierre · Edición =====
+function renderBottomNav() {
+  const dest = [
+    ['captura', 'Captura', 'video-camera'],
+    ['cierre', 'Cierre', 'checklist'],
+    ['edicion', 'Edición', 'edit'],
+  ];
+  const active = activeView;
+  return `<nav class="botnav" aria-label="Navegación">${dest.map(([key, label, icon]) => `
+    <button class="botnav-tab ${active === key ? 'active' : ''}" aria-pressed="${active === key}" onclick="setBotnav('${key}')">
+      <span class="botnav-ic">${BOTNAV_ICON[icon]}</span>
+      <span class="botnav-lbl">${label}</span>
+    </button>`).join('')}</nav>`;
+}
+
+const BOTNAV_ICON = {
+  'video-camera': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 10l4.55-2.28A1 1 0 0 1 21 8.62v6.76a1 1 0 0 1-1.45.9L15 14"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>',
+  'checklist': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  'edit': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+};
+
+function setBotnav(key) {
+  activeView = key;
+  if (key === 'captura' && capturaScreen !== 'cuarto') capturaScreen = 'lista';
+  render();
+}
+
+// ===== Cobertura (Fer/Danna): sin barra inferior =====
+function renderCoverageForRole() {
+  if (!state.espacios.length) {
+    return `<div class="empty"><h2>Sin cuartos todavía</h2><p>Danna arma los cuartos y aquí aparecerán.</p><button class="primary" onclick="abrirSetup()" style="margin-top:12px">Armar cuartos</button></div>`;
+  }
+  return coberturaVista() === 'foco' ? renderCoberturaFoco() : renderCoverage();
 }
 
 function renderLaneEntry() {
@@ -1068,7 +1328,10 @@ function renderTabs() {
 function renderActiveView() {
   if (activeView === 'cierre') return renderCloseView();
   if (activeView === 'edicion') return renderEditView();
-  return renderCaptureView();
+  // Bruno dentro de un cuarto: loop existente con regreso a la propiedad.
+  const back = (isBruno() && capturaScreen === 'cuarto')
+    ? `<button class="back-prop" onclick="salirCuarto()"><i class="ti ti-chevron-left"></i> Propiedad</button>` : '';
+  return back + renderCaptureView();
 }
 
 const TIPO_LABEL = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', quinta: 'Quinta' };
