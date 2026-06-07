@@ -352,15 +352,17 @@
     .cap-takes-hd > span:first-child { font-size: 13px; font-weight: 600; color: var(--ink-3); }
     .cap-takes-n { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
     .cap-empty { color: var(--ink-3); font-size: 13px; padding: 6px 2px; }
-    .cap-take { display: flex; align-items: center; gap: 11px; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 7px; box-shadow: var(--shadow); }
-    .cap-take.latest { border-color: var(--gold-leaf); box-shadow: 0 0 0 1px var(--gold-soft), var(--shadow); }
+    .cap-take { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 7px; box-shadow: var(--shadow); text-align: left; }
+    .cap-take.fail .cap-tok { color: var(--ink-3); text-decoration: line-through; }
     .cap-take-main { flex: 1; min-width: 0; border: 0; background: transparent; padding: 0; text-align: left; }
-    .cap-tok { display: block; font-family: var(--font-mono); font-size: 14px; font-weight: 600; color: var(--ink-1); }
-    .cap-take-meta { display: block; font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+    .cap-tok { font-family: var(--font-mono); font-size: 14px; font-weight: 600; color: var(--ink-1); flex: none; }
+    .cap-take-meta { flex: 1; min-width: 0; font-size: 11px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cap-badge { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
     .cap-badge i { font-size: 14px; }
     .cap-badge.good { background: var(--green-soft); color: var(--green); }
+    .cap-badge.fav { background: #fbf6e6; color: #7a5a12; }
     .cap-badge.fail { background: var(--red-soft); color: var(--red); }
+    .cap-badge { flex: none; }
     .cap-mark { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 8px; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); font-size: 12px; font-weight: 600; }
     .cap-mark i { font-size: 16px; color: var(--gold); }
     .cap-mark.active { background: var(--green-soft); border-color: var(--green); color: var(--green); }
@@ -468,6 +470,10 @@
     .botnav-ic { display: flex; color: var(--ink-3); }
     .botnav-ic svg { width: 22px; height: 22px; }
     .app.has-botnav .content { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+    .app.has-thumb .content { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+    .app.has-botnav.has-thumb .content { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
+    .app.has-thumb.has-latest .content { padding-bottom: calc(230px + env(safe-area-inset-bottom)); }
+    .app.has-botnav.has-thumb.has-latest .content { padding-bottom: calc(290px + env(safe-area-inset-bottom)); }
     .app.has-botnav.has-thumb .cap-thumb { bottom: calc(60px + env(safe-area-inset-bottom)); }
 
     /* ===== Pantalla de entrada (elegir lane) ===== */
@@ -585,10 +591,55 @@
     .setup-row-actions { display: flex; gap: 4px; flex: none; }
     .cuarto-row-wrap { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
     .cuarto-row-wrap .cuarto-row { flex: 1; min-width: 0; margin-bottom: 0; }
-    .cap-focus-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-    .cap-focus-copy { min-width: 0; }
-    .cap-focus-opts { width: 38px; height: 38px; flex: none; margin-top: 4px; border-radius: 8px; border: 1px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
+    .cap-focus-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .cap-focus-copy { min-width: 0; flex: 1; text-align: right; }
+    .cap-back { display: inline-flex; align-items: center; gap: 3px; flex: none; border: 0; background: transparent; color: var(--ink-3); font-size: 13px; font-weight: 600; padding: 4px 2px; }
+    .cap-back i { font-size: 18px; }
+    .cap-focus-opts { width: 38px; height: 38px; flex: none; border-radius: 8px; border: 1px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
     .cap-focus-opts i { font-size: 20px; }
+    /* ===== F7 — Loop de captura (3 capas) ===== */
+    .cap-cam2 { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow); }
+    .cap-cam-seg { width: 100%; }
+    .cap-next-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: 10px; }
+    .cap-next { min-width: 0; }
+    .cap-next-lbl { display: block; font-size: 11px; color: var(--ink-3); }
+    .cap-token { display: block; font-family: var(--font-mono); font-size: 26px; font-weight: 600; color: var(--ink-1); letter-spacing: -.01em; }
+    .cap-next-init { border: 0; background: transparent; color: var(--gold); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; }
+    .cap-foto-btn { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--gold-leaf); background: var(--gold-soft); color: var(--gold); font-size: 14px; font-weight: 600; }
+    .cap-foto-btn i { font-size: 17px; }
+    .cap-sug { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow); }
+    .cap-sug-h { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; background: transparent; padding: 0; }
+    .cap-sug-t { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--gold); }
+    .cap-sug-t i { font-size: 16px; }
+    .cap-sug-c { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+    .cap-sug-chips { margin-top: 10px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
+    .cap-sug-chips::-webkit-scrollbar { height: 0; }
+    .cap-sug-chip { white-space: nowrap; flex: none; }
+    .cap-sug-chip.done { color: var(--green); background: var(--green-soft); border-color: #BFE0CC; }
+    .cap-sug-chip.done i { color: var(--green); }
+    .cap-sug-chip.sel { border-color: var(--gold-leaf); box-shadow: 0 0 0 1.5px var(--gold-leaf); background: var(--gold-soft); }
+    .cap-sug-detail { margin-top: 11px; border-top: 1px dashed var(--line); padding-top: 10px; }
+    .cap-mini-lbl { font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: .03em; text-transform: uppercase; margin-bottom: 6px; }
+    .cap-qg { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; margin-bottom: 11px; }
+    .cap-mov-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
+    .cap-mov-chips::-webkit-scrollbar { height: 0; }
+    .cap-mov-chip { white-space: nowrap; flex: none; }
+    .cap-mov-chip.mv-on { border-color: var(--gold-leaf); box-shadow: 0 0 0 1.5px var(--gold-leaf); background: var(--gold-soft); }
+    .cap-plan { font-size: 11.5px; color: var(--ink-3); margin-top: 10px; }
+    .cap-plan b { color: var(--ink-1); font-weight: 600; }
+    .cap-latest { position: fixed; left: 0; right: 0; z-index: 41; max-width: 960px; margin: 0 auto; bottom: calc(88px + env(safe-area-inset-bottom)); padding: 11px 14px 10px; background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgba(16,16,16,.08); }
+    .app.has-botnav .cap-latest { bottom: calc(148px + env(safe-area-inset-bottom)); }
+    .cap-latest-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .cap-latest-who { font-size: 11px; font-weight: 600; color: var(--gold); }
+    .cap-latest-tk { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink-1); min-width: 0; text-align: right; }
+    .cap-qa { display: flex; gap: 8px; margin-bottom: 8px; }
+    .cap-qbtn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 10px; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); font-size: 14px; font-weight: 600; }
+    .cap-qbtn i { font-size: 17px; }
+    .cap-qbtn.fav.on { color: #7a5a12; border-color: #e4d39a; background: #fbf6e6; }
+    .cap-qbtn.good.on { color: var(--green); border-color: #BFE0CC; background: var(--green-soft); }
+    .cap-notef { width: 100%; display: flex; align-items: center; gap: 7px; border: 1px dashed var(--line-2, #D2C9B3); border-radius: 9px; padding: 9px 11px; color: var(--ink-3); font-size: 12.5px; background: transparent; text-align: left; }
+    .cap-notef i { font-size: 15px; flex: none; }
+    .cap-notef.has { color: var(--ink-2); border-style: solid; }
     /* ===== Navegación de recorrido (anterior / cambiar / siguiente) ===== */
     .cap-nav { display: flex; gap: 8px; margin-top: 12px; }
     .cap-nav-prev { width: 46px; flex: none; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); border-radius: var(--radius); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
@@ -780,8 +831,10 @@ let toastTimer = null;
 let syncStatus = 'ok';
 let guideMode = localStorage.getItem('checklist_guide_' + (TOKEN || 'demo')) === '1';
 let activeSugId = null;
-let aprendizOpen = false;
-let aprendizSpaceIdx = 0;
+// F7 — etiqueta de la proxima toma (no se auto-avanza)
+let pendingShotType = null;   // id de SHOT_TYPES seleccionado en la tira de sugerencias
+let pendingMovement = null;   // id de MOVEMENTS seleccionado
+let sugStripOpen = true;      // tira de sugerencias plegable
 let configGuiaOpen = false;
 let guideConfigDraft = null;
 let currentGuideConfig = null;
@@ -1052,13 +1105,6 @@ function render() {
     bindNameInput();
     return;
   }
-  if (aprendizOpen) {
-    app.innerHTML = `${renderShellHeader()}<main class="content">${renderAprendiz()}</main>`;
-    app.classList.remove('has-thumb');
-    app.classList.remove('has-botnav');
-    bindNameInput();
-    return;
-  }
   const showSetup = setupOpen || !state.espacios.length;
   const showConfig = configGuiaOpen;
   const bruno = isBruno();
@@ -1079,6 +1125,7 @@ function render() {
   `;
   app.classList.toggle('has-thumb', !!app.querySelector('.cap-thumb'));
   app.classList.toggle('has-botnav', showBotnav);
+  app.classList.toggle('has-latest', !!app.querySelector('.cap-latest'));
   bindNameInput();
   const search = document.getElementById('space-search');
   if (search) {
@@ -2081,6 +2128,7 @@ function discardShort(file) {
   return { empty: 'vacío', failed: 'fallida', unrelated: 'no relacionado' }[file.discardReason] || 'descarte';
 }
 
+// ===== F7 — Loop de captura (3 capas, segun mockup 02-loop-captura) =====
 function renderMediaCapture() {
   const target = activeTarget();
   if (!target) {
@@ -2095,55 +2143,178 @@ function renderMediaCapture() {
   const piso = isDrone ? 'Drone' : (target.piso || 'Sin piso');
   const parentName = !isDrone && target.parentId ? (state.espacios.find((e) => e.id === target.parentId) || {}).nombre : '';
   const noAplicaVideo = state.modoActual === 'video' && target.estados && (target.estados.video || {}).estado === 'no_aplica';
-  const tomaOnclick = guideMode
-    ? "registrarArchivo('" + target.id + "','take',undefined," + (activeSugId ? "{suggestionId:'" + esc(activeSugId) + "'}" : 'null') + ')'
-    : "registrarArchivo('" + target.id + "','take')";
-  let tomaSubLabel = '';
-  if (guideMode) {
-    if (activeSugId) {
-      const activeSug = logic.findSuggestion(activeSugId, state);
-      tomaSubLabel = activeSug ? '<span class="cap-toma-sub">' + esc(activeSug.nombre) + '</span>' : '';
-    } else {
-      tomaSubLabel = '<span class="cap-toma-sub">toma libre</span>';
-    }
-  } else {
-    tomaSubLabel = nextTok ? '<span class="cap-toma-sub">+1 · ' + esc(nextTok) + '</span>' : '';
-  }
-  return `
+
+  // Header con regreso a Cuartos + nombre + piso (mockup 02)
+  const head = `
   <section class="cap-focus">
     <div class="cap-focus-head">
+      <button class="cap-back" onclick="abrirCambiarCuarto()" aria-label="Cambiar cuarto"><i class="ti ti-chevron-left"></i>Cuartos</button>
       <div class="cap-focus-copy">
-        <span class="cap-floor"><i class="ti ti-stairs-up"></i>${esc(piso)}</span>
         <h2 class="cap-room">${parentName ? `<span class="cap-parent">${esc(parentName)}</span>` : ''}${esc(target.nombre)}</h2>
-        ${guideMode && state.modoActual === 'video' ? catChipHtml(target) : ''}
+        <span class="cap-floor"><i class="ti ti-stairs-up"></i>${esc(piso)}</span>
       </div>
       <button class="cap-focus-opts" onclick="abrirAccionesFoco()" aria-label="Opciones del cuarto"><i class="ti ti-dots-vertical"></i></button>
     </div>
-  </section>
-  ${noAplicaVideo ? `
-  <button class="cap-change" onclick="abrirCambiarCuarto()"><span class="cap-change-l"><i class="ti ti-arrows-exchange"></i>Cambiar cuarto</span><i class="ti ti-chevron-right cap-change-chev"></i></button>
-  <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
-  <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>
-  ` : `
-  <div class="guide-toggle"><div class="seg"><button class="seg-btn${!guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Manual</button><button class="seg-btn${guideMode ? ' active' : ''}" onclick="toggleGuideMode()">Guiado</button></div>${guideMode ? renderFaltantesChip() : ''}${guideMode ? '<button class="gate-salida-btn" onclick="abrirGateSalida()">listo para irte?</button>' : ''}${guideMode ? '<button class="guide-aprendiz-btn seg-btn" onclick="iniciarAprendiz()">Aprendiz</button>' : ''}${guideMode ? '<button class="icon-btn" onclick="imprimirGuia()" aria-label="Imprimir guia"><i class="ti ti-printer"></i></button>' : ''}${guideMode ? '<button class="guide-ia-btn icon-btn" onclick="abrirPropuestaIA()" aria-label="Propuesta IA"><i class="ti ti-brain"></i></button>' : ''}</div>
-  <div class="cap-cam">
-    <span class="cap-cam-ic"><i class="ti ti-camera"></i></span>
-    <div class="cap-cam-copy">
-      <div class="cap-cam-lbl">${esc(camera ? camera.label : 'Sin cámara')}</div>
-      <div class="cap-cam-next">${nextTok ? `siguiente archivo · <b>${esc(nextTok)}</b>` : 'inicia la secuencia antes de grabar'}</div>
-    </div>
-    <button class="cap-swap" aria-label="Cambiar o iniciar cámara" onclick="${state.modoActual === 'video' ? 'abrirCamaras()' : 'abrirSecuencia()'}"><i class="ti ti-switch-horizontal"></i></button>
-  </div>
-  ${renderCapNav(isDrone ? 'toma' : 'cuarto', 'abrirCambiarCuarto()')}
-  ${guideMode ? renderGuideList(target) : ''}
+  </section>`;
+
+  if (noAplicaVideo) {
+    return `${head}
+    <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
+    <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>`;
+  }
+
+  // Capa 1 — switch de camara (getCameras del modo) + token grande del siguiente archivo
+  const camStrip = renderCapCamSwitch(camera, isDrone, nextTok);
+
+  // Capa 2 — sugerencias (tira plegable, secundaria) — etiqueta la proxima toma
+  const sugStrip = renderCapSugStrip(target, isDrone);
+
+  // Capa 3 — toma recien hecha (favorita/buena/describir, sin scroll)
+  const latestTake = files.length ? files[files.length - 1] : null;
+  const latestPanel = (latestTake && latestTake.kind === 'take') ? renderCapLatest(latestTake) : '';
+
+  // Etiqueta de la proxima toma para el boton Toma
+  let tomaSubLabel = '';
+  if (pendingShotType || pendingMovement) {
+    tomaSubLabel = `<span class="cap-toma-sub">${esc(pendingTakeLabel())}</span>`;
+  } else if (nextTok) {
+    tomaSubLabel = `<span class="cap-toma-sub">+1 · ${esc(nextTok)}</span>`;
+  }
+
+  return `${head}
+  ${camStrip}
+  ${sugStrip}
   <section class="cap-takes">
     <div class="cap-takes-hd"><span>Tomas en ${isDrone ? 'esta toma' : 'este cuarto'}</span><span class="cap-takes-n">${files.length} · ${good.length} buena${good.length === 1 ? '' : 's'}</span></div>
     ${files.length ? renderCapTakes(files) : `<p class="cap-empty">Aún no registras nada aquí. Da Toma cuando grabes.</p>`}
   </section>
+  ${latestPanel}
   <div class="cap-thumb">
-    <button class="cap-btn-toma" onclick="${tomaOnclick}"><span class="cap-toma-lbl">Toma</span>${tomaSubLabel}</button>
-    <button class="cap-btn-no" onclick="noSirve('${target.id}')"><i class="ti ti-circle-x"></i><span>No sirve</span></button>
-  </div>`}`;
+    <button class="cap-btn-toma" onclick="darToma('${esc(target.id)}')"><span class="cap-toma-lbl">Toma</span>${tomaSubLabel}</button>
+    <button class="cap-btn-no" onclick="noSirve('${esc(target.id)}')"><i class="ti ti-circle-x"></i><span>No sirve</span></button>
+  </div>`;
+}
+
+// Capa 1 — switch de camara como segmented control + token grande + (drone) + foto
+function renderCapCamSwitch(camera, isDrone, nextTok) {
+  const cams = logic.getCameras(state).filter((c) => c.mode === state.modoActual);
+  const segHtml = cams.length
+    ? `<div class="seg cap-cam-seg">${cams.map((c) => `<button class="seg-btn${camera && camera.id === c.id ? ' active' : ''}" onclick="setCamera('${esc(c.id)}')">${esc(c.label)}</button>`).join('')}</div>`
+    : `<div class="cap-cam-lbl">Sin cámara</div>`;
+  const tokenHtml = nextTok
+    ? `<div class="cap-next"><span class="cap-next-lbl">siguiente ${isDrone ? 'video' : 'archivo'}</span><span class="cap-token">${esc(nextTok)}</span></div>`
+    : `<button class="cap-next-init" onclick="abrirSecuencia()"><i class="ti ti-player-play"></i>inicia la secuencia antes de grabar</button>`;
+  const dronePhoto = (isDrone && nextTok)
+    ? `<button class="cap-foto-btn" onclick="agregarFotoDrone()"><i class="ti ti-plus"></i>foto</button>`
+    : '';
+  return `<div class="cap-cam2">
+    ${segHtml}
+    <div class="cap-next-row">${tokenHtml}${dronePhoto}</div>
+  </div>`;
+}
+
+// Capa 2 — tira de sugerencias plegable; tocar un chip etiqueta la proxima toma (sin auto-avanzar)
+function renderCapSugStrip(target, isDrone) {
+  const suggestions = logic.suggestionsForTarget(state, state.modoActual, target) || [];
+  if (!suggestions.length) return '';
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+  const doneCount = suggestions.filter((s) => logic.suggestionProgress(state, state.modoActual, target.id, s.id).done).length;
+  const roomLabel = isDrone ? 'esta toma' : esc(target.nombre);
+
+  const chips = suggestions.map((s) => {
+    const done = logic.suggestionProgress(state, state.modoActual, target.id, s.id).done;
+    const sel = activeSugId === s.id;
+    const check = done ? `<i class="ti ti-check"></i>` : '';
+    return `<button class="chip cap-sug-chip${done ? ' done' : ''}${sel ? ' sel' : ''}" onclick="seleccionarSugerencia('${esc(s.id)}')">${check}${esc(s.nombre)}</button>`;
+  }).join('');
+
+  let detail = '';
+  if (activeSugId) {
+    const sug = suggestions.find((s) => s.id === activeSugId) || logic.findSuggestion(activeSugId, state);
+    if (sug) {
+      const movChips = Object.keys(movements).map((mvId) => {
+        const on = (pendingMovement || sug.movement) === mvId;
+        return `<button class="chip cap-mov-chip${on ? ' mv-on' : ''}" onclick="seleccionarMovimiento('${esc(mvId)}')">${esc(movements[mvId].label)}</button>`;
+      }).join('');
+      const typeLabel = (shotTypes[pendingShotType || sug.shotType] || {}).label || (pendingShotType || sug.shotType);
+      const movLabel = (movements[pendingMovement || sug.movement] || {}).label || (pendingMovement || sug.movement);
+      detail = `<div class="cap-sug-detail">
+        <div class="cap-mini-lbl">Qué grabar</div>
+        <div class="cap-qg">${esc(sug.enfoque)}</div>
+        <div class="cap-mini-lbl">Movimiento</div>
+        <div class="chips cap-mov-chips">${movChips}</div>
+        <div class="cap-plan">Próxima toma → <b>${esc(typeLabel)} · ${esc(movLabel)}</b></div>
+      </div>`;
+    }
+  }
+
+  return `<div class="cap-sug">
+    <button class="cap-sug-h" onclick="toggleSugStrip()">
+      <span class="cap-sug-t"><i class="ti ti-bulb"></i>Sugeridas para ${roomLabel}</span>
+      <span class="cap-sug-c">${doneCount} / ${suggestions.length} <i class="ti ti-chevron-${sugStripOpen ? 'up' : 'down'}"></i></span>
+    </button>
+    ${sugStripOpen ? `<div class="chips cap-sug-chips">${chips}</div>${detail}` : ''}
+  </div>`;
+}
+
+// Capa 3 — toma recien hecha, acciones de un toque sobre los botones
+function renderCapLatest(file) {
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+  const parts = [];
+  if (file.shotType) parts.push((shotTypes[file.shotType] || {}).label || file.shotType);
+  if (file.movement) parts.push((movements[file.movement] || {}).label || file.movement);
+  const meta = parts.length ? ' · ' + esc(parts.join(' · ')) : '';
+  const noteHtml = file.note
+    ? `<button class="cap-notef has" onclick="agregarNotaArchivo('${esc(file.id)}')"><i class="ti ti-note"></i>${esc(file.note)}</button>`
+    : `<button class="cap-notef" onclick="agregarNotaArchivo('${esc(file.id)}')"><i class="ti ti-plus"></i>describir lo que grabaste</button>`;
+  return `<div class="cap-latest">
+    <div class="cap-latest-h"><span class="cap-latest-who">recién grabada</span><span class="cap-latest-tk">${esc(file.fileToken)}${meta}</span></div>
+    <div class="cap-qa">
+      <button class="cap-qbtn fav${file.favorite ? ' on' : ''}" onclick="toggleFavorita('${esc(file.id)}')"><i class="ti ti-star${file.favorite ? '-filled' : ''}"></i>Favorita</button>
+      <button class="cap-qbtn good${file.good ? ' on' : ''}" onclick="toggleBuena('${esc(file.id)}')"><i class="ti ti-check"></i>Buena</button>
+    </div>
+    ${noteHtml}
+  </div>`;
+}
+
+function pendingTakeLabel() {
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+  const parts = [];
+  if (pendingShotType) parts.push((shotTypes[pendingShotType] || {}).label || pendingShotType);
+  if (pendingMovement) parts.push((movements[pendingMovement] || {}).label || pendingMovement);
+  return parts.join(' · ');
+}
+
+function toggleSugStrip() {
+  sugStripOpen = !sugStripOpen;
+  render();
+}
+
+function seleccionarMovimiento(mvId) {
+  pendingMovement = mvId;
+  render();
+}
+
+// Registrar una toma con la camara activa, el cuarto, y tipo/movimiento etiquetados (si hay).
+function darToma(targetId) {
+  const ctx = (pendingShotType || pendingMovement) ? { shotType: pendingShotType, movement: pendingMovement, suggestionId: activeSugId } : null;
+  registrarArchivo(targetId, 'take', undefined, ctx);
+}
+
+// Drone — agrega una foto: mueve el consecutivo sin crear toma.
+function agregarFotoDrone() {
+  const camera = activeCamera();
+  if (!camera || !logic.getCameraSequence(state, camera.id).nextToken) return abrirSecuencia();
+  state = logic.bumpCameraCounter(state, camera.id, 1);
+  render(); scheduleSave();
+}
+
+function toggleFavorita(mediaId) {
+  state = logic.toggleMediaFavorite(state, mediaId);
+  render(); scheduleSave();
 }
 
 function categoriaDe(space) {
@@ -2303,152 +2474,19 @@ function imprimirGuia() {
   w.document.close();
 }
 
+// F7 — tocar un chip etiqueta la proxima toma (tipo + movimiento recomendado), sin auto-avanzar.
 function seleccionarSugerencia(id) {
-  activeSugId = activeSugId === id ? null : id;
-  render();
-}
-
-function avanzarSugerencia(targetId, currentSugId) {
-  const target = state.espacios.find((e) => e.id === targetId) || state.droneItems.find((e) => e.id === targetId);
-  if (!target) { activeSugId = null; return; }
-  const suggestions = logic.suggestionsForTarget(state, state.modoActual, target);
-  if (!suggestions || !suggestions.length) { activeSugId = null; return; }
-  const guideSkip = target.guideSkip || {};
-  const currentIdx = suggestions.findIndex((s) => s.id === currentSugId);
-  const after = currentIdx >= 0 ? suggestions.slice(currentIdx + 1) : suggestions;
-  const next = after.find((s) => !logic.suggestionProgress(state, state.modoActual, targetId, s.id).done && !guideSkip[s.id]);
-  activeSugId = next ? next.id : null;
-}
-
-// ===== Modo aprendiz =====
-function aprendizGetTarget(idx) {
-  const ids = recorridoTargets(state.modoActual);
-  const id = ids[idx];
-  if (!id) return null;
-  return state.espacios.find((e) => e.id === id) || state.droneItems.find((e) => e.id === id) || null;
-}
-
-function aprendizPendingMusts(target) {
-  const sugs = logic.suggestionsForTarget(state, state.modoActual, target) || [];
-  const skip = target.guideSkip || {};
-  return sugs.filter((s) => s.priority === 'must' && !skip[s.id] && !logic.suggestionProgress(state, state.modoActual, target.id, s.id).done);
-}
-
-function iniciarAprendiz() {
-  aprendizOpen = true;
-  const ids = recorridoTargets(state.modoActual);
-  aprendizSpaceIdx = 0;
-  for (let i = 0; i < ids.length; i++) {
-    const t = aprendizGetTarget(i);
-    if (t && aprendizPendingMusts(t).length > 0) { aprendizSpaceIdx = i; break; }
+  if (activeSugId === id) {
+    activeSugId = null;
+    pendingShotType = null;
+    pendingMovement = null;
+  } else {
+    activeSugId = id;
+    const sug = logic.findSuggestion(id, state);
+    pendingShotType = sug ? (sug.shotType || null) : null;
+    pendingMovement = sug ? (sug.movement || null) : null;
   }
   render();
-}
-
-function cerrarAprendiz() {
-  aprendizOpen = false;
-  render();
-}
-
-function aprendizToma(targetId, sugId) {
-  registrarArchivo(targetId, 'take', undefined, { suggestionId: sugId });
-  // registrarArchivo calls render() which calls renderAprendiz(); the scan-forward inside
-  // renderAprendiz handles advancing to next pending must automatically.
-}
-
-function aprendizSaltar(targetId, sugId) {
-  const target = state.espacios.find((e) => e.id === targetId) || state.droneItems.find((e) => e.id === targetId);
-  if (!target) return;
-  if (!target.guideSkip) target.guideSkip = {};
-  target.guideSkip[sugId] = true;
-  scheduleSave();
-  render();
-}
-
-function renderAprendiz() {
-  const mode = state.modoActual;
-  const ids = recorridoTargets(mode);
-  const shotTypes = logic.getShotTypes();
-  const movements = logic.getMovements();
-
-  // Scan forward from aprendizSpaceIdx to find first target with pending musts
-  let currentTarget = null;
-  for (let i = aprendizSpaceIdx; i < ids.length; i++) {
-    const t = aprendizGetTarget(i);
-    if (t && aprendizPendingMusts(t).length > 0) {
-      currentTarget = t;
-      aprendizSpaceIdx = i;
-      break;
-    }
-  }
-
-  // Count spaces that have any non-skipped musts (for N in progress)
-  const targetsWithMusts = ids.map((id) => {
-    const t = state.espacios.find((e) => e.id === id) || state.droneItems.find((e) => e.id === id);
-    if (!t) return null;
-    const sugs = logic.suggestionsForTarget(state, mode, t) || [];
-    const skip = t.guideSkip || {};
-    return sugs.some((s) => s.priority === 'must' && !skip[s.id]) ? t : null;
-  }).filter(Boolean);
-  const N = targetsWithMusts.length;
-  const X = currentTarget ? (targetsWithMusts.findIndex((t) => t.id === currentTarget.id) + 1) : N;
-
-  if (!currentTarget) {
-    return `<div class="aprendiz-screen">
-      <div class="aprendiz-header">
-        <button class="icon-btn" onclick="cerrarAprendiz()" aria-label="Salir"><i class="ti ti-x"></i></button>
-        <span class="aprendiz-progress">completado</span>
-      </div>
-      <div class="aprendiz-done">
-        <div class="aprendiz-done-icon"><i class="ti ti-circle-check-filled"></i></div>
-        <h2>Listo, cobertura clave completa</h2>
-        <p>Todas las tomas clave han sido registradas o descartadas.</p>
-        <button class="btn" onclick="cerrarAprendiz()">Salir del modo aprendiz</button>
-      </div>
-    </div>`;
-  }
-
-  const allMusts = (() => {
-    const sugs = logic.suggestionsForTarget(state, mode, currentTarget) || [];
-    const skip = currentTarget.guideSkip || {};
-    return sugs.filter((s) => s.priority === 'must' && !skip[s.id]);
-  })();
-  const pendingMusts = allMusts.filter((s) => !logic.suggestionProgress(state, mode, currentTarget.id, s.id).done);
-  const sug = pendingMusts[0];
-  const Z = allMusts.length;
-  const Y = (allMusts.length - pendingMusts.length) + 1;
-
-  if (!sug) return `<div class="aprendiz-screen"></div>`;
-
-  const typeLabel = (shotTypes[sug.shotType] || {}).label || sug.shotType || '';
-  const movLabel = (movements[sug.movement] || {}).label || sug.movement || '';
-  const shotDef = shotTypes[sug.shotType] || {};
-  const piso = mode === 'drone' ? 'Drone' : (currentTarget.piso || '');
-
-  return `<div class="aprendiz-screen">
-    <div class="aprendiz-header">
-      <button class="icon-btn" onclick="cerrarAprendiz()" aria-label="Salir"><i class="ti ti-x"></i></button>
-      <span class="aprendiz-progress">Cuarto ${X} de ${N} · clave ${Y} de ${Z}</span>
-    </div>
-    <div class="aprendiz-room">
-      ${piso ? `<span class="aprendiz-piso">${esc(piso)}</span>` : ''}
-      <h2 class="aprendiz-room-name">${esc(currentTarget.nombre)}</h2>
-    </div>
-    <div class="aprendiz-sug">
-      <div class="aprendiz-glyph">${movementGlyph(sug.movement)}</div>
-      <div class="aprendiz-sug-name">${esc(sug.nombre)}</div>
-      <div class="aprendiz-sug-type">${esc(typeLabel)} · ${esc(movLabel)}</div>
-      <div class="aprendiz-sug-enfoque">${esc(sug.enfoque)}</div>
-      ${shotDef.ejemplo ? `<div class="aprendiz-sug-ejemplo">${esc(shotDef.ejemplo)}</div>` : ''}
-    </div>
-    <div class="aprendiz-actions">
-      <button class="aprendiz-toma-btn" onclick="aprendizToma('${esc(currentTarget.id)}','${esc(sug.id)}')">
-        <span class="cap-toma-lbl">Toma</span>
-        <span class="cap-toma-sub">${esc(sug.nombre)}</span>
-      </button>
-      <button class="aprendiz-saltar-btn" onclick="aprendizSaltar('${esc(currentTarget.id)}','${esc(sug.id)}')">Saltar</button>
-    </div>
-  </div>`;
 }
 
 function movementGlyph(movId) {
@@ -3049,24 +3087,25 @@ function reactivarVideoFoco() {
   scheduleSave(); render();
 }
 
+// F7 — toda la fila abre acciones (tocar la toma para corregir cualquier toma, incl. fallida).
 function renderCapTakes(files) {
-  return files.slice().reverse().map((file, index) => {
-    const latest = index === 0;
-    const right = file.kind === 'take'
-      ? (file.good
-        ? `<button class="cap-mark active" onclick="toggleBuena('${file.id}')"><i class="ti ti-star-filled"></i>buena</button>`
-        : `<button class="cap-mark" onclick="toggleBuena('${file.id}')"><i class="ti ti-star"></i>buena</button>`)
-      : `<span class="cap-badge fail"><i class="ti ti-x"></i>${esc(discardShort(file))}</span>`;
-    const reintentarHtml = (latest && file.kind === 'take')
-      ? `<button class="cap-reintentar" onclick="reintentarToma('${file.id}')"><i class="ti ti-rotate"></i>reintentar</button>`
-      : '';
-    return `<div class="cap-take${latest ? ' latest' : ''}">
-      <button class="cap-take-main" onclick="abrirArchivo('${file.id}')">
-        <span class="cap-tok">${esc(file.fileToken)}</span>
-        <span class="cap-take-meta">${esc(mediaKindLabel(file))} · ${esc(file.author || '')}</span>
-      </button>
-      ${right}${reintentarHtml}
-    </div>`;
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+  return files.slice().reverse().map((file) => {
+    const isFail = file.kind !== 'take';
+    let badge = '';
+    if (isFail) badge = `<span class="cap-badge fail"><i class="ti ti-x"></i>${esc(discardShort(file))}</span>`;
+    else if (file.favorite) badge = `<span class="cap-badge fav"><i class="ti ti-star-filled"></i>favorita</span>`;
+    else if (file.good) badge = `<span class="cap-badge good"><i class="ti ti-check"></i>buena</span>`;
+    const parts = [];
+    if (file.shotType) parts.push((shotTypes[file.shotType] || {}).label || file.shotType);
+    if (file.movement) parts.push((movements[file.movement] || {}).label || file.movement);
+    const meta = parts.length ? parts.join(' · ') : (isFail ? mediaKindLabel(file) : (file.note || mediaKindLabel(file)));
+    return `<button class="cap-take${isFail ? ' fail' : ''}" onclick="abrirArchivo('${esc(file.id)}')">
+      <span class="cap-tok">${esc(file.fileToken)}</span>
+      <span class="cap-take-meta">${esc(meta)}</span>
+      ${badge}
+    </button>`;
   }).join('');
 }
 
@@ -3120,12 +3159,12 @@ function irACuartoVideo(id) {
 }
 
 function setActiveRoom(id) {
-  const prev = activeTarget();
   activeRoomId = id;
   localStorage.setItem(roomKey(), id);
+  // F7 — al cambiar de cuarto se limpia la etiqueta de la proxima toma; sin cuestionario "cual quedo".
+  pendingShotType = null; pendingMovement = null; activeSugId = null;
   cerrarModal();
   render();
-  if (prev && prev.id !== id) promptBuena(prev);
 }
 
 function agregarCuartoRapido() {
@@ -3143,30 +3182,6 @@ function setTipoPropiedadDrone(tipo) {
   state.guide.tipoPropiedad = tipo;
   scheduleSave();
   render();
-}
-
-function promptBuena(target) {
-  if (!target || !isMediaMode()) return;
-  const files = mediaFilesForTarget(target.id).filter((f) => f.kind === 'take');
-  if (!files.length || files.some((f) => f.good)) return;
-  abrirPromptBuena(target.id);
-}
-
-function abrirPromptBuena(targetId) {
-  const target = state.espacios.find((e) => e.id === targetId) || state.droneItems.find((d) => d.id === targetId);
-  if (!target) return;
-  const files = mediaFilesForTarget(targetId).filter((f) => f.kind === 'take');
-  abrirModal(`<div class="sheet-head"><h2>¿Cuál fue la buena en ${esc(target.nombre)}?</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
-    <p class="sheet-note">Marca una o dos. O cierra y la decides luego.</p>
-    <div class="cuarto-list">${files.map((f) => `<button class="cuarto-row${f.good ? ' active' : ''}" onclick="togglePromptBuena('${f.id}','${targetId}')"><span class="cuarto-name mono">${esc(f.fileToken)}</span>${f.good ? '<span class="cuarto-done"><i class="ti ti-star-filled"></i>buena</span>' : '<span class="cuarto-meta">tocar para marcar</span>'}</button>`).join('')}</div>
-    <button class="primary block" onclick="cerrarModal()" style="width:100%">Listo</button>`);
-}
-
-function togglePromptBuena(mediaId, targetId) {
-  state = logic.toggleMediaGood(state, mediaId);
-  scheduleSave();
-  render();
-  abrirPromptBuena(targetId);
 }
 
 function visibleSpaces() {
@@ -3355,26 +3370,22 @@ function aplicarSecuencia(cameraId, filename) {
   cerrarModal(); render(); scheduleSave();
 }
 
-function registrarArchivo(targetId, kind, discardReason, guideCtx) {
+// F7 — registra con la camara activa, el cuarto, y tipo/movimiento etiquetados (si hay).
+// "No sirve" (discard 'failed') registra directo, sin preguntar y sin banner.
+function registrarArchivo(targetId, kind, discardReason, ctx) {
   const camera = activeCamera();
   if (!camera || !logic.getCameraSequence(state, camera.id).nextToken) return abrirSecuencia();
   const previous = state;
   let suggFields = {};
-  if (guideCtx && guideCtx.suggestionId) {
-    const sug = logic.findSuggestion(guideCtx.suggestionId, state);
-    suggFields = sug ? { suggestionId: sug.id, shotType: sug.shotType, movement: sug.movement } : {};
+  if (ctx && (ctx.shotType || ctx.movement || ctx.suggestionId)) {
+    suggFields = { shotType: ctx.shotType || null, movement: ctx.movement || null, suggestionId: ctx.suggestionId || null };
   }
   state = logic.registerMediaFile(state, { cameraId: camera.id, targetId, kind, discardReason, autor: miNombre(), now: new Date(), ...suggFields });
   if (state === previous) return showToast('Reactiva este elemento antes de registrar');
   activeRoomId = targetId; localStorage.setItem(roomKey(), targetId);
-  if (guideCtx && guideCtx.suggestionId) avanzarSugerencia(targetId, guideCtx.suggestionId);
+  // No auto-avance: la etiqueta de la proxima toma se limpia tras grabar.
+  if (kind === 'take') { pendingShotType = null; pendingMovement = null; activeSugId = null; }
   render(); scheduleSave();
-  const file = state.mediaFiles[state.mediaFiles.length - 1];
-  if (kind === 'discard') {
-    showToast(`Fallida · ${file.fileToken}`, () => abrirMotivoDescarte(file.id), '¿qué fue?');
-  } else {
-    showToast(`${file.fileToken} registrado`, () => { state = previous; render(); scheduleSave(); }, 'Deshacer');
-  }
 }
 
 function abrirDescarte(targetId) {
@@ -3407,20 +3418,40 @@ function reintentarToma(mediaId) {
   render(); scheduleSave();
 }
 
+// F7 — tocar una toma abre estas acciones (corregir buena/favorita/fallida, reasignar, nota).
 function abrirArchivo(mediaId) {
   const file = (state.mediaFiles || []).find((item) => item.id === mediaId);
   if (!file) return;
+  const markRow = file.kind === 'take'
+    ? `<div class="cap-qa" style="margin-bottom:10px">
+        <button class="cap-qbtn fav${file.favorite ? ' on' : ''}" onclick="toggleFavoritaDesdeModal('${esc(file.id)}')"><i class="ti ti-star${file.favorite ? '-filled' : ''}"></i>Favorita</button>
+        <button class="cap-qbtn good${file.good ? ' on' : ''}" onclick="toggleBuenaDesdeArchivo('${esc(file.id)}')"><i class="ti ti-check"></i>Buena</button>
+      </div>`
+    : '';
   abrirModal(`<div class="sheet-head"><h2>${esc(file.fileToken)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    ${markRow}
     <div class="action-stack">
       <button class="btn" onclick="insertarOmitido('${file.id}')">Insertar archivo olvidado antes</button>
-      <button class="btn" onclick="abrirAsignacionArchivo('${file.id}')">${file.kind === 'omitted' ? 'Identificar archivo' : 'Cambiar escena'}</button>
+      <button class="btn" onclick="abrirAsignacionArchivo('${file.id}')">${file.kind === 'omitted' ? 'Identificar archivo' : 'Reasignar cuarto'}</button>
       ${file.kind !== 'take' ? `<button class="btn" onclick="convertirArchivoToma('${file.id}')">Convertir en toma</button>` : ''}
-      ${file.kind === 'take' ? `<button class="btn" onclick="abrirCambioDescarte('${file.id}')">Convertir en descarte</button>` : ''}
+      ${file.kind === 'take' ? `<button class="btn" onclick="abrirCambioDescarte('${file.id}')">Marcar como fallida</button>` : ''}
       ${file.kind === 'discard' ? `<button class="btn" onclick="abrirCambioDescarte('${file.id}')">Cambiar motivo de descarte</button>` : ''}
       <button class="btn" onclick="agregarNotaArchivo('${file.id}')">Agregar nota</button>
       <button class="danger btn" onclick="eliminarRegistroArchivo('${file.id}')">Eliminar registro: no se creo archivo</button>
       <button class="btn ghost" onclick="cerrarModal()">Cancelar</button>
     </div>`);
+}
+
+function toggleFavoritaDesdeModal(mediaId) {
+  state = logic.toggleMediaFavorite(state, mediaId);
+  scheduleSave();
+  abrirArchivo(mediaId);
+}
+
+function toggleBuenaDesdeArchivo(mediaId) {
+  state = logic.toggleMediaGood(state, mediaId);
+  scheduleSave();
+  abrirArchivo(mediaId);
 }
 
 function abrirArchivosEscena(targetId) {
