@@ -511,15 +511,21 @@
     .chip.suggest, .chips.suggest .chip { font-weight: 500; }
     .chips.suggest { margin-top: 10px; }
     .chips.suggest .chip i { color: var(--gold); }
+    .chip.added { color: var(--green); background: var(--green-soft); border-color: #BFE0CC; cursor: default; }
+    .chip.added i { color: var(--green); }
+    .setup-addhint { font-size: 12.5px; color: var(--ink-2); margin: 4px 0 9px; }
+    .setup-addhint b { color: var(--ink-1); font-weight: 600; }
     .setup-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
     .setup-add .field { width: 100%; height: 44px; padding: 0 12px; border: 1.5px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--card); font-size: 14px; }
     .setup-add .btn { height: 44px; }
     .setup-piso-group { margin-top: 12px; }
     .setup-piso-name { font-size: 12px; font-weight: 600; color: var(--gold); margin-bottom: 5px; }
-    .setup-room { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); margin-bottom: 6px; box-shadow: var(--shadow); }
-    .setup-room.sub { margin-left: 18px; }
-    .setup-room.sub .setup-room-name::before { content: "– "; color: var(--ink-3); }
+    .setup-room { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 8px 0 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); margin-bottom: 6px; box-shadow: var(--shadow); }
+    .setup-room.sub { margin-left: 18px; border-left: 2px solid var(--line-2, #D2C9B3); }
     .setup-room-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 500; }
+    .setup-room-sub { font-size: 12px; font-weight: 600; color: var(--gold); flex: none; background: transparent; border: 0; padding: 6px 8px; white-space: nowrap; }
+    .setup-room-x { width: 30px; height: 30px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid var(--line-2, #D2C9B3); background: var(--page); color: var(--red); }
+    .setup-room-x i { font-size: 16px; }
     .setup-mini { display: inline-flex; align-items: center; gap: 3px; height: 30px; padding: 0 9px; border: 1px solid var(--line-2, #D2C9B3); border-radius: 8px; background: var(--page); color: var(--ink-2); font-size: 12px; font-weight: 600; flex: none; }
     .setup-mini i { font-size: 14px; }
     .setup-mini.del { color: var(--red); border-color: #E8C9C3; }
@@ -1344,10 +1350,12 @@ function getFocusPiso() {
 function renderSetup() {
   const pisos = state.pisos && state.pisos.length ? state.pisos : ['Piso 1'];
   const focusP = getFocusPiso();
-  const added = new Set(state.espacios.map((e) => e.nombre.toLowerCase()));
-  const sugg = (logic.SPACE_SUGGESTIONS[setupTipo] || []).filter((row) => !added.has(row[0].toLowerCase()) && !row[3]);
+  // Chips sugeridos del tipo: cuartos raiz (no sub-espacios de plantilla).
+  const sugg = (logic.SPACE_SUGGESTIONS[setupTipo] || []).filter((row) => !row[3]);
+  // Cuartos raiz en el piso en foco (para el conteo del encabezado).
+  const enFoco = state.espacios.filter((e) => (e.piso || 'Sin piso') === focusP && !e.parentId).length;
   return `<section class="setup">
-    <div class="setup-hd"><h2>Armar cuartos</h2><p>Agrega solo lo que aplica. Puedes volver a entrar cuando quieras.</p></div>
+    <div class="setup-hd"><h2>Armar cuartos</h2><p>Arrancas de cero. Toca un chip para agregar al piso en foco; toca la X para quitar.</p></div>
     <div class="setup-block">
       <label class="setup-lbl">Tipo de propiedad</label>
       <div class="seg">${['casa', 'departamento', 'terreno', 'quinta'].map((t) => `<button class="seg-btn${setupTipo === t ? ' active' : ''}" onclick="setSetupTipo('${t}')">${TIPO_LABEL[t]}</button>`).join('')}</div>
@@ -1357,13 +1365,22 @@ function renderSetup() {
       <div class="chips">${pisos.map((p) => `<button class="chip${p === focusP ? ' active' : ''}" onclick="setSetupPiso('${esc(p)}')">${esc(p)}<i class="ti ti-x chip-x" onclick="event.stopPropagation();quitarPiso('${esc(p)}')"></i></button>`).join('')}<button class="chip add" onclick="agregarPiso()"><i class="ti ti-plus"></i>piso</button></div>
     </div>
     <div class="setup-block">
-      <label class="setup-lbl">Agregar a <b>${esc(focusP)}</b></label>
-      <div class="setup-add"><input class="field" id="setup-input" type="text" placeholder="Escribe un cuarto y Enter" autocomplete="off" onkeydown="if(event.key==='Enter')agregarCuartoEscrito()"><button class="btn" onclick="agregarCuartoEscrito()">Agregar</button></div>
-      <div class="chips suggest">${sugg.length ? sugg.slice(0, 18).map((row) => `<button class="chip" onclick="agregarCuartoSugerido('${esc(row[0])}','${row[1]}')"><i class="ti ti-plus"></i>${esc(row[0])}</button>`).join('') : '<span class="muted">Sin más sugerencias para este tipo.</span>'}</div>
+      <div class="setup-addhint">Toca para agregar a <b>${esc(focusP)}</b></div>
+      <div class="chips suggest">${sugg.length ? sugg.slice(0, 18).map((row) => {
+        const ya = chipYaEnFoco(row[0]);
+        return `<button class="chip${ya ? ' added' : ''}" ${ya ? 'disabled' : `onclick="agregarCuartoSugerido('${esc(row[0])}','${row[1]}')"`}>${ya ? '<i class="ti ti-check"></i>' : '<i class="ti ti-plus"></i>'}${esc(row[0])}</button>`;
+      }).join('') : '<span class="muted">Sin sugerencias para este tipo.</span>'}</div>
+      <div class="setup-add" style="margin-top:10px"><input class="field" id="setup-input" type="text" placeholder="Escribe para buscar o crear otro…" autocomplete="off" onkeydown="if(event.key==='Enter')agregarCuartoEscrito()"><button class="btn" onclick="agregarCuartoEscrito()">Agregar</button></div>
     </div>
-    ${state.espacios.length ? `<div class="setup-block"><label class="setup-lbl">Cuartos · ${state.espacios.length}</label>${renderSetupList()}</div>
+    ${state.espacios.length ? `<div class="setup-block"><label class="setup-lbl">En ${esc(focusP)} · ${enFoco} ${enFoco === 1 ? 'cuarto' : 'cuartos'}</label>${renderSetupList()}</div>
       <button class="primary block" onclick="cerrarSetup()">Listo, a capturar</button>` : ''}
   </section>`;
+}
+
+function chipYaEnFoco(nombre) {
+  const focusP = getFocusPiso();
+  const n = nombre.toLowerCase();
+  return state.espacios.some((e) => !e.parentId && (e.piso || 'Sin piso') === focusP && e.nombre.toLowerCase() === n);
 }
 
 function renderSetupList() {
@@ -1378,17 +1395,10 @@ function renderSetupList() {
 function setupRoomRow(room) {
   const subs = state.espacios.filter((e) => e.parentId === room.id).sort((a, b) => (a.orden || 0) - (b.orden || 0));
   return `<div class="setup-room"><span class="setup-room-name">${esc(room.nombre)}</span>
-    <div class="setup-row-actions">
-      <button class="setup-mini" onclick="moverEspacio('${room.id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
-      <button class="setup-mini" onclick="moverEspacio('${room.id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
-      <button class="setup-mini" onclick="accionesEspacio('${room.id}')" aria-label="Opciones"><i class="ti ti-dots-vertical"></i></button>
-    </div></div>
+    <button class="setup-room-sub" onclick="addSubSetup('${room.id}')">+ sub-cuarto</button>
+    <button class="setup-room-x" onclick="quitarEspacio('${room.id}')" aria-label="Quitar ${esc(room.nombre)}"><i class="ti ti-x"></i></button></div>
     ${subs.map((s) => `<div class="setup-room sub"><span class="setup-room-name">${esc(s.nombre)}</span>
-      <div class="setup-row-actions">
-        <button class="setup-mini" onclick="moverEspacio('${s.id}',-1)" aria-label="Subir"><i class="ti ti-chevron-up"></i></button>
-        <button class="setup-mini" onclick="moverEspacio('${s.id}',1)" aria-label="Bajar"><i class="ti ti-chevron-down"></i></button>
-        <button class="setup-mini" onclick="accionesEspacio('${s.id}')" aria-label="Opciones"><i class="ti ti-dots-vertical"></i></button>
-      </div></div>`).join('')}`;
+      <button class="setup-room-x" onclick="quitarEspacio('${s.id}')" aria-label="Quitar ${esc(s.nombre)}"><i class="ti ti-x"></i></button></div>`).join('')}`;
 }
 
 function accionesEspacio(id) {
@@ -1400,7 +1410,7 @@ function accionesEspacio(id) {
       <button class="btn" onclick="renombrarEspacio('${id}')"><i class="ti ti-pencil"></i> Cambiar nombre</button>
       ${esSub ? '' : `<button class="btn" onclick="addSubSetup('${id}')"><i class="ti ti-plus"></i> Agregar sub-cuarto</button>`}
       ${esSub ? '' : `<button class="btn" onclick="cambiarPisoEspacio('${id}')"><i class="ti ti-stairs"></i> Cambiar de piso</button>`}
-      <button class="danger btn" onclick="delSetup('${id}')"><i class="ti ti-trash"></i> Borrar</button>
+      <button class="danger btn" onclick="cerrarModal();quitarEspacio('${id}')"><i class="ti ti-trash"></i> Quitar</button>
     </div>`);
 }
 
@@ -1454,20 +1464,31 @@ function aplicarPisoEspacio(id, piso) {
   cerrarModal(); scheduleSave(); render();
 }
 
-function nuevoEspacio(nombre, piso, zona, parentId) {
+function nuevoEspacio(nombre, piso, zona, parentId, categoria) {
   const espacio = {
     id: 'esp-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
     nombre: nombre.trim(), piso, zona: zona || 'interior', parentId: parentId || null,
     clave: false, orden: state.espacios.length + 1,
-    estados: { foto: { estado: 'pendiente' }, t360: { estado: 'pendiente' }, video: { estado: 'pendiente' } },
+    categoria: categoria || logic.detectCategoria(nombre),
+    estados: { foto: { estado: 'pendiente' }, t360: { estado: 'pendiente' }, video: { estado: 'pendiente' }, drone: { estado: 'pendiente' } },
   };
   state.espacios.push(espacio);
   return espacio;
 }
 
-function setSetupTipo(t) { setupTipo = t; render(); }
+function setSetupTipo(t) {
+  setupTipo = t;
+  if (state.guide) state.guide.tipoPropiedad = t;
+  scheduleSave();
+  render();
+}
 function setSetupPiso(p) { setupPiso = p; render(); }
-function abrirSetup() { setupOpen = true; cerrarModal(); render(); }
+function abrirSetup() {
+  setupOpen = true;
+  // Re-entrable: arranca con el tipo ya elegido si lo hay.
+  if (state.guide && state.guide.tipoPropiedad && TIPO_LABEL[state.guide.tipoPropiedad]) setupTipo = state.guide.tipoPropiedad;
+  cerrarModal(); render();
+}
 function cerrarSetup() { setupOpen = false; render(); }
 
 function agregarCuartoEscrito() {
@@ -1475,7 +1496,8 @@ function agregarCuartoEscrito() {
   const value = input && input.value.trim();
   if (!value) return;
   setupOpen = true;
-  nuevoEspacio(value, getFocusPiso(), 'interior');
+  // Texto libre: la categoria se detecta (corregible despues con renombrar/acciones).
+  nuevoEspacio(value, getFocusPiso(), 'interior', null, logic.detectCategoria(value));
   scheduleSave();
   render();
   const again = document.getElementById('setup-input');
@@ -1483,8 +1505,10 @@ function agregarCuartoEscrito() {
 }
 
 function agregarCuartoSugerido(nombre, zona) {
+  if (chipYaEnFoco(nombre)) return;
   setupOpen = true;
-  nuevoEspacio(nombre, getFocusPiso(), zona);
+  // Chip: la categoria queda fijada desde el nombre estandar del chip.
+  nuevoEspacio(nombre, getFocusPiso(), zona, null, logic.detectCategoria(nombre));
   scheduleSave();
   render();
 }
@@ -1519,7 +1543,9 @@ function addSubSetup(parentId) {
   const parent = state.espacios.find((e) => e.id === parentId);
   if (!parent) return;
   abrirModal(`<div class="sheet-head"><h2>Sub-cuarto de ${esc(parent.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
-    <div class="setup-add"><input class="field" id="sub-input" type="text" placeholder="Baño, clóset…" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarSub('${parentId}')"><button class="btn" onclick="confirmarSub('${parentId}')">Agregar</button></div>`);
+    <p class="sheet-note">Cuelga un nivel de ${esc(parent.nombre)} y hereda el piso (${esc(parent.piso || 'Sin piso')}).</p>
+    <div class="setup-add"><input class="field" id="sub-input" type="text" placeholder="Baño, clóset, alacena…" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarSub('${parentId}')"><button class="btn" onclick="confirmarSub('${parentId}')">Agregar</button></div>`);
+  setTimeout(() => { const i = document.getElementById('sub-input'); if (i) i.focus(); }, 50);
 }
 
 function confirmarSub(parentId) {
@@ -1527,15 +1553,25 @@ function confirmarSub(parentId) {
   if (!value) return;
   const parent = state.espacios.find((e) => e.id === parentId);
   if (!parent) return;
-  nuevoEspacio(value, parent.piso, parent.zona, parentId);
+  // Sub-cuarto: hereda el piso del padre; la categoria se detecta del nombre.
+  nuevoEspacio(value, parent.piso, parent.zona, parentId, logic.detectCategoria(value));
   cerrarModal(); scheduleSave(); render();
 }
 
-function delSetup(id) {
+// Quitar con un toque, sin confirmacion; el toast permite deshacer (regresa el
+// cuarto y sus sub-cuartos tal cual estaban). Las tomas no se borran del estado.
+function quitarEspacio(id) {
   const ids = new Set(logic.getDescendantIds(state, id));
-  if ((state.mediaFiles || []).some((f) => ids.has(f.targetId)) || state.bitacora.some((b) => ids.has(b.targetId))) return showToast('Tiene tomas registradas');
+  const sp = state.espacios.find((e) => e.id === id);
+  if (!sp) return;
+  const removidos = state.espacios.filter((e) => ids.has(e.id));
   state.espacios = state.espacios.filter((e) => !ids.has(e.id));
+  if (activeRoomId && ids.has(activeRoomId)) activeRoomId = null;
   scheduleSave(); render();
+  showToast(`Quitaste "${sp.nombre}"`, () => {
+    removidos.forEach((r) => { if (!state.espacios.some((e) => e.id === r.id)) state.espacios.push(r); });
+    scheduleSave(); render();
+  }, 'Deshacer');
 }
 
 function renderTemplateCard(key) {
