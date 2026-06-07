@@ -1,0 +1,21 @@
+# Config SOLO para previews en workers.dev. No incluye la ruta de produccion ni el cron,
+# para no afectar contratos.inmueblesaudiovisuales.com. Comparte la D1 real (usar ?demo=1 para
+# ver la UI sin tocar datos). Deploy: npx wrangler deploy -c wrangler.preview.toml
+name = "contratos-iav-v4-preview"
+account_id = "0d0d6aaf107ae092f9fb5da06ddb338c"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+workers_dev = true
+
+[assets]
+directory = "../frontend"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "contratos-iav-v4"
+database_id = "84ae26a8-5bbc-4cdc-ad39-ead4c6bc7500"
+
+[vars]
+ADMIN_KEY = "framedock"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwv6J6Mh-y31LYGdLBasL0bFDOloosEaiaLJDXH-TIF2-A_VpFUbh14I9zHt43LEfY/exec"
