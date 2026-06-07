@@ -837,6 +837,17 @@ const ROLE_DEF = {
   bruno: { service: 'video', label: 'Bruno', sub: 'Video + Drone', initials: 'BG' },
 };
 const ROLE_ORDER = ['fernanda', 'danna', 'bruno'];
+// Modos que cada rol opera en el loop de captura.
+// Bruno es dueno de video + drone (alterna ambos en el mismo cuarto).
+// Fernanda (foto) y Danna (t360) no entran a este loop.
+const ROLE_LOOP_MODES = {
+  bruno: ['video', 'drone'],
+  fernanda: ['foto'],
+  danna: ['t360'],
+};
+function loopModesForRole() {
+  return ROLE_LOOP_MODES[getRole()] || [state.modoActual];
+}
 function roleKey() { return 'checklist_role_' + (TOKEN || 'demo'); }
 function getRole() {
   const r = localStorage.getItem(roleKey());
@@ -848,9 +859,20 @@ function roleReady() {
 }
 function isBruno() { return getRole() === 'bruno'; }
 // Aplica el servicio del rol activo a un estado (preserva el plumbing por servicio).
+// Bruno opera video + drone: si ya eligio una camara/modo en la sesion (carril guardado
+// dentro de sus modos), se respeta y no se pisa con 'video'. Fer (foto) y Danna (t360)
+// tienen un solo servicio, asi que su modo no cambia.
 function applyRoleServiceOn(target) {
   const role = getRole();
   if (!role || !target) return;
+  const modes = ROLE_LOOP_MODES[role];
+  if (modes && modes.length > 1) {
+    const savedLane = localStorage.getItem(laneKey());
+    if (savedLane && modes.includes(savedLane) && target.servicios && target.servicios[savedLane]) {
+      target.modoActual = savedLane;
+      return;
+    }
+  }
   target.modoActual = ROLE_DEF[role].service;
 }
 function applyRoleService() { applyRoleServiceOn(state); }
@@ -1990,8 +2012,9 @@ function cycleCobertura(id) {
 }
 
 function activeTarget() {
+  // Tras F2 el drone comparte espacios; ya no usa state.droneItems.
   const list = state.modoActual === 'asesor' ? (state.asesorPuntos || [])
-    : state.modoActual === 'drone' ? state.droneItems : state.espacios;
+    : state.espacios;
   if (!list.length) return null;
   if (activeRoomId) {
     const found = list.find((item) => item.id === activeRoomId);
@@ -2029,13 +2052,13 @@ function recorridoEspacios(servicio) {
 }
 
 function recorridoTargets(servicio) {
-  if (servicio === 'drone') return state.droneItems.slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0)).map((t) => t.id);
+  // Drone comparte espacios tras F2: usa el mismo recorrido que video.
   if (servicio === 'asesor') return (state.asesorPuntos || []).slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0)).map((t) => t.id);
   return recorridoEspacios(servicio);
 }
 
 function esPendiente(id, servicio) {
-  if (servicio === 'drone') { const it = state.droneItems.find((x) => x.id === id); return !!it && it.estado !== 'hecho' && !it.noAplica; }
+  // Drone comparte espacios tras F2: su pendiente se lee del estado por servicio.
   if (servicio === 'asesor') { const it = (state.asesorPuntos || []).find((x) => x.id === id); return !!it && it.estado !== 'hecho'; }
   const sp = state.espacios.find((x) => x.id === id);
   if (!sp) return false;
@@ -2205,8 +2228,11 @@ function renderMediaCapture() {
 }
 
 // Capa 1 — switch de camara como segmented control + token grande + (drone) + foto
+// El switch NO filtra por modoActual: muestra las camaras de todos los modos del rol
+// (Bruno → video + drone). Elegir una camara cambia el modo activo (ver setCamera).
 function renderCapCamSwitch(camera, isDrone, nextTok) {
-  const cams = logic.getCameras(state).filter((c) => c.mode === state.modoActual);
+  const modes = loopModesForRole();
+  const cams = logic.getCameras(state).filter((c) => modes.includes(c.mode));
   const segHtml = cams.length
     ? `<div class="seg cap-cam-seg">${cams.map((c) => `<button class="seg-btn${camera && camera.id === c.id ? ' active' : ''}" onclick="setCamera('${esc(c.id)}')">${esc(c.label)}</button>`).join('')}</div>`
     : `<div class="cap-cam-lbl">Sin cámara</div>`;
@@ -3040,13 +3066,7 @@ function noSirve(targetId) {
 }
 
 function abrirCambiarCuarto() {
-  if (state.modoActual === 'drone') {
-    const items = state.droneItems.slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0));
-    abrirModal(`<div class="sheet-head"><h2>Cambiar toma</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
-      <div class="cuarto-list">${items.map((item) => listaRow('drone', item)).join('')}</div>
-      <div class="action-stack" style="margin-top:12px"><button class="btn" onclick="agregarItemLista('drone')"><i class="ti ti-plus"></i> Agregar toma</button></div>`);
-    return;
-  }
+  // Drone comparte espacios tras F2: lista los mismos cuartos que video.
   const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(state.espacios.map((e) => e.piso || 'Sin piso'))];
   const covMap = guideMode ? new Map(logic.guideCoverage(state, state.modoActual).map((c) => [c.target.id, c])) : null;
   const body = pisos.map((piso) => {
@@ -3259,7 +3279,19 @@ function abrirCamaras() {
 }
 
 function setCamera(cameraId) {
-  state.activeCameraByMode[state.modoActual] = cameraId;
+  // Elegir una camara fija el modo activo segun el modo de esa camara
+  // (Drone DJI → modoActual='drone'; Sony/Osmo → 'video'). Asi el loop
+  // (token "siguiente video", "+ foto", sugerencias) reacciona al nuevo modo.
+  const cam = logic.getCameras(state).find((c) => c.id === cameraId);
+  if (!state.activeCameraByMode) state.activeCameraByMode = {};
+  if (cam && cam.mode) {
+    state.modoActual = cam.mode;
+    state.activeCameraByMode[cam.mode] = cameraId;
+    // Recordar la ultima camara elegida para no pisar el modo por el rol.
+    localStorage.setItem(laneKey(), cam.mode);
+  } else {
+    state.activeCameraByMode[state.modoActual] = cameraId;
+  }
   cerrarModal(); render(); scheduleSave();
 }
 
