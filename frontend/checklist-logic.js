@@ -1059,8 +1059,10 @@
           file.kind = 'omitted';
           file.discardReason = null;
           file.good = false;
+          file.favorite = false;
           file.shotNumber = null;
         }
+        if (typeof file.favorite !== 'boolean') file.favorite = false;
         file.shotType = file.shotType || null;
         file.movement = file.movement || null;
         file.suggestionId = file.suggestionId || null;
@@ -1300,6 +1302,7 @@
       kind,
       discardReason: options.discardReason || null,
       good: false,
+      favorite: false,
       note: options.note || '',
       author: options.autor || 'Anonimo',
       createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
@@ -1363,6 +1366,16 @@
     const next = clone(state);
     const file = next.mediaFiles.find((item) => item.id === mediaId);
     if (file && file.kind === 'take') file.good = !file.good;
+    return next;
+  }
+
+  function toggleMediaFavorite(state, mediaId) {
+    const next = clone(state);
+    const file = next.mediaFiles.find((item) => item.id === mediaId);
+    if (file && file.kind === 'take') {
+      file.favorite = !file.favorite;
+      if (file.favorite) file.good = true;
+    }
     return next;
   }
 
@@ -1780,6 +1793,7 @@
         tipo: f.kind,
         motivoDescarte: f.discardReason || null,
         buena: !!f.good,
+        favorita: !!f.favorite,
         nota: f.note || '',
         par: f.pairId || null,
         autor: f.author || '',
@@ -1796,6 +1810,7 @@
           Shot: f.shotNumber ? String(f.shotNumber) : '',
           'Camera Roll': cam.label || '',
           Good: !!f.good,
+          Favorite: !!f.favorite,
           Comment: f.note || '',
           Description: describirArchivo(servicio, enrichedFile),
         },
@@ -1914,6 +1929,7 @@
     registerMediaFile,
     registerAsesorFile,
     toggleMediaGood,
+    toggleMediaFavorite,
     insertOmittedMediaFile,
     updateMediaFile,
     removeMediaFile,

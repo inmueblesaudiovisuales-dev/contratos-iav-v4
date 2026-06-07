@@ -182,6 +182,39 @@ test('registers every video file and keeps good selection manual', () => {
   assert.equal(state.mediaFiles[1].good, true);
 });
 
+test('toggleMediaFavorite marca favorite y fuerza good', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'take' });
+  const id = state.mediaFiles[state.mediaFiles.length - 1].id;
+
+  state = logic.toggleMediaFavorite(state, id);
+  const f = state.mediaFiles.find((m) => m.id === id);
+  assert.equal(f.favorite, true);
+  assert.equal(f.good, true); // favorita implica buena
+
+  state = logic.toggleMediaFavorite(state, id);
+  const f2 = state.mediaFiles.find((m) => m.id === id);
+  assert.equal(f2.favorite, false);
+  assert.equal(f2.good, true); // al desmarcar favorite NO quita good
+});
+
+test('buildExport incluye favorita y mantiene version 1', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'take' });
+  const id = state.mediaFiles[state.mediaFiles.length - 1].id;
+  state = logic.toggleMediaFavorite(state, id);
+
+  const out = logic.buildExport(state, { folio: 'F1', nombreCliente: 'X' });
+  assert.equal(out.version, 1);
+  const archivo = out.archivos.find((a) => a.favorita === true);
+  assert.ok(archivo, 'el export incluye un archivo favorito');
+  assert.equal(archivo.premiere.Favorite, true);
+});
+
 test('registers discards and keeps camera counters independent', () => {
   let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
   const salaId = state.espacios[0].id;
