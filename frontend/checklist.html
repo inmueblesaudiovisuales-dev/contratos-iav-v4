@@ -812,6 +812,9 @@
     .cg-gloss-entry:last-of-type { border-bottom: none; }
     .cg-gloss-id { font-size: 11px; color: var(--ink-3); font-family: monospace; }
     .cg-gloss-hint { font-size: 12px; }
+    .cg-cam-preview { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+    .cg-cam-preview-empty { color: var(--ink-3); }
+    .cg-cam-token { font-family: monospace; font-weight: 700; color: var(--ink); }
     /* R102 — gate de salida global */
     .gate-salida-btn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--ink-3); background: transparent; color: var(--ink-2); }
     .gate-verdict { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--radius); font-size: 14px; font-weight: 700; margin-bottom: 16px; }
@@ -3012,6 +3015,7 @@ function renderConfigGuia() {
     ${droneHtml}
     <div class="cg-section-head"><h3>Amenidades</h3></div>
     ${amenHtml}
+    ${renderConfigCamaras()}
     <div class="cg-section-head">
       <h3>Tipos de toma</h3>
       ${hasShotTypesOverride ? `<button class="setup-mini" onclick="restaurarSeccionGuia('shotTypes')"><i class="ti ti-rotate-clockwise"></i> restaurar</button>` : ''}
@@ -3066,6 +3070,134 @@ function renderConfigShot(section, key, shot, shotTypes, movements) {
       </div>
     </div>
   </div>`;
+}
+
+const CAMARA_MODES = [
+  { value: 'video', label: 'Video' },
+  { value: 'drone', label: 'Drone' },
+  { value: 'audio', label: 'Audio' },
+];
+const CAMARA_KINDS = [
+  { value: 'sony', label: 'Sony (prefijo + numero)' },
+  { value: 'dji', label: 'DJI (numero + sufijo)' },
+  { value: 'otro', label: 'Otro' },
+];
+
+function camaraPreviewToken(cam) {
+  const width = Number(cam.counterWidth) > 0 ? Number(cam.counterWidth) : 0;
+  if (!width) return '';
+  const base = Number.isFinite(Number(cam.counterExampleNum)) ? Number(cam.counterExampleNum) : 0;
+  // Mismo formato que logic.formatFileToken: prefijo + numero (ancho) + sufijo
+  const next = (cam.prefixHint || '') + String(base + 1).padStart(width, '0');
+  return next + (cam.suffixHint || '');
+}
+
+function renderConfigCamaras() {
+  const cams = (guideConfigDraft && Array.isArray(guideConfigDraft.cameras))
+    ? guideConfigDraft.cameras
+    : logic.getCameras({});
+  const hasOverride = !!(guideConfigDraft && Array.isArray(guideConfigDraft.cameras));
+  const cards = cams.map((cam, idx) => {
+    const cid = esc(cam.id || '');
+    const modeOpts = CAMARA_MODES
+      .map((m) => `<option value="${m.value}"${cam.mode === m.value ? ' selected' : ''}>${m.label}</option>`)
+      .join('');
+    const kindOpts = CAMARA_KINDS
+      .map((k) => `<option value="${k.value}"${(cam.kind || 'otro') === k.value ? ' selected' : ''}>${esc(k.label)}</option>`)
+      .join('');
+    const preview = camaraPreviewToken(cam);
+    const previewHtml = preview
+      ? `<div class="cg-cam-preview">Siguiente: <span class="cg-cam-token">${esc(preview)}</span></div>`
+      : `<div class="cg-cam-preview cg-cam-preview-empty">Pega un nombre de archivo de ejemplo para ver el siguiente.</div>`;
+    return `<div class="cg-shot-card">
+      <div class="cg-shot-row">
+        <div class="cg-shot-fields">
+          <input class="field cg-shot-nombre" value="${esc(cam.label || '')}" placeholder="Nombre" onchange="editarCamaraConfig(${idx},'label',this.value)">
+          <input class="field" value="${cid}" placeholder="id" onchange="editarCamaraConfig(${idx},'id',this.value)">
+          <select class="field" onchange="editarCamaraConfig(${idx},'mode',this.value)">${modeOpts}</select>
+          <select class="field" onchange="editarCamaraConfig(${idx},'kind',this.value)">${kindOpts}</select>
+          <input class="field" value="${esc(cam.counterExample || '')}" placeholder="Ejemplo de archivo (p. ej. PIB2818)" onchange="editarCamaraEjemplo(${idx},this.value)">
+          ${previewHtml}
+        </div>
+        <div class="cg-shot-actions">
+          <button class="setup-mini del" onclick="eliminarCamaraConfig(${idx})" title="Eliminar"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="cg-section-head">
+      <h3>Camaras</h3>
+      ${hasOverride ? `<button class="setup-mini" onclick="restaurarCamarasConfig()"><i class="ti ti-rotate-clockwise"></i> restaurar</button>` : ''}
+    </div>
+    <div class="setup-block cg-section">
+      ${cards}
+      <button class="chip add" style="margin-top:8px" onclick="agregarCamaraConfig()"><i class="ti ti-plus"></i>agregar camara</button>
+    </div>`;
+}
+
+function ensureCamarasDraft() {
+  if (!guideConfigDraft) guideConfigDraft = {};
+  if (!Array.isArray(guideConfigDraft.cameras)) {
+    guideConfigDraft.cameras = logic.getCameras({}).map((c) => Object.assign({}, c));
+  }
+  return guideConfigDraft.cameras;
+}
+
+function editarCamaraConfig(idx, field, value) {
+  const cams = ensureCamarasDraft();
+  if (!cams[idx]) return;
+  cams[idx][field] = value;
+  if (field === 'kind' && cams[idx].counterExample) {
+    aplicarEjemploCamara(cams[idx], cams[idx].counterExample);
+  }
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
+}
+
+function aplicarEjemploCamara(cam, ejemplo) {
+  const parsed = logic.parseFilenameSequence(ejemplo, cam.kind);
+  cam.counterExample = ejemplo;
+  if (parsed) {
+    cam.prefixHint = parsed.prefixHint;
+    cam.suffixHint = parsed.suffixHint;
+    cam.counterWidth = parsed.counterWidth;
+    cam.counterExampleNum = parsed.counter;
+  } else {
+    cam.prefixHint = '';
+    cam.suffixHint = '';
+    cam.counterWidth = 0;
+    cam.counterExampleNum = null;
+  }
+}
+
+function editarCamaraEjemplo(idx, value) {
+  const cams = ensureCamarasDraft();
+  if (!cams[idx]) return;
+  aplicarEjemploCamara(cams[idx], value);
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
+}
+
+function agregarCamaraConfig() {
+  const cams = ensureCamarasDraft();
+  const rand = Math.random().toString(36).slice(2, 7);
+  cams.push({ id: 'cam-' + rand, label: 'Nueva camara', mode: 'video', kind: 'otro' });
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
+}
+
+function eliminarCamaraConfig(idx) {
+  const cams = ensureCamarasDraft();
+  if (idx < 0 || idx >= cams.length) return;
+  cams.splice(idx, 1);
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
+}
+
+function restaurarCamarasConfig() {
+  if (guideConfigDraft) delete guideConfigDraft.cameras;
+  logic.applyGuideConfig(guideConfigDraft);
+  render();
 }
 
 function editarShotConfig(section, key, shotId, field, value) {
