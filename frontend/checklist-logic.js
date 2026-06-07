@@ -1195,6 +1195,17 @@
     return next;
   }
 
+  function bumpCameraCounter(state, cameraId, n) {
+    const steps = Math.floor(Number(n) || 1);
+    if (steps < 1) return state;
+    const next = clone(state);
+    const camera = getCamera(next, cameraId);
+    const segment = (next.sequenceSegments || []).find((item) => item.id === (camera && camera.activeSegmentId));
+    if (!camera || !segment) return state;
+    segment.counterNext += steps;
+    return next;
+  }
+
   function targetsForMode(state, mode) {
     if (mode === 'asesor') return state.asesorPuntos || [];
     // drone comparte los mismos espacios que video (ya no usa droneItems).
@@ -1914,6 +1925,7 @@
     parseFilenameSequence,
     getCameraSequence,
     initializeCameraSequence,
+    bumpCameraCounter,
     getScenePath,
     getDescendantIds,
     getMediaSceneGroups,

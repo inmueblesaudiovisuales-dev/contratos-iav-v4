@@ -1726,3 +1726,13 @@ test('C1: applyGuideConfig con una seccion invalida conserva las secciones valid
   const lib = logic.getGuideLibrary();
   assert.ok(lib.sala, 'sala debe existir como defaults tras fallo de categorias');
 });
+
+test('F3: bumpCameraCounter avanza el consecutivo sin crear toma', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'drone-dji', lastFilename: 'DJI_0001' });
+  const before = logic.getCameraSequence(s, 'drone-dji').nextToken;
+  const n0 = s.mediaFiles.length;
+  s = logic.bumpCameraCounter(s, 'drone-dji', 5);
+  assert.equal(s.mediaFiles.length, n0, 'no debe crear tomas');
+  assert.notEqual(logic.getCameraSequence(s, 'drone-dji').nextToken, before, 'el consecutivo debe avanzar');
+});
