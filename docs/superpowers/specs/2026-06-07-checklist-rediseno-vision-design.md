@@ -226,3 +226,11 @@ Casi siempre **intro y despedida** (a veces recorrido hablado).
 - Motor: modo `asesor`, `asesorPuntos`, par por `pairId` (ya existe parcialmente; se rediseña en su
   fase). Nota: el "asesor como entidad propia / su URL" ligado a contratos sigue **aplazado** y es
   distinto de este modo de grabación.
+
+## 16. Ideas futuras (backlog — fuera de fases 1–3)
+
+- **Sincronizar drone con audio.** El drone no trae buen audio; el audio se graba aparte (DJI Mic 2 +
+  Osmo). Hoy Bruno usa un marcador visual de sincronía (pantalla blanca que parpadea a rojo y vuelve a
+  blanco) para alinear en edición. A futuro, la app podría **generar ese marcador** (destello en el cel
+  + un tono que capte el mic) y **registrar el punto de sync ligando el clip de drone con su audio**,
+  para alinear sin adivinar. Se brainstormea a su tiempo.
