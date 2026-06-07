@@ -83,10 +83,18 @@ Aditivos y compatibles hacia atrás (el estado viejo debe seguir cargando). El b
    (buena, favorita, fallida, reasignar cuarto, nota).
 7. **Fuera el modo aprendiz** y el cheatsheet imprimible. **Se conservan** el guion de edición
    imprimible y el gate de salida.
-8. **Cámaras configurables y extensibles.** Lista editable (defaults: Sony FX30, Osmo Pocket 3, DJI
-   Air 3, DJI Mini 4 Pro), cada una con su **consecutivo y prefijo** propios. El switch de cámara en
-   el loop muestra las relevantes. El control **"+ foto"** aplica a las cámaras de drone (foto+video
-   comparten contador). Agregar una cámara nueva no debe requerir tocar código.
+8. **Cámaras configurables y extensibles, administradas desde el editor de biblioteca (`?config=1`).**
+   Lista editable (defaults: Sony FX30, Osmo Pocket 3, DJI Air 3, DJI Mini 4 Pro). El switch de cámara
+   en el loop muestra las relevantes. El control **"+ foto"** aplica a las cámaras de drone
+   (foto+video comparten contador). Agregar una cámara nueva no requiere tocar código.
+   - **Alta de cámara:** nombre, tipo (video / drone) y **patrón de numeración**. El patrón se captura
+     **pegando un ejemplo del nombre de archivo**; el motor infiere **prefijo + número + sufijo + ancho**
+     (reusar `parseFilenameSequence`) y muestra **vista previa del "siguiente"** para confirmar. Soporta
+     patrón Sony (prefijo + número aditivo) y DJI (número aditivo + letra/sufijo al final). Respaldo:
+     selector manual *solo número* vs *número + sufijo*.
+   - **Patrón vs número del día:** el **patrón** (prefijo/sufijo/ancho) vive en la **cámara** (config,
+     reutilizable entre sesiones). El **número actual** se engancha en **campo** tecleando una vez el
+     último archivo (`initializeCameraSequence`), sin redefinir el patrón.
 
 ## 5. Captura — el loop (vista de Bruno)
 
@@ -185,8 +193,8 @@ Un cuarto en foco, pensado para el pulgar. De arriba a abajo:
 - `buildExport` en `version:1` (app de Mac `iav-metadata-app`).
 - Motor `checklist-logic.js` como capa de lógica pura, testeada (`node --test
   frontend/checklist-logic.test.js`); se extiende de forma aditiva.
-- Modos `?config=1` (editor de biblioteca de sugerencias, tras contraseña de admin) y `?demo=1`
-  (datos de ejemplo, sin backend).
+- Modos `?config=1` (editor de biblioteca: sugerencias **y cámaras**, tras contraseña de admin) y
+  `?demo=1` (datos de ejemplo, sin backend).
 
 ## 14. Verificación (para los planes)
 
