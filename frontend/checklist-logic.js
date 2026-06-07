@@ -741,17 +741,12 @@
   function buildPropuestaPrompt(state) {
     const guide = state.guide || {};
     const descripcion = guide.descripcion || '';
-    const cuartos = (state.espacios || []).map((esp) => ({
+    // El drone comparte los espacios; no hay targets de drone aparte.
+    const allTargets = (state.espacios || []).map((esp) => ({
       id: esp.id,
       nombre: esp.nombre,
       categoria: esp.categoria || detectCategoria(esp.nombre),
     }));
-    const droneTargets = (state.droneItems || []).map((item) => ({
-      id: item.id,
-      nombre: item.nombre,
-      categoria: 'drone',
-    }));
-    const allTargets = cuartos.concat(droneTargets);
 
     const shotTypes = getShotTypes();
     const movements = getMovements();
@@ -816,7 +811,7 @@
         return emptyResult;
       }
 
-      const allTargets = [...(state.espacios || []), ...(state.droneItems || [])];
+      const allTargets = [...(state.espacios || [])];
       const byId = new Map(allTargets.map((t) => [t.id, t]));
       const byNombre = new Map(allTargets.map((t) => [normNombre(t.nombre), t]));
 
@@ -896,7 +891,7 @@
   }
 
   function guideCoverage(state, mode) {
-    const targets = mode === 'drone' ? (state.droneItems || []) : (state.espacios || []);
+    const targets = targetsForMode(state, mode);
     return targets.map((target) => {
       const suggestions = suggestionsForTarget(state, mode, target);
       const guideSkip = target.guideSkip || {};
@@ -945,6 +940,7 @@
       foto: { estado: 'pendiente' },
       t360: { estado: 'pendiente' },
       video: { estado: 'pendiente' },
+      drone: { estado: 'pendiente' },
     };
   }
 
@@ -985,7 +981,7 @@
       pisos: PISOS_DEFAULT.slice(),
       modoActual: 'video',
       espacios: [],
-      droneItems: createDroneItems(),
+      droneItems: [],
       asesorPuntos: createAsesorPuntos(),
       recorrido: {},
       bitacora: [],
@@ -1000,6 +996,49 @@
   function legacyValueToState(value) {
     if (!value) return { estado: 'pendiente' };
     return { estado: 'hecho', autor: typeof value === 'string' ? value : '', hora: '' };
+  }
+
+  // Convierte droneItems (modelo viejo) en espacios (modelo nuevo). Mutador.
+  // Solo migra droneItems que tengan al menos un mediaFile apuntandolos; los demas se descartan.
+  function migrateDroneItemsToEspacios(state) {
+    const droneItems = Array.isArray(state.droneItems) ? state.droneItems : [];
+    if (!droneItems.length) {
+      state.droneItems = [];
+      return;
+    }
+    const mediaFiles = Array.isArray(state.mediaFiles) ? state.mediaFiles : [];
+    const espaciosIds = new Set((state.espacios || []).map((esp) => esp.id));
+    // droneItems usados por al menos un mediaFile (y que no sean ya un espacio).
+    const usedIds = new Set();
+    mediaFiles.forEach((file) => {
+      if (file && file.targetId && !espaciosIds.has(file.targetId)) usedIds.add(file.targetId);
+    });
+    const idMap = {};
+    droneItems.forEach((item, index) => {
+      if (!item || !item.id || !usedIds.has(item.id)) return;
+      const nuevoId = makeId('esp');
+      idMap[item.id] = nuevoId;
+      const estados = blankEstados();
+      if (item.estado === 'hecho') estados.drone = { estado: 'hecho' };
+      else if (item.noAplica) estados.drone = { estado: 'no_aplica' };
+      state.espacios.push({
+        id: nuevoId,
+        nombre: item.nombre || 'Toma drone',
+        parentId: null,
+        orden: state.espacios.length + 1,
+        clave: false,
+        zona: 'exterior',
+        piso: 'Exterior',
+        estados,
+        categoria: undefined,
+        guideSkip: undefined,
+      });
+    });
+    // Reasignar el targetId de los mediaFiles al espacio nuevo, preservando todo lo demas.
+    mediaFiles.forEach((file) => {
+      if (file && file.targetId && idMap[file.targetId]) file.targetId = idMap[file.targetId];
+    });
+    state.droneItems = [];
   }
 
   function normalizeChecklistData(data) {
@@ -1019,16 +1058,12 @@
         categoria: space.categoria || undefined,
         guideSkip: space.guideSkip || undefined,
       }));
+      // Migracion droneItems -> espacios: el drone ya no es entidad propia, comparte espacios.
+      // Por cada droneItem USADO por al menos un mediaFile creamos un espacio nuevo en piso
+      // 'Exterior' (zona 'exterior') y reasignamos el targetId de esos mediaFiles, preservando
+      // todo lo demas del mediaFile. Los droneItems no usados se descartan. No se pierden archivos.
+      migrateDroneItemsToEspacios(normalized);
       normalized.pisos = Array.isArray(data.pisos) && data.pisos.length ? data.pisos.slice() : derivePisos(normalized.espacios);
-      normalized.droneItems = (normalized.droneItems && normalized.droneItems.length ? normalized.droneItems : createDroneItems())
-        .map((item, index) => ({
-          id: item.id || makeId('drone'),
-          nombre: item.nombre || 'Toma drone',
-          estado: item.estado || 'pendiente',
-          ordenLista: item.ordenLista || index + 1,
-          ultimoOrden: item.ultimoOrden || null,
-          noAplica: !!item.noAplica,
-        }));
       normalized.asesorPuntos = (normalized.asesorPuntos && normalized.asesorPuntos.length ? normalized.asesorPuntos : createAsesorPuntos())
         .map((p, index) => ({
           id: p.id || makeId('asesor'),
@@ -1097,6 +1132,7 @@
         foto: legacyValueToState(room.foto || room.completado),
         t360: legacyValueToState(room.t360 || room.completado),
         video: legacyValueToState(room.video || room.completado),
+        drone: { estado: 'pendiente' },
       },
     }));
     base.pisos = derivePisos(base.espacios);
@@ -1160,8 +1196,8 @@
   }
 
   function targetsForMode(state, mode) {
-    if (mode === 'drone') return state.droneItems || [];
     if (mode === 'asesor') return state.asesorPuntos || [];
+    // drone comparte los mismos espacios que video (ya no usa droneItems).
     return state.espacios || [];
   }
 
@@ -1169,7 +1205,7 @@
     const list = targetsForMode(state, mode);
     const target = list.find((item) => item.id === targetId);
     if (!target) return 'Sin identificar';
-    if (mode === 'drone' || mode === 'asesor') return target.nombre;
+    if (mode === 'asesor') return target.nombre;
     const names = [];
     const visited = new Set();
     let current = target;
@@ -1221,30 +1257,26 @@
   }
 
   function targetIsNoAplica(state, mode, targetId) {
-    if (mode === 'drone') {
-      const item = state.droneItems.find((entry) => entry.id === targetId);
-      return !item || item.noAplica;
-    }
     const space = state.espacios.find((entry) => entry.id === targetId);
-    return !space || (space.estados.video || {}).estado === 'no_aplica';
+    if (!space) return true;
+    const servicio = mode === 'drone' ? 'drone' : 'video';
+    return (space.estados[servicio] || {}).estado === 'no_aplica';
   }
 
   function deriveMediaTargetState(state, camera, targetId) {
     const cameraIds = new Set(state.cameras.filter((item) => item.mode === camera.mode).map((item) => item.id));
     const files = state.mediaFiles.filter((file) => cameraIds.has(file.cameraId) && file.targetId === targetId && file.kind === 'take');
-    if (camera.mode === 'drone') {
-      const item = state.droneItems.find((entry) => entry.id === targetId);
-      if (item) item.estado = files.length ? 'hecho' : 'pendiente';
-      return;
-    }
     if (camera.mode === 'asesor') {
       const punto = (state.asesorPuntos || []).find((entry) => entry.id === targetId);
       if (punto) punto.estado = files.length ? 'hecho' : 'pendiente';
       return;
     }
+    const servicio = camera.mode === 'drone' ? 'drone' : 'video';
     const space = state.espacios.find((entry) => entry.id === targetId);
-    if (space && files.length) space.estados.video = { estado: 'hecho' };
-    else if (space && (space.estados.video || {}).estado !== 'no_aplica') space.estados.video = { estado: 'pendiente' };
+    if (!space) return;
+    if (!space.estados) space.estados = blankEstados();
+    if (files.length) space.estados[servicio] = { estado: 'hecho' };
+    else if ((space.estados[servicio] || {}).estado !== 'no_aplica') space.estados[servicio] = { estado: 'pendiente' };
   }
 
   function renumberTargetShots(state, cameraId, targetId) {
@@ -1258,13 +1290,11 @@
   }
 
   function repairDerivedMediaState(state) {
+    const videoCamera = state.cameras.find((item) => item.mode === 'video');
+    const droneCamera = state.cameras.find((item) => item.mode === 'drone');
     state.espacios.forEach((space) => {
-      const camera = state.cameras.find((item) => item.mode === 'video');
-      if (camera) deriveMediaTargetState(state, camera, space.id);
-    });
-    state.droneItems.forEach((item) => {
-      const camera = state.cameras.find((entry) => entry.mode === 'drone');
-      if (camera) deriveMediaTargetState(state, camera, item.id);
+      if (videoCamera) deriveMediaTargetState(state, videoCamera, space.id);
+      if (droneCamera) deriveMediaTargetState(state, droneCamera, space.id);
     });
     (state.asesorPuntos || []).forEach((punto) => {
       const camera = state.cameras.find((entry) => entry.mode === 'asesor');
@@ -1560,14 +1590,8 @@
       space.orden = next.espacios.length + 1;
       next.espacios.push(space);
     });
-    if (template.drone) {
-      next.droneItems = template.drone.map((nombre, index) => ({
-        id: makeId('drone'),
-        nombre,
-        estado: 'pendiente',
-        ordenLista: index + 1,
-      }));
-    }
+    // El drone ya no es una entidad propia: comparte los espacios. El template.drone
+    // (nombres de tomas aereas) se conserva como referencia/sugerencias via DRONE_GUIDE.
     return next;
   }
 
@@ -1590,7 +1614,7 @@
   }
 
   function findTargetName(state, tipo, targetId) {
-    const list = tipo === 'drone' ? state.droneItems : state.espacios;
+    const list = tipo === 'asesor' ? (state.asesorPuntos || []) : state.espacios;
     const item = list.find((entry) => entry.id === targetId);
     return item ? item.nombre : '';
   }
@@ -1600,17 +1624,11 @@
     const tipo = options.tipo;
     const targetId = options.targetId;
     const intencion = options.intencion || 'principal';
-    if (tipo !== 'drone') {
-      const existingSpace = next.espacios.find((entry) => entry.id === targetId);
-      const existingState = existingSpace && existingSpace.estados[tipo];
-      if (!existingSpace || (existingState && existingState.estado === 'no_aplica')) return state;
-      if (existingState && existingState.estado === 'hecho' && (tipo === 'foto' || tipo === 't360')) return state;
-      if (existingState && existingState.estado === 'hecho' && tipo === 'video' && intencion === 'principal') return state;
-    } else {
-      const existingDrone = next.droneItems.find((entry) => entry.id === targetId);
-      if (!existingDrone || existingDrone.noAplica) return state;
-      if (existingDrone && existingDrone.estado === 'hecho' && intencion === 'principal') return state;
-    }
+    const existingSpace = next.espacios.find((entry) => entry.id === targetId);
+    const existingState = existingSpace && existingSpace.estados[tipo];
+    if (!existingSpace || (existingState && existingState.estado === 'no_aplica')) return state;
+    if (existingState && existingState.estado === 'hecho' && (tipo === 'foto' || tipo === 't360')) return state;
+    if (existingState && existingState.estado === 'hecho' && (tipo === 'video' || tipo === 'drone') && intencion === 'principal') return state;
     const order = tipo === 'video' || tipo === 'drone' ? getNextOrder(next, tipo) : null;
     const hora = formatTime(options.now);
     const log = {
@@ -1626,20 +1644,10 @@
       intencion,
     };
 
-    if (tipo === 'drone') {
-      const item = next.droneItems.find((entry) => entry.id === targetId);
-      if (item) {
-        item.estado = 'hecho';
-        item.autor = log.autor;
-        item.hora = hora;
-        item.ultimoOrden = order;
-      }
-    } else {
-      const space = next.espacios.find((entry) => entry.id === targetId);
-      if (space) {
-        space.estados[tipo] = { estado: 'hecho', autor: log.autor, hora };
-        if (order) space.estados[tipo].ultimoOrden = order;
-      }
+    const space = next.espacios.find((entry) => entry.id === targetId);
+    if (space) {
+      space.estados[tipo] = { estado: 'hecho', autor: log.autor, hora };
+      if (order) space.estados[tipo].ultimoOrden = order;
     }
 
     next.bitacora.push(log);
@@ -1650,24 +1658,6 @@
     const next = clone(state);
     const log = next.bitacora.pop();
     if (!log) return next;
-    if (log.tipo === 'drone') {
-      const item = next.droneItems.find((entry) => entry.id === log.targetId);
-      const previous = next.bitacora.filter((entry) => entry.tipo === 'drone' && entry.targetId === log.targetId).pop();
-      if (item) {
-        if (previous) {
-          item.estado = 'hecho';
-          item.ultimoOrden = previous.orden || null;
-          item.autor = previous.autor || '';
-          item.hora = previous.hora || '';
-        } else {
-          item.estado = 'pendiente';
-          delete item.ultimoOrden;
-          delete item.autor;
-          delete item.hora;
-        }
-      }
-      return next;
-    }
     const space = next.espacios.find((entry) => entry.id === log.targetId);
     if (space && space.estados[log.tipo]) {
       const previous = next.bitacora.filter((entry) => entry.tipo === log.tipo && entry.targetId === log.targetId).pop();
@@ -1714,10 +1704,11 @@
       summary.totalDone += required - pending.length;
     });
     if (state.servicios.drone) {
-      const pending = state.droneItems
-        .filter((item) => item.estado !== 'hecho' && !item.noAplica)
-        .map((item) => item.nombre);
-      const required = state.droneItems.filter((item) => !item.noAplica).length;
+      const pending = state.espacios
+        .filter((space) => (space.estados.drone || {}).estado !== 'hecho' && (space.estados.drone || {}).estado !== 'no_aplica')
+        .map((space) => space.nombre);
+      const required = state.espacios
+        .filter((space) => (space.estados.drone || {}).estado !== 'no_aplica').length;
       summary.byService.drone = { label: SERVICE_LABELS.drone, pending, required, done: required - pending.length };
       summary.totalPending += pending.length;
       summary.totalRequired += required;

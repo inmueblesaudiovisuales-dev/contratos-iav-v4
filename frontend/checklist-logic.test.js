@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const logic = require('./checklist-logic.js');
 
-test('migrates legacy checklist format to version 3 with active services and drone defaults', () => {
+test('migrates legacy checklist format to version 3 with active services and drone as a per-space service', () => {
   const migrated = logic.normalizeChecklistData({
     cuartos: [
       { nombre: 'Sala', foto: 'Ana', video: 'Bruno', t360: false },
@@ -18,7 +18,10 @@ test('migrates legacy checklist format to version 3 with active services and dro
   assert.equal(migrated.espacios[0].estados.foto.estado, 'hecho');
   assert.equal(migrated.espacios[0].estados.video.estado, 'hecho');
   assert.equal(migrated.espacios[1].estados.t360.estado, 'hecho');
-  assert.equal(migrated.droneItems.length > 0, true);
+  // El drone ya no es entidad propia: comparte los espacios y aparece como estado por espacio.
+  assert.equal(migrated.servicios.drone, true);
+  assert.equal(migrated.espacios[0].estados.drone.estado, 'pendiente');
+  assert.deepEqual(migrated.droneItems, []);
   assert.deepEqual(migrated.bitacora, []);
 });
 
@@ -48,22 +51,23 @@ Terraza`);
 });
 
 test('registers video and drone captures with independent sequence numbers', () => {
+  // El drone usa los mismos espacios que el video; su estado vive en espacio.estados.drone.
   let state = logic.createDefaultState();
-  state = logic.addSpacesFromText(state, 'Sala\nCocina');
+  state = logic.addSpacesFromText(state, 'Sala\nCocina\nFachada');
   const salaId = state.espacios.find((item) => item.nombre === 'Sala').id;
   const cocinaId = state.espacios.find((item) => item.nombre === 'Cocina').id;
-  const droneId = state.droneItems[0].id;
+  const fachadaId = state.espacios.find((item) => item.nombre === 'Fachada').id;
 
   state = logic.registerCapture(state, { tipo: 'video', targetId: salaId, autor: 'Bruno', now: new Date('2026-06-03T17:00:00Z') });
   state = logic.registerCapture(state, { tipo: 'video', targetId: cocinaId, autor: 'Bruno', now: new Date('2026-06-03T17:01:00Z') });
-  state = logic.registerCapture(state, { tipo: 'drone', targetId: droneId, autor: 'Bruno', now: new Date('2026-06-03T17:02:00Z') });
+  state = logic.registerCapture(state, { tipo: 'drone', targetId: fachadaId, autor: 'Bruno', now: new Date('2026-06-03T17:02:00Z') });
 
   assert.equal(state.bitacora[0].orden, 1);
   assert.equal(state.bitacora[1].orden, 2);
   assert.equal(state.bitacora[2].orden, 1);
   assert.equal(state.espacios.find((item) => item.id === cocinaId).estados.video.ultimoOrden, 2);
-  assert.equal(state.droneItems[0].estado, 'hecho');
-  assert.equal(state.droneItems[0].ultimoOrden, 1);
+  assert.equal(state.espacios.find((item) => item.id === fachadaId).estados.drone.estado, 'hecho');
+  assert.equal(state.espacios.find((item) => item.id === fachadaId).estados.drone.ultimoOrden, 1);
 });
 
 test('disabled services are excluded from pending summary without deleting history', () => {
@@ -106,6 +110,116 @@ test('applies departamento template with interior and amenidades zones', () => {
 
   assert.equal(state.espacios.some((space) => space.zona === 'interior' && space.nombre === 'Sala'), true);
   assert.equal(state.espacios.some((space) => space.zona === 'amenidades' && space.nombre === 'Alberca'), true);
+});
+
+// ─── F2: drone comparte espacios (eliminar droneItems como entidad) ───────────
+
+test('F2: targetsForMode drone devuelve los mismos espacios que video', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Sala\nFachada');
+  // El drone registra contra un espacio (no contra droneItems).
+  state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
+  const fachadaId = state.espacios.find((e) => e.nombre === 'Fachada').id;
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: fachadaId, kind: 'take' });
+  const file = state.mediaFiles[state.mediaFiles.length - 1];
+  assert.equal(file.targetId, fachadaId, 'el target del drone es un espacio');
+  assert.equal(file.scene, 'Fachada');
+  // El estado de drone vive en el espacio.
+  assert.equal(state.espacios.find((e) => e.id === fachadaId).estados.drone.estado, 'hecho');
+  assert.deepEqual(state.droneItems, [], 'ya no hay droneItems como entidad');
+});
+
+test('F2: blankEstados incluye el servicio drone', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Sala');
+  assert.ok(state.espacios[0].estados.drone, 'el espacio nuevo trae estado drone');
+  assert.equal(state.espacios[0].estados.drone.estado, 'pendiente');
+});
+
+test('F2: getScenePath del drone usa ruta anidada como video', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Recamara principal\n  Bano principal');
+  const bano = state.espacios.find((e) => e.nombre === 'Bano principal');
+  const path = logic.getScenePath(state, bano.id, 'drone');
+  assert.equal(path, 'Recamara principal > Bano principal');
+});
+
+test('F2: migración droneItems->espacios preserva mediaFiles', () => {
+  const viejo = {
+    version: 3,
+    espacios: [],
+    droneItems: [{ id: 'd1', nombre: 'Fachada aerea', estado: 'hecho' }],
+    mediaFiles: [{ id: 'm1', cameraId: 'drone-dji', targetId: 'd1', kind: 'take', fileToken: 'DJI0001' }],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  const s = logic.normalizeChecklistData(viejo);
+  const m = s.mediaFiles.find((x) => x.id === 'm1');
+  assert.ok(m, 'el mediaFile sobrevive');
+  const esp = s.espacios.find((e) => e.id === m.targetId);
+  assert.ok(esp, 'el target ahora es un espacio');
+  assert.equal(esp.piso, 'Exterior');
+  assert.equal(esp.zona, 'exterior');
+  assert.equal(esp.nombre, 'Fachada aerea');
+  assert.deepEqual(s.droneItems, [], 'droneItems queda vacio tras migrar');
+});
+
+test('F2: migración preserva consecutivo, good y favorite del mediaFile', () => {
+  const viejo = {
+    version: 3,
+    espacios: [],
+    droneItems: [{ id: 'd1', nombre: 'Orbita', estado: 'hecho' }],
+    mediaFiles: [{
+      id: 'm1', cameraId: 'drone-dji', targetId: 'd1', kind: 'take',
+      fileToken: 'DJI0007', fileCounter: 7, good: true, favorite: true, note: 'epica',
+    }],
+    cameras: [{ id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' }],
+    sequenceSegments: [],
+  };
+  const s = logic.normalizeChecklistData(viejo);
+  const m = s.mediaFiles.find((x) => x.id === 'm1');
+  assert.ok(m, 'el mediaFile sobrevive');
+  assert.equal(m.fileToken, 'DJI0007');
+  assert.equal(m.fileCounter, 7);
+  assert.equal(m.good, true);
+  assert.equal(m.favorite, true);
+  assert.equal(m.note, 'epica');
+  const esp = s.espacios.find((e) => e.id === m.targetId);
+  assert.equal(esp.estados.drone.estado, 'hecho', 'el estado drone del espacio se deriva como hecho');
+});
+
+test('F2: droneItems no usados por ningun mediaFile se descartan', () => {
+  const viejo = {
+    version: 3,
+    espacios: [],
+    droneItems: [
+      { id: 'd1', nombre: 'Usado', estado: 'hecho' },
+      { id: 'd2', nombre: 'Sin usar', estado: 'pendiente' },
+    ],
+    mediaFiles: [{ id: 'm1', cameraId: 'drone-dji', targetId: 'd1', kind: 'take', fileToken: 'DJI0001' }],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  const s = logic.normalizeChecklistData(viejo);
+  assert.equal(s.espacios.length, 1, 'solo el droneItem usado se convierte en espacio');
+  assert.equal(s.espacios[0].nombre, 'Usado');
+  assert.deepEqual(s.droneItems, []);
+});
+
+test('F2: estado nuevo sin droneItems carga sin perder espacios ni archivos', () => {
+  const nuevo = {
+    version: 3,
+    espacios: [{ id: 'e1', nombre: 'Fachada', zona: 'exterior', piso: 'Exterior', estados: {} }],
+    mediaFiles: [{ id: 'm1', cameraId: 'drone-dji', targetId: 'e1', kind: 'take', fileToken: 'DJI0001' }],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  const s = logic.normalizeChecklistData(nuevo);
+  assert.equal(s.espacios.length, 1);
+  const m = s.mediaFiles.find((x) => x.id === 'm1');
+  assert.ok(m, 'el archivo sobrevive');
+  assert.equal(m.targetId, 'e1', 'el target sigue siendo el espacio existente');
+  assert.deepEqual(s.droneItems, []);
 });
 
 test('does not duplicate foto or 360 captures when already completed', () => {
@@ -216,13 +330,14 @@ test('buildExport incluye favorita y mantiene version 1', () => {
 });
 
 test('registers discards and keeps camera counters independent', () => {
-  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nFachada');
   const salaId = state.espacios[0].id;
+  const fachadaId = state.espacios[1].id;
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
 
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'discard', discardReason: 'empty' });
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: state.droneItems[0].id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: fachadaId, kind: 'take' });
 
   assert.equal(state.mediaFiles[0].fileToken, 'PIB2819');
   assert.equal(state.mediaFiles[0].good, false);
@@ -233,12 +348,12 @@ test('registers discards and keeps camera counters independent', () => {
 });
 
 test('inserts an omitted file and renumbers only later files in the same segment', () => {
-  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nCocina');
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nCocina\nFachada');
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[1].id, kind: 'take' });
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: state.droneItems[0].id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: state.espacios[2].id, kind: 'take' });
 
   const cocinaFileId = state.mediaFiles.find((file) => file.targetId === state.espacios[1].id).id;
   state = logic.insertOmittedMediaFile(state, cocinaFileId);
@@ -389,13 +504,13 @@ test('finds every nested descendant before deleting a space', () => {
 });
 
 test('separates video and drone scenes with the same name for review', () => {
+  // Drone y video comparten el mismo espacio; getMediaSceneGroups las separa por modo.
   let state = logic.addSpacesFromText(logic.createDefaultState(), 'Amenidades');
-  const videoTarget = state.espacios[0];
-  const droneTarget = state.droneItems.find((item) => item.nombre === 'Amenidades');
+  const target = state.espacios[0];
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
-  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: videoTarget.id, kind: 'take' });
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: droneTarget.id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: target.id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: target.id, kind: 'take' });
   state = logic.toggleMediaGood(state, state.mediaFiles[0].id);
 
   const groups = logic.getMediaSceneGroups(state);
@@ -433,14 +548,15 @@ test('normalization preserves a file from an unknown camera as unidentified', ()
 });
 
 test('does not register media files for targets marked no aplica', () => {
+  // El drone comparte el espacio; su no_aplica vive en espacio.estados.drone.
   let state = logic.addSpacesFromText(logic.createDefaultState(), 'Bodega');
   state.espacios[0].estados.video = { estado: 'no_aplica' };
-  state.droneItems[0].noAplica = true;
+  state.espacios[0].estados.drone = { estado: 'no_aplica' };
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
 
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: state.droneItems[0].id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: state.espacios[0].id, kind: 'take' });
 
   assert.equal(state.mediaFiles.length, 0);
   assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB2819');
@@ -450,10 +566,10 @@ test('does not register media files for targets marked no aplica', () => {
 test('does not register legacy captures for targets marked no aplica', () => {
   let state = logic.addSpacesFromText(logic.createDefaultState(), 'Bodega');
   state.espacios[0].estados.foto = { estado: 'no_aplica' };
-  state.droneItems[0].noAplica = true;
+  state.espacios[0].estados.drone = { estado: 'no_aplica' };
 
   state = logic.registerCapture(state, { tipo: 'foto', targetId: state.espacios[0].id, autor: 'Ana' });
-  state = logic.registerCapture(state, { tipo: 'drone', targetId: state.droneItems[0].id, autor: 'Bruno' });
+  state = logic.registerCapture(state, { tipo: 'drone', targetId: state.espacios[0].id, autor: 'Bruno' });
 
   assert.equal(state.bitacora.length, 0);
 });
