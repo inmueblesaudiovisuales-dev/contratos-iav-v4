@@ -1,0 +1,4 @@
+{
+  "test_cmd": "node --test frontend/checklist-logic.test.js",
+  "grep_include": ["*.js", "*.html"]
+}
