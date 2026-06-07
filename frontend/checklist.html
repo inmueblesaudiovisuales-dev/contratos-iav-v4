@@ -208,6 +208,43 @@
     .empty p { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
 
     .close-list, .edit-list { display: grid; gap: 9px; }
+
+    /* F10 — vista Edicion: bitacora editable agrupada servicio > piso > cuarto */
+    .edit-svc { margin-top: 4px; }
+    .edit-svc-head { font-family: inherit; font-size: 11px; font-weight: 900; letter-spacing: .04em;
+      text-transform: uppercase; color: var(--gold); margin: 14px 2px 8px; }
+    .edit-svc:first-of-type .edit-svc-head { margin-top: 4px; }
+    .edit-grp { margin-bottom: 11px; }
+    .edit-grp-head { font-size: 12px; font-weight: 600; color: var(--ink-1); margin-bottom: 7px;
+      display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+    .edit-grp-head .crumb { color: var(--ink-3); font-weight: 700; font-size: 11px; }
+    .edit-grp-head .gcount { margin-left: auto; color: var(--ink-3); font-size: 10px; font-weight: 800; }
+    .erow { display: grid; grid-template-columns: auto 1fr auto; gap: 9px 10px; align-items: center;
+      padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--card); margin-bottom: 7px; }
+    .erow.is-discard { background: var(--page); opacity: .82; }
+    .erow .etk { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; font-weight: 700;
+      color: var(--ink-1); white-space: nowrap; }
+    .erow .emeta { font-size: 10px; color: var(--ink-3); font-weight: 700; margin-top: 2px; }
+    .erow .ekind { display: inline-block; font-size: 9px; font-weight: 900; color: var(--red);
+      text-transform: uppercase; letter-spacing: .03em; }
+    .erow .emid { min-width: 0; }
+    .erow .edesc { width: 100%; resize: none; border: 1px solid var(--line); border-radius: 6px;
+      background: var(--page); color: var(--ink-1); font-size: 11.5px; font-family: inherit;
+      padding: 6px 8px; min-height: 34px; line-height: 1.35; }
+    .erow .edesc:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); outline: none; background: var(--card); }
+    .erow .eacts { display: flex; align-items: center; gap: 5px; justify-self: end; }
+    .eic { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--line);
+      display: inline-flex; align-items: center; justify-content: center; background: var(--card);
+      color: var(--ink-3); cursor: pointer; padding: 0; }
+    .eic i { font-size: 16px; }
+    .eic.on.good { color: var(--green); background: var(--green-soft); border-color: #BFE0CD; }
+    .eic.on.fav { color: #7A5A12; background: var(--gold-soft); border-color: #E4D39A; }
+    .eic.more { color: var(--ink-2); }
+    @media (min-width: 1024px) {
+      .edit-svc-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px 16px; align-items: start; }
+      .edit-grp { margin-bottom: 0; }
+    }
     .panel {
       background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
       padding: 13px;
@@ -3890,28 +3927,92 @@ function renderEditView() {
 }
 
 function renderMediaEditView() {
-  const files = state.mediaFiles || [];
   const groups = logic.getMediaSceneGroups(state);
-  const cameraLabel = (id) => ((state.cameras || []).find((camera) => camera.id === id) || {}).label || id;
   const legacy = state.bitacora.filter((entry) => entry.tipo === 'video' || entry.tipo === 'drone');
-  return `<div class="edit-list">${renderExportBar()}${groups.map((group) => {
-    const items = group.files;
-    const good = items.filter((file) => file.kind === 'take' && file.good);
-    const other = items.filter((file) => file.kind === 'take' && !file.good);
-    const discards = items.filter((file) => file.kind === 'discard');
-    const omitted = items.filter((file) => file.kind === 'omitted');
-    return `<section class="panel">
-      <h3>${esc(SERVICE_UI[group.mode]?.short || 'Archivo')} · ${esc(group.scenePath)}</h3>
-      ${good.length ? `<p class="line"><strong>Buenas:</strong> ${good.map((file) => esc(file.fileToken)).join(', ')}</p>` : '<p class="line"><strong>Buenas:</strong> ninguna</p>'}
-      ${other.length ? `<p class="line"><strong>Otras:</strong> ${other.map((file) => esc(file.fileToken)).join(', ')}</p>` : ''}
-      ${discards.length ? `<p class="line"><strong>Descartes:</strong> ${discards.map((file) => `${esc(file.fileToken)} (${esc(mediaKindLabel(file))})`).join(', ')}</p>` : ''}
-      ${omitted.length ? `<p class="line"><strong>Sin identificar:</strong> ${omitted.map((file) => esc(file.fileToken)).join(', ')}</p>` : ''}
-      <p class="sequence-meta">${[...new Set(items.map((file) => cameraLabel(file.cameraId)))].map(esc).join(' · ')}</p>
-      ${items.filter((file) => file.note).map((file) => `<p class="line">${esc(file.fileToken)} · ${esc(file.note)}</p>`).join('')}
-    </section>`;
-  }).join('')}
+
+  // Agrupar servicio (mode) > piso > cuarto (scenePath). Preserva orden de aparicion.
+  const spaceById = {};
+  (state.espacios || []).forEach((e) => { spaceById[e.id] = e; });
+  const pisoDeFile = (file) => {
+    const sp = spaceById[file.targetId];
+    if (sp) return sp.piso || 'Sin piso';
+    const mode = (state.cameras || []).find((c) => c.id === file.cameraId);
+    return mode && mode.mode === 'drone' ? 'Drone' : 'Sin piso';
+  };
+
+  const services = [];
+  const svcMap = new Map();
+  groups.forEach((group) => {
+    const mode = group.mode;
+    if (!svcMap.has(mode)) { const s = { mode, pisos: [], pmap: new Map() }; svcMap.set(mode, s); services.push(s); }
+    const svc = svcMap.get(mode);
+    const piso = pisoDeFile(group.files[0]) || 'Sin piso';
+    if (!svc.pmap.has(piso)) { const p = { piso, groups: [] }; svc.pmap.set(piso, p); svc.pisos.push(p); }
+    svc.pmap.get(piso).groups.push(group);
+  });
+
+  const svcHtml = services.map((svc) => {
+    const svcLabel = SERVICE_UI[svc.mode] ? SERVICE_UI[svc.mode].label : 'Archivos';
+    const pisosHtml = svc.pisos.map((p) => {
+      const roomsHtml = p.groups.map((group) => renderEditRoomGroup(group)).join('');
+      return `<div class="mini-lbl" style="font-size:10px;font-weight:900;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;margin:2px 2px 6px">${esc(p.piso)}</div>
+        <div class="edit-svc-rooms">${roomsHtml}</div>`;
+    }).join('');
+    return `<section class="edit-svc"><div class="edit-svc-head">${esc(svcLabel)}</div>${pisosHtml}</section>`;
+  }).join('');
+
+  return `<div class="edit-list">${renderExportBar()}
+    ${svcHtml || '<section class="panel"><p class="line">Aún no hay archivos registrados.</p></section>'}
     ${legacy.length ? `<section class="panel"><h3>Historial anterior</h3>${legacy.map((entry) => `<div class="review-item"><strong>${SERVICE_UI[entry.tipo].short} ${entry.orden || ''}</strong><div>${esc(entry.nombre)}${entry.intencion ? ' · ' + esc(entry.intencion) : ''}</div></div>`).join('')}</section>` : ''}
   </div>`;
+}
+
+function renderEditRoomGroup(group) {
+  // Tomas primero, luego descartes/omitidos; cada fila editable.
+  const order = { take: 0, omitted: 1, discard: 2 };
+  const items = group.files.slice().sort((a, b) => (order[a.kind] || 0) - (order[b.kind] || 0) || (a.fileCounter || 0) - (b.fileCounter || 0));
+  const goodCount = items.filter((f) => f.kind === 'take' && f.good).length;
+  const takeCount = items.filter((f) => f.kind === 'take').length;
+  return `<div class="edit-grp">
+    <div class="edit-grp-head">${esc(group.scenePath)}<span class="gcount">${goodCount}/${takeCount} buenas</span></div>
+    ${items.map((file) => renderEditRow(file)).join('')}
+  </div>`;
+}
+
+function renderEditRow(file) {
+  const isTake = file.kind === 'take';
+  const tipo = [
+    file.shotType ? (logic.getShotTypes()[file.shotType] || {}).label : null,
+    file.movement ? (logic.getMovements()[file.movement] || {}).label : null,
+  ].filter(Boolean).join(' · ');
+  const meta = isTake
+    ? (tipo || cameraLabel(file.cameraId))
+    : `<span class="ekind">${esc(mediaKindLabel(file))}</span>`;
+  const acts = isTake
+    ? `<button class="eic fav${file.favorite ? ' on' : ''}" title="Favorita" onclick="toggleFavoritaEdit('${file.id}')"><i class="ti ti-star${file.favorite ? '-filled' : ''}"></i></button>
+       <button class="eic good${file.good ? ' on' : ''}" title="Buena" onclick="toggleBuenaEdit('${file.id}')"><i class="ti ti-check"></i></button>
+       <button class="eic more" title="Más" onclick="abrirArchivo('${file.id}')"><i class="ti ti-dots"></i></button>`
+    : `<button class="eic more" title="Reasignar / opciones" onclick="abrirArchivo('${file.id}')"><i class="ti ti-dots"></i></button>`;
+  return `<div class="erow${isTake ? '' : ' is-discard'}">
+    <div><span class="etk">${esc(file.fileToken)}</span><div class="emeta">${meta}</div></div>
+    <div class="emid"><textarea class="edesc" rows="1" placeholder="Descripción para edición…" onchange="guardarDescEdit('${file.id}', this.value)">${esc(file.note || '')}</textarea></div>
+    <div class="eacts">${acts}</div>
+  </div>`;
+}
+
+function toggleBuenaEdit(mediaId) {
+  state = logic.toggleMediaGood(state, mediaId);
+  render(); scheduleSave();
+}
+
+function toggleFavoritaEdit(mediaId) {
+  state = logic.toggleMediaFavorite(state, mediaId);
+  render(); scheduleSave();
+}
+
+function guardarDescEdit(mediaId, value) {
+  state = logic.updateMediaFile(state, mediaId, { note: (value || '').trim() });
+  scheduleSave();
 }
 
 function primarySequence(tipo) {
