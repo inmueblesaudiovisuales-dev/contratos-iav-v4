@@ -513,25 +513,10 @@
     .app.has-botnav.has-thumb.has-latest .content { padding-bottom: calc(290px + env(safe-area-inset-bottom)); }
     .app.has-botnav.has-thumb .cap-thumb { bottom: calc(60px + env(safe-area-inset-bottom)); }
 
-    /* ===== Pantalla de entrada (elegir lane) ===== */
-    .lane-entry { padding: 22px 16px 32px; max-width: 560px; margin: 0 auto; }
+    /* ===== Pantalla de entrada / selector de lane ===== */
     .lane-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 13px; font-weight: 500; }
-    .lane-entry-hd h1 { font-family: var(--font-display); font-weight: 500; font-size: 28px; line-height: 1.1; margin-top: 14px; }
-    .lane-entry-hd p { color: var(--ink-2); font-size: 14px; margin-top: 4px; }
     .lane-name { margin: 20px 0; }
     .lane-name label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
-    .lane-opts { display: grid; gap: 10px; }
-    .lane-opt { display: flex; align-items: center; gap: 13px; width: 100%; padding: 15px 14px; text-align: left;
-      border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); }
-    .lane-opt-ic { width: 44px; height: 44px; flex: none; border-radius: 10px; background: var(--gold-soft);
-      display: flex; align-items: center; justify-content: center; }
-    .lane-opt-ic i { font-size: 24px; color: var(--gold); }
-    .lane-opt-copy { flex: 1; min-width: 0; }
-    .lane-opt-copy strong { display: block; font-size: 16px; font-weight: 600; }
-    .lane-opt-copy span { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
-    .lane-opt-chev { font-size: 20px; color: var(--ink-3); flex: none; }
-    .lane-opt.soon { opacity: .55; }
-    .lane-soon { font-size: 11px; font-weight: 600; color: var(--ink-3); background: var(--muted); border-radius: 999px; padding: 3px 9px; flex: none; }
     .ob-lane i, .action-stack .btn i, .action-stack .primary i { font-size: 17px; }
     .action-stack .btn, .action-stack .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 
@@ -735,54 +720,10 @@
     .export-bar .primary i, .export-bar .secondary i { font-size: 18px; }
     .export-bar .secondary { background: var(--card); border: 1.5px solid var(--line-2); color: var(--ink-1); }
 
-    /* ===== Modo Guiado — F8a ===== */
-    .guide-toggle { margin-top: 10px; margin-bottom: 4px; }
-    .guide-list { padding: 14px 0 4px; }
-    .guide-list-hd { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: none; letter-spacing: .03em; margin-bottom: 8px; }
-    .guide-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 6px; box-shadow: var(--shadow); cursor: pointer; width: 100%; text-align: left; }
-    .guide-row.active { border-color: var(--gold-leaf); box-shadow: 0 0 0 1px var(--gold-soft), var(--shadow); }
-    .guide-row-body { flex: 1; min-width: 0; }
-    .guide-row-name { font-size: 14px; font-weight: 600; color: var(--ink-1); line-height: 1.3; }
-    .guide-row-type { font-size: 12px; color: var(--ink-3); font-weight: 400; }
-    .guide-row-sub { font-size: 12px; color: var(--ink-2); margin-top: 3px; line-height: 1.35; }
-    .guide-row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: none; padding-top: 1px; }
-    .guide-badge-must { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--gold-soft); color: var(--gold); border: 1px solid var(--gold-leaf); white-space: nowrap; }
-    .guide-state-done { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--green); }
-    .guide-state-done i { font-size: 14px; }
-    .guide-state-tok { font-family: var(--font-mono); font-size: 10px; color: var(--green); }
-    .guide-state-pending { font-size: 11px; color: var(--ink-3); }
+    /* ===== Categoría de cuarto (chip) ===== */
     .cat-chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border: 1px solid var(--line-2, #D2C9B3); border-radius: 999px; background: var(--card); color: var(--ink-2); font-size: 11px; font-weight: 600; margin-top: 5px; cursor: pointer; }
     .cat-chip i { font-size: 13px; }
-    /* F9 — acordeón "ver movimiento" */
-    .guide-row-wrap { margin-bottom: 6px; }
-    .guide-row-wrap .guide-row { margin-bottom: 0; border-radius: var(--radius) var(--radius) 0 0; }
-    .guide-toma-btn { display: flex; align-items: center; gap: 5px; width: 100%; padding: 7px 12px; border: 1px solid var(--line); border-top: none; background: var(--card); color: var(--ink-2); font-size: 12px; font-weight: 600; cursor: pointer; }
-    .guide-toma-btn i { font-size: 14px; color: var(--gold); }
-    .guide-toma-btn:active { background: var(--muted); }
-    .guide-mov-details { border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--radius) var(--radius); background: var(--muted); overflow: hidden; }
-    .guide-mov-summary { display: flex; align-items: center; gap: 5px; padding: 5px 12px; font-size: 11px; color: var(--ink-3); cursor: pointer; list-style: none; user-select: none; }
-    .guide-mov-summary::-webkit-details-marker { display: none; }
-    .guide-mov-summary i { font-size: 12px; transition: transform .2s; }
-    .guide-mov-details[open] .guide-mov-summary i { transform: rotate(90deg); }
-    .guide-mov-body { display: flex; align-items: center; gap: 10px; padding: 8px 12px 10px; }
-    .guide-mov-glyph { flex: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
-    .guide-mov-label { font-size: 12px; font-weight: 600; color: var(--ink-1); }
-    .guide-mov-hint { font-size: 11px; color: var(--ink-2); margin-top: 2px; line-height: 1.35; }
-    .guide-mov-ejemplo { font-size: 11px; color: var(--ink-3); margin-top: 4px; font-style: italic; line-height: 1.35; }
-    @keyframes mov-slide-h { 0%,100% { transform: translateX(-4px); } 50% { transform: translateX(4px); } }
-    @keyframes mov-slide-v { 0%,100% { transform: translateY(-4px); } 50% { transform: translateY(4px); } }
-    @keyframes mov-grow { 0%,100% { transform: scale(.72); } 50% { transform: scale(1); } }
-    @keyframes mov-shrink { 0%,100% { transform: scale(1); } 50% { transform: scale(.72); } }
-    @keyframes mov-orbit { to { transform: rotate(360deg); } }
-    @media (prefers-reduced-motion: reduce) { .mov-anim { animation: none !important; } }
-    /* F11 — tipo propiedad drone */
-    .guide-tipo { padding-bottom: 10px; }
-    .guide-tipo-lbl { display: block; font-size: 11px; font-weight: 700; color: var(--ink-3); margin-bottom: 6px; letter-spacing: .03em; }
     /* F10 — faltantes en sitio */
-    .guide-toggle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .guide-missing-chip { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1.5px solid var(--red, #D94F3B); background: var(--red-soft, #FFF0EE); color: var(--red, #D94F3B); }
-    .guide-missing-chip.ok { border-color: var(--green, #2E9E5B); background: var(--green-soft, #E8F7EE); color: var(--green, #2E9E5B); cursor: default; }
-    .guide-missing-chip i { font-size: 15px; }
     .cuarto-faltan { font-size: 11px; font-weight: 700; color: var(--red, #D94F3B); white-space: nowrap; flex: none; }
     .faltantes-target { padding: 10px 0; border-bottom: 1px solid var(--line); }
     .faltantes-target:last-child { border-bottom: none; }
@@ -822,11 +763,7 @@
     .gate-verdict.bad { background: var(--red-soft); color: var(--red); border: 1px solid var(--red); }
     .gate-verdict i { font-size: 18px; flex: none; }
     .gate-lane-head { font-size: 12px; font-weight: 700; color: var(--ink-3); letter-spacing: .04em; margin: 12px 0 4px; }
-    /* R103 — aviso 3 capas */
-    .guide-capas-aviso { font-size: 12px; color: var(--gold); font-weight: 600; padding: 4px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
     /* F15 — puente IA */
-    .guide-tag-ia { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 700; background: var(--gold-soft); color: var(--gold); border: 1px solid var(--gold-leaf); margin-left: 5px; vertical-align: middle; letter-spacing: .03em; }
-    .guide-ia-btn { flex: none; }
     .propuesta-status { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--radius); background: var(--gold-soft); color: var(--gold); font-size: 13px; font-weight: 700; margin-bottom: 12px; border: 1px solid var(--gold-leaf); }
     .propuesta-status i { font-size: 15px; }
     .field-group { margin-bottom: 10px; }
@@ -840,27 +777,6 @@
     .propuesta-shot { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; }
     .propuesta-shot-name { font-size: 13px; font-weight: 600; color: var(--ink-1); }
     .propuesta-shot-type { font-size: 11px; color: var(--ink-3); }
-    /* R105 — modo aprendiz */
-    .aprendiz-screen { display: flex; flex-direction: column; min-height: calc(100vh - 56px); }
-    .aprendiz-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line-2); }
-    .aprendiz-progress { flex: 1; font-size: 13px; color: var(--ink-2); font-weight: 600; text-align: center; }
-    .aprendiz-room { padding: 20px 20px 10px; }
-    .aprendiz-piso { font-size: 12px; color: var(--ink-3); letter-spacing: .04em; }
-    .aprendiz-room-name { margin: 4px 0 0; font-size: 22px; font-weight: 700; color: var(--ink-1); }
-    .aprendiz-sug { padding: 18px 20px; text-align: center; flex: 1; }
-    .aprendiz-glyph svg { width: 72px; height: 72px; display: block; margin: 0 auto; color: var(--gold-leaf); }
-    .aprendiz-sug-name { font-size: 21px; font-weight: 700; margin-top: 14px; color: var(--ink-1); }
-    .aprendiz-sug-type { font-size: 13px; color: var(--ink-3); margin-top: 5px; }
-    .aprendiz-sug-enfoque { font-size: 15px; color: var(--ink-2); margin-top: 14px; line-height: 1.5; border-top: 1px solid var(--line-2); padding-top: 14px; text-align: left; }
-    .aprendiz-sug-ejemplo { font-size: 13px; color: var(--ink-3); margin-top: 10px; font-style: italic; line-height: 1.45; text-align: left; }
-    .aprendiz-actions { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-    .aprendiz-toma-btn { min-height: 64px; border: 0; border-radius: 14px; background: var(--gold-leaf); color: var(--black); box-shadow: 0 1px 0 var(--gold), 0 6px 16px rgba(176,141,46,.18); font-size: 18px; font-weight: 700; cursor: pointer; }
-    .aprendiz-saltar-btn { height: 46px; border: 1.5px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--ink-2); font-weight: 600; font-size: 14px; cursor: pointer; }
-    .aprendiz-done { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 48px 24px; text-align: center; flex: 1; }
-    .aprendiz-done-icon { font-size: 52px; color: var(--green, #2a9d5c); line-height: 1; }
-    .aprendiz-done h2 { font-size: 20px; font-weight: 700; color: var(--ink-1); }
-    .aprendiz-done p { color: var(--ink-2); font-size: 15px; line-height: 1.5; }
-    .guide-aprendiz-btn { white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -1420,33 +1336,6 @@ function renderCoverageForRole() {
   return renderCoverage();
 }
 
-function renderLaneEntry() {
-  const lanes = [
-    ['foto', 'Foto', 'camera', 'Marca la cobertura de fotos por cuarto.'],
-    ['t360', '360', 'rotate-360', 'Marca los recorridos 360 por cuarto.'],
-    ['video', 'Video', 'video', 'Registra cada archivo con su cuarto y calidad.'],
-    ['drone', 'Drone', 'drone', 'Registra la secuencia de tomas aéreas.'],
-    ['asesor', 'Asesores', 'microphone-2', 'Graba al asesor: par de cámaras Sony + Osmo ligado.'],
-  ];
-  return `<div class="lane-entry">
-    <div class="lane-entry-hd">
-      <span class="lane-brand"><span class="ob-logo">IAV</span>bitácora</span>
-      <h1>¿Qué vas a hacer?</h1>
-      ${meta.nombreCliente ? `<p>${esc(meta.nombreCliente)}</p>` : ''}
-    </div>
-    <div class="lane-name">
-      <label for="mi-nombre">Tu nombre</label>
-      <input class="field" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" autocomplete="off">
-    </div>
-    <div class="lane-opts">${lanes.map((l) => `
-      <button class="lane-opt" onclick="chooseLane('${l[0]}')">
-        <span class="lane-opt-ic"><i class="ti ti-${l[2]}"></i></span>
-        <span class="lane-opt-copy"><strong>${l[1]}</strong><span>${l[3]}</span></span>
-        <i class="ti ti-chevron-right lane-opt-chev"></i>
-      </button>`).join('')}</div>
-  </div>`;
-}
-
 function abrirLane() {
   const lanes = activeServices();
   abrirModal(`<div class="sheet-head"><h2>Cambiar de servicio</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
@@ -1595,20 +1484,6 @@ function guardarNombreEspacio(id) {
   sp.nombre = value;
   (state.mediaFiles || []).forEach((f) => { if (f.targetId === id) { f.scene = value; f.scenePath = logic.getScenePath(state, id, 'video'); } });
   cerrarModal(); scheduleSave(); render();
-}
-
-function moverEspacio(id, dir) {
-  const sp = state.espacios.find((e) => e.id === id);
-  if (!sp) return;
-  const hermanos = state.espacios
-    .filter((e) => (e.piso || '') === (sp.piso || '') && (e.parentId || null) === (sp.parentId || null))
-    .sort((a, b) => (a.orden || 0) - (b.orden || 0));
-  hermanos.forEach((e, idx) => { e.orden = idx + 1; });
-  const i = hermanos.findIndex((e) => e.id === id);
-  const j = i + dir;
-  if (j < 0 || j >= hermanos.length) return;
-  const t = hermanos[i].orden; hermanos[i].orden = hermanos[j].orden; hermanos[j].orden = t;
-  scheduleSave(); render();
 }
 
 function cambiarPisoEspacio(id) {
@@ -2462,46 +2337,6 @@ function catChipHtml(target) {
   return `<button class="cat-chip" onclick="abrirCategoriaSheet('${esc(target.id)}')"><i class="ti ti-tag"></i>${esc(cat ? cat.label : catId)}</button>`;
 }
 
-function toggleGuideMode() {
-  guideMode = !guideMode;
-  localStorage.setItem('checklist_guide_' + (TOKEN || 'demo'), guideMode ? '1' : '0');
-  activeSugId = null;
-  render();
-}
-
-function renderFaltantesChip() {
-  const coverage = logic.guideCoverage(state, state.modoActual);
-  const total = coverage.reduce((acc, c) => acc + c.must.faltan.length, 0);
-  if (total === 0) {
-    return `<button class="guide-missing-chip ok" disabled><i class="ti ti-circle-check"></i>cobertura clave completa</button>`;
-  }
-  return `<button class="guide-missing-chip" onclick="abrirFaltantes()"><i class="ti ti-alert-circle"></i>faltan ${total} clave</button>`;
-}
-
-function abrirFaltantes() {
-  const coverage = logic.guideCoverage(state, state.modoActual);
-  const conFaltantes = coverage.filter((c) => c.must.faltan.length > 0);
-  const shotTypes = logic.getShotTypes();
-  const movements = logic.getMovements();
-  let body;
-  if (!conFaltantes.length) {
-    body = '<p class="sheet-note">Todas las tomas clave estan cubiertas.</p>';
-  } else {
-    body = conFaltantes.map((c) => {
-      const shots = c.must.faltan.map((s) => {
-        const typeLabel = (shotTypes[s.shotType] || {}).label || s.shotType;
-        const movLabel = (movements[s.movement] || {}).label || s.movement;
-        return `<div class="faltantes-shot"><span class="faltantes-shot-name">${esc(s.nombre)}</span><span class="faltantes-shot-type">${esc(typeLabel)} / ${esc(movLabel)}</span></div>`;
-      }).join('');
-      const jumpBtn = state.modoActual !== 'drone'
-        ? `<button class="faltantes-target-jump" onclick="setActiveRoom('${c.target.id}')"><i class="ti ti-corner-down-right"></i>ir</button>`
-        : '';
-      return `<div class="faltantes-target"><div class="faltantes-target-head"><span class="faltantes-target-name">${esc(c.target.nombre)}</span>${jumpBtn}</div>${shots}</div>`;
-    }).join('');
-  }
-  abrirModal(`<div class="sheet-head"><h2>Tomas clave pendientes</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>${body}`);
-}
-
 function abrirGateSalida() {
   const videoCoverage = logic.guideCoverage(state, 'video');
   const droneCoverage = logic.guideCoverage(state, 'drone');
@@ -2545,69 +2380,6 @@ function abrirGateSalida() {
   abrirModal(`<div class="sheet-head"><h2>Resumen de la propiedad</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>${verdictHtml}${body}`);
 }
 
-function imprimirGuia() {
-  const shotTypes = logic.getShotTypes();
-  const movements = logic.getMovements();
-  const folio = meta.folio || '';
-  const cliente = meta.nombreCliente || '';
-
-  function escHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-
-  function buildLane(servicio, titulo) {
-    const ids = recorridoTargets(servicio);
-    if (!ids.length) return '';
-    const targets = ids.map((id) =>
-      servicio === 'drone'
-        ? state.droneItems.find((x) => x.id === id)
-        : state.espacios.find((x) => x.id === id)
-    ).filter(Boolean);
-
-    const roomBlocks = targets.map((t) => {
-      const sugs = logic.suggestionsForTarget(state, servicio, t) || [];
-      if (!sugs.length) return '';
-      const rows = sugs.map((s) => {
-        const typeLabel = (shotTypes[s.shotType] || {}).label || s.shotType;
-        const movLabel = (movements[s.movement] || {}).label || s.movement;
-        const mustMark = s.priority === 'must' ? '<strong>[clave]</strong> ' : '';
-        return `<tr><td>${mustMark}${escHtml(s.nombre)}</td><td>${escHtml(typeLabel)} / ${escHtml(movLabel)}</td><td>${escHtml(s.enfoque)}</td></tr>`;
-      }).join('');
-      return `<div class="room"><h3>${escHtml(t.nombre || t.id)}</h3><table><thead><tr><th>Toma</th><th>Tipo / Movimiento</th><th>Enfoque</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-    }).join('');
-
-    if (!roomBlocks) return '';
-    return `<section><h2>${escHtml(titulo)}</h2>${roomBlocks}</section>`;
-  }
-
-  const html = [
-    '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">',
-    `<title>Guia de tomas${folio ? ' \xb7 ' + folio : ''}</title>`,
-    '<style>',
-    'body{font-family:system-ui,sans-serif;font-size:13px;color:#111;margin:24px}',
-    'h1{font-size:16px;margin:0 0 4px}',
-    '.sub{font-size:12px;color:#666;margin-bottom:20px}',
-    'h2{font-size:14px;border-bottom:1.5px solid #111;padding-bottom:3px;margin:20px 0 10px}',
-    'h3{font-size:13px;margin:14px 0 6px}',
-    'table{width:100%;border-collapse:collapse;margin-bottom:8px}',
-    'th{text-align:left;font-size:11px;color:#555;border-bottom:1px solid #ccc;padding-bottom:3px}',
-    'td{vertical-align:top;padding:4px 6px 4px 0;font-size:12px;border-bottom:1px solid #eee}',
-    'td:first-child{width:30%}td:nth-child(2){width:25%;color:#444}',
-    'strong{font-weight:700}',
-    '@media print{body{margin:12px}}',
-    '</style></head><body>',
-    `<h1>Guia de tomas${folio ? ' \xb7 ' + escHtml(folio) : ''}</h1>`,
-    cliente ? `<div class="sub">${escHtml(cliente)}</div>` : '',
-    buildLane('video', 'Video'),
-    buildLane('drone', 'Drone'),
-    '<script>window.onload=function(){window.print();}<\/script>',
-    '</body></html>',
-  ].join('');
-
-  const w = window.open('', '_blank');
-  if (!w) return;
-  w.document.write(html);
-  w.document.close();
-}
-
 // F7 — tocar un chip etiqueta la proxima toma (tipo + movimiento recomendado), sin auto-avanzar.
 function seleccionarSugerencia(id) {
   if (activeSugId === id) {
@@ -2621,115 +2393,6 @@ function seleccionarSugerencia(id) {
     pendingMovement = sug ? (sug.movement || null) : null;
   }
   render();
-}
-
-function movementGlyph(movId) {
-  const families = {
-    pan:'h', slider:'h', tracking:'h',
-    tilt:'v', tilt_up:'v', pedestal:'v',
-    push_in:'f', dolly:'f', gimbal_walk:'f',
-    pull_out:'b',
-    orbit:'c', parallax:'c',
-    static:'s',
-  };
-  const fam = families[movId] || 'x';
-  const A = 'class="mov-anim"';
-  const svgs = {
-    h: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g ${A} style="animation:mov-slide-h 1.4s ease-in-out infinite"><path d="M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4"/></g></svg>`,
-    v: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g ${A} style="animation:mov-slide-v 1.4s ease-in-out infinite"><path d="M12 3v18M12 3L8 7M12 3l4 4M12 21l-4-4M12 21l4-4"/></g></svg>`,
-    f: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g ${A} style="animation:mov-grow 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center"><path d="M5 12h14M14 8l5 4-5 4"/></g></svg>`,
-    b: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g ${A} style="animation:mov-shrink 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center"><path d="M19 12H5M10 8 5 12l5 4"/></g></svg>`,
-    c: `<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3.5 3" opacity=".4"/><circle ${A} cx="17.5" cy="12" r="2.5" fill="currentColor" style="animation:mov-orbit 1.8s linear infinite;transform-origin:12px 12px"/></svg>`,
-    s: `<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 5v4M12 15v4M5 12h4M15 12h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
-    x: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12c2-4 4-4 4 0s2 4 4 0 2-4 4 0 2 4 4 0"/></svg>`,
-  };
-  return svgs[fam] || svgs.x;
-}
-
-function renderGuideList(target) {
-  const suggestions = logic.suggestionsForTarget(state, state.modoActual, target);
-  if (!suggestions || !suggestions.length) {
-    return `<div class="guide-list"><p class="cap-empty">Sin sugerencias para este espacio.</p></div>`;
-  }
-  const shotTypes = logic.getShotTypes();
-  const movements = logic.getMovements();
-  const rows = suggestions.map((s) => {
-    const progress = logic.suggestionProgress(state, state.modoActual, target.id, s.id);
-    const typeLabel = (shotTypes[s.shotType] || {}).label || s.shotType;
-    const movLabel = (movements[s.movement] || {}).label || s.movement;
-    const isActive = activeSugId === s.id;
-    const iaTag = s.id.startsWith('custom.ia.') ? `<span class="guide-tag-ia">IA</span>` : '';
-    let stateHtml;
-    if (progress.done) {
-      const toks = (progress.files || []).map((f) => esc(f.fileToken)).join(' ');
-      stateHtml = `<span class="guide-state-done"><i class="ti ti-check"></i>${toks ? `<span class="guide-state-tok">${toks}</span>` : ''}</span>`;
-    } else {
-      stateHtml = `<span class="guide-state-pending">pendiente</span>`;
-    }
-    const movDef = movements[s.movement] || {};
-    const shotDef = shotTypes[s.shotType] || {};
-    const movHint = movDef.hint ? `<div class="guide-mov-hint">${esc(movDef.hint)}</div>` : '';
-    const shotEjemplo = shotDef.ejemplo ? `<div class="guide-mov-ejemplo">${esc(shotDef.ejemplo)}</div>` : '';
-    return `<div class="guide-row-wrap">
-      <button class="guide-row${isActive ? ' active' : ''}" onclick="seleccionarSugerencia('${esc(s.id)}')">
-        <div class="guide-row-body">
-          <div class="guide-row-name">${esc(s.nombre)}${iaTag}<span class="guide-row-type"> · ${esc(typeLabel)} / ${esc(movLabel)}</span></div>
-          <div class="guide-row-sub">${esc(s.enfoque)}</div>
-        </div>
-        <div class="guide-row-right">
-          ${s.priority === 'must' ? `<span class="guide-badge-must">clave</span>` : ''}
-          ${stateHtml}
-        </div>
-      </button>
-      <button class="guide-toma-btn" data-sug-id="${esc(s.id)}" onclick="registrarSugerencia(this)"><i class="ti ti-video"></i>Toma</button>
-      <details class="guide-mov-details">
-        <summary class="guide-mov-summary"><i class="ti ti-chevron-right"></i>ver movimiento</summary>
-        <div class="guide-mov-body">
-          <div class="guide-mov-glyph">${movementGlyph(s.movement)}</div>
-          <div class="guide-mov-info">
-            <div class="guide-mov-label">${esc(movLabel)}</div>
-            ${movHint}
-            ${shotEjemplo}
-          </div>
-        </div>
-      </details>
-    </div>`;
-  }).join('');
-  let capasAvisoHtml = '';
-  if (state.modoActual === 'video') {
-    const hasTakes = (state.mediaFiles || []).some((f) => {
-      if (f.kind !== 'take' || f.targetId !== target.id) return false;
-      const cameraIds = new Set((state.cameras || []).filter((c) => c.mode === 'video').map((c) => c.id));
-      return cameraIds.has(f.cameraId);
-    });
-    if (hasTakes) {
-      const capas = logic.capasCubiertas(state, 'video', target.id);
-      const faltanCapas = [];
-      if (!capas.medio) faltanCapas.push('toma media');
-      if (!capas.detalle) faltanCapas.push('toma de detalle');
-      if (faltanCapas.length) {
-        capasAvisoHtml = `<div class="guide-capas-aviso">falta ${faltanCapas.join(' y ')}</div>`;
-      }
-    }
-  }
-  let tipoChipsHtml = '';
-  if (state.modoActual === 'drone') {
-    const droneLib = logic.getDroneGuide();
-    const current = (state.guide && state.guide.tipoPropiedad) || 'casa';
-    const chips = Object.keys(droneLib).map((key) => {
-      const label = (droneLib[key].label || key).split('/')[0].trim();
-      return `<button class="chip${current === key ? ' active' : ''}" onclick="setTipoPropiedadDrone('${esc(key)}')">${esc(label)}</button>`;
-    }).join('');
-    tipoChipsHtml = `<div class="guide-tipo"><span class="guide-tipo-lbl">Tipo de propiedad</span><div class="chips">${chips}</div></div>`;
-  }
-  return `<div class="guide-list">${tipoChipsHtml}<div class="guide-list-hd">sugerencias</div>${capasAvisoHtml}${rows}</div>`;
-}
-
-function registrarSugerencia(btn) {
-  const sugId = btn.dataset.sugId;
-  const target = activeTarget();
-  if (!target || !sugId) return;
-  registrarArchivo(target.id, 'take', undefined, { suggestionId: sugId });
 }
 
 function abrirCategoriaSheet(targetId) {
@@ -3670,14 +3333,6 @@ function confirmarDescarte(targetId, reason) {
 
 function toggleBuena(mediaId) {
   state = logic.toggleMediaGood(state, mediaId);
-  render(); scheduleSave();
-}
-
-function reintentarToma(mediaId) {
-  const file = (state.mediaFiles || []).find((f) => f.id === mediaId);
-  if (!file || file.kind !== 'take') return;
-  state = logic.updateMediaFile(state, mediaId, { kind: 'discard', discardReason: 'failed' });
-  activeSugId = file.suggestionId || null;
   render(); scheduleSave();
 }
 
