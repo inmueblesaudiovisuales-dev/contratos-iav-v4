@@ -1000,8 +1000,21 @@ function setSync(status) {
   const dot = document.getElementById('sync-dot');
   const label = document.getElementById('sync-label');
   if (!dot || !label) return;
-  dot.className = 'dot' + (status === 'syncing' ? ' syncing' : status === 'error' ? ' error' : '');
-  label.textContent = status === 'syncing' ? 'Guardando' : status === 'error' ? 'Error' : 'En vivo';
+  const cls = status === 'syncing' ? ' syncing' : (status === 'error' || status === 'offline') ? ' error' : '';
+  dot.className = 'dot' + cls;
+  label.textContent = status === 'syncing' ? 'Guardando'
+    : status === 'offline' ? 'Sin conexión, se guardará'
+    : status === 'error' ? 'Error'
+    : 'En vivo';
+}
+
+// Espejo completo del estado en localStorage para arranque sin señal.
+// Debe escribirse SIEMPRE que tengamos un estado bueno (al cargar y al guardar),
+// no solo al editar; de lo contrario, abrir sin editar y luego perder señal deja
+// la app sin copia para arrancar.
+function mirrorState() {
+  if (DEMO) return;
+  try { localStorage.setItem(stateKey(), JSON.stringify({ meta, state })); } catch (_) {}
 }
 
 async function apiGet(payload) {
@@ -1044,7 +1057,7 @@ async function apiPost(payload) {
 function scheduleSave() {
   if (DEMO) return;
   dirty = true;
-  try { localStorage.setItem(stateKey(), JSON.stringify({ meta, state })); } catch (_) {}
+  mirrorState();
   retryCount = 0;
   clearTimeout(saveTimer);
   clearTimeout(retryTimer);
@@ -1067,17 +1080,45 @@ async function saveNow() {
       return;
     }
     setSync('ok');
+    mirrorState();
     if (dirty) {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(saveNow, 0);
     }
   } catch (_) {
+    // Fallo de red: NO nos rendimos. Reintento con backoff acotado y, al volver
+    // la señal, el listener 'online' dispara saveNow de inmediato para vaciar la cola.
     saving = false;
-    setSync('error');
+    setSync('offline');
     dirty = true;
     retryCount++;
     if (retryCount === 1 || retryCount % 4 === 0) showToast('Sin conexión. Se guardará al volver la señal.');
+    clearTimeout(retryTimer);
     retryTimer = setTimeout(saveNow, Math.min(30000, 3000 * retryCount));
+  }
+}
+
+function restaurarPrefsDispositivo() {
+  // Estado por-dispositivo: rol, carril/cámara activa y cuarto en foco.
+  const savedLane = localStorage.getItem(laneKey());
+  if (savedLane && state.servicios[savedLane]) state.modoActual = savedLane;
+  activeRoomId = localStorage.getItem(roomKey()) || null;
+  ensureActiveMode();
+  if (getRole()) applyRoleService();
+}
+
+// Intenta arrancar desde el espejo local. Devuelve true si lo logró.
+function bootDesdeEspejo() {
+  const local = localStorage.getItem(stateKey());
+  if (!local) return false;
+  try {
+    const saved = JSON.parse(local);
+    meta = saved.meta || meta;
+    state = logic.normalizeChecklistData(saved.state || saved);
+    restaurarPrefsDispositivo();
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
@@ -1088,53 +1129,58 @@ async function cargar() {
     meta = { folio: data.folio || '', nombreCliente: data.nombreCliente || '' };
     const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     state = logic.normalizeChecklistData(payload);
-    const savedLane = localStorage.getItem(laneKey());
-    if (savedLane && state.servicios[savedLane]) state.modoActual = savedLane;
-    activeRoomId = localStorage.getItem(roomKey()) || null;
-    ensureActiveMode();
-    if (getRole()) applyRoleService();
+    restaurarPrefsDispositivo();
+    mirrorState(); // espejo fresco SIEMPRE al cargar, aunque el usuario no edite nada.
+    setSync('ok');
     render();
     iniciarPolling();
   } catch (_) {
-    const local = localStorage.getItem(stateKey());
-    if (local) {
-      try {
-        const saved = JSON.parse(local);
-        meta = saved.meta || meta;
-        state = logic.normalizeChecklistData(saved.state || saved);
-        const savedLane = localStorage.getItem(laneKey());
-        if (savedLane && state.servicios[savedLane]) state.modoActual = savedLane;
-        activeRoomId = localStorage.getItem(roomKey()) || null;
-        ensureActiveMode();
-        if (getRole()) applyRoleService();
-        dirty = true;
-        render();
-        iniciarPolling();
-        showToast('Sin conexión: trabajando con la copia local.');
-        return;
-      } catch (e) {}
-    }
-    mostrarError('No se pudo cargar la bitacora.');
+    // Fallo de red en el boot: NO dejar la app en blanco. Arrancamos desde el
+    // espejo si existe; si no, con estado vacío usable para empezar a trabajar.
+    const tieneEspejo = bootDesdeEspejo();
+    dirty = tieneEspejo; // si veníamos de un espejo, hay que re-sincronizar al volver señal.
+    render();
+    setSync('offline');
+    iniciarPolling();
+    showToast(tieneEspejo
+      ? 'Sin conexión: trabajando con la copia local. Se sincroniza al volver la señal.'
+      : 'Sin conexión: puedes empezar a trabajar. Se guardará al volver la señal.');
   }
 }
 
+function inputEnfoco() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+}
+
 async function poll() {
+  // Nunca pisar cambios locales pendientes ni romper si la red está caída.
   if (dirty || saving) return;
   try {
     const data = await apiGet({ action: 'obtenerChecklist' });
     if (dirty || saving) return;
-    if (data.error) return;
+    if (!data || data.error) return;
     const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     const next = logic.normalizeChecklistData(payload);
     next.modoActual = state.modoActual;
     next.activeCameraByMode = state.activeCameraByMode;
     if (getRole()) { applyRoleServiceOn(next); }
     if (JSON.stringify(next) !== JSON.stringify(state)) {
+      // No re-renderizar encima de un input enfocado: perderíamos el cursor.
+      // Diferimos: el siguiente poll aplicará el cambio cuando ya no haya foco.
+      if (inputEnfoco()) return;
       state = next;
       ensureActiveMode();
+      mirrorState();
       render();
     }
-  } catch (_) {}
+    if (syncStatus === 'offline' || syncStatus === 'error') setSync('ok');
+  } catch (_) {
+    // Red caída durante el poll: silencioso, solo reflejamos el estado.
+    if (!saving && !dirty) setSync('offline');
+  }
 }
 
 function iniciarPolling() {
@@ -4272,6 +4318,23 @@ function mostrarError(message) {
 
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && document.getElementById('overlay').classList.contains('visible')) cerrarModal();
+});
+
+// Al volver la señal: vaciar la cola pendiente de inmediato (no esperar al backoff).
+window.addEventListener('online', () => {
+  if (DEMO) return;
+  if (dirty) {
+    retryCount = 0;
+    clearTimeout(retryTimer);
+    saveNow();
+  } else if (syncStatus === 'offline' || syncStatus === 'error') {
+    setSync('ok');
+  }
+  poll();
+});
+window.addEventListener('offline', () => {
+  if (DEMO) return;
+  setSync('offline');
 });
 
 if (CONFIG) {
