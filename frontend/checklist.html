@@ -546,20 +546,25 @@
     .cov-sub { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
     .cov-edit { width: 42px; height: 42px; flex: none; border-radius: var(--radius); border: 1px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
     .cov-edit i { font-size: 20px; }
+    .cov-sumbar { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; margin: 4px 0 4px; padding: 11px 13px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); font-size: 13px; color: var(--ink-2); text-align: left; transition: border-color .15s, box-shadow .15s; }
+    .cov-sumbar .cov-sum-pend { color: #8B6A13; font-weight: 700; }
+    .cov-sumbar.on { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
     .cov-group { margin-top: 14px; }
-    .cov-piso { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
-    .cov-piso > span:first-child { font-size: 12px; font-weight: 600; color: var(--gold); }
-    .cov-count { font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
+    .cov-piso { font-size: 12px; font-weight: 600; color: var(--gold); letter-spacing: .03em; text-transform: uppercase; margin-bottom: 8px; }
     .cov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .cov-tile { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; min-height: 74px; padding: 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); text-align: left; }
+    .cov-tile { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; justify-content: space-between; min-height: 74px; padding: 13px 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); text-align: left; transition: box-shadow .15s, opacity .15s; }
     .cov-tile.sub { grid-column: auto; }
-    .cov-name { font-size: 15px; font-weight: 600; line-height: 1.2; }
-    .cov-state { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
-    .cov-state i { font-size: 16px; }
+    .cov-name { font-family: var(--font-display); font-size: 15px; font-weight: 500; line-height: 1.2; }
+    .cov-state { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #8B6A13; }
+    .cov-check { display: inline-flex; }
+    .cov-check svg { width: 14px; height: 14px; }
     .cov-tile.hecho { border-color: #BFE0CC; background: var(--green-soft); }
     .cov-tile.hecho .cov-state { color: var(--green); }
-    .cov-tile.no_aplica { background: var(--muted); }
-    .cov-tile.no_aplica .cov-name, .cov-tile.no_aplica .cov-state { color: var(--ink-3); }
+    .cov-tile.no_aplica { background: var(--muted); opacity: .6; }
+    .cov-tile.no_aplica .cov-name { color: var(--ink-3); }
+    .cov-tile.no_aplica .cov-state { color: var(--ink-3); }
+    .cov-body.hl-pend .cov-tile.hecho, .cov-body.hl-pend .cov-tile.no_aplica { opacity: .4; }
+    .cov-body.hl-pend .cov-tile.pendiente { box-shadow: 0 0 0 2px var(--gold); }
 
     /* ===== Cierre: línea de tiempo cronológica ===== */
     .cron { display: flex; flex-direction: column; gap: 1px; margin-top: 6px; }
@@ -1300,7 +1305,7 @@ function renderCoverageForRole() {
   if (!state.espacios.length) {
     return `<div class="empty"><h2>Sin cuartos todavía</h2><p>Danna arma los cuartos y aquí aparecerán.</p><button class="primary" onclick="abrirSetup()" style="margin-top:12px">Armar cuartos</button></div>`;
   }
-  return coberturaVista() === 'foco' ? renderCoberturaFoco() : renderCoverage();
+  return renderCoverage();
 }
 
 function renderLaneEntry() {
@@ -1938,34 +1943,51 @@ function iniciarSecuenciaAsesor(cameraId) {
   aplicarSecuencia(cameraId, filename);
 }
 
+let covHighlightPend = false;
+function toggleCovHighlight() { covHighlightPend = !covHighlightPend; render(); }
+
 function renderCoverage() {
   const svc = state.modoActual;
-  const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(state.espacios.map((e) => e.piso || 'Sin piso'))];
+  const all = state.espacios;
+  const total = all.length;
+  const stateOf = (r) => (r.estados[svc] || {}).estado || 'pendiente';
+  const pend = all.filter((r) => stateOf(r) === 'pendiente').length;
+  const na = all.filter((r) => stateOf(r) === 'no_aplica').length;
+
+  const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(all.map((e) => e.piso || 'Sin piso'))];
   const groups = pisos.map((p) => {
-    const rooms = state.espacios.filter((e) => (e.piso || 'Sin piso') === p).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    const rooms = all.filter((e) => (e.piso || 'Sin piso') === p).sort((a, b) => (a.orden || 0) - (b.orden || 0));
     if (!rooms.length) return '';
-    const done = rooms.filter((r) => (r.estados[svc] || {}).estado === 'hecho').length;
-    const na = rooms.filter((r) => (r.estados[svc] || {}).estado === 'no_aplica').length;
-    return `<section class="cov-group"><div class="cov-piso"><span>${esc(p)}</span><span class="cov-count">${done}/${rooms.length - na} listo</span></div>
-      <div class="cov-grid">${rooms.map((r) => covTile(r, svc)).join('')}</div></section>`;
+    return `<section class="cov-group">
+      <div class="cov-piso">${esc(p)}</div>
+      <div class="cov-grid">${rooms.map((r) => covTile(r, svc)).join('')}</div>
+    </section>`;
   }).join('');
+
+  const pendTxt = `<span class="cov-sum-pend">${pend} pendiente${pend === 1 ? '' : 's'}</span>`;
+  const naTxt = na ? ` · ${na} no aplica` : '';
   return `<div class="cov-hd">
       <div><h2 class="cov-title">${esc(SERVICE_UI[svc].label)}</h2><p class="cov-sub">Toca un cuarto para marcar su cobertura.</p></div>
-      <div class="cov-hd-actions">
-        <button class="cov-edit" onclick="setCoberturaVista('foco')" aria-label="Ver en foco"><i class="ti ti-focus-2"></i></button>
-        <button class="cov-edit" onclick="abrirSetup()" aria-label="Armar cuartos"><i class="ti ti-home-cog"></i></button>
-      </div>
+      <button class="cov-edit" onclick="abrirSetup()" aria-label="Armar cuartos"><i class="ti ti-home-cog"></i></button>
     </div>
-    ${groups || '<div class="empty"><h2>Sin cuartos</h2><p>Arma la lista de cuartos para empezar.</p></div>'}`;
+    <button class="cov-sumbar${covHighlightPend ? ' on' : ''}" onclick="toggleCovHighlight()" aria-pressed="${covHighlightPend}">
+      <span>${total} cuarto${total === 1 ? '' : 's'}</span>
+      <span>${pendTxt}${naTxt}</span>
+    </button>
+    <div class="cov-body${covHighlightPend ? ' hl-pend' : ''}">
+      ${groups || '<div class="empty"><h2>Sin cuartos</h2><p>Arma la lista de cuartos para empezar.</p></div>'}
+    </div>`;
 }
+
+const COV_CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg>';
 
 function covTile(room, svc) {
   const st = (room.estados[svc] || {}).estado || 'pendiente';
-  const icon = st === 'hecho' ? 'circle-check-filled' : st === 'no_aplica' ? 'circle-minus' : 'circle';
   const label = st === 'hecho' ? 'listo' : st === 'no_aplica' ? 'no aplica' : 'pendiente';
+  const mark = st === 'hecho' ? `<span class="cov-check">${COV_CHECK_SVG}</span>` : '';
   return `<button class="cov-tile ${st}${room.parentId ? ' sub' : ''}" onclick="cycleCobertura('${room.id}')">
     <span class="cov-name">${esc(room.nombre)}</span>
-    <span class="cov-state"><i class="ti ti-${icon}"></i>${label}</span>
+    <span class="cov-state">${mark}${label}</span>
   </button>`;
 }
 
