@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobertura · Cierre · Edición</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper-0:#F7F4EC; --paper-1:#FFFDF8; --paper-2:#EFEADF; --line:#E2DBCB;
+    --onyx:#1C1C1E; --muted:#6F6A5E; --gold:#B08D2E; --gold-leaf:#C9A84C;
+    --ok:#2F7D55; --warn:#B0560E; --danger:#B23A2B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E1D3;font-family:'Inter',sans-serif;color:var(--onyx);
+    padding:30px 16px 64px;display:flex;flex-direction:column;align-items:center;gap:24px}
+  .intro{max-width:820px;text-align:center}
+  .intro h1{font-family:'Fraunces',serif;font-weight:600;font-size:23px;margin-bottom:8px}
+  .intro p{color:var(--muted);font-size:14.5px;line-height:1.5}
+  .stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;justify-content:center;max-width:1120px}
+  .col{width:320px;display:flex;flex-direction:column;align-items:center}
+  .cap{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin-bottom:4px}
+  .capd{font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px;line-height:1.4;max-width:300px}
+
+  .phone{width:320px;background:var(--paper-0);border-radius:34px;padding:8px;
+    box-shadow:0 24px 48px -20px rgba(40,34,20,.45);border:1px solid #d8d1c0}
+  .screen{background:var(--paper-0);border-radius:26px;overflow:hidden;display:flex;flex-direction:column;height:660px}
+
+  .hd{padding:13px 14px;background:var(--paper-1);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .hd .ti{font-family:'Fraunces',serif;font-size:16px;font-weight:600}
+  .rolechip{display:flex;align-items:center;gap:6px;background:var(--paper-2);border:1px solid var(--line);border-radius:999px;padding:4px 9px 4px 5px}
+  .avatar{width:20px;height:20px;border-radius:50%;background:var(--gold-leaf);color:#3a2f10;font-weight:600;font-size:9px;display:flex;align-items:center;justify-content:center}
+  .rolechip b{font-size:11px}
+  .pillbtn{border:1px solid var(--line);background:var(--paper-0);border-radius:8px;padding:6px 10px;font-size:11.5px;color:#46412f;cursor:pointer;font-weight:500}
+
+  .body{flex:1;overflow-y:auto;padding:12px 13px}
+  .mini-lbl{font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.03em;margin:4px 2px 8px;text-transform:uppercase}
+
+  /* coverage */
+  .sumbar{display:flex;align-items:center;justify-content:space-between;background:var(--paper-1);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:12px;margin-bottom:13px}
+  .sumbar .pend{color:var(--warn);font-weight:600}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .cell{border:1px solid var(--line);border-radius:11px;padding:13px 11px;background:var(--paper-1);min-height:62px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer}
+  .cell .cn{font-family:'Fraunces',serif;font-size:14.5px}
+  .st{font-size:10.5px;font-family:'Spline Sans Mono',monospace;display:flex;align-items:center;gap:4px}
+  .cell.listo{background:#eef7f1;border-color:#bfe0cd}
+  .cell.listo .st{color:var(--ok)}
+  .cell.pend .st{color:var(--warn)}
+  .cell.na{opacity:.55}
+  .cell.na .st{color:var(--muted)}
+
+  /* cierre */
+  .sem{border-radius:12px;padding:13px 14px;margin-bottom:14px;border:1px solid}
+  .sem.amber{background:#f8efe4;border-color:#e7cdb0}
+  .sem .lvl{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--warn);display:flex;align-items:center;gap:7px}
+  .sem p{font-size:12px;color:#5c4a30;margin-top:3px}
+  .lst{background:var(--paper-1);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:14px}
+  .li{display:flex;align-items:center;gap:9px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12.5px}
+  .li:last-child{border-bottom:none}
+  .li .dot{width:7px;height:7px;border-radius:50%;background:var(--warn);flex-shrink:0}
+  .li .rt{flex:1}
+  .li .sub{color:var(--muted);font-size:10.5px}
+  .conc{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);font-size:12px}
+  .conc:last-child{border-bottom:none}
+  .conc .tok{font-family:'Spline Sans Mono',monospace;font-weight:600}
+  .conc .chk{display:flex;gap:6px}
+  .micro{font-size:10.5px;padding:4px 9px;border-radius:7px;border:1px solid var(--line);background:var(--paper-0);cursor:pointer}
+  .micro.ok{color:var(--ok);border-color:#bfe0cd;background:#eef7f1}
+  .gate{margin-top:4px;width:100%;height:50px;border-radius:13px;border:none;background:var(--gold-leaf);color:#322806;font-size:15px;font-weight:600;cursor:pointer}
+
+  /* edicion */
+  .grp{margin-bottom:14px}
+  .ghd{font-size:11.5px;color:#46412f;font-weight:600;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+  .ghd .crumb{color:var(--muted);font-weight:500}
+  .erow{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--paper-1);margin-bottom:7px}
+  .erow .tk{font-family:'Spline Sans Mono',monospace;font-size:12px}
+  .erow .ed{flex:1;font-size:11px;color:var(--muted)}
+  .ic{width:24px;height:24px;border-radius:7px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;background:var(--paper-0)}
+  .ic.good{color:var(--ok);background:#eef7f1;border-color:#bfe0cd}
+  .ic.fav{color:#7a5a12;background:#f7efd8;border-color:#e4d39a}
+  .export{width:100%;height:48px;border-radius:13px;border:1px solid var(--gold);background:var(--paper-1);color:#322806;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  svg{width:15px;height:15px}
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>Las tres vistas restantes</h1>
+    <p>Cobertura es de Fer/Danna. Cierre y Edición son tuyas. Cada una con un solo trabajo claro.</p>
+  </div>
+
+  <div class="stage">
+
+    <!-- COBERTURA -->
+    <div class="col">
+      <div class="cap">Cobertura</div>
+      <div class="capd">Fernanda / Danna. Una rejilla; un toque cicla pendiente → listo → no aplica. Sin cámara, sin barra inferior.</div>
+      <div class="phone"><div class="screen">
+        <div class="hd">
+          <span class="ti">Fotografía</span>
+          <span class="rolechip"><span class="avatar">FE</span><b>Fernanda</b></span>
+        </div>
+        <div class="body">
+          <div class="sumbar"><span>10 cuartos</span><span><span class="pend">2 pendientes</span> · 1 no aplica</span></div>
+          <div class="mini-lbl">Piso 1</div>
+          <div class="grid">
+            <div class="cell listo"><span class="cn">Sala</span><span class="st"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg> listo</span></div>
+            <div class="cell listo"><span class="cn">Cocina</span><span class="st"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg> listo</span></div>
+            <div class="cell pend"><span class="cn">Comedor</span><span class="st">pendiente</span></div>
+            <div class="cell na"><span class="cn">Bodega</span><span class="st">no aplica</span></div>
+          </div>
+          <div class="mini-lbl">Exterior</div>
+          <div class="grid">
+            <div class="cell listo"><span class="cn">Fachada</span><span class="st"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg> listo</span></div>
+            <div class="cell pend"><span class="cn">Alberca</span><span class="st">pendiente</span></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- CIERRE -->
+    <div class="col">
+      <div class="cap">Cierre</div>
+      <div class="capd">"¿Ya nos vamos?" Faltantes + conciliar el consecutivo con tu cámara real, mientras aún puedes regrabar.</div>
+      <div class="phone"><div class="screen">
+        <div class="hd"><span class="ti">Cierre</span><span class="pillbtn">Línea de tiempo</span></div>
+        <div class="body">
+          <div class="sem amber">
+            <div class="lvl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Casi listos</div>
+            <p>Revisa 3 cosas antes de salir.</p>
+          </div>
+          <div class="mini-lbl">Faltantes</div>
+          <div class="lst">
+            <div class="li"><span class="dot"></span><span class="rt">Comedor<div class="sub">sin tomas</div></span></div>
+            <div class="li"><span class="dot"></span><span class="rt">Alberca<div class="sub">sin tomas</div></span></div>
+            <div class="li"><span class="dot"></span><span class="rt">Sala<div class="sub">sin una toma buena marcada</div></span></div>
+          </div>
+          <div class="mini-lbl">Conciliar con tu cámara</div>
+          <div class="lst">
+            <div class="conc"><span>Sony · app va en <span class="tok">PIB2840</span></span><span class="chk"><span class="micro ok">igual</span><span class="micro">hay hueco</span></span></div>
+            <div class="conc"><span>Drone · siguiente <span class="tok">DJI_0252</span></span><span class="chk"><span class="micro ok">igual</span><span class="micro">hay hueco</span></span></div>
+          </div>
+          <button class="gate">Salir de la propiedad</button>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- EDICION -->
+    <div class="col">
+      <div class="cap">Edición</div>
+      <div class="capd">En el escritorio. Bitácora limpia por servicio → piso → cuarto, editable. De aquí sale el export a Premiere.</div>
+      <div class="phone"><div class="screen">
+        <div class="hd"><span class="ti">Edición</span><span class="pillbtn">Guion</span></div>
+        <div class="body">
+          <div class="grp">
+            <div class="ghd">Video <span class="crumb">› Piso 1 › Sala</span></div>
+            <div class="erow"><span class="tk">PIB2818</span><span class="ed">plano abierto · gimbal</span><span class="ic fav"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"/></svg></span><span class="ic good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg></span></div>
+            <div class="erow"><span class="tk">PIB2819</span><span class="ed">recorrido · gimbal</span><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor" opacity=".25"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"/></svg></span><span class="ic good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg></span></div>
+          </div>
+          <div class="grp">
+            <div class="ghd">Drone <span class="crumb">› Exterior › Fachada</span></div>
+            <div class="erow"><span class="tk">DJI_0241</span><span class="ed">órbita</span><span class="ic fav"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"/></svg></span><span class="ic good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg></span></div>
+          </div>
+          <button class="export"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg> Exportar para Premiere</button>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+</body>
+</html>

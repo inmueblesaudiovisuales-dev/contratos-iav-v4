@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modo cuartos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper-0:#F7F4EC; --paper-1:#FFFDF8; --paper-2:#EFEADF; --line:#E2DBCB;
+    --onyx:#1C1C1E; --muted:#6F6A5E; --gold:#B08D2E; --gold-leaf:#C9A84C;
+    --ok:#2F7D55; --warn:#B0560E; --danger:#B23A2B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E1D3;font-family:'Inter',sans-serif;color:var(--onyx);
+    padding:30px 16px 64px;display:flex;flex-direction:column;align-items:center;gap:26px}
+  .intro{max-width:760px;text-align:center}
+  .intro h1{font-family:'Fraunces',serif;font-weight:600;font-size:23px;margin-bottom:8px}
+  .intro p{color:var(--muted);font-size:14.5px;line-height:1.5}
+  .stage{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;justify-content:center;max-width:1000px}
+
+  .phone{width:384px;background:var(--paper-0);border-radius:36px;padding:9px;
+    box-shadow:0 28px 55px -20px rgba(40,34,20,.45);border:1px solid #d8d1c0}
+  .screen{background:var(--paper-0);border-radius:28px;overflow:hidden;display:flex;flex-direction:column;height:792px}
+
+  .hd{padding:14px 16px;background:var(--paper-1);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd .ti{font-family:'Fraunces',serif;font-size:18px;font-weight:600}
+  .done{background:var(--gold-leaf);color:#322806;border:none;border-radius:9px;padding:8px 15px;font-size:13px;font-weight:600;cursor:pointer}
+
+  .body{flex:1;overflow-y:auto;padding:14px}
+  .blk{margin-bottom:18px}
+  .mini-lbl{font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.04em;margin-bottom:8px;text-transform:uppercase}
+
+  .seg{display:flex;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+  .seg div{flex:1;text-align:center;padding:8px 0;font-size:12.5px;font-weight:500;border-radius:7px;color:var(--muted);cursor:pointer}
+  .seg div.on{background:var(--paper-1);color:var(--onyx);box-shadow:0 1px 2px rgba(0,0,0,.06);font-weight:600}
+
+  .floors{display:flex;gap:7px;flex-wrap:wrap}
+  .fl{font-size:12.5px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--paper-1);color:#46412f;cursor:pointer}
+  .fl.on{border-color:var(--gold);box-shadow:0 0 0 1.5px var(--gold-leaf);font-weight:600;background:#fbf3df}
+  .fl.add{border-style:dashed;color:var(--muted)}
+
+  .addhint{font-size:12px;color:var(--muted);margin:13px 0 9px}
+  .addhint b{color:#322806;font-weight:600}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-size:13px;padding:8px 13px;border-radius:999px;border:1px solid var(--line);background:var(--paper-1);
+    color:#46412f;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .chip .pl{color:var(--gold);font-weight:600}
+  .chip.added{color:var(--ok);background:#eef7f1;border-color:#bfe0cd}
+
+  .typebox{margin-top:11px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;background:var(--paper-1);color:var(--muted);font-size:13px}
+
+  .added-list{margin-top:6px}
+  .arow{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--paper-1);margin-bottom:8px}
+  .arow .an{font-family:'Fraunces',serif;font-size:15.5px;flex:1}
+  .arow .sub{font-size:11.5px;color:var(--gold);font-weight:600;cursor:pointer;white-space:nowrap}
+  .arow .x{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--paper-0);
+    display:flex;align-items:center;justify-content:center;color:var(--danger);cursor:pointer}
+  .subrow{margin-left:20px;border-left:2px solid var(--line);padding-left:10px}
+
+  .toast{margin:4px 14px 0;background:var(--onyx);color:#F7F4EC;border-radius:10px;padding:10px 13px;
+    display:flex;align-items:center;justify-content:space-between;font-size:12.5px}
+  .toast b{cursor:pointer;color:var(--gold-leaf)}
+
+  .notes{width:300px;max-width:90vw}
+  .notes h2{font-family:'Fraunces',serif;font-size:18px;margin-bottom:14px}
+  .note{background:var(--paper-1);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:11px}
+  .note .k{font-size:12px;font-weight:600;color:var(--gold);margin-bottom:5px}
+  .note p{font-size:13px;line-height:1.5;color:#46412f}
+  .legend{font-size:11.5px;color:var(--muted);margin-top:4px}
+  svg{width:16px;height:16px}
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>Armar cuartos — vacío, por chips, fácil de deshacer</h1>
+    <p>Arrancas de cero. El tipo de propiedad sesga las sugerencias. Tocas un chip para agregar; tocas la X para quitar. Un toque cada uno.</p>
+  </div>
+
+  <div class="stage">
+    <div class="phone"><div class="screen">
+
+      <div class="hd"><span class="ti">Armar cuartos</span><button class="done">Listo</button></div>
+
+      <div class="body">
+
+        <div class="blk">
+          <div class="mini-lbl">Tipo de propiedad</div>
+          <div class="seg"><div class="on">Casa</div><div>Depto</div><div>Terreno</div><div>Quinta</div></div>
+        </div>
+
+        <div class="blk">
+          <div class="mini-lbl">Pisos</div>
+          <div class="floors">
+            <div class="fl on">Piso 1</div>
+            <div class="fl">Piso 2</div>
+            <div class="fl">Exterior</div>
+            <div class="fl">Amenidades</div>
+            <div class="fl add">+ piso</div>
+          </div>
+        </div>
+
+        <div class="blk">
+          <div class="addhint">Toca para agregar a <b>Piso 1</b></div>
+          <div class="chips">
+            <div class="chip added"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg> Sala</div>
+            <div class="chip added"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg> Cocina</div>
+            <div class="chip"><span class="pl">+</span> Comedor</div>
+            <div class="chip"><span class="pl">+</span> Recámara</div>
+            <div class="chip"><span class="pl">+</span> Baño</div>
+            <div class="chip"><span class="pl">+</span> Estudio</div>
+            <div class="chip"><span class="pl">+</span> Cuarto de TV</div>
+            <div class="chip"><span class="pl">+</span> Vestíbulo</div>
+            <div class="chip"><span class="pl">+</span> Escaleras</div>
+          </div>
+          <div class="typebox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Escribe para buscar o crear otro…</div>
+        </div>
+
+        <div class="blk">
+          <div class="mini-lbl">En Piso 1 · 2 cuartos</div>
+          <div class="added-list">
+            <div class="arow">
+              <span class="an">Sala</span>
+              <span class="sub">+ sub-cuarto</span>
+              <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+            </div>
+            <div class="arow">
+              <span class="an">Cocina</span>
+              <span class="sub">+ sub-cuarto</span>
+              <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+            </div>
+            <div class="arow subrow">
+              <span class="an">Alacena</span>
+              <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="toast">Quitaste "Comedor" <b>Deshacer</b></div>
+
+    </div></div>
+
+    <div class="notes">
+      <h2>Lo que cambia</h2>
+      <div class="note">
+        <div class="k">Arranca vacío</div>
+        <p>Nada pre-cargado. Tú construyes la propiedad real, sin ir borrando lo que no aplica.</p>
+      </div>
+      <div class="note">
+        <div class="k">Tipo sesga sugerencias</div>
+        <p>Casa / Depto / Terreno / Quinta cambia los chips que aparecen primero. Quinta trae alberca, palapa, asadores, cabañas…</p>
+      </div>
+      <div class="note">
+        <div class="k">Un toque agregar, un toque quitar</div>
+        <p>Chip = agrega al piso en foco (queda con palomita). La X en cada cuarto lo quita al instante — sin confirmaciones de dos pasos.</p>
+      </div>
+      <div class="note">
+        <div class="k">Deshacer siempre</div>
+        <p>Si quitas algo por error, el aviso de abajo lo regresa con un toque. Imposible "perder" un cuarto.</p>
+      </div>
+      <div class="note">
+        <div class="k">Pisos y sub-cuartos</div>
+        <p>El cuarto cae en el piso en foco. "+ sub-cuarto" cuelga un nivel (Cocina → Alacena), hereda el piso.</p>
+      </div>
+      <div class="note">
+        <div class="k">Re-entrable</div>
+        <p>Entras y sales cuando quieras; agrega encima de lo existente sin romper lo ya capturado.</p>
+      </div>
+      <p class="legend">Casi sin escribir: el campo de texto es solo para lo raro.</p>
+    </div>
+  </div>
+</body>
+</html>

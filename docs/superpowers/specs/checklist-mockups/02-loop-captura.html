@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loop captura v3 — tipo + movimiento + descripción</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper-0:#F7F4EC; --paper-1:#FFFDF8; --paper-2:#EFEADF; --line:#E2DBCB;
+    --onyx:#1C1C1E; --muted:#6F6A5E; --gold:#B08D2E; --gold-leaf:#C9A84C;
+    --ok:#2F7D55; --warn:#B0560E; --danger:#B23A2B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E1D3;font-family:'Inter',sans-serif;color:var(--onyx);
+    padding:30px 16px 64px;display:flex;flex-direction:column;align-items:center;gap:26px}
+  .intro{max-width:760px;text-align:center}
+  .intro h1{font-family:'Fraunces',serif;font-weight:600;font-size:23px;margin-bottom:8px}
+  .intro p{color:var(--muted);font-size:14.5px;line-height:1.5}
+  .stage{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;justify-content:center;max-width:1000px}
+
+  .phone{width:382px;background:var(--paper-0);border-radius:36px;padding:9px;
+    box-shadow:0 28px 55px -20px rgba(40,34,20,.45);border:1px solid #d8d1c0}
+  .screen{background:var(--paper-0);border-radius:28px;overflow:hidden;display:flex;flex-direction:column;height:792px}
+
+  .hd{padding:14px 16px 12px;background:var(--paper-1);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .back{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12.5px;cursor:pointer;white-space:nowrap}
+  .hdr-room{flex:1;text-align:right}
+  .hdr-room .rn{font-family:'Fraunces',serif;font-size:18px;font-weight:600;line-height:1}
+  .hdr-room .fl{font-family:'Spline Sans Mono',monospace;font-size:10.5px;color:var(--muted)}
+
+  .cam{padding:11px 14px;background:var(--paper-0);border-bottom:1px solid var(--line)}
+  .seg{display:flex;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+  .seg div{flex:1;text-align:center;padding:6px 0;font-size:13px;font-weight:500;border-radius:7px;color:var(--muted);cursor:pointer}
+  .seg div.on{background:var(--paper-1);color:var(--onyx);box-shadow:0 1px 2px rgba(0,0,0,.06);font-weight:600}
+  .nextrow{display:flex;align-items:center;justify-content:space-between;margin-top:9px}
+  .nextlbl{font-size:11px;color:var(--muted)}
+  .token{font-family:'Spline Sans Mono',monospace;font-size:24px;font-weight:600}
+
+  .sug{padding:10px 14px;background:#FBF8F0;border-bottom:1px solid var(--line)}
+  .sug-h{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+  .sug-h .t{font-size:11.5px;font-weight:600;color:var(--gold);display:flex;align-items:center;gap:6px}
+  .sug-h .c{font-family:'Spline Sans Mono',monospace;font-size:10.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .chips{display:flex;gap:7px;overflow-x:auto;margin-top:9px;padding-bottom:3px}
+  .chips::-webkit-scrollbar{height:0}
+  .chip{white-space:nowrap;font-size:12.5px;padding:6px 11px;border-radius:999px;border:1px solid var(--line);
+    background:var(--paper-1);color:#46412f;cursor:pointer;display:flex;gap:5px;align-items:center}
+  .chip.done{color:var(--ok);background:#eef7f1;border-color:#bfe0cd}
+  .chip.sel{border-color:var(--gold);box-shadow:0 0 0 1.5px var(--gold-leaf);font-weight:600;background:#fbf3df}
+
+  /* expanded detail of selected suggestion */
+  .sug-detail{margin-top:11px;border-top:1px dashed var(--line);padding-top:10px}
+  .mini-lbl{font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.03em;margin-bottom:6px;text-transform:uppercase}
+  .qg{font-size:12.5px;color:#46412f;line-height:1.45;margin-bottom:11px}
+  .chips.mv{margin-top:0}
+  .chip.mv-on{border-color:var(--gold);box-shadow:0 0 0 1.5px var(--gold-leaf);font-weight:600;background:#fbf3df}
+  .plan{font-size:11.5px;color:var(--muted);margin-top:10px}
+  .plan b{color:#322806;font-weight:600}
+
+  .takes{flex:1;overflow-y:auto;padding:10px 14px}
+  .takes .lbl{font-size:11px;color:var(--gold);font-weight:600;margin:2px 2px 6px}
+  .take{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;background:var(--paper-1);cursor:pointer}
+  .take .tk{font-family:'Spline Sans Mono',monospace;font-size:13px;font-weight:500}
+  .take .tn{font-size:11px;color:var(--muted);flex:1}
+  .badge{font-size:10px;padding:2px 7px;border-radius:999px;font-family:'Spline Sans Mono',monospace}
+  .b-good{color:var(--ok);background:#eef7f1;border:1px solid #bfe0cd}
+  .b-fav{color:#7a5a12;background:#f7efd8;border:1px solid #e4d39a}
+  .b-fail{color:var(--danger);background:#f7ece9;border:1px solid #e6c4bd}
+  .take.fail .tk{color:var(--muted);text-decoration:line-through}
+
+  .latest{border-top:1px solid var(--line);background:var(--paper-1);padding:11px 14px 10px}
+  .latest .lh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .latest .lh .who{font-size:11px;color:var(--gold);font-weight:600}
+  .latest .lh .tk{font-family:'Spline Sans Mono',monospace;font-size:13.5px;font-weight:600}
+  .qa{display:flex;gap:8px;margin-bottom:8px}
+  .qbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 0;border-radius:10px;border:1px solid var(--line);background:var(--paper-0);font-size:13px;font-weight:600;cursor:pointer}
+  .qbtn.fav{color:#7a5a12;border-color:#e4d39a;background:#fbf6e6}
+  .qbtn.good{color:var(--ok);border-color:#bfe0cd;background:#eef7f1}
+  .notef{border:1px dashed var(--line);border-radius:9px;padding:9px 11px;color:var(--muted);font-size:12px}
+
+  .thumb{display:flex;gap:10px;padding:11px 14px 16px;background:var(--paper-1);border-top:1px solid var(--line)}
+  .big{flex:1;height:56px;border-radius:14px;font-size:16px;font-weight:600;border:none;cursor:pointer}
+  .big.toma{background:var(--gold-leaf);color:#322806}
+  .big.no{background:var(--paper-2);color:var(--danger);border:1px solid #e6c4bd}
+
+  .notes{width:300px;max-width:90vw}
+  .notes h2{font-family:'Fraunces',serif;font-size:18px;margin-bottom:14px}
+  .note{background:var(--paper-1);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-bottom:11px}
+  .note .k{font-size:12px;font-weight:600;color:var(--gold);margin-bottom:5px}
+  .note p{font-size:13px;line-height:1.5;color:#46412f}
+  .legend{font-size:11.5px;color:var(--muted);margin-top:4px}
+  svg{width:16px;height:16px}
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>Tipo + movimiento + descripción</h1>
+    <p>Seleccionas una sugerencia → se expande con "qué grabar" y los chips de movimiento. La descripción libre va en la toma. Todo opcional, nada obligatorio.</p>
+  </div>
+
+  <div class="stage">
+    <div class="phone"><div class="screen">
+
+      <div class="hd">
+        <div class="back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg> Cuartos</div>
+        <div class="hdr-room"><div class="rn">Sala</div><div class="fl">Piso 1</div></div>
+      </div>
+
+      <div class="cam">
+        <div class="seg"><div class="on">Sony</div><div>Drone</div></div>
+        <div class="nextrow"><div><div class="nextlbl">siguiente</div><div class="token">PIB2820</div></div></div>
+      </div>
+
+      <div class="sug">
+        <div class="sug-h">
+          <span class="t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg> Sugeridas para Sala</span>
+          <span class="c">2 / 5 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg></span>
+        </div>
+        <div class="chips">
+          <div class="chip done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg> Plano abierto</div>
+          <div class="chip done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg> Recorrido</div>
+          <div class="chip sel">Plano medio</div>
+          <div class="chip">Detalle</div>
+          <div class="chip">Contrapicado</div>
+        </div>
+
+        <div class="sug-detail">
+          <div class="mini-lbl">Qué grabar</div>
+          <div class="qg">El conjunto sala–comedor desde la entrada: muestra amplitud y la conexión con el ventanal.</div>
+          <div class="mini-lbl">Movimiento</div>
+          <div class="chips mv">
+            <div class="chip">Estático</div>
+            <div class="chip mv-on">Push in</div>
+            <div class="chip">Paneo</div>
+            <div class="chip">Tilt</div>
+            <div class="chip">Gimbal</div>
+            <div class="chip">Órbita</div>
+          </div>
+          <div class="plan">Próxima toma → <b>Plano medio · Push in</b></div>
+        </div>
+      </div>
+
+      <div class="takes">
+        <div class="lbl">Tomas en este cuarto</div>
+        <div class="take"><span class="tk">PIB2818</span><span class="tn">plano abierto · gimbal</span><span class="badge b-good">buena</span></div>
+        <div class="take"><span class="tk">PIB2819</span><span class="tn">recorrido · gimbal</span></div>
+      </div>
+
+      <div class="latest">
+        <div class="lh"><span class="who">recién grabada</span><span class="tk">PIB2819 · recorrido · gimbal</span></div>
+        <div class="qa">
+          <div class="qbtn fav"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"/></svg> Favorita</div>
+          <div class="qbtn good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg> Buena</div>
+        </div>
+        <div class="notef">+ describir lo que grabaste — p. ej. "barrido del ventanal a la chimenea"</div>
+      </div>
+
+      <div class="thumb">
+        <button class="big toma">Toma</button>
+        <button class="big no">No sirve</button>
+      </div>
+
+    </div></div>
+
+    <div class="notes">
+      <h2>Las tres capas de una toma</h2>
+      <div class="note">
+        <div class="k">1 · Tipo (chip de sugerencia)</div>
+        <p>Plano abierto, medio, detalle… Salen de la biblioteca del cuarto. Tocas uno para elegirlo.</p>
+      </div>
+      <div class="note">
+        <div class="k">2 · Movimiento (chips, al expandir)</div>
+        <p>Estático, push in, paneo, gimbal, órbita… La sugerencia trae uno recomendado ya marcado; lo cambias de un toque.</p>
+      </div>
+      <div class="note">
+        <div class="k">3 · Descripción (en la toma)</div>
+        <p>Texto libre opcional sobre lo que de verdad grabaste. Va en la toma recién hecha, junto a buena/favorita.</p>
+      </div>
+      <div class="note">
+        <div class="k">"Qué grabar" = guía, no dato</div>
+        <p>La línea de ayuda te recuerda el propósito del plano. No se guarda; solo te orienta en el momento.</p>
+      </div>
+      <div class="note">
+        <div class="k">Todo opcional</div>
+        <p>Puedes grabar solo con "Toma" sin tocar nada. Tipo/movimiento/descripción suman cuando quieres, nunca frenan.</p>
+      </div>
+      <p class="legend">Wireframe de estructura.</p>
+    </div>
+  </div>
+</body>
+</html>
