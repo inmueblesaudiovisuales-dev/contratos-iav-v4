@@ -576,6 +576,32 @@
     .cron-kind { font-size: 11px; color: var(--ink-3); }
     .cron-chev { font-size: 18px; color: var(--ink-3); flex: none; }
 
+    /* ===== Cierre: semáforo + faltantes + conciliación + gate ===== */
+    .close-sem { border-left: 4px solid var(--line); }
+    .close-sem.red { border-left-color: var(--red); background: var(--red-soft); }
+    .close-sem.amber { border-left-color: var(--gold); background: var(--gold-soft); }
+    .close-sem.green { border-left-color: var(--green); background: var(--green-soft); }
+    .close-lvl { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; color: var(--ink-1); }
+    .close-lvl i { font-size: 19px; flex: none; }
+    .close-sem.red .close-lvl i { color: var(--red); }
+    .close-sem.amber .close-lvl i { color: var(--gold); }
+    .close-sem.green .close-lvl i { color: var(--green); }
+    .close-semtext { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; line-height: 1.45; }
+    .close-lst { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    .close-li { display: flex; align-items: center; gap: 9px; padding: 10px 11px; border-top: 1px solid var(--muted); font-size: 13px; color: var(--ink-1); }
+    .close-li:first-child { border-top: 0; }
+    .close-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); flex: none; }
+    .close-rt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .close-sub { color: var(--ink-3); font-size: 11px; margin-top: 1px; }
+    .close-conc { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 11px; border-top: 1px solid var(--muted); font-size: 12.5px; color: var(--ink-1); }
+    .close-conc:first-child { border-top: 0; }
+    .close-conctxt { flex: 1; min-width: 0; }
+    .close-tok { font-family: var(--font-mono); font-weight: 700; color: var(--ink-1); }
+    .close-chk { display: flex; gap: 6px; flex: none; }
+    .close-micro { font-size: 11px; padding: 5px 10px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-weight: 700; cursor: pointer; }
+    .close-micro.ok { color: var(--green); border-color: var(--green); background: var(--green-soft); }
+    .close-gate { width: 100%; min-height: 50px; border-radius: var(--radius); border: none; background: var(--gold); color: #322806; font-size: 15px; font-weight: 800; cursor: pointer; margin-top: 2px; }
+
     /* el toast oculto NO debe asomar al fondo ni interceptar toques */
     .toast { transform: translateY(calc(100% + 32px)); visibility: hidden; pointer-events: none; }
     .toast.visible { transform: translateY(0); visibility: visible; pointer-events: auto; }
@@ -3621,111 +3647,143 @@ function registrarIntencion(intencion) {
   registrarCaptura(id, intencion);
 }
 
+// ===== F9 — Cierre: "¿ya nos vamos?" =====
+// Semáforo + faltantes (cuartos sin tomas, escenas sin buena) + conciliación
+// del consecutivo con la cámara física + línea de tiempo + gate de salida.
+
+// Cuartos sin tomas en los servicios de cámara activos (video/drone).
+function closeRoomsMissing() {
+  const result = [];
+  const files = state.mediaFiles || [];
+  ['video', 'drone'].forEach((service) => {
+    if (!state.servicios[service]) return;
+    (state.espacios || []).forEach((space) => {
+      const estado = (space.estados[service] || {}).estado;
+      if (estado === 'no_aplica' || estado === 'hecho') return;
+      const cameraIds = new Set((state.cameras || []).filter((c) => c.mode === service).map((c) => c.id));
+      const hasTake = files.some((f) => f.kind === 'take' && f.targetId === space.id && cameraIds.has(f.cameraId));
+      if (!hasTake) result.push({ nombre: space.nombre, service, targetId: space.id, reason: 'sin tomas' });
+    });
+  });
+  return result;
+}
+
+// Escenas grabadas (video/drone) sin una toma buena marcada.
+function closeScenesWithoutGood() {
+  return logic.getMediaSceneGroups(state)
+    .filter((group) => group.hasTake && !group.hasGood && (group.mode === 'video' || group.mode === 'drone'))
+    .map((group) => ({ nombre: group.scenePath, service: group.mode, reason: 'sin una toma buena marcada' }));
+}
+
+// Cámaras con secuencia activa o archivos, dentro de un servicio activo.
+function closeActiveCameras() {
+  const files = state.mediaFiles || [];
+  return (state.cameras || []).filter((camera) => {
+    if (!state.servicios[camera.mode]) return false;
+    const seq = logic.getCameraSequence(state, camera.id);
+    const hasFiles = files.some((f) => f.cameraId === camera.id);
+    return !!seq.segment || hasFiles;
+  });
+}
+
 function renderCloseView() {
-  const summary = logic.getPendingSummary(state);
-  const repeated = state.bitacora.filter((entry) => ['repetida', 'extra', 'reemplazo', 'problema'].includes(entry.intencion) || entry.bandera);
-  const noAplica = getNoAplicaItems();
-  const disabled = Object.entries(state.servicios).filter(([, active]) => !active).map(([key]) => SERVICE_UI[key].label);
-  const urgent = closeUrgentItems(summary);
-  const review = [
-    ...repeated.map((entry) => `<strong>${esc(entry.nombre)}</strong>: ${SERVICE_UI[entry.tipo].short} ${entry.orden || ''} marcada como ${esc(entry.intencion || entry.bandera)}`),
-    ...noAplica.map((item) => `<strong>No aplica:</strong> ${esc(item)}`),
-    ...disabled.map((item) => `<strong>Servicio apagado:</strong> ${esc(item)}`),
-  ];
-  const ready = closeReadyItems(summary);
+  const rooms = closeRoomsMissing();
+  const scenes = closeScenesWithoutGood();
+  const faltantes = [...rooms, ...scenes];
+  const cameras = closeActiveCameras();
+
+  // Semáforo: verde sin faltantes; rojo si hay cuartos sin toma; amarillo si solo
+  // faltan buenas marcadas.
+  let level, lvlLabel, lvlText, icon;
+  if (!faltantes.length) {
+    level = 'green'; lvlLabel = 'Todo listo';
+    lvlText = 'No hay faltantes. Pueden salir de la propiedad.';
+    icon = '<i class="ti ti-circle-check"></i>';
+  } else if (rooms.length) {
+    level = 'red'; lvlLabel = 'Aún no nos vamos';
+    lvlText = `Faltan tomas en ${rooms.length} cuarto${rooms.length === 1 ? '' : 's'}${scenes.length ? ` y ${scenes.length} escena${scenes.length === 1 ? '' : 's'} sin buena` : ''}.`;
+    icon = '<i class="ti ti-alert-triangle"></i>';
+  } else {
+    level = 'amber'; lvlLabel = 'Casi listos';
+    lvlText = `Revisa ${scenes.length} cosa${scenes.length === 1 ? '' : 's'} antes de salir.`;
+    icon = '<i class="ti ti-alert-triangle"></i>';
+  }
+
+  const faltantesHtml = faltantes.length
+    ? `<div class="close-lst">${faltantes.map((item) => `<div class="close-li"><span class="close-dot"></span><span class="close-rt">${esc(item.nombre)}<span class="close-sub">${esc(item.reason)}${item.service ? ` · ${SERVICE_UI[item.service].short}` : ''}</span></span></div>`).join('')}</div>`
+    : '<p class="line">No hay cuartos ni escenas pendientes.</p>';
+
+  const concHtml = cameras.length
+    ? `<div class="close-lst">${cameras.map(renderConcCamera).join('')}</div>`
+    : '<p class="line">Aún no hay secuencias iniciadas.</p>';
+
   return `<div class="close-list">
-    ${renderMediaClosePanels()}
-    ${renderCronologia()}
-    <section class="panel traffic red"><h3 class="traffic-title"><span></span>Falta antes de irnos</h3>${urgent.length ? urgent.slice(0, 12).map(renderReviewItem).join('') : '<p class="line">No hay faltantes prioritarios.</p>'}</section>
-    <section class="panel traffic yellow"><h3 class="traffic-title"><span></span>Revisar</h3>${review.length ? review.slice(0, 12).map(renderReviewItem).join('') : '<p class="line">No hay excepciones que revisar.</p>'}</section>
-    <section class="panel traffic green"><h3 class="traffic-title"><span></span>Listo</h3>${ready.map(renderReviewItem).join('') || '<p class="line">Completa los puntos prioritarios para cerrar.</p>'}</section>
-    <section class="panel"><h3>Detalle normal pendiente</h3>${renderNormalPending(summary)}</section>
+    <section class="panel close-sem ${level}">
+      <div class="close-lvl">${icon}${esc(lvlLabel)}</div>
+      <p class="close-semtext">${esc(lvlText)}</p>
+    </section>
+    <section class="panel"><h3>Faltantes</h3>${faltantesHtml}</section>
+    <section class="panel"><h3>Conciliar con tu cámara</h3>
+      <p class="line">Confirma que el consecutivo de la app coincide con tu tarjeta, mientras aún puedes regrabar.</p>
+      ${concHtml}
+    </section>
+    ${renderCloseTimelines(cameras)}
+    <button class="close-gate" onclick="abrirGateSalida()">Salir de la propiedad</button>
   </div>`;
 }
 
-function renderMediaClosePanels() {
-  const files = state.mediaFiles || [];
-  const unidentified = files.filter((file) => file.kind === 'omitted' || file.scene === 'Sin identificar');
-  const sceneGroups = logic.getMediaSceneGroups(state).filter((group) => group.hasTake);
-  const groupLabel = (group) => `${SERVICE_UI[group.mode]?.short || 'Archivo'} · ${group.scenePath}`;
-  const withoutGood = sceneGroups.filter((group) => !group.hasGood);
-  const tooManyGood = sceneGroups.filter((group) => group.goodCount >= 3);
-  const discardCounts = files.filter((file) => file.kind === 'discard').reduce((counts, file) => {
-    counts[file.discardReason] = (counts[file.discardReason] || 0) + 1;
-    return counts;
-  }, {});
-  const cameras = (state.cameras || []).map((camera) => {
-    const seq = logic.getCameraSequence(state, camera.id);
-    const cameraFiles = files.filter((file) => file.cameraId === camera.id);
-    if (!state.servicios[camera.mode]) return '';
-    if (camera.optional && !seq.segment && !cameraFiles.length) return '';
-    if (!seq.segment && !cameraFiles.length) return `<div class="review-item"><strong>${esc(camera.label)}</strong><div>Sin secuencia iniciada</div></div>`;
-    const last = cameraFiles[cameraFiles.length - 1];
-    return `<div class="review-item"><strong>${esc(camera.label)}</strong><div>${last ? `Checklist termina en ${esc(last.fileToken)} · confirma en camara` : 'Secuencia iniciada sin archivos'}</div></div>`;
-  }).join('');
-  return `<section class="panel traffic yellow"><h3 class="traffic-title"><span></span>Reconciliar archivos</h3>${cameras || '<p class="line">Aun no hay secuencias iniciadas.</p>'}</section>
-    <section class="panel"><h3>Seleccion para edicion</h3>
-      ${withoutGood.length ? withoutGood.map((group) => renderReviewItem(`<strong>${esc(groupLabel(group))}</strong>: ninguna toma buena`)).join('') : sceneGroups.length ? '<p class="line">Todas las escenas grabadas tienen una buena.</p>' : '<p class="line">Aun no hay tomas registradas.</p>'}
-      ${tooManyGood.map((group) => renderReviewItem(`<strong>${esc(groupLabel(group))}</strong>: tres o mas buenas`)).join('')}
-      ${unidentified.map((file) => `<div class="review-item"><strong>${esc(file.fileToken)}</strong><div>Sin identificar</div><button class="mini-btn" onclick="abrirArchivo('${file.id}')">Resolver</button></div>`).join('')}
-      ${Object.keys(discardCounts).length ? `<p class="line">Descartes: ${Object.entries(discardCounts).map(([reason, count]) => `${mediaKindLabel({ kind: 'discard', discardReason: reason })} ${count}`).join(' · ')}</p>` : ''}
-    </section>`;
+// Una fila de conciliación por cámara: "app va en <token>" + igual / hay hueco.
+function renderConcCamera(camera) {
+  const seq = logic.getCameraSequence(state, camera.id);
+  const cameraFiles = (state.mediaFiles || []).filter((f) => f.cameraId === camera.id).sort((a, b) => a.fileCounter - b.fileCounter);
+  const last = cameraFiles[cameraFiles.length - 1];
+  let tokenHtml;
+  if (last) tokenHtml = `app va en <span class="close-tok">${esc(last.fileToken)}</span>`;
+  else if (seq.nextToken) tokenHtml = `siguiente <span class="close-tok">${esc(seq.nextToken)}</span>`;
+  else tokenHtml = 'sin archivos aún';
+  const huecoBtn = last
+    ? `<button class="close-micro" onclick="conciliarHueco('${camera.id}')">hay hueco</button>`
+    : '';
+  return `<div class="close-conc">
+    <span class="close-conctxt">${esc(camera.label)} · ${tokenHtml}</span>
+    <span class="close-chk"><span class="close-micro ok">igual</span>${huecoBtn}</span>
+  </div>`;
 }
 
-function renderReviewItem(item) {
-  return `<div class="review-item"><span>—</span><div>${item}</div></div>`;
-}
-
-function renderCronologia() {
-  const cams = (state.cameras || []).filter((c) => (state.mediaFiles || []).some((f) => f.cameraId === c.id));
-  if (!cams.length) return '';
-  return cams.map((cam) => {
+// Línea de tiempo por cámara: orden cronológico del consecutivo con su cuarto.
+function renderCloseTimelines(cameras) {
+  const blocks = cameras.map((cam) => {
     const files = (state.mediaFiles || []).filter((f) => f.cameraId === cam.id).sort((a, b) => a.fileCounter - b.fileCounter);
     if (!files.length) return '';
-    return `<section class="panel"><h3>Secuencia · ${esc(cam.label)}</h3>
-      <p class="line">En el orden real de la tarjeta. Toca un archivo para insertar uno olvidado, reasignar o corregir.</p>
+    return `<section class="panel"><h3>Línea de tiempo · ${esc(cam.label)}</h3>
+      <p class="line">En el orden real de la tarjeta. Toca un archivo para insertar uno olvidado, reasignar o quitar un registro.</p>
       <div class="cron">${files.map((f) => `<button class="cron-row" onclick="abrirArchivo('${f.id}')">
         <span class="cron-tok">${esc(f.fileToken)}</span>
         <span class="cron-info"><span class="cron-scene">${esc(f.scenePath || 'Sin identificar')}</span><span class="cron-kind">${esc(mediaKindLabel(f))}${f.good ? ' · buena' : ''}</span></span>
         <i class="ti ti-dots cron-chev"></i>
       </button>`).join('')}</div></section>`;
-  }).join('');
+  }).filter(Boolean).join('');
+  return blocks;
 }
 
-function closeUrgentItems(summary) {
-  const seen = new Set();
-  const items = [];
-  summary.keyPending.forEach((item) => {
-    const key = `${item.service}:${item.nombre}`;
-    if (!seen.has(key)) items.push(`<strong>${esc(item.nombre)}</strong>: falta ${SERVICE_UI[item.service].short}`);
-    seen.add(key);
+// "Hay hueco": inserta el archivo olvidado antes del último consecutivo y abre su
+// detalle para identificarlo / reasignarlo (reusa insertOmittedMediaFile).
+function conciliarHueco(cameraId) {
+  const cameraFiles = (state.mediaFiles || []).filter((f) => f.cameraId === cameraId).sort((a, b) => a.fileCounter - b.fileCounter);
+  const last = cameraFiles[cameraFiles.length - 1];
+  if (!last) return showToast('Esta cámara aún no tiene archivos');
+  confirmSheet('Hay un hueco', 'Se insertará un archivo olvidado en la secuencia de esta cámara y se recorrerán los consecutivos posteriores. Lo identificas en el detalle.', 'Insertar olvidado', () => {
+    state = logic.insertOmittedMediaFile(state, last.id);
+    const inserted = state.mediaFiles.find((file, index) => state.mediaFiles[index + 1] && state.mediaFiles[index + 1].id === last.id);
+    if (inserted) inserted.author = miNombre();
+    scheduleSave();
+    render();
+    if (inserted) abrirArchivo(inserted.id);
   });
-  Object.entries(summary.byZone.amenidades || {}).forEach(([service, data]) => data.pending.forEach((name) => {
-    const key = `${service}:${name}`;
-    if (!seen.has(key)) items.push(`<strong>${esc(name)}</strong>: falta ${SERVICE_UI[service].short} en amenidad`);
-    seen.add(key);
-  }));
-  if (summary.byService.drone) summary.byService.drone.pending.forEach((name) => items.push(`<strong>${esc(name)}</strong>: falta Drone`));
-  return items;
 }
 
-function closeReadyItems(summary) {
-  const items = [];
-  ['interior', 'exterior', 'amenidades'].forEach((zone) => {
-    const services = Object.values(summary.byZone[zone] || {});
-    if (services.length && services.every((item) => !item.pending.length)) items.push(`<strong>${ZONE_LABELS[zone]}</strong> completo`);
-  });
-  if (summary.byService.drone && !summary.byService.drone.pending.length) items.push('<strong>Drone</strong> completo');
-  if (!summary.keyPending.length) items.unshift('<strong>Espacios clave</strong> completos');
-  return items;
-}
-
-function renderNormalPending(summary) {
-  const keyNames = new Set(summary.keyPending.map((item) => `${item.service}:${item.nombre}`));
-  const lines = ['interior', 'exterior'].flatMap((zone) => Object.entries(summary.byZone[zone] || {}).flatMap(([service, item]) =>
-    item.pending.filter((name) => !keyNames.has(`${service}:${name}`)).map((name) => `${SERVICE_UI[service].short}: ${name}`)
-  ));
-  return lines.length ? lines.slice(0, 14).map((line) => `<p class="line">${esc(line)}</p>`).join('') : '<p class="line">Sin faltantes normales.</p>';
+function renderReviewItem(item) {
+  return `<div class="review-item"><span>—</span><div>${item}</div></div>`;
 }
 
 function renderExportBar() {
@@ -3869,17 +3927,6 @@ function renderSequence(items, emptyText) {
 
 function amenityDone(space) {
   return ['foto', 't360', 'video'].filter((service) => (space.estados[service] || {}).estado === 'hecho').map((service) => SERVICE_UI[service].short).join(', ') || 'pendiente';
-}
-
-function getNoAplicaItems() {
-  const items = [];
-  state.espacios.forEach((space) => {
-    ['foto', 't360', 'video'].forEach((service) => {
-      if ((space.estados[service] || {}).estado === 'no_aplica') items.push(`${SERVICE_UI[service].label}: ${space.nombre}`);
-    });
-  });
-  state.droneItems.forEach((item) => { if (item.noAplica) items.push(`Drone: ${item.nombre}`); });
-  return items;
 }
 
 function abrirTemplate(key) {
