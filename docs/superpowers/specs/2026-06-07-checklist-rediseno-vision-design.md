@@ -24,7 +24,8 @@ Diseñar lo ideal para el negocio, que funcione excelente siempre.
 
 **North star:** *"casi invisible en campo, indispensable en edición"*. Prioridad absoluta:
 eficiencia y claridad. Cada acción frecuente = 1 toque, operable con un pulgar, difícil
-equivocarse. **Nada de vistas escondidas por mal diseño.**
+equivocarse. **Nada de vistas escondidas por mal diseño.** Legible en exteriores con sol (contraste
+alto, toques grandes).
 
 ## 2. Negocio y workflow (contexto que rige el diseño)
 
@@ -32,14 +33,18 @@ equivocarse. **Nada de vistas escondidas por mal diseño.**
   - **Fernanda** → fotografía.
   - **Danna** → recorrido virtual 360.
   - **Bruno** → video + drone (video y fotos con drone).
-- Equipo: Sony FX3 (video), DJI Air 3S / Mini 5 Pro (drone). Entregables al cliente: **Fotos (JPG)
-  + Video (MP4)**; el 360 es el recorrido inmersivo aparte.
+- Cámaras reales: **Sony FX30** (video), **Osmo Pocket 3**, **DJI Air 3** y **DJI Mini 4 Pro**
+  (drones). El modelo debe permitir **agregar cámaras en el futuro** (lista configurable, no fija).
+  Entregables al cliente: **Fotos (JPG) + Video (MP4)**; el 360 es el recorrido inmersivo aparte.
 - Las **fotos de drone** importan **solo** porque comparten el consecutivo físico de la tarjeta con
   los videos de drone: mueven el número del **siguiente video**. No se catalogan como entregable.
 
 ## 3. El marco (modelo mental)
 
 - **La app abre en LA PROPIEDAD** (la sesión / folio), no en "¿qué vas a hacer?".
+- **Acceso por link de sesión.** El admin genera/comparte el **link de la propiedad del día**; los 3
+  lo abren en su celular y caen en la misma sesión sincronizada. Cada quien elige su rol. El link
+  queda cacheado offline para seguir trabajando sin señal.
 - **Una sola propiedad compartida y sincronizada.** Los 3 celulares ven los mismos cuartos. Quien
   sea (típicamente Danna) **arma los cuartos** y a Fer y a Bruno les aparecen al instante.
 - **Rol por celular, discreto y cambiable.** Un chip en la esquina dice quién eres; tocarlo cambia
@@ -64,7 +69,8 @@ Aditivos y compatibles hacia atrás (el estado viejo debe seguir cargando). El b
    vive como **espacios descriptivos** en el piso "Exterior". Migración determinista de `droneItems`
    existentes a espacios.
 2. **Favorita además de buena.** Hoy solo existe `good`. Se agrega `favorite`. **Buena** = sirve;
-   **favorita** = la que más gustó. **Favorita implica buena** (un gesto para "la mejor").
+   **favorita** = la que más gustó. **Favorita implica buena** (un gesto para "la mejor"). La favorita
+   **viaja al export** de forma aditiva (sin romper `version:1`) para aprovecharla en edición.
 3. **Tres capas por toma, todas opcionales:** **tipo** (shotType), **movimiento** (movement) y
    **descripción libre** (texto). Ya soportadas en el export (`tipoToma`, `movimiento`, nota).
 4. **Contador del drone (foto + video juntos).** En el loop de drone, además de "Toma" (video), un
@@ -77,6 +83,10 @@ Aditivos y compatibles hacia atrás (el estado viejo debe seguir cargando). El b
    (buena, favorita, fallida, reasignar cuarto, nota).
 7. **Fuera el modo aprendiz** y el cheatsheet imprimible. **Se conservan** el guion de edición
    imprimible y el gate de salida.
+8. **Cámaras configurables y extensibles.** Lista editable (defaults: Sony FX30, Osmo Pocket 3, DJI
+   Air 3, DJI Mini 4 Pro), cada una con su **consecutivo y prefijo** propios. El switch de cámara en
+   el loop muestra las relevantes. El control **"+ foto"** aplica a las cámaras de drone (foto+video
+   comparten contador). Agregar una cámara nueva no debe requerir tocar código.
 
 ## 5. Captura — el loop (vista de Bruno)
 
@@ -109,6 +119,9 @@ Un cuarto en foco, pensado para el pulgar. De arriba a abajo:
   **VERIFICAR a fondo** (en la app actual fallaban): crear, heredar piso, capturar dentro, sincronizar.
 - **Casi sin escribir** (campo de texto con autocompletar solo para lo raro). **Re-entrable y
   aditivo.**
+- **Categoría del cuarto:** al agregar desde un chip, el cuarto queda con su **categoría** (sala,
+  cocina, baño…) para que las sugerencias salgan bien. Para nombres libres, la categoría se detecta
+  y es **corregible** (no depender solo del nombre).
 
 ## 7. Cierre — "¿ya nos vamos?" (vista de Bruno)
 
@@ -126,6 +139,8 @@ Un cuarto en foco, pensado para el pulgar. De arriba a abajo:
 - Agrupado por **servicio → piso → cuarto**, filas editables (buena, favorita, descripción, descarte
   con motivo, reasignar, cámara, orden real).
 - Botón **Exportar para Premiere** (`buildExport`, `version:1`, intacto). Guion de edición imprimible.
+- **Optimizada para pantalla grande (escritorio):** es la vista que se usa en la compu al editar;
+  debe ser responsive, no solo mobile-first.
 
 ## 9. Offline-first (Fase 1)
 
@@ -161,6 +176,8 @@ Un cuarto en foco, pensado para el pulgar. De arriba a abajo:
 2. **Sugerencias de IA no se aplicaban** (IDs de cuarto no coinciden → descarte silencioso) → Fase 2,
    con verificación de que las sugerencias aparecen en el cuarto correcto.
 3. **Sin señal no funcionaba** → offline-first con prueba de captura sin red y reconexión.
+4. **Migración de propiedades ya capturadas** (drone separado → espacios) → verificar que no se
+   pierdan archivos ni consecutivos al cargar estado viejo.
 
 ## 13. Lo que se preserva (contratos invisibles)
 
@@ -168,3 +185,13 @@ Un cuarto en foco, pensado para el pulgar. De arriba a abajo:
 - `buildExport` en `version:1` (app de Mac `iav-metadata-app`).
 - Motor `checklist-logic.js` como capa de lógica pura, testeada (`node --test
   frontend/checklist-logic.test.js`); se extiende de forma aditiva.
+- Modos `?config=1` (editor de biblioteca de sugerencias, tras contraseña de admin) y `?demo=1`
+  (datos de ejemplo, sin backend).
+
+## 14. Verificación (para los planes)
+
+- **Lógica pura:** `node --test frontend/checklist-logic.test.js`, extendido con los casos nuevos
+  (favorita, contador "+ foto" del drone, migración droneItems→espacios, sub-cuartos).
+- **Navegador local:** recorrer captura, modo cuartos (incl. sub-cuartos), cobertura, cierre, edición.
+- **Celular real:** incluida **captura sin señal** y reconexión (offline-first), y legibilidad en sol.
+- **Export:** confirmar `version:1` y que la app de Mac (`iav-metadata-app`) lo sigue leyendo.
