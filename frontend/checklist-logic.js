@@ -489,6 +489,7 @@
   let _effectiveDroneGuide     = null;
   let _effectiveAmenityGuide   = null;
   let _effectiveRoomCategories = null;
+  let _effectiveCameras        = null;
 
   function getShotTypes()      { return _effectiveShotTypes      || SHOT_TYPES; }
   function getMovements()      { return _effectiveMovements      || MOVEMENTS; }
@@ -496,6 +497,25 @@
   function getDroneGuide()     { return _effectiveDroneGuide     || DRONE_GUIDE; }
   function getAmenityGuide()   { return _effectiveAmenityGuide   || AMENITY_GUIDE; }
   function getRoomCategories() { return _effectiveRoomCategories || ROOM_CATEGORIES; }
+
+  function getCameras(state) {
+    const result = CAMERA_DEFAULTS.map((camera) => Object.assign({}, camera));
+    if (Array.isArray(_effectiveCameras)) {
+      for (const cam of _effectiveCameras) {
+        if (!cam || typeof cam !== 'object' || !cam.id) continue;
+        const idx = result.findIndex((item) => item.id === cam.id);
+        if (idx >= 0) result[idx] = Object.assign({}, result[idx], cam);
+        else result.push(Object.assign({}, cam));
+      }
+    }
+    const stateCameras = state && Array.isArray(state.cameras) ? state.cameras : [];
+    for (const cam of stateCameras) {
+      if (!cam || typeof cam !== 'object' || !cam.id) continue;
+      if (result.some((item) => item.id === cam.id)) continue;
+      result.push(Object.assign({}, cam));
+    }
+    return result;
+  }
 
   function _mergeShots(defaultShots, overrideShots) {
     if (!Array.isArray(overrideShots)) return defaultShots.slice();
@@ -599,6 +619,15 @@
         _effectiveRoomCategories = null;
       }
     } catch (_) { _effectiveRoomCategories = null; }
+    try {
+      if (Array.isArray(config.cameras)) {
+        _effectiveCameras = config.cameras
+          .filter((cam) => cam && typeof cam === 'object' && cam.id)
+          .map((cam) => Object.assign({}, cam));
+      } else {
+        _effectiveCameras = null;
+      }
+    } catch (_) { _effectiveCameras = null; }
   }
 
   function resetGuideConfig() {
@@ -608,6 +637,7 @@
     _effectiveDroneGuide     = null;
     _effectiveAmenityGuide   = null;
     _effectiveRoomCategories = null;
+    _effectiveCameras        = null;
   }
 
   // F2 — keywords para deteccion de amenidades por nombre de espacio
@@ -1901,6 +1931,7 @@
     getDroneGuide,
     getAmenityGuide,
     getRoomCategories,
+    getCameras,
     applyGuideConfig,
     resetGuideConfig,
     normNombre,

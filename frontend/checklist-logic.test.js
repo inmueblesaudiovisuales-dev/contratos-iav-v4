@@ -1736,3 +1736,13 @@ test('F3: bumpCameraCounter avanza el consecutivo sin crear toma', () => {
   assert.equal(s.mediaFiles.length, n0, 'no debe crear tomas');
   assert.notEqual(logic.getCameraSequence(s, 'drone-dji').nextToken, before, 'el consecutivo debe avanzar');
 });
+
+test('F4: applyGuideConfig agrega cámaras y getCameras las incluye', () => {
+  logic.applyGuideConfig({ cameras: [{ id: 'mini4', label: 'DJI Mini 4 Pro', mode: 'drone', kind: 'dji' }] });
+  const cams = logic.getCameras(logic.createDefaultState());
+  assert.ok(cams.some((c) => c.id === 'mini4'), 'getCameras debe incluir la cámara agregada por config');
+  assert.ok(cams.some((c) => c.id === 'sony-main'), 'getCameras debe conservar las cámaras default');
+  logic.resetGuideConfig();
+  const defaults = logic.getCameras(logic.createDefaultState());
+  assert.ok(!defaults.some((c) => c.id === 'mini4'), 'Tras resetGuideConfig getCameras vuelve a los defaults');
+});
