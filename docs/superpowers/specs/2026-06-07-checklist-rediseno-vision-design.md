@@ -87,7 +87,7 @@ Aditivos y compatibles hacia atrás (el estado viejo debe seguir cargando). El b
    Lista editable (defaults: Sony FX30, Osmo Pocket 3, DJI Air 3, DJI Mini 4 Pro). El switch de cámara
    en el loop muestra las relevantes. El control **"+ foto"** aplica a las cámaras de drone
    (foto+video comparten contador). Agregar una cámara nueva no requiere tocar código.
-   - **Alta de cámara:** nombre, tipo (video / drone) y **patrón de numeración**. El patrón se captura
+   - **Alta de cámara:** nombre, tipo (video / drone / audio) y **patrón de numeración**. El patrón se captura
      **pegando un ejemplo del nombre de archivo**; el motor infiere **prefijo + número + sufijo + ancho**
      (reusar `parseFilenameSequence`) y muestra **vista previa del "siguiente"** para confirmar. Soporta
      patrón Sony (prefijo + número aditivo) y DJI (número aditivo + letra/sufijo al final). Respaldo:
@@ -167,13 +167,15 @@ Un cuarto en foco, pensado para el pulgar. De arriba a abajo:
 | **Visión** (este doc) | Marco completo aprobado. |
 | **Fase 1 — Rediseño + captura confiable** | Marco/navegación nueva; rol por celular; cuartos compartidos; Modo cuartos vacío con chips y deshacer (incl. sub-cuartos verificados); loop de captura (buena/favorita 1 toque, tipo+movimiento+descripción, flujo de fallo simple, sin auto-sugerencia, sin banners); drone unificado + contador "+ foto"; Cobertura, Cierre, Edición; **offline-first**; quitar modo aprendiz/cheatsheet. Export `version:1` intacto. |
 | **Fase 2 — Sugerencias con IA** | Rediseño del flujo: cuartos → **destacados** de la propiedad → fotos del cel → prompt mejor armado → aplicar sugerencias **de verdad** (arreglar el bug de IDs que no coinciden y se descartan en silencio). Caen en la tira de sugerencias del loop. |
+| **Fase 3 — Asesores** | Modo asesor: par video+audio, dispositivos de audio configurables, puntos (intro/despedida/voz en off), tolerancia a desfase del par. **Arquitectado en esta visión** (ver §15); se construye aquí. |
 
 ## 11. Fuera de alcance / diferido
 
 - **Dictado por voz / micrófono en la app:** descartado por ahora (Bruno no lo quiere integrado). La
   descripción se escribe a mano. Revisar a futuro solo si surge una forma externa que no meta micrófono
   en la UI.
-- **Lane Asesores** (par de cámaras): no es rol de ninguno de los 3 hoy; diferido.
+- **Asesores:** no entra en Fase 1, pero **sí se arquitecta** en esta visión (ver §15) y se construye
+  en su propia fase (Fase 3).
 - **Cualquier cambio a `worker/`, backend, migraciones, deploy.**
 - **Procesamiento de metadatos de Premiere:** lo hace la app de Mac, no `checklist.html`.
 
@@ -203,3 +205,24 @@ Un cuarto en foco, pensado para el pulgar. De arriba a abajo:
 - **Navegador local:** recorrer captura, modo cuartos (incl. sub-cuartos), cobertura, cierre, edición.
 - **Celular real:** incluida **captura sin señal** y reconexión (offline-first), y legibilidad en sol.
 - **Export:** confirmar `version:1` y que la app de Mac (`iav-metadata-app`) lo sigue leyendo.
+
+## 15. Asesores (arquitectado ahora — se construye en Fase 3)
+
+Add-on dentro de la propiedad. La toma es un **par video + audio** contra un **punto** (no un cuarto).
+Casi siempre **intro y despedida** (a veces recorrido hablado).
+
+- **Dispositivos de audio como cámaras configurables.** Las cámaras tienen tipo **audio** (Osmo
+  Pocket 3, DJI Mic 2, DJI Mic), dadas de alta desde el editor con su patrón de numeración. Se debe
+  poder grabar **solo con DJI Mic 2** (o DJI Mic), sin Osmo, si así se trabaja.
+- **Par ligado (`pairId`).** Un toque crea el par cámara-de-video + dispositivo-de-audio y avanza
+  **ambos** consecutivos. **Voz en off** = punto solo-audio.
+- **Ambos nombres de archivo siempre visibles** (ej. `Sony PIB2820 ↔ DJI 0034`), para confirmar contra
+  los dos aparatos físicos. Es el seguro anti-error del par.
+- **Tolerar errores humanos (desfase del par).** Un toque accidental en el mic o la cámara crea un
+  archivo de más (o de menos) y rompe el 1:1. La app debe permitir **corregir el contador de un solo
+  dispositivo** y marcar un **archivo suelto sin par** (como la conciliación de Cierre, pero por par).
+- **Puntos:** Intro, Despedida, custom. Cada toma: **buena + qué punto + comentario**.
+- **Vive como sección "Asesor"** en la vista de Bruno (no como cuartos).
+- Motor: modo `asesor`, `asesorPuntos`, par por `pairId` (ya existe parcialmente; se rediseña en su
+  fase). Nota: el "asesor como entidad propia / su URL" ligado a contratos sigue **aplazado** y es
+  distinto de este modo de grabación.
