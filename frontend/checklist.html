@@ -2091,25 +2091,6 @@ function duplicarEspacio(id) {
   scheduleSave(); render();
 }
 
-// F20 — Selector rapido de sub-cuarto: Closet / Bano de un toque + Otro (texto libre).
-function renderSubPick(room) {
-  return `<div class="setup-subpick">
-    <span class="subpick-lbl">Sub-cuarto de <b>${esc(room.nombre)}</b>:</span>
-    <div class="chips">
-      <button class="chip" onclick="addSubRapido('${room.id}','Clóset')"><i class="ti ti-plus"></i>Clóset</button>
-      <button class="chip" onclick="addSubRapido('${room.id}','Baño')"><i class="ti ti-plus"></i>Baño</button>
-      <button class="chip" onclick="addSubRapido('${room.id}','Balcón / Terraza','terraza')"><i class="ti ti-plus"></i>Balcón / Terraza</button>
-      <button class="chip" onclick="addSubRapido('${room.id}','Vestidor','vestidor')"><i class="ti ti-plus"></i>Vestidor</button>
-      <button class="chip add" onclick="addSubSetup('${room.id}')">Otro…</button>
-    </div>
-  </div>`;
-}
-
-function toggleSubPick(roomId) {
-  setupSubFor = setupSubFor === roomId ? null : roomId;
-  render();
-}
-
 // Agrega un sub-cuarto rapido de un toque (hereda piso/zona del padre).
 // Si se pasa categoria explicita se usa; si no, se infiere con detectCategoria.
 function addSubRapido(parentId, nombre, categoria) {
