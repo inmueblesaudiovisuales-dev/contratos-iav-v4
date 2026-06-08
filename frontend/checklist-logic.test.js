@@ -1746,3 +1746,68 @@ test('F4: applyGuideConfig agrega cámaras y getCameras las incluye', () => {
   const defaults = logic.getCameras(logic.createDefaultState());
   assert.ok(!defaults.some((c) => c.id === 'mini4'), 'Tras resetGuideConfig getCameras vuelve a los defaults');
 });
+
+test('F15: MOVEMENTS incluye los 7 movimientos reales por id con labels en español', () => {
+  const movements = logic.getMovements();
+  const esperados = {
+    push_in: 'Push in',
+    pull_out: 'Pull out',
+    pan: 'Paneo',
+    tilt: 'Tilt',
+    travel: 'Travel',
+    orbit: 'Órbita',
+    reveal: 'Reveal',
+  };
+  for (const [id, label] of Object.entries(esperados)) {
+    assert.ok(movements[id], `MOVEMENTS debe incluir el id "${id}"`);
+    assert.equal(movements[id].label, label, `label de "${id}"`);
+  }
+  // No se borraron entradas historicas (estado viejo / sugerencias las referencian).
+  for (const id of ['static', 'dolly', 'gimbal_walk', 'umbral', 'tracking']) {
+    assert.ok(movements[id], `MOVEMENTS debe conservar el id historico "${id}"`);
+  }
+  // Listas curadas user-facing.
+  assert.deepEqual(logic.CURATED_MOVEMENTS, ['push_in', 'pull_out', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
+  assert.deepEqual(logic.CURATED_SHOT_TYPES, ['general', 'detalle']);
+});
+
+test('F15: una toma LIBRE puede registrarse con shotType+movement sin sugerencia', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  const salaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+
+  state = logic.registerMediaFile(state, {
+    cameraId: 'sony-main',
+    targetId: salaId,
+    kind: 'take',
+    autor: 'Bruno',
+    shotType: 'detalle',
+    movement: 'travel',
+  });
+
+  const file = state.mediaFiles[state.mediaFiles.length - 1];
+  assert.equal(file.shotType, 'detalle');
+  assert.equal(file.movement, 'travel');
+  assert.equal(file.suggestionId, null, 'toma libre: sin sugerencia');
+
+  // Drone: mismo plano + movimiento.
+  state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
+  state = logic.registerMediaFile(state, {
+    cameraId: 'drone-dji',
+    targetId: salaId,
+    kind: 'take',
+    autor: 'Bruno',
+    shotType: 'general',
+    movement: 'orbit',
+  });
+  const droneFile = state.mediaFiles[state.mediaFiles.length - 1];
+  assert.equal(droneFile.shotType, 'general');
+  assert.equal(droneFile.movement, 'orbit');
+  assert.equal(droneFile.suggestionId, null);
+
+  // El export mantiene version:1 y refleja los labels de plano+movimiento.
+  const out = logic.buildExport(state, { folio: 'X', nombreCliente: 'Y' });
+  assert.equal(out.version, 1);
+  const exported = out.archivos.find((a) => a.tipoToma === 'detalle');
+  assert.equal(exported.movimientoLabel, 'Travel');
+});

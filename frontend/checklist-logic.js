@@ -185,14 +185,19 @@
   });
 
   const MOVEMENTS = Object.freeze({
-    static:      { label: 'Fija/estatica',                hint: 'Camara inmovil en tripie o gimbal bloqueado.' },
+    // Los 7 movimientos reales user-facing (F15). NO borrar los demas: estado viejo
+    // y sugerencias pueden referenciar ids historicos (static, dolly, umbral, etc.).
+    push_in:     { label: 'Push in',                      hint: 'Avanzar lento hacia un foco.' },
+    pull_out:    { label: 'Pull out',                     hint: 'Retroceder lento revelando contexto.' },
     pan:         { label: 'Paneo',                        hint: 'Giro horizontal sobre eje fijo.' },
-    tilt:        { label: 'Cabeceo/tilt',                 hint: 'Giro vertical (piso a techo).' },
+    tilt:        { label: 'Tilt',                         hint: 'Giro vertical (piso a techo).' },
+    travel:      { label: 'Travel',                       hint: 'Desplazamiento fisico lateral de la camara.' },
+    orbit:       { label: 'Órbita',                       hint: 'Movimiento circular alrededor de un punto.' },
+    reveal:      { label: 'Reveal',                       hint: 'El espacio se descubre progresivamente.' },
+    // Entradas historicas (no user-facing en el panel, conservadas por compatibilidad)
+    static:      { label: 'Fija/estatica',                hint: 'Camara inmovil en tripie o gimbal bloqueado.' },
     dolly:       { label: 'Travelling/dolly',             hint: 'Desplazamiento fisico de la camara.' },
-    push_in:     { label: 'Acercamiento',                 hint: 'Avanzar lento hacia un foco.' },
-    pull_out:    { label: 'Alejamiento',                  hint: 'Retroceder lento revelando contexto.' },
     gimbal_walk: { label: 'Caminata con gimbal',          hint: 'Ninja walk: rodillas flexionadas, paso suave.' },
-    orbit:       { label: 'Orbital',                      hint: 'Movimiento circular alrededor de un punto.' },
     umbral:      { label: 'Revelacion tras umbral',       hint: 'Cruzar una puerta para descubrir el cuarto.' },
     parallax:    { label: 'Parallax',                     hint: 'Objeto en primer plano cruza mas rapido que el fondo.' },
     tilt_up:     { label: 'Revelacion vertical',          hint: 'Empezar bajo y subir para descubrir altura.' },
@@ -201,6 +206,12 @@
     pedestal:    { label: 'Pies a cabeza',                hint: 'Tilt desde el piso subiendo para presentar.' },
     whip:        { label: 'Whip pan/transicion',          hint: 'Paneo rapido desenfocado entre cuartos.' },
   });
+
+  // ─── Listas curadas user-facing para el panel "Etiquetar toma" (F15) ──────────
+  // Plano: solo Abierto (general) y Detalle (detalle). El vocabulario es chico.
+  // Movimiento: los 7 reales en el orden del mockup recomendacion.html.
+  const CURATED_SHOT_TYPES = Object.freeze(['general', 'detalle']);
+  const CURATED_MOVEMENTS = Object.freeze(['push_in', 'pull_out', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
 
   const GUIDE_LIBRARY = Object.freeze({
     entrada: { label: 'Entrada/recibidor', shots: Object.freeze([
@@ -1919,6 +1930,8 @@
     SPACE_SUGGESTIONS,
     SHOT_TYPES,
     MOVEMENTS,
+    CURATED_SHOT_TYPES,
+    CURATED_MOVEMENTS,
     GUIDE_LIBRARY,
     DRONE_GUIDE,
     AMENITY_GUIDE,
