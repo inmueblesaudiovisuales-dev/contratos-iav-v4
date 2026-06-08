@@ -1782,7 +1782,10 @@ function abrirSetup() {
   setupQuery = ''; setupSubFor = null;
   cerrarModal(); render();
 }
-function cerrarSetup() { setupOpen = false; render(); }
+// Al salir del setup, si la propiedad es terreno materializa su sujeto unico en
+// state.espacios; de lo contrario showSetup (que fuerza el setup con espacios vacios)
+// nunca dejaria avanzar al loop. Idempotente y no-op para no-terreno.
+function cerrarSetup() { materializarTerrenoSiAplica(); setupOpen = false; render(); }
 
 // F20 — Buscador: refresca el dropdown sin perder el foco del input. Como el
 // dropdown se re-renderiza dentro del bloque del buscador, guardamos el foco
