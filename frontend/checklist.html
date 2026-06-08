@@ -30,6 +30,8 @@
       --red-soft: #FCEAE7;
       --blue: #2457A6;
       --blue-soft: #E7EEF9;
+      --amber: #8B6A13;
+      --amber-soft: #F8F0D2;
       --purple: #6E489C;
       --purple-soft: #EFE8F7;
       --radius: 8px;
@@ -350,6 +352,7 @@
       --green: #2F7D55; --green-soft: #E7F1EA;
       --red: #B23A2B; --red-soft: #F8E7E4;
       --blue: #3F6FA8; --blue-soft: #E8EFF6;
+      --amber: #8B6A13; --amber-soft: #F3EAD0;
       --purple: #6B4FA0; --purple-soft: #EFE9F6;
       --radius: 10px;
       --shadow: 0 1px 2px rgba(33,30,24,.04), 0 4px 16px rgba(33,30,24,.06);
@@ -691,31 +694,37 @@
     .setup-single .single-name { font-family: var(--font-display); font-size: var(--ts-lg); font-weight: 500; }
     .setup-single .single-desc { font-size: var(--ts-cap); color: var(--ink-2); margin-top: var(--sp-1); }
 
-    /* ===== Cobertura foto/360 ===== */
-    .cov-hd { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 0 8px; }
-    .cov-title { font-family: var(--font-display); font-weight: 500; font-size: 24px; }
-    .cov-sub { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
-    .cov-edit { width: 42px; height: 42px; flex: none; border-radius: var(--radius); border: 1px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
+    /* ===== Cobertura foto/360 — rejilla (R6) al sistema R1 =====
+       renderCoverage()/covTile(): rejilla por piso, un toque cicla estado.
+       Espaciado --sp-*, tipografía consistente (piso/cuarto), celdas en .card
+       con elevación --el-1. Estados con color semántico (verde=listo; ámbar
+       --amber=pendiente; neutro=no aplica) — aquí el color SÍ significa. Micro-
+       texto en --ink-2 para AA (nada <12px). Celdas táctiles ≥44px. Encabezado
+       de piso en tinta neutra, sin dorado de relleno. Clases acotadas a .cov-*. */
+    .cov-hd { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-4) 0 var(--sp-2); }
+    .cov-title { font-family: var(--font-display); font-weight: 500; font-size: var(--ts-display); letter-spacing: -.01em; color: var(--ink-1); }
+    .cov-sub { color: var(--ink-2); font-size: var(--ts-cap); margin-top: var(--sp-1); }
+    .cov-edit { width: 44px; height: 44px; flex: none; border-radius: var(--radius); border: 1px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; box-shadow: var(--el-1); }
     .cov-edit i { font-size: 20px; }
-    .cov-sumbar { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; margin: 4px 0 4px; padding: 11px 13px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); font-size: 13px; color: var(--ink-2); text-align: left; transition: border-color .15s, box-shadow .15s; }
-    .cov-sumbar .cov-sum-pend { color: #8B6A13; font-weight: 700; }
-    .cov-sumbar.on { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
-    .cov-group { margin-top: 14px; }
-    .cov-piso { font-size: 12px; font-weight: 600; color: var(--gold); letter-spacing: .03em; text-transform: uppercase; margin-bottom: 8px; }
-    .cov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .cov-tile { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; justify-content: space-between; min-height: 74px; padding: 13px 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); text-align: left; transition: box-shadow .15s, opacity .15s; }
+    .cov-sumbar { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: var(--sp-2); margin: var(--sp-1) 0; min-height: 44px; padding: var(--sp-3); border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--el-1); font-size: var(--ts-cap); color: var(--ink-2); text-align: left; transition: border-color .15s, box-shadow .15s; }
+    .cov-sumbar .cov-sum-pend { color: var(--amber); font-weight: 700; }
+    .cov-sumbar.on { border-color: var(--amber); box-shadow: var(--el-1), 0 0 0 3px var(--amber-soft); }
+    .cov-group { margin-top: var(--sp-4); }
+    .cov-piso { font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); letter-spacing: .03em; text-transform: uppercase; margin-bottom: var(--sp-2); }
+    .cov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+    .cov-tile { display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; justify-content: space-between; min-height: 74px; padding: var(--sp-3); border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--el-1); text-align: left; transition: box-shadow .15s, opacity .15s; }
     .cov-tile.sub { grid-column: auto; }
-    .cov-name { font-family: var(--font-display); font-size: 15px; font-weight: 500; line-height: 1.2; }
-    .cov-state { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #8B6A13; }
+    .cov-name { font-family: var(--font-display); font-size: var(--ts-base); font-weight: 500; line-height: 1.2; color: var(--ink-1); }
+    .cov-state { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: var(--ts-cap); font-weight: 500; color: var(--amber); }
     .cov-check { display: inline-flex; }
     .cov-check svg { width: 14px; height: 14px; }
     .cov-tile.hecho { border-color: #BFE0CC; background: var(--green-soft); }
     .cov-tile.hecho .cov-state { color: var(--green); }
     .cov-tile.no_aplica { background: var(--muted); opacity: .6; }
-    .cov-tile.no_aplica .cov-name { color: var(--ink-3); }
-    .cov-tile.no_aplica .cov-state { color: var(--ink-3); }
+    .cov-tile.no_aplica .cov-name { color: var(--ink-2); }
+    .cov-tile.no_aplica .cov-state { color: var(--ink-2); }
     .cov-body.hl-pend .cov-tile.hecho, .cov-body.hl-pend .cov-tile.no_aplica { opacity: .4; }
-    .cov-body.hl-pend .cov-tile.pendiente { box-shadow: 0 0 0 2px var(--gold); }
+    .cov-body.hl-pend .cov-tile.pendiente { box-shadow: var(--el-1), 0 0 0 2px var(--amber); }
 
     /* ===== Cierre (R4) — tarjetas al sistema R1 (acotadas a .close-list) ===== */
     .close-list .panel { background: var(--card); border: 1px solid var(--line);
