@@ -335,7 +335,25 @@
       --font-ui: 'Inter', system-ui, sans-serif;
       --font-display: 'Fraunces', Georgia, serif;
       --font-mono: 'Spline Sans Mono', ui-monospace, monospace;
+
+      /* ===== R1 — Sistema de tokens (referencia visual, aditivo) ===== */
+      /* Espaciado: ritmo de 4px */
+      --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+      /* Tipografía: escala definida (12/14/16/20/28). El display serif solo en títulos */
+      --ts-cap: 12px; --ts-body: 14px; --ts-base: 16px; --ts-lg: 20px; --ts-display: 28px;
+      /* Elevación: 3 niveles de superficie */
+      --el-0: none;
+      --el-1: 0 1px 2px rgba(20,16,12,.04);
+      --el-2: 0 1px 2px rgba(20,16,12,.05), 0 6px 18px rgba(20,16,12,.07);
+      /* Tinte neutro para estados activos (NO dorado): el dorado se reserva a la acción primaria */
+      --tint: var(--muted);
+      --tint-line: #CFC6B2;
     }
+
+    /* ===== R1 — Patrón de superficie/elevación reutilizable ===== */
+    .surface { background: transparent; box-shadow: var(--el-0); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--el-1); }
+    .card-raised { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--el-2); }
     body { font-family: var(--font-ui); }
     /* sin MAYÚSCULAS en labels */
     .eyebrow, .sync, .zone-title, .card-name span, .file-summary, .state, .progress-num,
@@ -366,12 +384,14 @@
     /* tarjetas: hairline + sombra sutil */
     .summary-card, .capture-card, .panel, .template-card, .camera-strip { box-shadow: var(--shadow); }
 
-    /* ===== Captura "app de cámara" (video/drone) ===== */
-    .cap-focus { padding: 14px 0 2px; }
-    .cap-floor { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--gold); margin-bottom: 2px; }
-    .cap-floor i { font-size: 16px; }
-    .cap-room { font-family: var(--font-display); font-size: 30px; font-weight: 500; letter-spacing: -.01em; line-height: 1.08; }
-    .cap-parent { display: block; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--ink-3); letter-spacing: 0; margin-bottom: 1px; }
+    /* ===== Captura "app de cámara" (video/drone) — R1 referencia visual ===== */
+    /* Header: un solo foco. Nombre del cuarto (serif display) manda; piso = caption
+       quieto en tinta (no dorado, no compite). Opciones discreto. */
+    .cap-focus { padding: var(--sp-5) 0 var(--sp-1); }
+    .cap-floor { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); margin-top: var(--sp-1); }
+    .cap-floor i { font-size: 15px; color: var(--ink-3); }
+    .cap-room { font-family: var(--font-display); font-size: var(--ts-display); font-weight: 500; letter-spacing: -.01em; line-height: 1.08; color: var(--ink-1); }
+    .cap-parent { display: block; font-family: var(--font-ui); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-bottom: 1px; }
     .cap-cam { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 11px 12px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); }
     .cap-cam-ic { width: 38px; height: 38px; border-radius: 8px; background: var(--gold-soft); display: flex; align-items: center; justify-content: center; flex: none; }
     .cap-cam-ic i { font-size: 21px; color: var(--gold); }
@@ -384,16 +404,22 @@
     .cap-change { margin-top: 12px; width: 100%; min-height: 46px; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: var(--ink-1); font-size: 14px; font-weight: 600; }
     .cap-change-l { display: inline-flex; align-items: center; gap: 9px; }
     .cap-change-l i, .cap-change-chev { font-size: 19px; color: var(--ink-3); }
-    .cap-takes { padding: 18px 0 8px; }
-    .cap-takes-hd { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
-    .cap-takes-hd > span:first-child { font-size: 13px; font-weight: 600; color: var(--ink-3); }
-    .cap-takes-n { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
-    .cap-empty { color: var(--ink-3); font-size: 13px; padding: 6px 2px; }
-    .cap-take { display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 7px; box-shadow: var(--shadow); text-align: left; }
+    /* Tomas: bloque coherente. Las filas comparten una superficie tintada con
+       divisiones sutiles (menos cajas blancas borde-1px). La última toma (primera
+       fila) va destacada DENTRO de la lista, no como tarjeta separada. */
+    .cap-takes { padding: var(--sp-5) 0 var(--sp-2); }
+    .cap-takes-hd { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--sp-3); }
+    .cap-takes-hd > span:first-child { font-size: var(--ts-body); font-weight: 600; color: var(--ink-2); }
+    .cap-takes-n { font-family: var(--font-mono); font-size: var(--ts-cap); color: var(--ink-2); }
+    .cap-empty { color: var(--ink-2); font-size: var(--ts-body); padding: var(--sp-2) var(--sp-1); }
+    .cap-take { display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: var(--sp-3); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: var(--sp-2); box-shadow: var(--el-1); text-align: left; min-height: 48px; }
+    /* última toma (primera de la lista invertida) destacada dentro del bloque */
+    .cap-take:first-child { box-shadow: var(--el-2); border-color: var(--tint-line); }
     .cap-take.fail .cap-tok { color: var(--ink-3); text-decoration: line-through; }
+    .cap-take.fail .cap-take-meta { color: var(--ink-3); }
     .cap-take-main { flex: 1; min-width: 0; border: 0; background: transparent; padding: 0; text-align: left; }
-    .cap-tok { font-family: var(--font-mono); font-size: 14px; font-weight: 600; color: var(--ink-1); flex: none; }
-    .cap-take-meta { flex: 1; min-width: 0; font-size: 11px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cap-tok { font-family: var(--font-mono); font-size: var(--ts-body); font-weight: 600; color: var(--ink-1); flex: none; }
+    .cap-take-meta { flex: 1; min-width: 0; font-size: var(--ts-cap); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cap-badge { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
     .cap-badge i { font-size: 14px; }
     .cap-badge.good { background: var(--green-soft); color: var(--green); }
@@ -406,11 +432,14 @@
     .cap-mark.active i { color: var(--green); }
     .cap-reintentar { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-3); font-size: 12px; font-weight: 600; margin-left: 4px; }
     .cap-reintentar i { font-size: 14px; }
-    .cap-thumb { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-width: 960px; margin: 0 auto; padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1.7fr 1fr; gap: 10px; background: linear-gradient(to top, var(--page) 74%, rgba(247,244,236,0)); }
-    .cap-btn-toma { min-height: 64px; border: 0; border-radius: 14px; background: var(--gold-leaf); color: var(--black); box-shadow: 0 1px 0 var(--gold), 0 6px 16px rgba(176,141,46,.18); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
-    .cap-toma-lbl { font-size: 18px; font-weight: 700; }
-    .cap-toma-sub { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: rgba(28,28,30,.6); }
-    .cap-btn-no { min-height: 64px; border: 1.5px solid var(--red); border-radius: 14px; background: var(--card); color: var(--red); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 14px; font-weight: 600; }
+    /* Barra de acción: Toma = ÚNICA acción dominante (dorado de marca, tinta OSCURA
+       —nunca blanco sobre dorado— con su token +1·PIBxxxx). No sirve = secundario,
+       contorno rojo. El dorado vive aquí y solo aquí. */
+    .cap-thumb { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; max-width: 960px; margin: 0 auto; padding: var(--sp-3) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1.7fr 1fr; gap: var(--sp-3); background: linear-gradient(to top, var(--page) 74%, rgba(247,244,236,0)); }
+    .cap-btn-toma { min-height: 64px; border: 0; border-radius: 14px; background: var(--gold-leaf); color: var(--ink-1); box-shadow: 0 1px 0 var(--gold), 0 6px 16px rgba(176,141,46,.18); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+    .cap-toma-lbl { font-size: var(--ts-lg); font-weight: 700; }
+    .cap-toma-sub { font-family: var(--font-mono); font-size: var(--ts-cap); font-weight: 600; color: rgba(33,30,24,.72); }
+    .cap-btn-no { min-height: 64px; border: 1.5px solid var(--red); border-radius: 14px; background: var(--card); color: var(--red); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: var(--ts-body); font-weight: 600; }
     .cap-btn-no i { font-size: 21px; }
     /* selector de cuarto por piso */
     .cuarto-list { display: flex; flex-direction: column; gap: 2px; }
@@ -537,9 +566,11 @@
     .setup-lbl { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; }
     .setup-lbl b { color: var(--gold); font-weight: 600; }
     .setup-hint { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; }
-    .seg { display: flex; flex-wrap: wrap; gap: 7px; }
-    .seg-btn { height: 38px; padding: 0 14px; border: 1.5px solid var(--line-2, #D2C9B3); border-radius: 8px; background: var(--card); color: var(--ink-2); font-weight: 600; font-size: 13px; }
-    .seg-btn.active { border-color: var(--gold-leaf); background: var(--gold-soft); color: var(--ink-1); }
+    .seg { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+    /* Chip de cámara: área táctil ≥44px. Cámara seleccionada = estado activo →
+       tinte neutro + borde marcado + tinta fuerte, NO dorado (reservado a Toma). */
+    .seg-btn { min-height: 44px; padding: 0 var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink-2); font-weight: 600; font-size: var(--ts-body); }
+    .seg-btn.active { border-color: var(--tint-line); background: var(--tint); color: var(--ink-1); box-shadow: inset 0 0 0 1px var(--tint-line); }
     .chips { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
     .chip { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 11px; border: 1px solid var(--line-2, #D2C9B3); border-radius: 999px; background: var(--card); color: var(--ink-1); font-size: 13px; font-weight: 600; }
     .chip i { font-size: 15px; color: var(--ink-3); }
@@ -691,39 +722,47 @@
     .setup-row-actions { display: flex; gap: 4px; flex: none; }
     .cuarto-row-wrap { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
     .cuarto-row-wrap .cuarto-row { flex: 1; min-width: 0; margin-bottom: 0; }
-    .cap-focus-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .cap-focus-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
     .cap-focus-copy { min-width: 0; flex: 1; text-align: right; }
-    .cap-back { display: inline-flex; align-items: center; gap: 3px; flex: none; border: 0; background: transparent; color: var(--ink-3); font-size: 13px; font-weight: 600; padding: 4px 2px; }
+    .cap-back { display: inline-flex; align-items: center; gap: 3px; flex: none; border: 0; background: transparent; color: var(--ink-2); font-size: var(--ts-body); font-weight: 600; padding: 4px 2px; }
     .cap-back i { font-size: 18px; }
-    .cap-focus-opts { width: 38px; height: 38px; flex: none; border-radius: 8px; border: 1px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
+    /* Opciones: superficie discreta, área táctil ≥44px, sin competir con el nombre */
+    .cap-focus-opts { width: 44px; height: 44px; flex: none; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; box-shadow: var(--el-1); }
     .cap-focus-opts i { font-size: 20px; }
     /* ===== F7 — Loop de captura (3 capas) ===== */
-    .cap-cam2 { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow); }
+    /* Tarjeta de cámara: switch + consecutivo del siguiente archivo (DATO SECUNDARIO).
+       El token ya no compite con el nombre del cuarto: --ts-lg mono, su etiqueta
+       "siguiente archivo" como caption ≥12px en tinta. Sin dorado de relleno. */
+    .cap-cam2 { margin-top: var(--sp-4); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-3); box-shadow: var(--el-1); }
     .cap-cam-seg { width: 100%; }
-    .cap-next-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: 10px; }
+    .cap-next-row { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-3); margin-top: var(--sp-3); }
     .cap-next { min-width: 0; }
-    .cap-next-lbl { display: block; font-size: 11px; color: var(--ink-3); }
-    .cap-token { display: block; font-family: var(--font-mono); font-size: 26px; font-weight: 600; color: var(--ink-1); letter-spacing: -.01em; }
-    .cap-next-init { border: 0; background: transparent; color: var(--gold); font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; }
-    .cap-foto-btn { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--gold-leaf); background: var(--gold-soft); color: var(--gold); font-size: 14px; font-weight: 600; }
-    .cap-foto-btn i { font-size: 17px; }
-    .cap-sug { margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow); }
-    .cap-sug-h { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; background: transparent; padding: 0; }
-    .cap-sug-t { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--gold); }
-    .cap-sug-t i { font-size: 16px; }
-    .cap-sug-c { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
-    .cap-sug-body { margin-top: 10px; }
+    .cap-next-lbl { display: block; font-size: var(--ts-cap); color: var(--ink-2); }
+    .cap-token { display: block; font-family: var(--font-mono); font-size: var(--ts-lg); font-weight: 600; color: var(--ink-1); letter-spacing: -.01em; margin-top: 1px; }
+    .cap-next-init { border: 0; background: transparent; color: var(--ink-2); font-size: var(--ts-body); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; min-height: 44px; }
+    .cap-next-init i { color: var(--gold); }
+    /* + foto (drone): secundario, sin relleno dorado; el icono lleva el acento */
+    .cap-foto-btn { flex: none; display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 0 var(--sp-4); border-radius: 999px; border: 1px solid var(--tint-line); background: var(--card); color: var(--ink-1); font-size: var(--ts-body); font-weight: 600; }
+    .cap-foto-btn i { font-size: 17px; color: var(--ink-2); }
+    /* Sugeridas: tira plegable, claramente SECUNDARIA → superficie tintada (no card
+       blanca de cuerpo completo), sin sombra, para que ceda jerarquía a Toma/tomas. */
+    .cap-sug { margin-top: var(--sp-3); background: var(--tint); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-3); box-shadow: var(--el-0); }
+    .cap-sug-h { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); border: 0; background: transparent; padding: var(--sp-1) 0; min-height: 44px; }
+    .cap-sug-t { display: inline-flex; align-items: center; gap: 6px; font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); }
+    .cap-sug-t i { font-size: 16px; color: var(--gold); }
+    .cap-sug-c { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: var(--ts-cap); color: var(--ink-2); }
+    .cap-sug-body { margin-top: var(--sp-3); }
     /* F16 — la lista de sugerencias envuelve (wrap), sin scroll horizontal */
     .cap-sug-chips { flex-wrap: wrap; gap: 8px; }
     .cap-sug-chip.done { color: var(--green); background: var(--green-soft); border-color: #BFE0CC; }
     .cap-sug-chip.done i { color: var(--green); }
-    .cap-sug-chip.sel { border-color: var(--gold-leaf); box-shadow: 0 0 0 1.5px var(--gold-leaf); background: var(--gold-soft); font-weight: 600; }
-    .cap-libre-chip { border-style: dashed; color: var(--ink-3); }
+    .cap-sug-chip.sel { border-color: var(--ink-2); box-shadow: 0 0 0 1px var(--ink-2); background: var(--tint); font-weight: 600; }
+    .cap-libre-chip { border-style: dashed; color: var(--ink-2); }
     .cap-libre-chip i { font-size: 13px; }
-    .cap-libre-chip.sel { border-style: solid; border-color: var(--gold-leaf); box-shadow: 0 0 0 1.5px var(--gold-leaf); background: var(--gold-soft); color: var(--ink-1); font-weight: 600; }
+    .cap-libre-chip.sel { border-style: solid; border-color: var(--ink-2); box-shadow: 0 0 0 1px var(--ink-2); background: var(--tint); color: var(--ink-1); font-weight: 600; }
     .cap-sug-guide { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; margin-bottom: 11px; }
     .cap-sug-detail { margin-top: 11px; border-top: 1px dashed var(--line); padding-top: 11px; }
-    .cap-mini-lbl { font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: .03em; text-transform: uppercase; margin-bottom: 6px; }
+    .cap-mini-lbl { font-size: var(--ts-cap); font-weight: 700; color: var(--ink-2); letter-spacing: .01em; margin-bottom: 6px; }
     .cap-qg { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; margin-bottom: 11px; }
     .cap-mov-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
     .cap-mov-chips::-webkit-scrollbar { height: 0; }
@@ -732,39 +771,46 @@
     .cap-plan { font-size: 11.5px; color: var(--ink-3); margin-top: 10px; }
     .cap-plan b { color: var(--ink-1); font-weight: 600; }
     /* F15 — panel "Etiquetar toma" (plano + movimiento para cualquier toma) */
-    .cap-tag-sel { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
-    .cap-tag-sel b { color: var(--gold); font-weight: 600; font-family: var(--font-sans, inherit); }
+    .cap-tag-sel { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: var(--ts-cap); color: var(--ink-2); }
+    .cap-tag-sel b { color: var(--ink-1); font-weight: 600; font-family: var(--font-sans, inherit); }
     .cap-mvgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; }
     .cap-mv { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 11px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
     .cap-mv svg { width: 26px; height: 26px; color: var(--ink-2); }
     .cap-mv span { font-size: 11px; color: var(--ink-2); font-weight: 500; text-align: center; line-height: 1.1; }
-    .cap-mv.mv-on { border-color: var(--gold-leaf, var(--gold)); box-shadow: 0 0 0 1.5px var(--gold-leaf, var(--gold)); background: var(--gold-soft); }
+    .cap-mv.mv-on { border-color: var(--ink-2); box-shadow: 0 0 0 1px var(--ink-2); background: var(--tint); }
     .cap-mv.mv-on svg, .cap-mv.mv-on span { color: var(--ink-1); }
     .cap-plano-chips { margin-top: 8px; flex-wrap: wrap; }
-    .cap-plano-chip.sel { border-color: var(--gold-leaf, var(--gold)); box-shadow: 0 0 0 1.5px var(--gold-leaf, var(--gold)); background: var(--gold-soft); font-weight: 600; }
+    .cap-plano-chip.sel { border-color: var(--ink-2); box-shadow: 0 0 0 1px var(--ink-2); background: var(--tint); font-weight: 600; }
     .cap-plano-chip.done { color: var(--green); background: var(--green-soft); border-color: #BFE0CC; }
     .cap-plano-chip.done i { color: var(--green); }
-    .cap-latest { position: fixed; left: 0; right: 0; z-index: 41; max-width: 960px; margin: 0 auto; bottom: calc(88px + env(safe-area-inset-bottom)); padding: 11px 14px 10px; background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgba(16,16,16,.08); }
+    /* "recién grabada": fundida con el flujo de tomas — strip contextual de acciones
+       (favorita/buena/describir) sobre la última toma, anclado encima de la barra de
+       acción. Superficie tintada continua (no card blanca de cuerpo completo) con un
+       canto superior sutil; lee como prolongación de la lista, no como caja aparte. */
+    .cap-latest { position: fixed; left: 0; right: 0; z-index: 41; max-width: 960px; margin: 0 auto; bottom: calc(88px + env(safe-area-inset-bottom)); padding: var(--sp-3) var(--sp-4) var(--sp-3); background: var(--tint); border-top: 1px solid var(--line); box-shadow: 0 -6px 16px rgba(20,16,12,.05); }
     .app.has-botnav .cap-latest { bottom: calc(148px + env(safe-area-inset-bottom)); }
-    .cap-latest-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-    .cap-latest-who { font-size: 11px; font-weight: 600; color: var(--gold); }
-    .cap-latest-tk { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--ink-1); min-width: 0; text-align: right; }
-    .cap-qa { display: flex; gap: 8px; margin-bottom: 8px; }
-    .cap-qbtn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 10px; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); color: var(--ink-2); font-size: 14px; font-weight: 600; }
+    .cap-latest-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-2); }
+    .cap-latest-who { font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); }
+    .cap-latest-tk { font-family: var(--font-mono); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-1); min-width: 0; text-align: right; }
+    .cap-qa { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+    .cap-qbtn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: var(--radius); border: 1px solid var(--tint-line); background: var(--card); color: var(--ink-2); font-size: var(--ts-body); font-weight: 600; }
     .cap-qbtn i { font-size: 17px; }
     .cap-qbtn.fav.on { color: #7a5a12; border-color: #e4d39a; background: #fbf6e6; }
     .cap-qbtn.good.on { color: var(--green); border-color: #BFE0CC; background: var(--green-soft); }
-    .cap-notef { width: 100%; display: flex; align-items: center; gap: 7px; border: 1px dashed var(--line-2, #D2C9B3); border-radius: 9px; padding: 9px 11px; color: var(--ink-3); font-size: 12.5px; background: transparent; text-align: left; }
+    .cap-notef { width: 100%; display: flex; align-items: center; gap: 7px; min-height: 44px; border: 1px dashed var(--tint-line); border-radius: var(--radius); padding: 0 var(--sp-3); color: var(--ink-2); font-size: var(--ts-cap); background: var(--card); text-align: left; }
     .cap-notef i { font-size: 15px; flex: none; }
-    .cap-notef.has { color: var(--ink-2); border-style: solid; }
-    /* ===== Navegación de recorrido (anterior / cambiar / siguiente) ===== */
-    .cap-nav { display: flex; gap: 8px; margin-top: 12px; }
-    .cap-nav-prev { width: 46px; flex: none; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); border-radius: var(--radius); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
+    .cap-notef.has { color: var(--ink-1); border-style: solid; }
+    /* ===== Navegación de recorrido — ÚNICA zona de navegación, neutra (sin dorado) =====
+       anterior · Cambiar cuarto · Siguiente; todo en tinta, áreas táctiles ≥44px.
+       "Siguiente" NO es acción primaria: es estado/navegación → tinte neutro marcado,
+       no dorado (el dorado se reserva al botón Toma). */
+    .cap-nav { display: flex; gap: var(--sp-2); margin-top: var(--sp-4); }
+    .cap-nav-prev { width: 48px; min-height: 48px; flex: none; border: 1px solid var(--tint-line); background: var(--card); border-radius: var(--radius); color: var(--ink-2); display: flex; align-items: center; justify-content: center; box-shadow: var(--el-1); }
     .cap-nav-prev i { font-size: 20px; }
-    .cap-nav-change { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 46px; border: 1.5px solid var(--line-2, #D2C9B3); background: var(--card); border-radius: var(--radius); color: var(--ink-1); font-size: 14px; font-weight: 600; white-space: nowrap; }
+    .cap-nav-change { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); color: var(--ink-1); font-size: var(--ts-body); font-weight: 600; white-space: nowrap; box-shadow: var(--el-1); }
     .cap-nav-change i { font-size: 18px; color: var(--ink-3); }
-    .cap-nav-next { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 46px; padding: 0 16px; border: 1.5px solid var(--gold-leaf); background: var(--gold-soft); border-radius: var(--radius); color: var(--ink-1); font-size: 14px; font-weight: 600; }
-    .cap-nav-next i { font-size: 18px; color: var(--gold); }
+    .cap-nav-next { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 48px; padding: 0 var(--sp-4); border: 1px solid var(--tint-line); background: var(--tint); border-radius: var(--radius); color: var(--ink-1); font-size: var(--ts-body); font-weight: 600; }
+    .cap-nav-next i { font-size: 18px; color: var(--ink-2); }
     .rec-num { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; margin-right: 8px; border-radius: 999px; background: var(--gold-soft); color: var(--gold); font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
     .rec-piso-label { padding: 6px 4px 2px; font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
     .cov-hd-actions { display: flex; gap: 6px; flex: none; }
