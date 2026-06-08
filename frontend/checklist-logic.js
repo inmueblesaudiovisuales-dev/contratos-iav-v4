@@ -1086,6 +1086,13 @@
     let base;
     if (mode === 'drone') {
       const tipo = state && state.guide ? state.guide.tipoPropiedad : null;
+      // F38 — target de SESION de drone: una sola lista ordenada (fijas + una por
+      // espacio). Se detecta por el id de sesion. (El sujeto terreno cae en el
+      // bloque esTerrenoSubject de abajo y droneSessionSuggestions tambien lo reusa,
+      // asi que ambos caminos coinciden para terreno.)
+      if (target && target.id === DRONE_SESSION_ID) {
+        return droneSessionSuggestions(state).concat(proposalShotsFor(state, target.id));
+      }
       // F34 — target de drone nuevo (virtual): si trae feature derivado, usa el
       // vocabulario aereo de ese feature; si trae scale, usa el pool de esa escala
       // filtrado por tipo. must primero en ambos.
@@ -1347,6 +1354,12 @@
   // El terreno se representa como un sujeto unico (no lista de cuartos).
   const TERRENO_SUBJECT_ID = 'terreno-unico';
 
+  // F38 — Sesion unica de drone. El drone deja de ser "varios targets navegables
+  // por escala" (F34/F35) y pasa a ser UNA sola sesion = UN solo target cuyas
+  // SUGERENCIAS son la lista completa ordenada (fijas + una por espacio). Para
+  // terreno se sigue usando el sujeto terreno (no se duplica).
+  const DRONE_SESSION_ID = 'drone-session';
+
   function isDronePiso(piso) {
     if (!piso) return false;
     return DRONE_PISOS.has(piso) || normNombre(piso) === normNombre(DRONE_PISO);
@@ -1530,6 +1543,102 @@
     });
 
     return result;
+  }
+
+  // ─── F38 — Sesion unica de drone: target unico + lista ordenada de sugerencias ─
+  // El drone es UNA sola sesion (una lista ordenada de tomas que se vuela de
+  // corrido). El sujeto/target de sesion es unico. Para terreno NO se crea uno
+  // nuevo: ES el sujeto de terrenoSingleSubject (no se duplica).
+
+  // Target de sesion de drone. Casa/quinta/depto: un sujeto kind:'drone' estable.
+  // Terreno: el sujeto unico de terrenoSingleSubject (mismo target, no duplicado).
+  function droneSessionSubject(state) {
+    const guide = state && state.guide ? state.guide : {};
+    if (guide.tipoPropiedad === 'terreno') {
+      return terrenoSingleSubject(state).subject;
+    }
+    return {
+      id: DRONE_SESSION_ID,
+      nombre: 'Sesión de drone',
+      parentId: null,
+      kind: 'drone',
+      estados: blankEstados(),
+    };
+  }
+
+  // F38 — Lista ORDENADA de tomas sugeridas de la sesion de drone:
+  //   (1) Fijas por tipo: tomas del pool property-wide/inmediato/ubicacion (las que
+  //       NO tienen `feature`) aplicables al tipo, ordenadas por escala (orden de
+  //       DRONE_SCALES), must primero dentro de cada escala. Incluye "Salida a
+  //       contexto" (canonica, tipos:'all').
+  //   (2) Derivadas: UNA toma por espacio real de zona exterior o amenidades (no
+  //       interiores, no el sujeto de sesion, no espacios kind:'drone' viejos). Si
+  //       el espacio empareja un feature conocido toma la PRIMERA toma de su
+  //       vocabulario como base (shotType/movement) con nombre "<espacio> aérea/o";
+  //       si no, generica "<nombre> aérea/o".
+  //   Orden final: agrupada por escala (propiedad -> amenidades -> inmediato ->
+  //   ubicacion); dentro de cada escala, must primero, luego derivadas. De-dup por id.
+  // Para terreno: reusa las 14 tomas (suggestionsForTarget del sujeto terreno).
+  function droneSessionSuggestions(state) {
+    const guide = state && state.guide ? state.guide : {};
+    const tipo = guide.tipoPropiedad;
+    if (tipo === 'terreno') {
+      // Reusa la lista unica de 14 del sujeto terreno (no se duplica la logica).
+      return suggestionsForTarget(state, 'drone', terrenoSingleSubject(state).subject);
+    }
+
+    const amenidades = droneAmenidadesAplica(state);
+    const scaleOrder = DRONE_SCALES.map((s) => s.id);
+
+    // (1) Fijas: tomas del pool sin feature, por escala, must primero. (aerialPoolForScale
+    // ya ordena must primero e incluye la canonica 'all' en 'propiedad'.)
+    const fixedByScale = Object.create(null);
+    scaleOrder.forEach((scale) => {
+      if (scale === 'amenidades' && !amenidades) { fixedByScale[scale] = []; return; }
+      fixedByScale[scale] = aerialPoolForScale(scale, tipo).filter((s) => !s.feature);
+    });
+
+    // (2) Derivadas: una por espacio exterior/amenidad real.
+    const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+    const derivedByScale = Object.create(null);
+    scaleOrder.forEach((scale) => { derivedByScale[scale] = []; });
+    espacios.forEach((esp) => {
+      if (!esp || typeof esp !== 'object' || !esp.id) return;
+      if (esp.id === TERRENO_SUBJECT_ID || esp.id === DRONE_SESSION_ID) return;
+      if (_espacioDroneCompat(esp)) return; // no interiores se filtra abajo; no espacios drone viejos
+      const zona = normNombre(esp.zona);
+      const esAmenidad = zona === 'amenidades';
+      if (zona !== 'exterior' && !esAmenidad) return; // interiores no aportan
+      const scale = esAmenidad ? 'amenidades' : 'propiedad';
+      if (scale === 'amenidades' && !amenidades) return;
+      const featureKey = aerialFeatureKeyFromName(esp.nombre);
+      const vocab = featureKey ? aerialVocabForFeature(featureKey) : [];
+      const base = vocab.length ? vocab[0] : null;
+      const nombreEsp = esp.nombre || 'Espacio';
+      derivedByScale[scale].push({
+        id: 'drone-feat-' + esp.id,
+        nombre: nombreEsp + ' aérea',
+        shotType: base ? base.shotType : 'establecimiento',
+        movement: base ? base.movement : 'static',
+        scale,
+        must: false,
+        featOf: esp.id,
+      });
+    });
+
+    // Orden final: por escala, must primero (fijas) y luego derivadas. De-dup por id.
+    const out = [];
+    const seen = new Set();
+    const pushAll = (arr) => arr.forEach((s) => {
+      if (!s || !s.id || seen.has(s.id)) return;
+      seen.add(s.id);
+      out.push(s);
+    });
+    scaleOrder.forEach((scale) => {
+      pushAll(fixedByScale[scale] || []);
+      pushAll(derivedByScale[scale] || []);
+    });
+    return out;
   }
 
   // ─── F19 — Biblioteca de cuartos indexada por piso + tipo de propiedad ────────
@@ -2075,12 +2184,40 @@
 
   function targetsForMode(state, mode) {
     if (mode === 'asesor') return state.asesorPuntos || [];
-    // F35 — el drone ya NO comparte state.espacios: tiene targets VIRTUALES por
-    // escala (features aereos derivados + fijos + los kind:'drone' viejos del camino
-    // de compat). Esto conecta los targets virtuales con la captura, getSceneData y
-    // el bucle de validacion de normalizeChecklistData (que no huerfana las tomas
-    // viejas porque droneScaleTargets incluye los espacios kind:'drone' preexistentes).
-    if (mode === 'drone') return droneScaleTargets(state);
+    // F38 — el drone es UNA sola sesion: devuelve UN unico target de sesion
+    // (droneSessionSubject; o el sujeto terreno si es terreno) cuyas sugerencias son
+    // la lista ordenada completa. ADEMAS, SOLO POR COMPAT, se anexan los espacios
+    // kind:'drone' preexistentes del estado para que el bucle de validacion de
+    // normalizeChecklistData no huerfane (omitted) las tomas viejas. El target de
+    // sesion va primero; de-dup por id. Estos espacios viejos NO son navegables en la
+    // UI nueva (F39): solo mantienen alcanzables sus mediaFiles.
+    if (mode === 'drone') {
+      const sesion = droneSessionSubject(state);
+      const result = [sesion];
+      const seen = new Set([sesion.id]);
+      const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+      // Camino de compat: incluye los espacios kind:'drone' preexistentes (drone-piso
+      // viejo) Y cualquier espacio con una toma de drone ya pegada (p.ej. migracion
+      // droneItems->espacios, que materializa espacios zona 'exterior' con el take
+      // reasignado). Asi sus mediaFiles no se huerfanan (omitted) al cargar.
+      const cameras = state && Array.isArray(state.cameras) ? state.cameras : [];
+      const mediaFiles = state && Array.isArray(state.mediaFiles) ? state.mediaFiles : [];
+      const droneCameraIds = new Set(cameras.filter((c) => c && c.mode === 'drone').map((c) => c.id));
+      const espaciosConTomaDrone = new Set(
+        mediaFiles
+          .filter((f) => f && f.kind === 'take' && f.targetId && droneCameraIds.has(f.cameraId))
+          .map((f) => f.targetId)
+      );
+      espacios.forEach((esp) => {
+        if (!esp || typeof esp !== 'object' || !esp.id) return;
+        if (seen.has(esp.id)) return;
+        if (_espacioDroneCompat(esp) || espaciosConTomaDrone.has(esp.id)) {
+          seen.add(esp.id);
+          result.push(esp);
+        }
+      });
+      return result;
+    }
     return state.espacios || [];
   }
 
@@ -2850,6 +2987,9 @@
     droneAmenidadesAplica,
     droneFeatureTargets,
     droneScaleTargets,
+    DRONE_SESSION_ID,
+    droneSessionSubject,
+    droneSessionSuggestions,
     targetsForMode,
     SPACE_LIBRARY_BY_FLOOR,
     SPACE_LIBRARY_INDEX,

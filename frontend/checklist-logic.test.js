@@ -114,26 +114,25 @@ test('applies departamento template with interior and amenidades zones', () => {
 
 // ─── F2: drone comparte espacios (eliminar droneItems como entidad) ───────────
 
-// F35 — el drone YA NO comparte state.espacios: tiene targets virtuales por escala
-// (droneScaleTargets), no las espacios de video. El take de drone se registra contra
-// uno de esos targets (kind:'drone'). Antes (F2) registraba contra un espacio de
-// cuarto; ese modelo (drone-como-espacio) lo elimina F35 (ver decision arquitectonica
-// transversal del plan). La compat de tomas viejas se prueba en el test de migracion.
-test('F35: targetsForMode drone devuelve los targets virtuales de escala (no las espacios)', () => {
+// F38 — REEMPLAZA al test F35 que asumia multiples targets de escala navegables.
+// El modelo cambio a SESION UNICA: targetsForMode('drone') devuelve UN SOLO target
+// de sesion (drone-session) cuyas sugerencias son la lista ordenada completa. Las
+// tomas se registran contra ese unico target. (Los kind:'drone' viejos solo se
+// anexan por compat; aqui no hay ninguno.)
+test('F38: targetsForMode drone devuelve UN SOLO target de sesion (no multiples escalas)', () => {
   let state = logic.createDefaultState();
   state = logic.addSpacesFromText(state, 'Sala\nAlberca', { zona: 'exterior' });
   const targets = logic.targetsForMode(state, 'drone');
-  // Ningun target de drone es una espacio de cuarto: todos son kind:'drone'.
-  assert.ok(targets.length > 0, 'hay targets de drone');
-  assert.ok(targets.every((t) => t.kind === 'drone'), 'todos los targets de drone son kind:drone');
-  // El take de drone se registra contra un target virtual (p. ej. el fijo de Salida a contexto).
+  // Un solo target de sesion (no hay kind:'drone' viejos en este estado).
+  assert.equal(targets.length, 1, 'un unico target de sesion de drone');
+  assert.equal(targets[0].id, 'drone-session', 'es el target de sesion');
+  assert.equal(targets[0].kind, 'drone', 'el target de sesion es kind:drone');
+  // El take de drone se registra contra el target unico de sesion.
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
-  const salida = targets.find((t) => t.id === 'drone-fixed-salida-contexto');
-  assert.ok(salida, 'existe el target fijo Salida a contexto');
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: salida.id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-session', kind: 'take' });
   const file = state.mediaFiles[state.mediaFiles.length - 1];
-  assert.equal(file.targetId, salida.id, 'el target del drone es un target virtual de escala');
-  assert.equal(file.scene, 'Salida a contexto');
+  assert.equal(file.targetId, 'drone-session', 'el target del drone es la sesion unica');
+  assert.equal(file.scene, 'Sesión de drone');
   assert.deepEqual(state.droneItems, [], 'ya no hay droneItems como entidad');
 });
 
@@ -144,16 +143,15 @@ test('F2: blankEstados incluye el servicio drone', () => {
   assert.equal(state.espacios[0].estados.drone.estado, 'pendiente');
 });
 
-// F35 — los targets de drone son virtuales y planos (features aereos + fijos), no la
-// jerarquia anidada de cuartos de video. getScenePath del drone resuelve el nombre
-// del target de escala. (Antes F2 reusaba la ruta anidada de espacios; ese modelo
-// drone-como-espacio lo elimina F35.)
-test('F35: getScenePath del drone resuelve el nombre del target virtual de escala', () => {
+// F38 — REEMPLAZA al test F35 que resolvia getScenePath de un target de escala
+// derivado (drone-feat-X). El modelo cambio a sesion unica: el unico target de drone
+// es la sesion (drone-session) y getScenePath resuelve su nombre. Los features
+// derivados (Alberca aérea…) ahora son SUGERENCIAS de la sesion, no targets.
+test('F38: getScenePath del drone resuelve el nombre del target de sesion', () => {
   let state = logic.createDefaultState();
   state = logic.addSpacesFromText(state, 'Alberca', { zona: 'exterior' });
-  const albercaId = state.espacios.find((e) => e.nombre === 'Alberca').id;
-  const path = logic.getScenePath(state, 'drone-feat-' + albercaId, 'drone');
-  assert.equal(path, 'Alberca aérea');
+  const path = logic.getScenePath(state, 'drone-session', 'drone');
+  assert.equal(path, 'Sesión de drone');
 });
 
 test('F2: migración droneItems->espacios preserva mediaFiles', () => {
@@ -348,8 +346,8 @@ test('registers discards and keeps camera counters independent', () => {
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
 
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'discard', discardReason: 'empty' });
-  // F35 — el drone registra contra un target virtual de escala (no contra un espacio).
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-fixed-salida-contexto', kind: 'take' });
+  // F38 — el drone registra contra el target unico de sesion (drone-session).
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-session', kind: 'take' });
 
   assert.equal(state.mediaFiles[0].fileToken, 'PIB2819');
   assert.equal(state.mediaFiles[0].good, false);
@@ -365,8 +363,8 @@ test('inserts an omitted file and renumbers only later files in the same segment
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[1].id, kind: 'take' });
-  // F35 — el drone registra contra un target virtual de escala (no contra un espacio).
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-fixed-salida-contexto', kind: 'take' });
+  // F38 — el drone registra contra el target unico de sesion (drone-session).
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-session', kind: 'take' });
 
   const cocinaFileId = state.mediaFiles.find((file) => file.targetId === state.espacios[1].id).id;
   state = logic.insertOmittedMediaFile(state, cocinaFileId);
@@ -524,7 +522,8 @@ test('separates video and drone scenes for review', () => {
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: target.id, kind: 'take' });
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-fixed-salida-contexto', kind: 'take' });
+  // F38 — el drone registra contra el target unico de sesion (drone-session).
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-session', kind: 'take' });
   state = logic.toggleMediaGood(state, state.mediaFiles[0].id);
 
   const groups = logic.getMediaSceneGroups(state);
@@ -1805,11 +1804,11 @@ test('F15: una toma LIBRE puede registrarse con shotType+movement sin sugerencia
   assert.equal(file.movement, 'travel');
   assert.equal(file.suggestionId, null, 'toma libre: sin sugerencia');
 
-  // Drone: mismo plano + movimiento. F35 — registra contra un target virtual de escala.
+  // Drone: mismo plano + movimiento. F38 — registra contra el target unico de sesion.
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
   state = logic.registerMediaFile(state, {
     cameraId: 'drone-dji',
-    targetId: 'drone-fixed-salida-contexto',
+    targetId: 'drone-session',
     kind: 'take',
     autor: 'Bruno',
     shotType: 'general',
@@ -1918,12 +1917,12 @@ test('F17: suggestionsForTarget en drone con sujeto sin match conserva el compor
 });
 
 test('F17 (C): buildExport lleva el label aereo por archivo de drone sin cambiar version:1', () => {
-  // F35 — el drone registra contra un target virtual de escala (no contra un espacio).
+  // F38 — el drone registra contra el target unico de sesion (drone-session).
   let state = logic.createDefaultState();
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
   state = logic.registerMediaFile(state, {
     cameraId: 'drone-dji',
-    targetId: 'drone-fixed-fachada-orbita',
+    targetId: 'drone-session',
     kind: 'take',
     autor: 'Bruno',
     shotType: 'orbita',
@@ -2651,15 +2650,25 @@ test('F35: escala amenidades presente solo donde aplica', () => {
   assert.equal(logic.droneAmenidadesAplica(casa2), true, 'casa con amenidad real: aplica');
 });
 
-test('F35: targetsForMode("drone") devuelve droneScaleTargets (no state.espacios)', () => {
+// F38 — REEMPLAZA al test F35 que igualaba targetsForMode('drone') a droneScaleTargets
+// (multiples targets de escala). El modelo cambio a SESION UNICA: targetsForMode('drone')
+// ya NO devuelve los multiples targets de escala; devuelve el target unico de sesion
+// (+ kind:'drone' viejos por compat, que aqui no existen). droneScaleTargets se conserva
+// como helper exportado (compat con HTML/estado viejo) pero ya no alimenta targetsForMode.
+test('F38: targetsForMode("drone") devuelve el target unico de sesion (no droneScaleTargets)', () => {
   let state = logic.createDefaultState();
   state = logic.addSpacesFromText(state, 'Sala\nAlberca', { zona: 'exterior' });
-  const fromMode = logic.targetsForMode(state, 'drone').map((t) => t.id).sort();
-  const direct = logic.droneScaleTargets(state).map((t) => t.id).sort();
-  assert.deepEqual(fromMode, direct, 'targetsForMode drone == droneScaleTargets');
+  const fromMode = logic.targetsForMode(state, 'drone');
+  // Un solo target de sesion.
+  assert.equal(fromMode.length, 1, 'un unico target de sesion');
+  assert.equal(fromMode[0].id, 'drone-session', 'es el target de sesion');
+  // Y NO es la lista de multiples targets de escala (droneScaleTargets sigue devolviendo varios).
+  const direct = logic.droneScaleTargets(state).map((t) => t.id);
+  assert.ok(direct.length > 1, 'droneScaleTargets aun expone varios (helper de compat)');
+  assert.notDeepEqual(fromMode.map((t) => t.id), direct, 'targetsForMode drone ya NO es droneScaleTargets');
   // y NO es state.espacios.
   const espIds = state.espacios.map((e) => e.id);
-  assert.ok(!fromMode.some((id) => espIds.includes(id)), 'ningun target es un espacio de cuarto');
+  assert.ok(!fromMode.some((t) => espIds.includes(t.id)), 'ningun target es un espacio de cuarto');
   // video sigue devolviendo espacios.
   assert.deepEqual(logic.targetsForMode(state, 'video'), state.espacios);
 });
@@ -2760,6 +2769,144 @@ test('F35: el sujeto terreno expone las 14 tomas y version:1 intacto', () => {
   assert.equal(sugs.filter((s) => s.must === true).length, 7, '7 must, must primero');
   assert.ok(sugs.slice(0, 7).every((s) => s.must === true), 'los 7 must van primero');
 
+  const exp = logic.buildExport(logic.createDefaultState(), {});
+  assert.equal(exp.version, 1, 'version:1 intacto');
+});
+
+// ─── F38 — sesion unica de drone: target unico + lista ordenada de sugerencias ─
+
+test('F38: droneSessionSubject de una casa es el target unico de sesion (kind:drone)', () => {
+  let state = logic.createDefaultState();
+  state.guide = Object.assign({}, state.guide, { tipoPropiedad: 'casa' });
+  const sesion = logic.droneSessionSubject(state);
+  assert.equal(sesion.id, 'drone-session');
+  assert.equal(sesion.kind, 'drone');
+  assert.equal(sesion.nombre, 'Sesión de drone');
+});
+
+test('F38: droneSessionSubject de un terreno ES el sujeto terreno (no se duplica)', () => {
+  const state = { guide: { tipoPropiedad: 'terreno' }, espacios: [] };
+  const sesion = logic.droneSessionSubject(state);
+  assert.equal(sesion.id, logic.TERRENO_SUBJECT_ID, 'reusa el sujeto terreno, no crea uno nuevo');
+});
+
+test('F38: droneSessionSuggestions de una casa incluye fijas + UNA por espacio exterior/amenidad', () => {
+  let state = logic.createDefaultState();
+  state.guide = Object.assign({}, state.guide, { tipoPropiedad: 'casa' });
+  state = logic.addSpacesFromText(state, 'Alberca\nJardín', { zona: 'amenidades' });
+  // sube Jardín a exterior, Alberca queda amenidad. Reasignamos zonas a mano.
+  state.espacios.find((e) => e.nombre === 'Jardín').zona = 'exterior';
+  state.espacios.find((e) => e.nombre === 'Alberca').zona = 'amenidades';
+  // un interior NO debe aportar ninguna toma.
+  state = logic.addSpacesFromText(state, 'Recibidor'); // interior por defecto
+  const sugs = logic.droneSessionSuggestions(state);
+  const nombres = sugs.map((s) => s.nombre);
+
+  // Fijas: incluye la canonica "Salida a contexto".
+  assert.ok(nombres.includes('Salida a contexto'), 'incluye la fija Salida a contexto');
+  assert.ok(sugs.some((s) => s.label === 'Fachada aérea'), 'incluye fijas property-wide de casa');
+
+  // Derivadas: EXACTAMENTE una "Alberca …" y una "Jardín …".
+  const albercaTomas = sugs.filter((s) => /^Alberca\b/.test(s.nombre));
+  const jardinTomas = sugs.filter((s) => /^Jardín\b/.test(s.nombre));
+  assert.equal(albercaTomas.length, 1, 'exactamente UNA toma de Alberca');
+  assert.equal(jardinTomas.length, 1, 'exactamente UNA toma de Jardín');
+
+  // El interior NO aporta ninguna toma derivada.
+  assert.ok(!sugs.some((s) => /^Recibidor\b/.test(s.nombre)), 'un interior no aporta tomas');
+});
+
+test('F38: una sola toma derivada por espacio (no varias por feature)', () => {
+  let state = logic.createDefaultState();
+  state.guide = Object.assign({}, state.guide, { tipoPropiedad: 'casa' });
+  state = logic.addSpacesFromText(state, 'Alberca', { zona: 'exterior' });
+  const sugs = logic.droneSessionSuggestions(state);
+  const albercaId = state.espacios.find((e) => e.nombre === 'Alberca').id;
+  const derivadas = sugs.filter((s) => s.featOf === albercaId);
+  assert.equal(derivadas.length, 1, 'una sola toma derivada por espacio');
+  assert.equal(derivadas[0].id, 'drone-feat-' + albercaId);
+  // El feature conocido aporta su shotType/movement base (primera del vocabulario).
+  const base = logic.aerialVocabForFeature('alberca')[0];
+  assert.equal(derivadas[0].shotType, base.shotType, 'usa shotType de la primera toma del vocabulario');
+  assert.equal(derivadas[0].movement, base.movement, 'usa movement de la primera toma del vocabulario');
+});
+
+test('F38: la lista esta agrupada por escala (propiedad->amenidades->inmediato->ubicacion), must primero', () => {
+  // Departamento: amenidades aplica, hay las 4 escalas.
+  let state = logic.createDefaultState();
+  state.guide = Object.assign({}, state.guide, { tipoPropiedad: 'departamento' });
+  state = logic.addSpacesFromText(state, 'Roof garden', { zona: 'amenidades' });
+  const sugs = logic.droneSessionSuggestions(state);
+  const orden = ['propiedad', 'amenidades', 'inmediato', 'ubicacion'];
+  // las escalas aparecen en orden no decreciente segun el indice de orden.
+  let maxIdx = -1;
+  for (const s of sugs) {
+    const idx = orden.indexOf(s.scale);
+    assert.ok(idx >= 0, 'cada toma tiene una escala valida: ' + s.scale);
+    assert.ok(idx >= maxIdx, 'las escalas no retroceden (toma ' + s.nombre + ')');
+    maxIdx = Math.max(maxIdx, idx);
+  }
+  // dentro de la escala 'propiedad', los must van antes que los no-must.
+  const propiedad = sugs.filter((s) => s.scale === 'propiedad');
+  let vistoNoMust = false;
+  for (const s of propiedad) {
+    if (s.must !== true) vistoNoMust = true;
+    else assert.ok(!vistoNoMust, 'must antes que no-must en escala propiedad: ' + s.nombre);
+  }
+  // sin ids duplicados.
+  const ids = sugs.map((s) => s.id);
+  assert.equal(new Set(ids).size, ids.length, 'no hay ids duplicados');
+});
+
+test('F38: terreno - la sesion expone las 14 tomas (no la lista de casa)', () => {
+  const state = { guide: { tipoPropiedad: 'terreno' }, espacios: [] };
+  const sugs = logic.droneSessionSuggestions(state);
+  assert.equal(sugs.length, 14, 'la sesion de terreno expone las 14 tomas');
+  assert.equal(sugs.filter((s) => s.must === true).length, 7, '7 must');
+  // y coincide con suggestionsForTarget del target de sesion (que es el sujeto terreno).
+  const sesion = logic.droneSessionSubject(state);
+  const viaTarget = logic.suggestionsForTarget(state, 'drone', sesion);
+  assert.deepEqual(viaTarget.map((s) => s.id), sugs.map((s) => s.id), 'mismo resultado por ambos caminos');
+});
+
+test('F38: suggestionsForTarget del target de sesion devuelve droneSessionSuggestions', () => {
+  let state = logic.createDefaultState();
+  state.guide = Object.assign({}, state.guide, { tipoPropiedad: 'casa' });
+  state = logic.addSpacesFromText(state, 'Alberca', { zona: 'exterior' });
+  const sesion = logic.droneSessionSubject(state);
+  const viaTarget = logic.suggestionsForTarget(state, 'drone', sesion).map((s) => s.id);
+  const direct = logic.droneSessionSuggestions(state).map((s) => s.id);
+  assert.deepEqual(viaTarget, direct, 'suggestionsForTarget(sesion) == droneSessionSuggestions');
+});
+
+test('F38 MIGRACION: estado viejo drone-piso + 1 toma -> NO omitted, conserva targetId y es alcanzable', () => {
+  const viejo = {
+    version: 3,
+    espacios: [
+      { id: 'drone-old', nombre: 'Fachada aerea', kind: 'drone', zona: 'exterior', piso: 'Drone', estados: {} },
+    ],
+    cameras: [{ id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' }],
+    activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
+    sequenceSegments: [
+      { id: 'seg1', cameraId: 'drone-dji', counterWidth: 4, counterNext: 247, prefixHint: '' },
+    ],
+    mediaFiles: [
+      { id: 'm1', cameraId: 'drone-dji', targetId: 'drone-old', kind: 'take', segmentId: 'seg1', fileCounter: 246 },
+    ],
+  };
+  const norm = logic.normalizeChecklistData(viejo);
+  const file = norm.mediaFiles.find((f) => f.id === 'm1');
+  assert.ok(file, 'la toma sobrevive');
+  assert.equal(file.kind, 'take', 'la toma NO quedo omitted');
+  assert.equal(file.targetId, 'drone-old', 'conserva su targetId');
+  // el target viejo es alcanzable via targetsForMode('drone') (compat).
+  const targets = logic.targetsForMode(norm, 'drone');
+  assert.ok(targets.some((t) => t.id === 'drone-session'), 'incluye el target de sesion');
+  assert.ok(targets.some((t) => t.id === 'drone-old'), 'el target viejo kind:drone es alcanzable (compat)');
+  assert.equal(norm.guide.incluirDrone, true, 'incluirDrone inferido true');
+});
+
+test('F38: version:1 intacto', () => {
   const exp = logic.buildExport(logic.createDefaultState(), {});
   assert.equal(exp.version, 1, 'version:1 intacto');
 });
