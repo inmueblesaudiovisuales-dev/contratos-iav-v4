@@ -549,18 +549,19 @@
     { id: 'medio_bano',  label: 'Medio bano',             keywords: ['medio bano', 'visitas'] },
     { id: 'bano',        label: 'Bano completo',          keywords: ['bano', 'wc', 'toilet', 'sanitario'] },
     { id: 'lavado',      label: 'Cuarto de lavado',       keywords: ['lavado', 'lavanderia'] },
-    { id: 'bodega',      label: 'Bodega/servicio',        keywords: ['bodega', 'servicio', 'almacen'] },
+    { id: 'bodega',      label: 'Bodega/servicio',        keywords: ['bodega', 'servicio', 'almacen', 'cuarto de servicio'] },
+    { id: 'servicio',    label: 'Cuarto de servicio',     keywords: ['servicio', 'sirvienta', 'empleada', 'muchacha'] },
     { id: 'vestidor',    label: 'Vestidor/closet',        keywords: ['vestidor', 'closet', 'walk-in'] },
     { id: 'cocina',      label: 'Cocina',                 keywords: ['cocina', 'kitchen', 'cocineta'] },
     { id: 'comedor',     label: 'Comedor',                keywords: ['comedor', 'antecomedor'] },
-    { id: 'sala',        label: 'Sala/estancia',          keywords: ['sala', 'living', 'estar'] },
-    { id: 'family',      label: 'Family room/sala de TV', keywords: ['family', 'tv', 'entretenimiento'] },
-    { id: 'estudio',     label: 'Estudio/home office',    keywords: ['estudio', 'oficina', 'office', 'despacho'] },
-    { id: 'recamara',    label: 'Recamara',               keywords: ['recamara', 'habitacion', 'dormitorio', 'alcoba', 'suite'] },
+    { id: 'sala',        label: 'Sala/estancia',          keywords: ['sala', 'living', 'estar', 'estancia', 'salon'] },
+    { id: 'family',      label: 'Family room/sala de TV', keywords: ['family', 'tv', 'entretenimiento', 'sala de tv', 'tele', 'juegos'] },
+    { id: 'estudio',     label: 'Estudio/home office',    keywords: ['estudio', 'oficina', 'office', 'despacho', 'biblioteca'] },
+    { id: 'recamara',    label: 'Recamara',               keywords: ['recamara', 'habitacion', 'dormitorio', 'alcoba', 'suite', 'cuarto'] },
     { id: 'garaje',      label: 'Garaje/cochera',         keywords: ['garaje', 'cochera', 'garage'] },
     { id: 'pasillo',     label: 'Pasillo/escaleras',      keywords: ['pasillo', 'escalera', 'hall', 'vestibulo'] },
-    { id: 'entrada',     label: 'Entrada/recibidor',      keywords: ['entrada', 'recibidor', 'foyer', 'acceso'] },
-    { id: 'terraza',     label: 'Terraza/balcon',         keywords: ['terraza', 'balcon', 'patio', 'roof'] },
+    { id: 'entrada',     label: 'Entrada/recibidor',      keywords: ['entrada', 'recibidor', 'foyer', 'acceso', 'vestibulo', 'hall', 'lobby'] },
+    { id: 'terraza',     label: 'Terraza/balcon',         keywords: ['terraza', 'balcon', 'patio', 'roof', 'azotea', 'roofgarden'] },
     { id: 'exterior',    label: 'Exterior/jardin',        keywords: ['fachada', 'jardin', 'exterior', 'frente'] },
   ]);
 
@@ -797,7 +798,7 @@
 
   function suggestionsForSpace(categoria, nombre) {
     const lib = getGuideLibrary();
-    const ALIAS = { exterior: 'terraza' };
+    const ALIAS = { exterior: 'terraza', servicio: 'bodega' };
     const resolved = lib[categoria] ? categoria : (ALIAS[categoria] || 'generico');
     const entry = lib[resolved] || lib.generico;
     const base = Array.from(entry.shots);
@@ -1232,6 +1233,9 @@
         _chip('Baño de visitas', 'interior', 'medio_bano', false),
         _chip('Estudio', 'interior', 'estudio', false),
         _chip('Lavandería', 'interior', 'lavado', false),
+        _chip('Antecomedor', 'interior', 'comedor', false),
+        _chip('Cuarto de servicio', 'interior', 'servicio', false),
+        _chip('Baño de servicio', 'interior', 'bano', false),
       ]),
       'Piso 2': Object.freeze([
         _chip('Pasillo', 'interior', 'pasillo', false),
@@ -1242,6 +1246,8 @@
         _chip('Recámara 3', 'interior', 'recamara', false),
         _chip('Baño', 'interior', 'bano', false),
         _chip('Family room', 'interior', 'family', false),
+        _chip('Sala de TV', 'interior', 'family', false),
+        _chip('Vestidor', 'interior', 'vestidor', false),
       ]),
       'Amenidades': Object.freeze([
         _chip('Caseta / acceso', 'amenidades', 'entrada', true),
@@ -1274,6 +1280,8 @@
         _chip('Clóset', 'interior', 'vestidor', false),
         _chip('Recámara secundaria', 'interior', 'recamara', false),
         _chip('Lavandería', 'interior', 'lavado', false),
+        _chip('Antecomedor', 'interior', 'comedor', false),
+        _chip('Vestidor', 'interior', 'vestidor', false),
       ]),
       'Amenidades': Object.freeze([
         _chip('Lobby', 'amenidades', 'entrada', true),
@@ -1302,6 +1310,9 @@
         _chip('Baño principal', 'interior', 'bano', false),
         _chip('Recámara 2', 'interior', 'recamara', false),
         _chip('Baño de visitas', 'interior', 'medio_bano', false),
+        _chip('Antecomedor', 'interior', 'comedor', false),
+        _chip('Cuarto de servicio', 'interior', 'servicio', false),
+        _chip('Baño de servicio', 'interior', 'bano', false),
       ]),
       'Amenidades': Object.freeze([
         _chip('Alberca', 'amenidades', 'alberca', true),
@@ -1348,10 +1359,21 @@
     return chips.map((c) => ({ nombre: c.nombre, zona: c.zona, categoria: c.categoria, clave: c.clave }));
   }
 
+  // F32 — Espacios solo-buscables: NO entran a suggestedSpacesFor (no ensucian los
+  // chips por piso/tipo) pero SI se indexan para que searchSpaces los encuentre.
+  // Forma: { nombre, zona, categoria }. Se concatenan a SPACE_LIBRARY_INDEX con
+  // tipo:'extra', piso:null, clave:false.
+  const EXTRA_SPACES = Object.freeze([
+    Object.freeze({ nombre: 'Cava', zona: 'interior', categoria: 'bodega' }),
+    Object.freeze({ nombre: 'Bar / Cantina', zona: 'interior', categoria: 'sala' }),
+    Object.freeze({ nombre: 'Cuarto de juegos', zona: 'interior', categoria: 'family' }),
+  ]);
+
   // F19 — Indice plano de toda la biblioteca de espacios para el buscador. Cada
   // entrada es { id, nombre, zona, categoria, tipo, piso, clave }. Se deduplica por
   // nombre normalizado para no repetir el mismo espacio que aparece en varios pisos
   // o tipos (p. ej. Sala, Pasillo, Baño). El id es el nombre normalizado.
+  // F32 — al final se concatenan los EXTRA_SPACES (solo-buscables).
   const SPACE_LIBRARY_INDEX = (() => {
     const out = [];
     const seen = new Set();
@@ -1373,6 +1395,20 @@
         }
       }
     }
+    for (const e of EXTRA_SPACES) {
+      const key = normNombre(e.nombre);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(Object.freeze({
+        id: key,
+        nombre: e.nombre,
+        zona: e.zona,
+        categoria: e.categoria,
+        tipo: 'extra',
+        piso: null,
+        clave: false,
+      }));
+    }
     return Object.freeze(out);
   })();
 
@@ -1388,8 +1424,18 @@
   function searchSpaces(query) {
     const raw = String(query == null ? '' : query).trim();
     const q = normNombre(raw);
+    const cats = getRoomCategories();
+    function entryMatches(entry) {
+      if (normNombre(entry.nombre).includes(q)) return true;
+      const cat = cats.find((c) => c.id === entry.categoria);
+      if (!cat) return false;
+      return cat.keywords.some((kw) => {
+        const kwNorm = normNombre(kw);
+        return kwNorm.includes(q) || q.includes(kwNorm);
+      });
+    }
     const matches = (q
-      ? SPACE_LIBRARY_INDEX.filter((entry) => normNombre(entry.nombre).includes(q))
+      ? SPACE_LIBRARY_INDEX.filter(entryMatches)
       : SPACE_LIBRARY_INDEX
     ).map((entry) => ({
       kind: 'match',

@@ -2329,3 +2329,68 @@ test('F28: estado viejo sin sentido/pared carga sin romper (default null)', () =
   assert.equal(m.sentido, null);
   assert.equal(m.pared, null);
 });
+
+// ─── F32 — Sinonimos por categoria en searchSpaces + cuartos nuevos + servicio ──
+
+test('F32: searchSpaces("habitacion") incluye al menos una Recamara (kind:match)', () => {
+  const res = logic.searchSpaces('habitacion');
+  const rec = res.filter((r) => r.kind === 'match' && /rec[aá]mara/i.test(r.nombre));
+  assert.ok(rec.length >= 1, JSON.stringify(res.map((r) => r.nombre)));
+});
+
+test('F32: searchSpaces("balcon") incluye Balcon/Terraza', () => {
+  const res = logic.searchSpaces('balcon');
+  const hit = res.some((r) => r.kind === 'match' && /(balc[oó]n|terraza)/i.test(r.nombre));
+  assert.ok(hit, JSON.stringify(res.map((r) => r.nombre)));
+});
+
+test('F32: searchSpaces("cava") incluye Cava (via EXTRA_SPACES)', () => {
+  const res = logic.searchSpaces('cava');
+  const hit = res.some((r) => r.kind === 'match' && logic.normNombre(r.nombre) === 'cava');
+  assert.ok(hit, JSON.stringify(res.map((r) => r.nombre)));
+});
+
+test('F32: suggestedSpacesFor casa Piso 1 incluye Antecomedor y Cuarto de servicio', () => {
+  const s = logic.createDefaultState();
+  const chips = logic.suggestedSpacesFor(s, 'Piso 1', 'casa');
+  const nombres = chips.map((c) => c.nombre);
+  assert.ok(nombres.includes('Antecomedor'), JSON.stringify(nombres));
+  assert.ok(nombres.includes('Cuarto de servicio'), JSON.stringify(nombres));
+});
+
+test('F32: suggestedSpacesFor NO incluye Cava en ningun piso/tipo', () => {
+  const s = logic.createDefaultState();
+  for (const tipo of Object.keys(logic.SPACE_LIBRARY_BY_FLOOR)) {
+    for (const piso of Object.keys(logic.SPACE_LIBRARY_BY_FLOOR[tipo])) {
+      const chips = logic.suggestedSpacesFor(s, piso, tipo);
+      assert.ok(!chips.some((c) => logic.normNombre(c.nombre) === 'cava'), `${tipo}/${piso}`);
+    }
+  }
+});
+
+test('F32: la categoria servicio existe en getRoomCategories()', () => {
+  const cat = logic.getRoomCategories().find((c) => c.id === 'servicio');
+  assert.ok(cat, 'falta categoria servicio');
+  assert.equal(cat.label, 'Cuarto de servicio');
+});
+
+test('F32: detectCategoria("cuarto de servicio") y sus tomas no truenan', () => {
+  const cat = logic.detectCategoria('cuarto de servicio');
+  assert.ok(typeof cat === 'string' && cat.length > 0);
+  const tomasServicio = logic.suggestionsForSpace('servicio', 'Cuarto de servicio');
+  assert.ok(Array.isArray(tomasServicio) && tomasServicio.length >= 1);
+});
+
+test('F32: version sigue siendo 1 y estado viejo carga sin romper', () => {
+  const exp = logic.buildExport(logic.createDefaultState(), {});
+  assert.equal(exp.version, 1);
+  const viejo = {
+    version: 3,
+    espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
+    mediaFiles: [],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  const s = logic.normalizeChecklistData(viejo);
+  assert.equal(s.espacios[0].nombre, 'Sala');
+});
