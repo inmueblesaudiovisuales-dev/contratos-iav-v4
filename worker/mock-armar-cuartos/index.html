@@ -61,6 +61,8 @@
   .subbar{margin:6px 0 0 46px;display:flex;flex-wrap:wrap;gap:6px}
   .subchip{min-height:36px;padding:0 10px;border:1px dashed var(--tint-line);border-radius:999px;background:transparent;color:var(--ink-2);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:5px}
 
+  .addhere{width:100%;min-height:44px;border:1px dashed var(--tint-line);background:var(--surface);color:var(--ink-2);border-radius:10px;font-weight:700;font-size:13px;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:6px}
+  .addhere svg{font-size:16px}
   .addfloor{width:100%;min-height:46px;border:1px dashed var(--tint-line);background:transparent;color:var(--ink-2);border-radius:var(--radius);font-weight:700;font-size:var(--ts-body);margin-top:4px;display:flex;align-items:center;justify-content:center;gap:6px}
 
   .foot{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(to top,var(--bg) 72%,transparent);padding:var(--sp-3) var(--sp-4) var(--sp-5);z-index:6}
@@ -217,6 +219,7 @@ function roomHTML(z,fi,r){
   return '<div class="room"><div class="room-main"><div class="room-ic">'+icon(r.icon)+'</div><div class="room-nm">'+r.name+'</div><div class="room-act"><button class="mini plus1" onclick="dup(\''+z+'\','+fi+',\''+r.id+'\')">'+icon("plus")+'1</button><button class="mini x" onclick="delRoom(\''+z+'\','+fi+',\''+r.id+'\')">'+icon("trash")+'</button></div></div>'+subs+subbar+'</div>';
 }
 function secHTML(title,iconN,cnt,inner){ return '<div class="sec"><div class="sec-h"><div class="name">'+icon(iconN)+title+'</div><div class="cnt">'+cnt+'</div></div>'+inner+'</div>'; }
+function addHereHTML(z,fi){ return '<button class="addhere" onclick="openSheetFor(\''+z+'\','+fi+')">'+icon("plus")+' Agregar cuarto aquí</button>'; }
 
 function renderOutline(){
   var h='';
@@ -226,12 +229,12 @@ function renderOutline(){
     '<button class="qs-go" onclick="generar()">Generar esqueleto</button></div></div>';
 
   floors.forEach(function(f,fi){
-    var inner=f.rooms.length?f.rooms.map(function(r){return roomHTML("interior",fi,r);}).join(''):'<div class="empty">Sin cuartos en esta planta todavía.</div>';
+    var inner=(f.rooms.length?f.rooms.map(function(r){return roomHTML("interior",fi,r);}).join(''):'<div class="empty">Sin cuartos en esta planta todavía.</div>')+addHereHTML("interior",fi);
     h+=secHTML(f.name,"stairs",f.rooms.length+(f.rooms.length===1?" cuarto":" cuartos"),inner);
   });
   h+='<button class="addfloor" onclick="addFloor()">'+icon("plus")+' Agregar planta</button>';
-  h+=secHTML("Exterior","plant",exterior.length,exterior.length?exterior.map(function(r){return roomHTML("exterior",0,r);}).join(''):'<div class="empty">Sin espacios exteriores.</div>');
-  h+=secHTML("Amenidades","pool",amenidades.length,amenidades.length?amenidades.map(function(r){return roomHTML("amenidades",0,r);}).join(''):'<div class="empty">Sin amenidades.</div>');
+  h+=secHTML("Exterior","plant",exterior.length,(exterior.length?exterior.map(function(r){return roomHTML("exterior",0,r);}).join(''):'<div class="empty">Sin espacios exteriores.</div>')+addHereHTML("exterior",0));
+  h+=secHTML("Amenidades","pool",amenidades.length,(amenidades.length?amenidades.map(function(r){return roomHTML("amenidades",0,r);}).join(''):'<div class="empty">Sin amenidades.</div>')+addHereHTML("amenidades",0));
 
   document.getElementById("body").innerHTML=h;
   var n=totalRooms();
@@ -254,6 +257,7 @@ function renderTiles(){
   document.getElementById("tiles").innerHTML=lib.map(function(x){var cnt=list.filter(function(r){return r.base===x.b;}).length;return '<button class="tile'+(cnt?' added':'')+'" onclick="addRoom(\''+sheetZone+'\',\''+x.b+'\',\''+x.i+'\')">'+(cnt?'<span class="badge">'+cnt+'</span>':'')+icon(x.i)+'<span class="tl">'+x.b+'</span></button>';}).join('');
 }
 function openSheet(){ sheetOpen=true; document.getElementById("scrim").classList.add("open"); document.getElementById("sheet").classList.add("open"); renderTabs(); renderTiles(); }
+function openSheetFor(z,fi){ sheetZone=z; sheetFloor=fi||0; openSheet(); }
 function closeSheet(){ sheetOpen=false; document.getElementById("scrim").classList.remove("open"); document.getElementById("sheet").classList.remove("open"); }
 
 function render(){ renderOutline(); if(sheetOpen){renderTabs();renderTiles();} }
