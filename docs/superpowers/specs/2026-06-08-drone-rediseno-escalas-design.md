@@ -148,3 +148,38 @@ Cenital giratorio · Órbita ascendente · Fly-through/pasada · Contrapicado de
   (`node --check` del inline + gate + inspección del DOM generado) y se redespliega el preview para que Bruno valide
   en su celular: "incluir drone" en Armar cuartos (sin pseudo-cuartos); en Captura la lane de drone muestra las 4
   escalas con sus tomas sugeridas; drone alcanzable donde toca; estado viejo carga.
+
+---
+
+## Addendum (2026-06-08, sesión 2): drone = SESIÓN ÚNICA ordenada (revisa la parte navegable de F36/F37)
+
+Tras probar F36/F37, Bruno aterrizó el modelo correcto. **Video se queda igual** (por cuarto, aislado: en la cocina
+solo ves tomas de cocina). **El drone se rediseña.** Lo de "lane por escalas con navegación entre targets" y el
+conmutador por-cuarto F37 quedan **revertidos**: F37 fue regresión (dejaba activar Drone parado en un interior como
+recibidor).
+
+**Principio:** el drone es **una sola sesión** = **una lista ordenada de tomas** que se vuela de corrido, **todas
+visibles en un scroll**. No se navega cuarto por cuarto para ver las sugerencias; están todas juntas, agrupadas por
+escala como encabezados (Propiedad · Amenidades · Inmediato · Ubicación). Casa/quinta/depto pasan a comportarse como
+**terreno** (sujeto único con su lista), pero con la lista derivada de los espacios reales.
+
+**Contenido de la lista (decidido con Bruno):**
+- **Fijas** (siempre): fachada aérea, salida a contexto (dronie), cenital giratorio, órbita, calles/acceso cercano,
+  ubicación/vialidades… (las property-wide/inmediato/ubicación del pool, por tipo).
+- **Una toma por espacio** exterior/amenidad real: Alberca aérea, Jardín aéreo, Caseta, Cancha, Roof, Casa club…
+  **una** por espacio (no varias). **Los interiores no aportan tomas.** Si no hay alberca, no hay "Alberca aérea".
+
+**Entrada:** un **acceso único "Sesión de drone"** en la lista de cuartos / pantalla de propiedad (fuera de los
+cuartos; solo si `incluirDrone`). Nunca dentro de un interior. Un toque abre la pantalla de sesión.
+
+**Motor:** un **único target de sesión** (`drone-session`; terreno sigue usando su sujeto). `targetsForMode('drone')`
+= `[sesión]` (+ espacios `kind:'drone'` viejos **solo por compat**, no navegables). `suggestionsForTarget` del target
+de sesión devuelve la lista ordenada (`droneSessionSuggestions`: fijas + una por espacio, por escala, must primero).
+La derivación por espacio se reusa para construir **sugerencias** (ya no targets navegables). Migración intacta (las
+tomas viejas de drone-piso no se pierden por el mismo mecanismo de compat). `version:1` intacto.
+
+**UI:** revertir el conmutador F37 y la navegación por escala de F36; agregar la tarjeta "Sesión de drone" en la
+lista de cuartos; pantalla de sesión = un scroll con toda la lista (reusa capa de sugeridas R1, Toma, ambos drones,
+contador), sin ‹Siguiente›/Cambiar entre targets, con regreso a cuartos.
+
+**Plan:** fases **F38 (motor)** y **F39 (UI)** en el plan. Maqueta aprobada por Bruno antes del HTML en F39.

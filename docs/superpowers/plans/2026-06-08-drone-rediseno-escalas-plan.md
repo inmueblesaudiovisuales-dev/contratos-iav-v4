@@ -138,10 +138,85 @@ Esta decisión resuelve tres riesgos que el plan original no conectaba con el c�
   agrupación de las 4 escalas en Captura) y esperar su OK antes de escribir el HTML.
 - **Commit:** `F36 — UI: interruptor incluir-drone + lane de drone por escalas (targets derivados) en Captura`.
 
+---
+
+# Rediseño 2 (2026-06-08, sesión 2): drone = SESIÓN ÚNICA ordenada (revisa F36/F37)
+
+> **Feedback de Bruno tras probar F36/F37.** El modelo de "lane por escalas con navegación entre targets" seguía
+> sintiéndose como "cambiar de cuarto", y el conmutador por-cuarto F37 fue una **regresión** (dejaba activar Drone
+> parado en un interior como recibidor). Video se queda **igual** (por cuarto, aislado). El drone se rediseña.
+>
+> **Decisiones cerradas con Bruno (AskUserQuestion):**
+> 1. Entrada = **acceso único "Sesión de drone"** en la lista de cuartos / pantalla de propiedad (fuera de los
+>    cuartos; solo si `incluirDrone`). Nunca dentro de un interior.
+> 2. Contenido = **una toma por espacio** relevante (Alberca aérea, Jardín aéreo, Caseta, Cancha…) **+ las fijas**
+>    (fachada, salida a contexto/dronie, cenital giratorio, órbita, calles/acceso, ubicación/vialidades). No varias
+>    por espacio.
+>
+> **Modelo nuevo:** el drone es **una sola sesión** = **una lista ordenada de tomas** que se vuela de corrido,
+> **todas visibles en un scroll**, agrupadas por escala como simples encabezados (Propiedad · Amenidades · Inmediato ·
+> Ubicación). **Sin** navegación target-a-target, **sin** ‹Siguiente›/Cambiar entre targets de drone. Casa/quinta/
+> depto pasan a comportarse como **terreno** (sujeto único con su lista), pero con la lista derivada de los espacios
+> reales. Los interiores **no** aportan tomas.
+
+## F38 — Motor: target único de sesión de drone + lista ordenada (fijas + una por espacio)
+**Archivos:** `frontend/checklist-logic.js`, `frontend/checklist-logic.test.js`.
+
+- **Un único target de sesión de drone** (id estable, p.ej. `drone-session`), análogo a `terreno-unico`. Para
+  `tipoPropiedad==='terreno'` se sigue usando el sujeto terreno (no se duplica).
+- **`targetsForMode(state,'drone')`** devuelve **`[sesión]`** (un solo target) **+** los espacios `kind:'drone'`
+  preexistentes **solo por compat** (para que el bucle de `normalizeChecklistData` no marque `omitted` las tomas
+  viejas; esos no se muestran como navegables en la UI nueva).
+- **`droneSessionSuggestions(state)`**: construye la **lista ordenada** de tomas sugeridas del target de sesión:
+  - **Fijas por tipo:** del `AERIAL_POOL` (las property-wide/inmediato/ubicación sin `feature`, filtradas por tipo),
+    ordenadas por escala. Incluye la canónica **Salida a contexto** (must).
+  - **Derivadas (una por espacio):** por cada espacio exterior/amenidad real, **una** toma aérea (Alberca aérea,
+    Jardín aéreo, Caseta, Cancha, Roof…). Si el espacio empareja un feature conocido (alberca/jardín/roof/terraza/
+    cancha) usa su toma primaria del vocabulario; si no, una genérica `"<nombre> aérea/o"`. **Interiores no aportan.**
+  - **Orden:** agrupada por escala (Propiedad → Amenidades → Inmediato → Ubicación), must primero dentro de cada
+    grupo. De-dup por id.
+- **`suggestionsForTarget(state,'drone', sesión)`** devuelve `droneSessionSuggestions(state)`. (Para los espacios
+  `kind:'drone'` viejos de compat, conserva el camino actual para no perder sus etiquetas.)
+- **Quitar** `droneScaleTargets`/`droneFeatureTargets` como **targets navegables** (ya no se exponen como múltiples
+  targets); su lógica de derivación se reusa para construir las **sugerencias** (no targets). Mantener cualquier
+  helper que el estado viejo/tests requieran por compat.
+- **Migración:** intacta — las tomas viejas de drone-piso no se pierden (los `kind:'drone'` viejos siguen en
+  `targetsForMode('drone')`). `incluirDrone` se sigue infiriendo. `version:1` intacto.
+- **Tests:** `targetsForMode('drone')` devuelve un único target de sesión (+ compat viejos); `droneSessionSuggestions`
+  incluye las fijas + una por espacio exterior/amenidad y **ninguna** por interiores; una sola toma por espacio;
+  orden por escala con must primero; casa con Alberca+Jardín → la lista trae "Alberca aérea" y "Jardín aéreo" (una de
+  cada); migración de estado viejo no pierde tomas; `version:1` intacto.
+- **Commit:** `F38 — motor: sesion unica de drone + lista ordenada (fijas + una por espacio) + compat`.
+
+## F39 — UI: revertir F37/F36-nav + acceso "Sesión de drone" + pantalla de sesión (un scroll)
+**Archivos:** `frontend/checklist.html`.
+
+- **Revertir F37:** quitar el conmutador Video|Drone por-cuarto (`renderLaneSwitch`/`setLane`/`laneSwitchAplica` y su
+  CSS). El drone deja de vivir dentro del loop de cuartos.
+- **Quitar la navegación por escala de F36:** nada de ‹Siguiente›/Cambiar entre targets de drone, ni rótulo de escala
+  por target. La sesión de drone no navega targets.
+- **Acceso "Sesión de drone":** en la lista de cuartos / pantalla de propiedad (`renderPropertyLanding`), una
+  **tarjeta única "Sesión de drone"** visible solo si `state.guide.incluirDrone` (y rol con drone; no en asesor).
+  Un toque entra a la pantalla de sesión. Fuera de los cuartos; nunca en un interior.
+- **Pantalla de sesión de drone:** un **solo scroll** con **toda la lista** de tomas sugeridas
+  (`droneSessionSuggestions` vía `suggestionsForTarget` del target de sesión), agrupada por escala con encabezados
+  discretos (Propiedad · Amenidades · Inmediato · Ubicación). Reusa la capa de **sugeridas R1**, el botón **Toma**, el
+  switch con **ambos drones** (Air 3 / Mini 4 Pro) y el contador buena/total. **Sin** barra ‹Siguiente›/Cambiar entre
+  targets; sí un regreso a la lista de cuartos. Materialización del sujeto de sesión como terreno (sin recrear
+  pseudo-cuartos): patrón `materializar…SiAplica` análogo, idempotente.
+- Sin emojis (Tabler). JS inline compila. Tests del motor verde (no se toca).
+- **Propuesta visual antes del HTML:** presentar a Bruno la maqueta de la pantalla de sesión + la tarjeta de acceso
+  y esperar su OK antes de escribir el HTML.
+- Verificación **estructural** (sin Playwright) + **redeploy del preview** y URL en texto plano para validar en
+  celular: el acceso aparece solo con incluirDrone y fuera de interiores; la sesión muestra la lista completa en un
+  scroll, agrupada por escala; casa con Alberca+Jardín → aparecen sus tomas; ambos drones; Toma registra; estado
+  viejo carga.
+- **Commit:** `F39 — UI: acceso Sesion de drone + pantalla de sesion (lista ordenada, un scroll); revierte F37/F36-nav`.
+
 ## Verificación final
 - `node --test frontend/checklist-logic.test.js` verde. Gate por fase (lo corre Bruno/orquestador, no el builder).
-  En F36, verificación **estructural** (sin Playwright en este entorno) + redeploy del preview y pasar la URL a Bruno
-  (texto plano, sin markdown) para validación en celular.
+  Verificación **estructural** (sin Playwright en este entorno) + redeploy del preview y pasar la URL a Bruno
+  (texto plano, sin markdown) para validación en celular. En F39 (UI), maqueta aprobada por Bruno antes del HTML.
 
 ## Después (backlog, otra sesión)
 - App de metadatos (manifiesto de sesión, columnas XMP, secuencias Premiere), orientación por sesión, sync por git.
