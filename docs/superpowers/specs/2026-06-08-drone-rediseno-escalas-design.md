@@ -26,17 +26,24 @@ targets especiales (`kind:'drone'`, con `scale`), análogo a cómo Terreno mater
 - **Inmediato / colonia** — la calle y lo de junto.
 - **Ubicación / contexto** — lejos, contexto espacial.
 
-Dentro de cada escala, las **tomas sugeridas** salen del pool aéreo filtrado por escala + tipo de propiedad
-(`suggestionsForTarget` para un target de drone devuelve las tomas de su escala).
+**Propiedad / Amenidades = derivadas de los espacios reales.** Los targets de estas dos escalas NO son fijos: se
+**derivan de los espacios exteriores/amenidad que el usuario armó**. Por cada Alberca / Jardín / Roof / Casa club
+que exista, la lane ofrece su **toma aérea** (Alberca aérea, Jardín aéreo…), **cada una con sus propias tomas
+sugeridas** (vocabulario aéreo compartido: cenital, órbita, reveal/push-in, establecimiento; sesgado por feature
+donde aplique). Si la propiedad no tiene alberca, no se sugiere "alberca aérea". A esto se suman targets fijos
+property-wide: **Salida a contexto**, **Fachada/Órbita de la casa** y **Cenital giratorio**.
+
+**Inmediato / Ubicación = targets fijos** (no dependen de espacios): acceso/calle/colonia; ubicación/vialidades/hito,
+cada uno con sus tomas sugeridas.
 
 ### Sin golden hour
 Se elimina "Golden hour" del vocabulario (no lo usan; graban cuando pueden).
 
-### Cámara
-`camerasForEspacio` sigue dando cámaras drone (Air 3 + Mini 4 Pro) a los targets de escala. **Decisión a confirmar
-en revisión:** simplificar a que el drone viva SOLO en su lane (quitar el híbrido "cámara drone en espacios
-exteriores" de F18), porque la escala "Propiedad" ya cubre eso. Alternativa conservadora: mantener el híbrido.
-*Recomendación: simplificar (un solo lugar para el drone).*
+### Cámara — decisión resuelta (con Bruno)
+El drone vive **solo en su lane**: se **quita el híbrido** "cámara drone en espacios exteriores" de F18. El drone SÍ
+graba features concretos (alberca, jardín, roof…), pero eso se resuelve **derivando esos targets en la lane** (ver
+"Propiedad/Amenidades derivadas"), no metiendo la cámara drone en cada espacio de cuarto. `camerasForEspacio` da las
+cámaras drone (Air 3 + Mini 4 Pro) a los targets de drone.
 
 ## Contenido — tomas sugeridas (curado con Bruno)
 
@@ -80,10 +87,17 @@ Cenital giratorio · Órbita ascendente · Fly-through/pasada · Contrapicado de
 - `DRONE_SCALES`: constante `[{id:'propiedad',...},{id:'amenidades', appliesWhen},{id:'inmediato',...},{id:'ubicacion',...}]`.
 - Pool aéreo (reemplaza/extiende `AERIAL_SUBJECTS`): cada toma `{ id, label, shotType, movement, scale, must,
   tipos:['casa'|'quinta'|'departamento'|'terreno'|'all'], situacional? }`. Sin golden hour.
-- `droneScaleTargets(state)`: devuelve los targets de escala que aplican (amenidades solo si privada/coto/depto).
-- `suggestionsForTarget(state,'drone', target)`: para un target de escala, devuelve el pool filtrado por
-  `scale` + tipo de propiedad, must primero.
-- `suggestedAerialSubjects`/lo que hoy sesga por tipo se reorganiza alrededor de escalas (aditivo donde se pueda).
+- `droneScaleTargets(state)`: devuelve los targets de la lane de drone:
+  - **Propiedad/Amenidades:** **derivados de los espacios exteriores/amenidad reales** (`droneFeatureTargets(state)`):
+    por cada espacio exterior/amenidad → su versión aérea (id propio, `scale`, deriva de `espacio.id`), **cada uno
+    con sus tomas sugeridas** (vocabulario aéreo compartido, sesgado por feature). + targets fijos property-wide
+    (Salida a contexto, Fachada/Órbita, Cenital giratorio).
+  - **Inmediato/Ubicación:** targets **fijos** del pool (acceso/calle/colonia; ubicación/vialidades/hito).
+  - Amenidades solo si aplica (privada/coto/depto).
+- `suggestionsForTarget(state,'drone', target)`: para un target de drone devuelve sus tomas sugeridas (las del
+  vocabulario aéreo de su feature/escala), must primero.
+- `suggestedAerialSubjects`/lo que hoy sesga por tipo se reorganiza alrededor de escalas y de los espacios reales
+  (aditivo donde se pueda).
 
 ## UI (checklist.html)
 - "Armar cuartos": quitar el piso Drone con chips; agregar el interruptor "incluir tomas de drone".
