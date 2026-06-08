@@ -2394,3 +2394,146 @@ test('F32: version sigue siendo 1 y estado viejo carga sin romper', () => {
   const s = logic.normalizeChecklistData(viejo);
   assert.equal(s.espacios[0].nombre, 'Sala');
 });
+
+// ─── F34 — Escalas de drone + pool de tomas aereas + suggestionsForTarget ───────
+
+test('F34: DRONE_SCALES define las 4 escalas con ids sin acentos y labels con acentos', () => {
+  const ids = logic.DRONE_SCALES.map((e) => e.id);
+  assert.deepEqual(ids, ['propiedad', 'amenidades', 'inmediato', 'ubicacion']);
+  const labels = logic.DRONE_SCALES.map((e) => e.label);
+  assert.ok(labels.includes('Propiedad'));
+  assert.ok(labels.includes('Amenidades'));
+  assert.ok(labels.includes('Inmediato / colonia'));
+  assert.ok(labels.includes('Ubicación / contexto'));
+  // ids sin acentos: ningun id contiene caracteres acentuados.
+  for (const id of ids) assert.equal(id, id.normalize('NFD').replace(/[̀-ͯ]/g, ''));
+});
+
+test('F34: el pool aereo NO contiene golden hour', () => {
+  for (const shot of logic.AERIAL_POOL) {
+    const hay = (shot.id + ' ' + shot.label).toLowerCase();
+    assert.ok(!hay.includes('golden'), 'sin golden en ' + shot.id);
+    assert.ok(!hay.includes('hora dorada'), 'sin hora dorada en ' + shot.id);
+    assert.ok(!hay.includes('atardecer'), 'sin atardecer en ' + shot.id);
+  }
+});
+
+test('F34: cada toma del pool tiene la forma esperada y shotType aereo valido', () => {
+  const droneTypes = logic.getDroneShotTypes();
+  const scaleIds = new Set(logic.DRONE_SCALES.map((e) => e.id));
+  const validTipos = new Set(['casa', 'quinta', 'departamento', 'terreno', 'all']);
+  for (const shot of logic.AERIAL_POOL) {
+    assert.equal(typeof shot.id, 'string');
+    assert.equal(typeof shot.label, 'string');
+    assert.ok(droneTypes[shot.shotType], shot.id + ': shotType aereo valido ' + shot.shotType);
+    assert.equal(typeof shot.movement, 'string');
+    assert.ok(scaleIds.has(shot.scale), shot.id + ': scale valida ' + shot.scale);
+    assert.equal(typeof shot.must, 'boolean');
+    assert.ok(Array.isArray(shot.tipos) && shot.tipos.every((t) => validTipos.has(t)), shot.id + ': tipos validos');
+  }
+});
+
+test('F34: "Salida a contexto" es must y aplica a todos los tipos', () => {
+  const salida = logic.AERIAL_POOL.find((s) => s.id === 'pool.aereo.salida_contexto');
+  assert.ok(salida, 'existe la canonica Salida a contexto');
+  assert.equal(salida.label, 'Salida a contexto');
+  assert.equal(salida.must, true);
+  assert.deepEqual(salida.tipos, ['all']);
+  assert.equal(salida.scale, 'propiedad', 'la porta un target fijo property-wide');
+
+  // Aparece como sugerencia de la escala propiedad en TODOS los tipos.
+  for (const tipo of ['casa', 'quinta', 'departamento', 'terreno']) {
+    const state = { guide: { tipoPropiedad: tipo } };
+    const sugs = logic.suggestionsForTarget(state, 'drone', { id: 't', scale: 'propiedad' });
+    const found = sugs.find((s) => s.label === 'Salida a contexto');
+    assert.ok(found, 'Salida a contexto sugerida en ' + tipo);
+    assert.equal(found.must, true);
+  }
+});
+
+test('F34: suggestionsForTarget por escala devuelve lo esperado, must primero', () => {
+  const state = { guide: { tipoPropiedad: 'casa' } };
+
+  const propiedad = logic.suggestionsForTarget(state, 'drone', { id: 'p', scale: 'propiedad' });
+  assert.ok(propiedad.length > 0);
+  // must primero: ningun must aparece despues de un no-must.
+  let vistoNoMust = false;
+  for (const s of propiedad) {
+    if (s.must !== true) vistoNoMust = true;
+    else assert.ok(!vistoNoMust, 'must antes que no-must en ' + s.id);
+  }
+  assert.ok(propiedad.some((s) => s.label === 'Fachada aérea'));
+  assert.ok(propiedad.some((s) => s.label === 'Órbita de la casa'));
+
+  const inmediato = logic.suggestionsForTarget(state, 'drone', { id: 'i', scale: 'inmediato' });
+  assert.ok(inmediato.every((s) => s.scale === 'inmediato'));
+  assert.ok(inmediato.some((s) => s.label === 'Calle y acceso'));
+
+  const ubicacion = logic.suggestionsForTarget(state, 'drone', { id: 'u', scale: 'ubicacion' });
+  assert.ok(ubicacion.every((s) => s.scale === 'ubicacion'));
+  assert.ok(ubicacion.some((s) => s.label === 'Ubicación en la ciudad'));
+});
+
+test('F34: suggestionsForTarget de un feature derivado devuelve su vocabulario aereo, must primero', () => {
+  const state = { guide: { tipoPropiedad: 'casa' } };
+  const alberca = logic.suggestionsForTarget(state, 'drone', { id: 'drone-feat-x', nombre: 'Alberca aérea', feature: 'alberca' });
+  assert.ok(alberca.length > 0, 'el feature alberca trae vocabulario');
+  assert.ok(alberca.every((s) => logic.getDroneShotTypes()[s.shotType]), 'todas son tomas aereas');
+
+  // Tambien se resuelve por nombre del espacio (sin feature explicito).
+  const porNombre = logic.aerialVocabForFeature('Alberca comun');
+  assert.ok(porNombre.length > 0);
+  assert.equal(logic.aerialFeatureKeyFromName('Jardin trasero'), 'jardin');
+  assert.equal(logic.aerialFeatureKeyFromName('Sala interior'), null);
+});
+
+test('F34: terreno tiene su lista unica de 14 tomas', () => {
+  const terreno = logic.AERIAL_POOL.filter((s) => s.tipos.includes('terreno'));
+  assert.equal(terreno.length, 14, 'terreno = 14 tomas');
+  const musts = terreno.filter((s) => s.must === true);
+  assert.equal(musts.length, 7, 'terreno tiene 7 must');
+  const labels = terreno.map((s) => s.label);
+  for (const esperado of [
+    'Cenital de límites', 'Establecimiento desde altura', 'Referencia de escala',
+    'Acceso / frente a calle', 'Vista que vende', 'Dónde iría la casa', 'Salida a contexto',
+  ]) {
+    assert.ok(labels.includes(esperado), 'terreno incluye must: ' + esperado);
+  }
+});
+
+test('F34: findSuggestion resuelve ids aereos viejos (compat) y tomas del pool nuevo', () => {
+  // id aereo viejo de AERIAL_SUBJECTS.
+  const viejo = logic.findSuggestion('aereo.alberca.cenital');
+  assert.ok(viejo, 'resuelve aereo.alberca.cenital');
+  assert.equal(viejo.id, 'aereo.alberca.cenital');
+
+  const viejo2 = logic.findSuggestion('aereo.fachada.establecimiento');
+  assert.ok(viejo2, 'resuelve aereo.fachada.establecimiento');
+
+  // toma del pool nuevo.
+  const nuevo = logic.findSuggestion('pool.aereo.salida_contexto');
+  assert.ok(nuevo, 'resuelve toma del pool nuevo');
+  assert.equal(nuevo.label, 'Salida a contexto');
+
+  // los no-existentes siguen siendo null.
+  assert.equal(logic.findSuggestion('aereo.no.existe'), null);
+});
+
+test('F34: suggestionsForTarget conserva el comportamiento viejo por nombre y por tipo', () => {
+  // Estado viejo: target sin scale ni feature, empareja por nombre (F17).
+  const state = logic.addSpacesFromText(logic.createDefaultState(), 'Fachada aerea');
+  const target = state.espacios[0];
+  const drone = logic.suggestionsForTarget(state, 'drone', target);
+  assert.ok(drone.some((s) => s.id === 'aereo.fachada.establecimiento'), 'sigue usando el vocabulario aereo viejo por nombre');
+
+  // Sin match por nombre cae al comportamiento por tipo de propiedad.
+  let s2 = logic.addSpacesFromText(logic.createDefaultState(), 'Cuarto raro');
+  s2.guide = Object.assign({}, s2.guide, { tipoPropiedad: 'casa' });
+  const drone2 = logic.suggestionsForTarget(s2, 'drone', s2.espacios[0]);
+  assert.deepEqual(drone2.map((x) => x.id), logic.suggestionsForDrone('casa').map((x) => x.id));
+});
+
+test('F34: version sigue siendo 1 (buildExport intacto)', () => {
+  const exp = logic.buildExport(logic.createDefaultState(), {});
+  assert.equal(exp.version, 1);
+});

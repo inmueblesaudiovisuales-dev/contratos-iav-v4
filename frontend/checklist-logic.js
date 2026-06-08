@@ -444,6 +444,140 @@
     terreno:      Object.freeze(['terreno_completo', 'perimetro_colindancias', 'cercania_vialidades', 'acceso_calle', 'entorno_colonia']),
   });
 
+  // ─── F34 — Escalas de drone ───────────────────────────────────────────────────
+  // El drone deja de ser un piso con pseudo-cuartos y pasa a ser una lane por
+  // escalas. ids sin acentos; labels con acentos. amenidades trae appliesWhen para
+  // que F35 decida (privada/coto/depto). Aditivo: no reemplaza nada.
+  const DRONE_SCALES = Object.freeze([
+    Object.freeze({ id: 'propiedad',  label: 'Propiedad' }),
+    Object.freeze({ id: 'amenidades', label: 'Amenidades', appliesWhen: Object.freeze(['privada', 'coto', 'departamento']) }),
+    Object.freeze({ id: 'inmediato',  label: 'Inmediato / colonia' }),
+    Object.freeze({ id: 'ubicacion',  label: 'Ubicación / contexto' }),
+  ]);
+
+  // ─── F34 — Pool de tomas aereas (EXTIENDE AERIAL_SUBJECTS, no lo reemplaza) ────
+  // Catalogo plano de tomas aereas sugeridas. Cada toma:
+  //   { id, label, shotType, movement, scale, must, tipos, situacional? }
+  //   - id: sin acentos; label: con acentos (texto visible).
+  //   - shotType: id de DRONE_SHOT_TYPES.
+  //   - scale: id de DRONE_SCALES.
+  //   - tipos: ['casa'|'quinta'|'departamento'|'terreno'|'all'].
+  //   - feature (opcional): asocia la toma al vocabulario aereo de un feature
+  //     derivado (alberca, jardin, roof…) para suggestionsForTarget de F35.
+  // SIN golden hour (se elimina del vocabulario sugerido nuevo; el sujeto viejo
+  // golden_hour permanece en AERIAL_SUBJECTS solo por compatibilidad de ids).
+  // Los ids aereos viejos (aereo.*) NO se tocan: siguen en AERIAL_SUBJECTS y
+  // findSuggestion debe resolverlos. Aqui usamos ids nuevos pool.aereo.* para no
+  // chocar con ellos.
+  const AERIAL_POOL = Object.freeze([
+    // ── Canonica: Salida a contexto (must en TODOS los tipos) ──────────────────
+    // La porta un target FIJO property-wide (scale 'propiedad'); es la toma de
+    // cierre / reveal en reversa. Absorbe los "Reveal de la casa/lote/quinta".
+    Object.freeze({ id: 'pool.aereo.salida_contexto', label: 'Salida a contexto', shotType: 'reveal_aereo', movement: 'pull_out', scale: 'propiedad', must: true, tipos: Object.freeze(['all']) }),
+
+    // ── Propiedad — property-wide (casa/quinta/departamento) ───────────────────
+    Object.freeze({ id: 'pool.aereo.fachada_aerea',      label: 'Fachada aérea',           shotType: 'establecimiento', movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.orbita_casa',        label: 'Órbita de la casa',       shotType: 'orbita',          movement: 'orbit',   scale: 'propiedad', must: true,  tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.cenital_giratorio',  label: 'Cenital giratorio',       shotType: 'cenital',         movement: 'orbit',   scale: 'propiedad', must: true,  tipos: Object.freeze(['casa', 'quinta']) }),
+    Object.freeze({ id: 'pool.aereo.contrapicado_fachada', label: 'Contrapicado de fachada', shotType: 'reveal_aereo', movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.orbita_ascendente',  label: 'Órbita ascendente',       shotType: 'orbita',          movement: 'orbit',   scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.fly_through',        label: 'Fly-through',              shotType: 'fly_through',     movement: 'travel',  scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.reveal_primer_plano', label: 'Reveal con primer plano', shotType: 'reveal_aereo',  movement: 'parallax',scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.reveal_barda',      label: 'Reveal sobre barda',       shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']), situacional: true }),
+    Object.freeze({ id: 'pool.aereo.roof_azotea',       label: 'Roof / azotea',            shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']), feature: 'roof' }),
+    Object.freeze({ id: 'pool.aereo.vista_que_vende',   label: 'Vista que vende',          shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.patio_jardin_alberca', label: 'Patio / jardín / alberca aéreo', shotType: 'cenital', movement: 'static', scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+
+    // Quinta — property-wide
+    Object.freeze({ id: 'pool.aereo.orbita_propiedad',  label: 'Órbita de la propiedad',   shotType: 'orbita',          movement: 'orbit',   scale: 'propiedad', must: true,  tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.alberca_palapa',    label: 'Alberca / palapa aérea',   shotType: 'cenital',         movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['quinta']), feature: 'alberca' }),
+    Object.freeze({ id: 'pool.aereo.casa_principal',    label: 'Casa principal / fachada aérea', shotType: 'establecimiento', movement: 'static', scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.jardines',          label: 'Jardines / áreas verdes',  shotType: 'cenital',         movement: 'static',  scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']), feature: 'jardin' }),
+    Object.freeze({ id: 'pool.aereo.cancha_cabanas',    label: 'Cancha / cabañas / área de evento', shotType: 'establecimiento', movement: 'static', scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.vista_terraza',     label: 'Vista desde terraza',      shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.reveal_vista',      label: 'Reveal de la vista',       shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['quinta', 'departamento']) }),
+
+    // Departamento — edificio (Propiedad)
+    Object.freeze({ id: 'pool.aereo.exterior_edificio', label: 'Exterior del edificio',    shotType: 'establecimiento', movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['departamento']) }),
+    Object.freeze({ id: 'pool.aereo.vista_altura',      label: 'La vista desde esa altura', shotType: 'reveal_aereo',   movement: 'tilt',    scale: 'propiedad', must: true,  tipos: Object.freeze(['departamento']) }),
+    Object.freeze({ id: 'pool.aereo.balcon_terraza',    label: 'El balcón / terraza desde fuera', shotType: 'reveal_aereo', movement: 'static', scale: 'propiedad', must: false, tipos: Object.freeze(['departamento']) }),
+
+    // ── Amenidades ─────────────────────────────────────────────────────────────
+    // Casa (si privada/coto)
+    Object.freeze({ id: 'pool.aereo.casa_club',         label: 'Casa club',                shotType: 'establecimiento', movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.alberca_comun',     label: 'Alberca común',            shotType: 'cenital',         movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['casa']), feature: 'alberca' }),
+    Object.freeze({ id: 'pool.aereo.areas_verdes',      label: 'Áreas verdes',             shotType: 'cenital',         movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['casa']), feature: 'jardin' }),
+    // Departamento (amenidades del edificio)
+    Object.freeze({ id: 'pool.aereo.roof_garden',       label: 'Roof garden / terraza común', shotType: 'reveal_aereo', movement: 'tilt',  scale: 'amenidades', must: true,  tipos: Object.freeze(['departamento']), feature: 'roof' }),
+    Object.freeze({ id: 'pool.aereo.alberca_comunes',   label: 'Alberca / áreas comunes',  shotType: 'cenital',         movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['departamento']), feature: 'alberca' }),
+    Object.freeze({ id: 'pool.aereo.lobby_acceso',      label: 'Lobby / acceso',           shotType: 'empuje_acceso',   movement: 'push_in', scale: 'amenidades', must: false, tipos: Object.freeze(['departamento']) }),
+
+    // ── Inmediato / colonia (targets fijos) ────────────────────────────────────
+    Object.freeze({ id: 'pool.aereo.calle_acceso',      label: 'Calle y acceso',           shotType: 'empuje_acceso',   movement: 'push_in', scale: 'inmediato', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.cuadra_vecindario', label: 'La cuadra / vecindario',   shotType: 'entorno',         movement: 'pan',     scale: 'inmediato', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.acceso_caseta',     label: 'Acceso / caseta / entrada', shotType: 'empuje_acceso',  movement: 'push_in', scale: 'inmediato', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.entorno_natural',   label: 'Entorno natural',          shotType: 'entorno',         movement: 'pan',     scale: 'inmediato', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.zona_colonia',      label: 'La zona / colonia',        shotType: 'entorno',         movement: 'pan',     scale: 'inmediato', must: true,  tipos: Object.freeze(['departamento']) }),
+    Object.freeze({ id: 'pool.aereo.la_calle',          label: 'La calle',                 shotType: 'entorno',         movement: 'pan',     scale: 'inmediato', must: false, tipos: Object.freeze(['departamento']) }),
+
+    // ── Ubicación / contexto (targets fijos) ───────────────────────────────────
+    Object.freeze({ id: 'pool.aereo.ubicacion_ciudad',  label: 'Ubicación en la ciudad',   shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['casa', 'departamento']) }),
+    Object.freeze({ id: 'pool.aereo.cercania_vialidades', label: 'Cercanía a vialidades',  shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['casa', 'departamento']) }),
+    Object.freeze({ id: 'pool.aereo.hito',              label: 'Hito',                     shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['casa', 'departamento']) }),
+    Object.freeze({ id: 'pool.aereo.como_se_llega',     label: 'Cómo se llega',            shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.ubicacion_regional', label: 'Ubicación regional',      shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['quinta']) }),
+
+    // ── Terreno — lista única (14; sin sesgo por subtipo) ──────────────────────
+    // Must (7): cenital de limites, establecimiento, referencia de escala,
+    // acceso/frente, vista que vende, donde iria la casa, salida a contexto.
+    Object.freeze({ id: 'pool.aereo.terreno.cenital_limites',  label: 'Cenital de límites',                shotType: 'cenital',        movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.establecimiento',  label: 'Establecimiento desde altura',      shotType: 'establecimiento',movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.referencia_escala', label: 'Referencia de escala',             shotType: 'establecimiento',movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.acceso_frente',    label: 'Acceso / frente a calle',           shotType: 'empuje_acceso',  movement: 'push_in', scale: 'inmediato', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.vista_que_vende',  label: 'Vista que vende',                   shotType: 'reveal_aereo',   movement: 'tilt',    scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.donde_iria_casa',  label: 'Dónde iría la casa',                shotType: 'cenital',        movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.salida_contexto',  label: 'Salida a contexto',                 shotType: 'reveal_aereo',   movement: 'pull_out',scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    // Opcionales (7).
+    Object.freeze({ id: 'pool.aereo.terreno.orbita',          label: 'Órbita del terreno',                shotType: 'orbita',         movement: 'orbit',   scale: 'propiedad', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.topografia',      label: 'Topografía / barrido lateral',      shotType: 'fly_through',    movement: 'travel',  scale: 'propiedad', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.fly_through',     label: 'Fly-through del lote',               shotType: 'fly_through',    movement: 'travel',  scale: 'propiedad', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.cercania_vialidades', label: 'Cercanía a vialidades',         shotType: 'entorno',        movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.hito',           label: 'Referencia a un hito',               shotType: 'entorno',        movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.entorno_vecino', label: 'Entorno / desarrollo vecino',        shotType: 'entorno',        movement: 'pan',     scale: 'inmediato', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.perimetro',      label: 'Perímetro / colindancias',           shotType: 'fly_through',    movement: 'travel',  scale: 'propiedad', must: false, tipos: Object.freeze(['terreno']) }),
+  ]);
+
+  // ─── F34 — Catalogo de movimientos "standout" reutilizables por feature ───────
+  // Vocabulario aereo compartido que un feature derivado (alberca, jardin, roof…)
+  // puede ofrecer. Cada entrada apunta a una toma del AERIAL_POOL por id; el
+  // vocabulario base es comun, sesgado por feature donde aplica.
+  const AERIAL_STANDOUT_MOVES = Object.freeze([
+    Object.freeze({ id: 'pool.aereo.cenital_giratorio',   feature: 'all' }),
+    Object.freeze({ id: 'pool.aereo.orbita_ascendente',   feature: 'all' }),
+    Object.freeze({ id: 'pool.aereo.fly_through',         feature: 'all' }),
+    Object.freeze({ id: 'pool.aereo.contrapicado_fachada', feature: 'fachada' }),
+    Object.freeze({ id: 'pool.aereo.reveal_primer_plano', feature: 'all' }),
+    Object.freeze({ id: 'pool.aereo.vista_terraza',      feature: 'terraza' }),
+    Object.freeze({ id: 'pool.aereo.reveal_vista',       feature: 'vista' }),
+    Object.freeze({ id: 'pool.aereo.reveal_barda',       feature: 'barda', situacional: true }),
+  ]);
+
+  // Vocabulario aereo por feature derivado (alberca, jardin, roof, terraza…).
+  // Tomas base comunes + sesgo por feature. Se usa en suggestionsForTarget para
+  // un target derivado de un espacio real (p. ej. "Alberca aérea").
+  const AERIAL_FEATURE_VOCAB = Object.freeze({
+    alberca: Object.freeze(['pool.aereo.patio_jardin_alberca', 'pool.aereo.alberca_palapa', 'pool.aereo.cenital_giratorio', 'pool.aereo.orbita_ascendente', 'pool.aereo.reveal_primer_plano']),
+    jardin:  Object.freeze(['pool.aereo.jardines', 'pool.aereo.cenital_giratorio', 'pool.aereo.fly_through', 'pool.aereo.reveal_primer_plano']),
+    roof:    Object.freeze(['pool.aereo.roof_garden', 'pool.aereo.roof_azotea', 'pool.aereo.vista_terraza', 'pool.aereo.reveal_vista', 'pool.aereo.orbita_ascendente']),
+    terraza: Object.freeze(['pool.aereo.vista_terraza', 'pool.aereo.reveal_vista', 'pool.aereo.cenital_giratorio']),
+    cancha:  Object.freeze(['pool.aereo.cancha_cabanas', 'pool.aereo.cenital_giratorio', 'pool.aereo.fly_through']),
+  });
+
+  // Indice id -> toma del pool, para resolver rapido (findSuggestion, vocab).
+  const AERIAL_POOL_INDEX = Object.freeze(
+    AERIAL_POOL.reduce((acc, shot) => { acc[shot.id] = shot; return acc; }, Object.create(null))
+  );
+
   const AMENITY_GUIDE = Object.freeze({
     alberca: { label: 'Alberca/piscina', shots: Object.freeze([
       { id: 'amenity.alberca.reveal',  nombre: 'Reveal del agua',             shotType: 'reveal',    movement: 'pull_out', enfoque: 'Reflejo y color del agua; empieza en el detalle y abre a la alberca completa.',priority: 'must' },
@@ -852,6 +986,49 @@
       .map((id) => ({ id, label: AERIAL_SUBJECTS[id].label, shots: Array.from(AERIAL_SUBJECTS[id].shots) }));
   }
 
+  // ─── F34 — Helpers del pool aereo (escalas / features) ────────────────────────
+  // must primero, conservando el orden relativo dentro de cada grupo.
+  function sortMustFirst(shots) {
+    const list = Array.isArray(shots) ? shots.slice() : [];
+    return list.sort((a, b) => (b.must === true ? 1 : 0) - (a.must === true ? 1 : 0));
+  }
+
+  // ¿Aplica esta toma al tipo de propiedad dado? ('all' aplica a todos.)
+  function aerialShotAppliesToTipo(shot, tipo) {
+    const tipos = shot && Array.isArray(shot.tipos) ? shot.tipos : [];
+    if (tipos.includes('all')) return true;
+    return tipo != null && tipos.includes(tipo);
+  }
+
+  // Tomas del pool de una escala dada, filtradas por tipo, must primero.
+  // La canonica "Salida a contexto" (tipos:'all') siempre entra en 'propiedad'.
+  function aerialPoolForScale(scale, tipo) {
+    const matches = AERIAL_POOL.filter((s) => s.scale === scale && aerialShotAppliesToTipo(s, tipo));
+    return sortMustFirst(matches);
+  }
+
+  // Vocabulario aereo de un feature derivado (alberca, jardin, roof…),
+  // resuelto a tomas del pool, must primero. featureKey puede ser un id de
+  // AERIAL_FEATURE_VOCAB o un nombre de espacio (se normaliza por keyword).
+  function aerialFeatureKeyFromName(nombre) {
+    const n = normNombre(nombre || '');
+    if (!n) return null;
+    if (n.includes('alberca') || n.includes('piscina')) return 'alberca';
+    if (n.includes('jardin') || n.includes('verde'))   return 'jardin';
+    if (n.includes('roof') || n.includes('azotea'))    return 'roof';
+    if (n.includes('terraza'))                          return 'terraza';
+    if (n.includes('cancha'))                           return 'cancha';
+    return null;
+  }
+
+  function aerialVocabForFeature(featureKey) {
+    const key = AERIAL_FEATURE_VOCAB[featureKey] ? featureKey : aerialFeatureKeyFromName(featureKey);
+    const ids = key ? AERIAL_FEATURE_VOCAB[key] : null;
+    if (!ids) return [];
+    const shots = ids.map((id) => AERIAL_POOL_INDEX[id]).filter(Boolean);
+    return sortMustFirst(shots);
+  }
+
   function findSuggestion(id, state) {
     const lib = getGuideLibrary();
     for (const cat of Object.values(lib)) {
@@ -866,6 +1043,14 @@
       const shot = entry.shots.find((s) => s.id === id);
       if (shot) return shot;
     }
+    // F34 — tambien escanea los sujetos aereos viejos (AERIAL_SUBJECTS) y el pool
+    // aereo nuevo (AERIAL_POOL). Aditivo: los ids aereos viejos (aereo.*) deben
+    // seguir siendo resolubles porque las tomas viejas los traen en suggestionId.
+    for (const subject of Object.values(AERIAL_SUBJECTS)) {
+      const shot = subject.shots.find((s) => s.id === id);
+      if (shot) return shot;
+    }
+    if (AERIAL_POOL_INDEX[id]) return AERIAL_POOL_INDEX[id];
     if (state) {
       const proposal = state.guide && state.guide.proposal;
       if (proposal && proposal.porCuarto) {
@@ -897,13 +1082,25 @@
   function suggestionsForTarget(state, mode, target) {
     let base;
     if (mode === 'drone') {
-      // F17 — si el sujeto (target) empareja con un sujeto aereo, usa su vocabulario
-      // aereo; si no (estado viejo, espacios sin sujeto aereo), conserva el
-      // comportamiento previo basado en el tipo de propiedad.
-      const aereas = target ? aerialSuggestionsForSubject(target.nombre) : [];
-      base = aereas.length
-        ? aereas
-        : suggestionsForDrone(state.guide ? state.guide.tipoPropiedad : null);
+      const tipo = state && state.guide ? state.guide.tipoPropiedad : null;
+      // F34 — target de drone nuevo (virtual): si trae feature derivado, usa el
+      // vocabulario aereo de ese feature; si trae scale, usa el pool de esa escala
+      // filtrado por tipo. must primero en ambos.
+      const feature = target ? (target.feature || target.featureKey || null) : null;
+      const scale = target ? target.scale : null;
+      if (feature) {
+        base = aerialVocabForFeature(feature);
+      } else if (scale) {
+        base = aerialPoolForScale(scale, tipo);
+      } else {
+        // F17 (retro-compat) — si el sujeto (target) empareja con un sujeto aereo
+        // viejo por nombre, usa su vocabulario aereo; si no (estado viejo, espacios
+        // sin sujeto aereo), conserva el comportamiento previo por tipo de propiedad.
+        const aereas = target ? aerialSuggestionsForSubject(target.nombre) : [];
+        base = aereas.length
+          ? aereas
+          : suggestionsForDrone(tipo);
+      }
     } else {
       const cat = target.categoria || detectCategoria(target.nombre);
       base = suggestionsForSpace(cat, target.nombre);
@@ -2434,6 +2631,11 @@
     DRONE_SHOT_TYPES,
     AERIAL_SUBJECTS,
     AERIAL_SUBJECTS_BY_PROPERTY,
+    DRONE_SCALES,
+    AERIAL_POOL,
+    AERIAL_POOL_INDEX,
+    AERIAL_STANDOUT_MOVES,
+    AERIAL_FEATURE_VOCAB,
     GUIDE_LIBRARY,
     DRONE_GUIDE,
     AMENITY_GUIDE,
@@ -2458,6 +2660,9 @@
     aerialSubjectFromName,
     aerialSuggestionsForSubject,
     suggestedAerialSubjects,
+    aerialPoolForScale,
+    aerialVocabForFeature,
+    aerialFeatureKeyFromName,
     DRONE_PISO,
     DRONE_PISOS,
     EXTERIOR_ZONAS,
