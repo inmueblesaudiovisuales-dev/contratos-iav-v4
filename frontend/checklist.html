@@ -783,6 +783,19 @@
     .cap-plano-chip.sel { border-color: var(--ink-2); box-shadow: 0 0 0 1px var(--ink-2); background: var(--tint); font-weight: 600; }
     .cap-plano-chip.done { color: var(--green); background: var(--green-soft); border-color: #BFE0CC; }
     .cap-plano-chip.done i { color: var(--green); }
+    /* F27 — linea "Etiqueta" de la toma recien grabada: colapsada (ranuras tappables),
+       se abre al tocar para mostrar los mismos chips/rejilla que la capa de sugeridas. */
+    .cap-lt { margin-top: var(--sp-2); }
+    .cap-lt-h { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-height: 44px; border: 1px solid var(--tint-line); border-radius: var(--radius); background: var(--card); padding: 0 var(--sp-3); text-align: left; }
+    .cap-lt-lbl { display: inline-flex; align-items: center; gap: 7px; font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); flex: none; }
+    .cap-lt-lbl i { font-size: 15px; color: var(--ink-3); }
+    .cap-lt-slots { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--ts-cap); color: var(--ink-1); }
+    .cap-lt-slots i { font-size: 15px; color: var(--ink-3); flex: none; }
+    .lt-slot { display: inline-flex; align-items: center; min-height: 44px; }
+    .lt-dot { color: var(--ink-3); }
+    .lt-empty { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-3); }
+    .lt-empty i { font-size: 13px; }
+    .lt-detail { margin-top: var(--sp-2); }
     /* "recién grabada": fundida con el flujo de tomas — strip contextual de acciones
        (favorita/buena/describir) sobre la última toma, anclado encima de la barra de
        acción. Superficie tintada continua (no card blanca de cuerpo completo) con un
@@ -936,6 +949,7 @@ let activeSugId = null;
 let pendingShotType = null;   // id de SHOT_TYPES seleccionado en la tira de sugerencias
 let pendingMovement = null;   // id de MOVEMENTS seleccionado
 let sugStripOpen = false;     // panel "Sugeridas" plegable (colapsado por defecto, F15/F16)
+let latestTagOpen = false;    // F27 — etiqueta plano/movimiento de la toma recien grabada (colapsado por defecto)
 let tagLibre = false;         // F16 — modo libre: detalle plano/movimiento sin sugerencia activa
 let configGuiaOpen = false;
 let guideConfigDraft = null;
@@ -2730,7 +2744,79 @@ function renderCapLatest(file) {
       <button class="cap-qbtn good${file.good ? ' on' : ''}" onclick="toggleBuena('${esc(file.id)}')"><i class="ti ti-check"></i>Buena</button>
     </div>
     ${noteHtml}
+    ${renderLatestTag(file)}
   </div>`;
+}
+
+// F27 — etiqueta de plano/movimiento de la toma RECIEN GRABADA (el file recibido).
+// Colapsado por defecto: dos ranuras tappables (Plano · Movimiento) con el valor actual
+// de la toma o un prompt tenue. Al tocar se despliegan los MISMOS componentes que
+// renderCapSugStrip (chips cap-plano-chip + rejilla cap-mv con MOV_SVGS). Edita la toma
+// ya grabada, no la proxima (pendingShotType/pendingMovement quedan intactos).
+function renderLatestTag(file) {
+  const movements = logic.getMovements();
+  const planoIds = (logic.CURATED_SHOT_TYPES || ['general', 'detalle']);
+  const movIds = (logic.CURATED_MOVEMENTS || ['push_in', 'pull_out', 'pan', 'tilt', 'travel', 'orbit', 'reveal']).filter((id) => movements[id]);
+
+  const planoCur = curatedPlano(file.shotType);
+  const movCur = curatedMovement(file.movement);
+  const planoSlot = planoCur ? esc(planoLabel(planoCur)) : '<span class="lt-empty"><i class="ti ti-plus"></i>plano</span>';
+  const movSlot = movCur ? esc((movements[movCur] || {}).label || movCur) : '<span class="lt-empty"><i class="ti ti-plus"></i>movimiento</span>';
+
+  let body = '';
+  if (latestTagOpen) {
+    const planoChips = planoIds.map((id) => {
+      const sel = planoCur === id;
+      return `<button class="chip cap-plano-chip${sel ? ' sel' : ''}" onclick="etiquetarPlanoToma('${esc(file.id)}','${esc(id)}')">${esc(planoLabel(id))}</button>`;
+    }).join('');
+    const movGrid = movIds.map((id) => {
+      const on = movCur === id;
+      const svg = MOV_SVGS[id] || '';
+      return `<button class="cap-mv${on ? ' mv-on' : ''}" onclick="etiquetarMovimientoToma('${esc(file.id)}','${esc(id)}')">${svg}<span>${esc((movements[id] || {}).label || id)}</span></button>`;
+    }).join('');
+    body = `<div class="cap-sug-detail lt-detail">
+      <div class="cap-mini-lbl">Plano</div>
+      <div class="chips cap-plano-chips">${planoChips}</div>
+      <div class="cap-mini-lbl" style="margin-top:12px">Movimiento</div>
+      <div class="cap-mvgrid">${movGrid}</div>
+    </div>`;
+  }
+
+  return `<div class="cap-lt">
+    <button class="cap-lt-h" onclick="toggleLatestTag()">
+      <span class="cap-lt-lbl"><i class="ti ti-tag"></i>Etiqueta</span>
+      <span class="cap-lt-slots">
+        <span class="lt-slot">${planoSlot}</span>
+        <span class="lt-dot">·</span>
+        <span class="lt-slot">${movSlot}</span>
+        <i class="ti ti-chevron-${latestTagOpen ? 'up' : 'down'}"></i>
+      </span>
+    </button>
+    ${body}
+  </div>`;
+}
+
+function toggleLatestTag() {
+  latestTagOpen = !latestTagOpen;
+  render();
+}
+
+// F27 — etiqueta el PLANO de la toma ya grabada (file). Persiste shotType en ese file via
+// logic.updateMediaFile (mismo camino que el panel "Etiquetar toma" F15). Tocar de nuevo
+// el mismo plano lo limpia (patron de seleccionarPlano). No toca pendingShotType.
+function etiquetarPlanoToma(fileId, id) {
+  const file = state.mediaFiles.find((f) => f.id === fileId);
+  const next = (file && curatedPlano(file.shotType) === id) ? null : id;
+  state = logic.updateMediaFile(state, fileId, { shotType: next });
+  scheduleSave(); render();
+}
+
+// F27 — etiqueta el MOVIMIENTO de la toma ya grabada (file). Persiste movement en ese file.
+function etiquetarMovimientoToma(fileId, mvId) {
+  const file = state.mediaFiles.find((f) => f.id === fileId);
+  const next = (file && curatedMovement(file.movement) === mvId) ? null : mvId;
+  state = logic.updateMediaFile(state, fileId, { movement: next });
+  scheduleSave(); render();
 }
 
 function pendingTakeLabel() {
