@@ -96,37 +96,6 @@
     .danger { border-color: #EDC2BC; background: var(--red-soft); color: var(--red); }
     .ghost { background: transparent; }
 
-    .mode-area { padding: 9px 14px 0; }
-    .mode-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; padding: 3px; background: var(--muted); border-radius: var(--radius); }
-    .mode-btn {
-      border: 0; background: transparent; border-radius: 6px;
-      min-height: 42px; text-align: center; padding: 0 4px; color: var(--ink-2);
-    }
-    .mode-btn strong { display: block; font-size: 11px; font-weight: 900; }
-    .mode-btn.active { background: var(--black); color: #fff; box-shadow: 0 2px 7px rgba(16,16,16,.16); }
-    .active-band {
-      margin-top: 6px; border-left: 3px solid var(--gold); background: var(--card);
-      padding: 7px 9px; display: flex; align-items: baseline; gap: 7px;
-    }
-    .active-band strong { flex: none; font-size: 11px; font-weight: 900; }
-    .active-band span { color: var(--ink-2); font-size: 10px; font-weight: 700; line-height: 1.35; }
-    .camera-strip {
-      margin-top: 6px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
-      padding: 8px 9px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    }
-    .camera-copy { min-width: 0; }
-    .camera-copy strong { display: block; font-size: 11px; font-weight: 900; }
-    .camera-copy span { display: block; margin-top: 2px; color: var(--ink-3); font-size: 9px; font-weight: 800; }
-    .camera-actions { display: flex; gap: 5px; flex: none; }
-    .mini-btn { min-height: 34px; border: 1px solid var(--line); border-radius: 6px; background: var(--page); padding: 0 8px; color: var(--ink-2); font-size: 9px; font-weight: 900; }
-
-    .tabs { padding: 8px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-    .tab {
-      border: 1px solid transparent; border-radius: var(--radius); background: transparent;
-      min-height: 38px; font-size: 11px; font-weight: 900; color: var(--ink-3);
-    }
-    .tab.active { border-color: var(--line); background: var(--card); color: var(--ink-1); }
-
     .content { padding: 0 14px; }
     .summary-card {
       background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
@@ -489,11 +458,6 @@
     .ob-folio { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,.5);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
     .ob-spacer { flex: 0 1 8px; min-width: 0; }
-    .ob-lane { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; flex: none;
-      border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
-      color: #fff; font-size: 13px; font-weight: 600; }
-    .ob-lane > i:first-child { font-size: 16px; color: var(--gold-leaf); }
-    .ob-chev { font-size: 15px; color: rgba(255,255,255,.5); }
     .ob-sync { display: inline-flex; align-items: center; gap: 5px; color: rgba(255,255,255,.55); font-size: 10px; font-weight: 600; flex: none; }
     .ob-sync .dot { width: 7px; height: 7px; }
     .demo-reset-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -586,8 +550,6 @@
 
     /* ===== Pantalla de entrada / selector de lane ===== */
     .lane-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 13px; font-weight: 500; }
-    .lane-name { margin: 20px 0; }
-    .lane-name label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
     .ob-lane i, .action-stack .btn i, .action-stack .primary i { font-size: 17px; }
     .action-stack .btn, .action-stack .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 
@@ -1139,19 +1101,6 @@ function laneReady() {
   // Armar cuartos igual que un contrato real recién creado.
   return hasLane();
 }
-function chooseLane(lane) {
-  state.modoActual = lane;
-  localStorage.setItem(laneKey(), lane);
-  ensureActiveMode();
-  const inicio = primerEnRecorrido(true) || primerEnRecorrido(false);
-  if (inicio) { activeRoomId = inicio; localStorage.setItem(roomKey(), inicio); }
-  cerrarModal();
-  render();
-  scheduleSave();
-}
-const LANE_ICON = { foto: 'camera', t360: 'rotate-360', video: 'video', drone: 'drone', asesor: 'microphone-2' };
-function laneIcon(lane) { return LANE_ICON[lane] || 'video'; }
-
 function activeServices() {
   return ['foto', 't360', 'video', 'drone', 'asesor'].filter((key) => state.servicios[key]);
 }
@@ -1422,19 +1371,6 @@ function bindNameInput() {
   name.oninput = () => localStorage.setItem('checklist_nombre', name.value.trim());
 }
 
-function renderHeader() {
-  const lane = SERVICE_UI[state.modoActual] ? SERVICE_UI[state.modoActual].short : 'Video';
-  return `<header class="topbar-onyx">
-    <span class="ob-brand"><span class="ob-logo">IAV</span>
-      <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span>${meta.folio ? `<span class="ob-folio">${esc(meta.folio)}</span>` : ''}</span>
-    </span>
-    <span class="ob-spacer"></span>
-    ${DEMO ? `<button class="demo-reset-btn" onclick="reiniciarDemo()" aria-label="Reiniciar demo" title="Reiniciar demo"><i class="ti ti-refresh"></i><span class="demo-reset-txt">Reiniciar demo</span></button>` : ''}
-    <button class="ob-lane" onclick="abrirLane()"><i class="ti ti-${laneIcon(state.modoActual)}"></i>${esc(lane)}<i class="ti ti-chevron-down ob-chev"></i></button>
-    <span class="ob-sync"><span class="dot" id="sync-dot"></span><span id="sync-label">en vivo</span></span>
-  </header>`;
-}
-
 function reiniciarDemo() {
   const prefix = 'checklist_';
   const suffix = '_demo';
@@ -1582,28 +1518,6 @@ function renderCoverageForRole() {
   return renderCoverage();
 }
 
-function abrirLane() {
-  const lanes = activeServices();
-  abrirModal(`<div class="sheet-head"><h2>Cambiar de servicio</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
-    <div class="lane-name" style="margin-bottom:12px"><label for="mi-nombre">Tu nombre</label>
-      <input class="field" id="mi-nombre" type="text" placeholder="Tu nombre" maxlength="30" value="${esc(localStorage.getItem('checklist_nombre') || '')}" oninput="localStorage.setItem('checklist_nombre', this.value.trim())"></div>
-    <div class="action-stack">${lanes.map((key) => `
-      <button class="${state.modoActual === key ? 'primary' : 'btn'}" onclick="chooseLane('${key}')"><i class="ti ti-${laneIcon(key)}"></i> ${esc(SERVICE_UI[key].short)}</button>`).join('')}
-      <button class="btn ghost" onclick="abrirSetup()"><i class="ti ti-home-cog"></i> Armar cuartos</button>
-      <button class="btn ghost" onclick="cerrarModal();abrirServicios()">Servicios contratados</button>
-    </div>`);
-}
-
-function renderModeArea() {
-  return `<section class="mode-area">
-    <div class="mode-grid">${activeServices().map((key) => `
-      <button class="mode-btn ${state.modoActual === key ? 'active' : ''}" aria-pressed="${state.modoActual === key}" onclick="setMode('${key}')">
-        <strong>${SERVICE_UI[key].short}</strong>
-      </button>
-    `).join('')}</div>
-  </section>`;
-}
-
 function isMediaMode() {
   return state.modoActual === 'video' || state.modoActual === 'drone';
 }
@@ -1611,23 +1525,6 @@ function isMediaMode() {
 function activeCamera() {
   const id = state.activeCameraByMode && state.activeCameraByMode[state.modoActual];
   return (state.cameras || []).find((camera) => camera.id === id);
-}
-
-function renderCameraStrip() {
-  const camera = activeCamera();
-  const sequence = camera && logic.getCameraSequence(state, camera.id);
-  return `<div class="camera-strip">
-    <div class="camera-copy"><strong>${esc(camera ? camera.label : 'Sin camara')}</strong><span>${sequence && sequence.nextToken ? `Siguiente ${esc(sequence.nextToken)}` : 'Inicia la secuencia antes de grabar'}</span></div>
-    <div class="camera-actions">
-      ${state.modoActual === 'video' ? '<button class="mini-btn" onclick="abrirCamaras()">Cambiar</button>' : ''}
-      <button class="mini-btn" onclick="abrirSecuencia()">${sequence && sequence.nextToken ? 'Nuevo tramo' : 'Iniciar'}</button>
-    </div>
-  </div>`;
-}
-
-function renderTabs() {
-  const tabs = [['captura', 'Capturar'], ['cierre', 'Cierre'], ['edicion', 'Edicion']];
-  return `<nav class="tabs" aria-label="Vista de bitacora">${tabs.map(([key, label]) => `<button class="tab ${activeView === key ? 'active' : ''}" aria-pressed="${activeView === key}" onclick="setView('${key}')">${label}</button>`).join('')}</nav>`;
 }
 
 function renderActiveView() {
@@ -2442,13 +2339,6 @@ function esPendiente(id, servicio) {
   if (!sp) return false;
   const st = (sp.estados[servicio] || {}).estado;
   return st !== 'hecho' && st !== 'no_aplica';
-}
-
-function primerEnRecorrido(soloPendiente) {
-  const servicio = state.modoActual;
-  const orden = recorridoTargets(servicio);
-  for (let i = 0; i < orden.length; i++) { if (!soloPendiente || esPendiente(orden[i], servicio)) return orden[i]; }
-  return null;
 }
 
 function siguienteCuarto(dir) {
@@ -4005,8 +3895,6 @@ function renderStateToken(key, stateValue) {
   return `<span class="state done ${key === 'video' ? 'video' : ''}">${SERVICE_UI[key].short}${order} listo</span>`;
 }
 
-function setMode(mode) { state.modoActual = mode; searchTerm = ''; render(); scheduleSave(); }
-function setView(view) { activeView = view; render(); }
 
 function abrirCamaras() {
   const cameras = (state.cameras || []).filter((camera) => camera.mode === state.modoActual);
