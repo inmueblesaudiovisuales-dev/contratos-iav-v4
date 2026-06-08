@@ -1088,7 +1088,16 @@
       // filtrado por tipo. must primero en ambos.
       const feature = target ? (target.feature || target.featureKey || null) : null;
       const scale = target ? target.scale : null;
-      if (feature) {
+      // F35 — sujeto terreno: expone la lista unica de 14 del pool aereo nuevo
+      // (must primero), no solo las 2 viejas. Se detecta por el marcador del sujeto
+      // o por tipoPropiedad terreno con el id del sujeto unico.
+      const esTerrenoSubject = target && (target.isTerrenoSubject === true
+        || (tipo === 'terreno' && target.id === TERRENO_SUBJECT_ID));
+      if (esTerrenoSubject) {
+        // Lista unica de 14 del terreno: tomas con tipo 'terreno' explicito (incluye
+        // su propia 'Salida a contexto'; no se suma la canonica 'all' para no duplicar).
+        base = sortMustFirst(AERIAL_POOL.filter((s) => Array.isArray(s.tipos) && s.tipos.includes('terreno')));
+      } else if (feature) {
         base = aerialVocabForFeature(feature);
       } else if (scale) {
         base = aerialPoolForScale(scale, tipo);
@@ -1355,18 +1364,19 @@
     return normNombre(espacio && espacio.zona) || 'interior';
   }
 
-  // F18 — camaras disponibles para un espacio segun su piso/zona:
-  //   piso Drone            -> solo camaras drone (los dos drones por defecto).
-  //   Exterior/Roof/Amenid. -> Sony/Osmo + drones.
-  //   interiores            -> solo Sony/Osmo (el drone NO aparece en interiores).
-  // La UI usa esto en el switch de camara del loop (reemplaza el filtro por rol de F14).
+  // F18/F35 — camaras disponibles para un target segun su naturaleza:
+  //   target de drone (kind:'drone' / piso Drone) -> solo camaras drone (los dos).
+  //   cualquier espacio de cuarto (interior/exterior/roof/amenidad) -> solo Sony/Osmo.
+  // F35 quita el HIBRIDO de F18: el drone ya NO se ofrece como camara en espacios
+  // exteriores/roof/amenidades de cuarto. El drone vive en su propia lane: sus
+  // camaras se dan a los targets kind:'drone' de droneScaleTargets (features aereos
+  // derivados + fijos + terreno). La UI usa esto en el switch de camara del loop.
   function camerasForEspacio(state, espacio) {
     const cameras = getCameras(state).filter((cam) => cam && cam.mode !== 'asesor');
     const drones = cameras.filter((cam) => cam.mode === 'drone');
     const terrestres = cameras.filter((cam) => cam.mode !== 'drone');
     const zona = zonaOfEspacio(espacio);
     if (zona === 'drone') return drones;
-    if (EXTERIOR_ZONAS.has(zona)) return terrestres.concat(drones);
     return terrestres;
   }
 
@@ -1385,6 +1395,11 @@
       clave: true,
       zona: 'exterior',
       piso: 'Exterior',
+      // F35 — el sujeto terreno es un target de drone (kind:'drone'); porta la lista
+      // unica de 14 del pool aereo nuevo via suggestionsForTarget. isTerrenoSubject
+      // es el marcador que el resolver usa para devolver las 14 (no solo las viejas).
+      kind: 'drone',
+      isTerrenoSubject: true,
       categoria: undefined,
       estados: blankEstados(),
     };
@@ -1393,6 +1408,125 @@
       subject,
       suggestions: aerialSuggestionsForSubject('terreno_completo'),
     };
+  }
+
+  // ─── F35 — Targets de drone derivados de espacios reales + targets fijos ──────
+  // Los targets de drone son VIRTUALES: se calculan al vuelo (droneScaleTargets) y
+  // NO se persisten en state.espacios (a diferencia de Terreno, que materializa UN
+  // sujeto). Si se materializaran reaparecerian como pseudo-cuartos en "Armar
+  // cuartos" y en los targets de video (que comparten state.espacios).
+
+  // ¿Es un espacio un target de drone preexistente (kind:'drone' / piso Drone)?
+  function _espacioDroneCompat(esp) {
+    return espacioEsDrone(esp);
+  }
+
+  // ¿Aplica la escala "amenidades"? Solo privada/coto/depto (por guide.tipoPropiedad)
+  // o cuando existan espacios reales de zona amenidades.
+  function droneAmenidadesAplica(state) {
+    const guide = state && state.guide ? state.guide : {};
+    const tipo = guide.tipoPropiedad;
+    if (tipo === 'departamento') return true;
+    if (guide.subtipoPropiedad === 'privada' || guide.subtipoPropiedad === 'coto') return true;
+    const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+    return espacios.some((esp) => esp && normNombre(esp.zona) === 'amenidades' && !_espacioDroneCompat(esp));
+  }
+
+  // F35 — Targets aereos DERIVADOS de los espacios exteriores/amenidad reales.
+  // Por cada espacio de zona exterior o amenidades (que NO sea ya un target de drone
+  // viejo ni el terreno-unico) genera su version aerea con su feature derivado del
+  // nombre, para que suggestionsForTarget le devuelva el vocabulario aereo de ese
+  // feature. NO genera para interiores. Si no hay alberca, no hay "Alberca aerea".
+  function droneFeatureTargets(state) {
+    const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+    const out = [];
+    espacios.forEach((esp) => {
+      if (!esp || typeof esp !== 'object') return;
+      if (esp.id === TERRENO_SUBJECT_ID) return;
+      if (_espacioDroneCompat(esp)) return;
+      const zona = normNombre(esp.zona);
+      const esAmenidad = zona === 'amenidades';
+      if (zona !== 'exterior' && !esAmenidad) return;
+      out.push({
+        id: 'drone-feat-' + esp.id,
+        nombre: (esp.nombre || 'Espacio') + ' aérea',
+        scale: esAmenidad ? 'amenidades' : 'propiedad',
+        kind: 'drone',
+        featOf: esp.id,
+        feature: aerialFeatureKeyFromName(esp.nombre) || undefined,
+        estados: blankEstados(),
+      });
+    });
+    return out;
+  }
+
+  // F35 — Targets FIJOS property-wide de la escala Propiedad (no dependen de
+  // espacios): Salida a contexto (must canonica de cierre), Fachada/Orbita,
+  // Cenital giratorio. Cada uno con su scale para que suggestionsForTarget resuelva.
+  function _droneFixedPropertyTargets() {
+    return [
+      { id: 'drone-fixed-salida-contexto', nombre: 'Salida a contexto', scale: 'propiedad', kind: 'drone', estados: blankEstados() },
+      { id: 'drone-fixed-fachada-orbita',  nombre: 'Fachada / Órbita',   scale: 'propiedad', kind: 'drone', estados: blankEstados() },
+      { id: 'drone-fixed-cenital-giratorio', nombre: 'Cenital giratorio', scale: 'propiedad', kind: 'drone', estados: blankEstados() },
+    ];
+  }
+
+  // F35 — Targets FIJOS de Inmediato / Ubicacion (del pool / DRONE_SCALES).
+  function _droneFixedContextTargets() {
+    return [
+      { id: 'drone-fixed-inmediato', nombre: 'Inmediato / colonia',  scale: 'inmediato', kind: 'drone', estados: blankEstados() },
+      { id: 'drone-fixed-ubicacion', nombre: 'Ubicación / contexto', scale: 'ubicacion', kind: 'drone', estados: blankEstados() },
+    ];
+  }
+
+  // F35 — Targets de la lane de drone. VIRTUAL (se calcula al vuelo, NO se persiste).
+  // Compone, de-dup por id:
+  //   (a) droneFeatureTargets (derivados de espacios reales);
+  //   (b) fijos property-wide de Propiedad (Salida a contexto, Fachada/Orbita, Cenital);
+  //   (c) fijos de Inmediato/Ubicacion;
+  //   (d) CAMINO DE COMPAT: los espacios kind:'drone' preexistentes (drone-piso
+  //       viejo + terreno-unico) y cualquier espacio con una toma de drone ya pegada,
+  //       para que sus mediaFiles NO se huerfanen al cargar (ver normalizeChecklistData).
+  // La escala Amenidades (en derivados/fijos) solo se incluye si aplica.
+  function droneScaleTargets(state) {
+    const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+    const mediaFiles = state && Array.isArray(state.mediaFiles) ? state.mediaFiles : [];
+    const cameras = state && Array.isArray(state.cameras) ? state.cameras : [];
+    const amenidades = droneAmenidadesAplica(state);
+
+    const result = [];
+    const seen = new Set();
+    const push = (t) => {
+      if (!t || !t.id || seen.has(t.id)) return;
+      if (t.scale === 'amenidades' && !amenidades) return;
+      seen.add(t.id);
+      result.push(t);
+    };
+
+    // (a) derivados de espacios reales.
+    droneFeatureTargets(state).forEach(push);
+    // (b) + (c) fijos.
+    _droneFixedPropertyTargets().forEach(push);
+    _droneFixedContextTargets().forEach(push);
+
+    // (d) camino de compat: espacios kind:'drone' preexistentes + cualquier espacio
+    // con una toma de drone pegada (incluye drone-piso viejo y el terreno-unico).
+    const droneCameraIds = new Set(cameras.filter((c) => c && c.mode === 'drone').map((c) => c.id));
+    const espaciosConTomaDrone = new Set(
+      mediaFiles
+        .filter((f) => f && f.kind === 'take' && f.targetId && droneCameraIds.has(f.cameraId))
+        .map((f) => f.targetId)
+    );
+    espacios.forEach((esp) => {
+      if (!esp || typeof esp !== 'object' || !esp.id) return;
+      if (seen.has(esp.id)) return;
+      if (_espacioDroneCompat(esp) || espaciosConTomaDrone.has(esp.id)) {
+        seen.add(esp.id);
+        result.push(esp);
+      }
+    });
+
+    return result;
   }
 
   // ─── F19 — Biblioteca de cuartos indexada por piso + tipo de propiedad ────────
@@ -1688,7 +1822,7 @@
       activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
       sequenceSegments: [],
       mediaFiles: [],
-      guide: { tipoPropiedad: null, descripcion: '', proposal: null },
+      guide: { tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false },
     };
   }
 
@@ -1744,7 +1878,29 @@
     if (data && (data.version === 2 || data.version === 3)) {
       const normalized = Object.assign(createDefaultState(), clone(data));
       normalized.servicios = Object.assign(clone(SERVICES_DEFAULT), normalized.servicios || {});
-      normalized.guide = Object.assign({ tipoPropiedad: null, descripcion: '', proposal: null }, normalized.guide || {});
+      normalized.guide = Object.assign({ tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false }, normalized.guide || {});
+      // F35 — migracion del default incluirDrone: el campo es nuevo. Si el estado
+      // entrante NO lo trae pero tiene rastro de drone (algun espacio kind:'drone' o
+      // algun mediaFile de camara drone), se normaliza a true; si no, queda false.
+      // Si ya viene el campo, se respeta. (El motor no conoce el rol; la UI lo
+      // enciende — pero un estado viejo con tomas de drone debe verse en la lane.)
+      const _guideEntrante = (data && typeof data.guide === 'object' && data.guide) ? data.guide : {};
+      if (!Object.prototype.hasOwnProperty.call(_guideEntrante, 'incluirDrone')) {
+        const _espaciosEntrantes = Array.isArray(data && data.espacios) ? data.espacios : [];
+        const _droneItemsEntrantes = Array.isArray(data && data.droneItems) ? data.droneItems : [];
+        const _camsEntrantes = Array.isArray(data && data.cameras) ? data.cameras : [];
+        const _droneCamIds = new Set(
+          _camsEntrantes.filter((c) => c && c.mode === 'drone').map((c) => c.id)
+          // los drones por defecto tambien cuentan como camara drone aunque no esten en data.cameras
+          .concat(['drone-dji', 'drone-mini-4-pro'])
+        );
+        const _filesEntrantes = Array.isArray(data && data.mediaFiles) ? data.mediaFiles : [];
+        const _hayRastroDrone =
+          _espaciosEntrantes.some((esp) => esp && (esp.kind === 'drone' || isDronePiso(esp.piso)))
+          || _droneItemsEntrantes.length > 0
+          || _filesEntrantes.some((f) => f && f.cameraId && _droneCamIds.has(f.cameraId));
+        normalized.guide.incluirDrone = !!_hayRastroDrone;
+      }
       normalized.espacios = (normalized.espacios || []).map((space, index) => ({
         id: space.id || makeId('esp'),
         nombre: space.nombre || 'Espacio sin nombre',
@@ -1916,7 +2072,12 @@
 
   function targetsForMode(state, mode) {
     if (mode === 'asesor') return state.asesorPuntos || [];
-    // drone comparte los mismos espacios que video (ya no usa droneItems).
+    // F35 — el drone ya NO comparte state.espacios: tiene targets VIRTUALES por
+    // escala (features aereos derivados + fijos + los kind:'drone' viejos del camino
+    // de compat). Esto conecta los targets virtuales con la captura, getSceneData y
+    // el bucle de validacion de normalizeChecklistData (que no huerfana las tomas
+    // viejas porque droneScaleTargets incluye los espacios kind:'drone' preexistentes).
+    if (mode === 'drone') return droneScaleTargets(state);
     return state.espacios || [];
   }
 
@@ -1976,6 +2137,17 @@
   }
 
   function targetIsNoAplica(state, mode, targetId) {
+    // F35 — los targets de drone son virtuales (no viven en state.espacios). Se
+    // resuelven via targetsForMode; un target virtual nunca esta 'no_aplica'. Para
+    // los targets de drone que SI son espacios (camino de compat) se respeta su
+    // estado drone como antes.
+    if (mode === 'drone') {
+      const target = targetsForMode(state, mode).find((entry) => entry.id === targetId);
+      if (!target) return true;
+      const espacio = state.espacios.find((entry) => entry.id === targetId);
+      if (!espacio) return false;
+      return ((espacio.estados && espacio.estados.drone) || {}).estado === 'no_aplica';
+    }
     const space = state.espacios.find((entry) => entry.id === targetId);
     if (!space) return true;
     const servicio = mode === 'drone' ? 'drone' : 'video';
@@ -2672,6 +2844,10 @@
     zonaOfEspacio,
     camerasForEspacio,
     terrenoSingleSubject,
+    droneAmenidadesAplica,
+    droneFeatureTargets,
+    droneScaleTargets,
+    targetsForMode,
     SPACE_LIBRARY_BY_FLOOR,
     SPACE_LIBRARY_INDEX,
     suggestedSpacesFor,

@@ -114,18 +114,26 @@ test('applies departamento template with interior and amenidades zones', () => {
 
 // ─── F2: drone comparte espacios (eliminar droneItems como entidad) ───────────
 
-test('F2: targetsForMode drone devuelve los mismos espacios que video', () => {
+// F35 — el drone YA NO comparte state.espacios: tiene targets virtuales por escala
+// (droneScaleTargets), no las espacios de video. El take de drone se registra contra
+// uno de esos targets (kind:'drone'). Antes (F2) registraba contra un espacio de
+// cuarto; ese modelo (drone-como-espacio) lo elimina F35 (ver decision arquitectonica
+// transversal del plan). La compat de tomas viejas se prueba en el test de migracion.
+test('F35: targetsForMode drone devuelve los targets virtuales de escala (no las espacios)', () => {
   let state = logic.createDefaultState();
-  state = logic.addSpacesFromText(state, 'Sala\nFachada');
-  // El drone registra contra un espacio (no contra droneItems).
+  state = logic.addSpacesFromText(state, 'Sala\nAlberca', { zona: 'exterior' });
+  const targets = logic.targetsForMode(state, 'drone');
+  // Ningun target de drone es una espacio de cuarto: todos son kind:'drone'.
+  assert.ok(targets.length > 0, 'hay targets de drone');
+  assert.ok(targets.every((t) => t.kind === 'drone'), 'todos los targets de drone son kind:drone');
+  // El take de drone se registra contra un target virtual (p. ej. el fijo de Salida a contexto).
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
-  const fachadaId = state.espacios.find((e) => e.nombre === 'Fachada').id;
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: fachadaId, kind: 'take' });
+  const salida = targets.find((t) => t.id === 'drone-fixed-salida-contexto');
+  assert.ok(salida, 'existe el target fijo Salida a contexto');
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: salida.id, kind: 'take' });
   const file = state.mediaFiles[state.mediaFiles.length - 1];
-  assert.equal(file.targetId, fachadaId, 'el target del drone es un espacio');
-  assert.equal(file.scene, 'Fachada');
-  // El estado de drone vive en el espacio.
-  assert.equal(state.espacios.find((e) => e.id === fachadaId).estados.drone.estado, 'hecho');
+  assert.equal(file.targetId, salida.id, 'el target del drone es un target virtual de escala');
+  assert.equal(file.scene, 'Salida a contexto');
   assert.deepEqual(state.droneItems, [], 'ya no hay droneItems como entidad');
 });
 
@@ -136,12 +144,16 @@ test('F2: blankEstados incluye el servicio drone', () => {
   assert.equal(state.espacios[0].estados.drone.estado, 'pendiente');
 });
 
-test('F2: getScenePath del drone usa ruta anidada como video', () => {
+// F35 — los targets de drone son virtuales y planos (features aereos + fijos), no la
+// jerarquia anidada de cuartos de video. getScenePath del drone resuelve el nombre
+// del target de escala. (Antes F2 reusaba la ruta anidada de espacios; ese modelo
+// drone-como-espacio lo elimina F35.)
+test('F35: getScenePath del drone resuelve el nombre del target virtual de escala', () => {
   let state = logic.createDefaultState();
-  state = logic.addSpacesFromText(state, 'Recamara principal\n  Bano principal');
-  const bano = state.espacios.find((e) => e.nombre === 'Bano principal');
-  const path = logic.getScenePath(state, bano.id, 'drone');
-  assert.equal(path, 'Recamara principal > Bano principal');
+  state = logic.addSpacesFromText(state, 'Alberca', { zona: 'exterior' });
+  const albercaId = state.espacios.find((e) => e.nombre === 'Alberca').id;
+  const path = logic.getScenePath(state, 'drone-feat-' + albercaId, 'drone');
+  assert.equal(path, 'Alberca aérea');
 });
 
 test('F2: migración droneItems->espacios preserva mediaFiles', () => {
@@ -332,12 +344,12 @@ test('buildExport incluye favorita y mantiene version 1', () => {
 test('registers discards and keeps camera counters independent', () => {
   let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala\nFachada');
   const salaId = state.espacios[0].id;
-  const fachadaId = state.espacios[1].id;
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
 
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'discard', discardReason: 'empty' });
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: fachadaId, kind: 'take' });
+  // F35 — el drone registra contra un target virtual de escala (no contra un espacio).
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-fixed-salida-contexto', kind: 'take' });
 
   assert.equal(state.mediaFiles[0].fileToken, 'PIB2819');
   assert.equal(state.mediaFiles[0].good, false);
@@ -353,7 +365,8 @@ test('inserts an omitted file and renumbers only later files in the same segment
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[0].id, kind: 'take' });
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: state.espacios[1].id, kind: 'take' });
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: state.espacios[2].id, kind: 'take' });
+  // F35 — el drone registra contra un target virtual de escala (no contra un espacio).
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-fixed-salida-contexto', kind: 'take' });
 
   const cocinaFileId = state.mediaFiles.find((file) => file.targetId === state.espacios[1].id).id;
   state = logic.insertOmittedMediaFile(state, cocinaFileId);
@@ -503,14 +516,15 @@ test('finds every nested descendant before deleting a space', () => {
   assert.deepEqual(new Set(descendants), new Set(state.espacios.map((space) => space.id)));
 });
 
-test('separates video and drone scenes with the same name for review', () => {
-  // Drone y video comparten el mismo espacio; getMediaSceneGroups las separa por modo.
+test('separates video and drone scenes for review', () => {
+  // F35 — video y drone ya no comparten espacio: el drone tiene targets virtuales.
+  // getMediaSceneGroups las separa por modo igual.
   let state = logic.addSpacesFromText(logic.createDefaultState(), 'Amenidades');
   const target = state.espacios[0];
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_20260517111742_0245_D' });
   state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: target.id, kind: 'take' });
-  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: target.id, kind: 'take' });
+  state = logic.registerMediaFile(state, { cameraId: 'drone-dji', targetId: 'drone-fixed-salida-contexto', kind: 'take' });
   state = logic.toggleMediaGood(state, state.mediaFiles[0].id);
 
   const groups = logic.getMediaSceneGroups(state);
@@ -1791,11 +1805,11 @@ test('F15: una toma LIBRE puede registrarse con shotType+movement sin sugerencia
   assert.equal(file.movement, 'travel');
   assert.equal(file.suggestionId, null, 'toma libre: sin sugerencia');
 
-  // Drone: mismo plano + movimiento.
+  // Drone: mismo plano + movimiento. F35 — registra contra un target virtual de escala.
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
   state = logic.registerMediaFile(state, {
     cameraId: 'drone-dji',
-    targetId: salaId,
+    targetId: 'drone-fixed-salida-contexto',
     kind: 'take',
     autor: 'Bruno',
     shotType: 'general',
@@ -1904,12 +1918,12 @@ test('F17: suggestionsForTarget en drone con sujeto sin match conserva el compor
 });
 
 test('F17 (C): buildExport lleva el label aereo por archivo de drone sin cambiar version:1', () => {
-  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Fachada aerea');
-  const fachadaId = state.espacios[0].id;
+  // F35 — el drone registra contra un target virtual de escala (no contra un espacio).
+  let state = logic.createDefaultState();
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
   state = logic.registerMediaFile(state, {
     cameraId: 'drone-dji',
-    targetId: fachadaId,
+    targetId: 'drone-fixed-fachada-orbita',
     kind: 'take',
     autor: 'Bruno',
     shotType: 'orbita',
@@ -1970,15 +1984,26 @@ test('F18: camerasForEspacio en interiores devuelve solo Sony/Osmo (sin drone)',
   assert.ok(!cams.some((c) => c.mode === 'asesor'), 'no incluye camaras de asesor');
 });
 
-test('F18: camerasForEspacio en exterior/roof/amenidades devuelve Sony/Osmo + dos drones', () => {
+// F35 — quita el HIBRIDO de F18: camerasForEspacio ya NO mete drone en espacios
+// exteriores/roof/amenidades de cuarto. El drone vive en su propia lane; sus camaras
+// se dan a los targets kind:'drone' de droneScaleTargets. Un espacio de cuarto (sea
+// cual sea su zona) solo recibe camaras terrestres (Sony/Osmo).
+test('F35: camerasForEspacio en exterior/roof/amenidades de cuarto NO incluye drone (solo Sony/Osmo)', () => {
   const state = logic.createDefaultState();
   for (const zona of ['exterior', 'roof', 'amenidades']) {
     const cams = logic.camerasForEspacio(state, { piso: 'Exterior', zona });
-    const drones = cams.filter((c) => c.mode === 'drone');
-    assert.equal(drones.length, 2, zona + ': incluye los dos drones');
+    assert.ok(!cams.some((c) => c.mode === 'drone'), zona + ': el drone NO aparece en espacios de cuarto');
     assert.ok(cams.some((c) => c.id === 'sony-main'), zona + ': incluye Sony');
     assert.ok(cams.some((c) => c.id === 'osmo-pocket-3'), zona + ': incluye Osmo');
   }
+});
+
+// F35 — las camaras drone SI se dan a un target kind:'drone' (los de droneScaleTargets).
+test('F35: camerasForEspacio en un target kind:drone devuelve solo los dos drones', () => {
+  const state = logic.createDefaultState();
+  const cams = logic.camerasForEspacio(state, { kind: 'drone', zona: 'exterior' });
+  assert.equal(cams.length, 2, 'solo los dos drones');
+  assert.ok(cams.every((c) => c.mode === 'drone'), 'todas son camaras drone');
 });
 
 test('F18: camerasForEspacio en el piso Drone devuelve solo los dos drones', () => {
@@ -2536,4 +2561,201 @@ test('F34: suggestionsForTarget conserva el comportamiento viejo por nombre y po
 test('F34: version sigue siendo 1 (buildExport intacto)', () => {
   const exp = logic.buildExport(logic.createDefaultState(), {});
   assert.equal(exp.version, 1);
+});
+
+// ─── F35 — derivar targets de drone de espacios reales + incluirDrone + migracion ─
+
+test('F35: createDefaultState trae guide.incluirDrone en false', () => {
+  const state = logic.createDefaultState();
+  assert.equal(state.guide.incluirDrone, false, 'default false (la UI lo enciende)');
+});
+
+test('F35: droneFeatureTargets deriva "Alberca aérea" y "Jardín aérea" cuando existen', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Alberca\nJardín\nFachada', { zona: 'exterior' });
+  const feats = logic.droneFeatureTargets(state);
+  const nombres = feats.map((t) => t.nombre);
+  assert.ok(nombres.includes('Alberca aérea'), 'deriva Alberca aérea');
+  assert.ok(nombres.includes('Jardín aérea'), 'deriva Jardín aérea');
+  // El feature derivado se infiere del nombre.
+  const alberca = feats.find((t) => t.nombre === 'Alberca aérea');
+  assert.equal(alberca.feature, 'alberca');
+  assert.equal(alberca.scale, 'propiedad');
+  assert.equal(alberca.kind, 'drone');
+  assert.ok(alberca.featOf, 'apunta al espacio del que deriva');
+});
+
+test('F35: droneFeatureTargets NO deriva interiores ni espacios inexistentes', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Sala\nCocina'); // zona interior por defecto
+  const feats = logic.droneFeatureTargets(state);
+  assert.equal(feats.length, 0, 'no deriva targets aereos de interiores');
+
+  // Sin alberca no hay "Alberca aérea".
+  let s2 = logic.createDefaultState();
+  s2 = logic.addSpacesFromText(s2, 'Jardín', { zona: 'exterior' });
+  const f2 = logic.droneFeatureTargets(s2);
+  assert.ok(!f2.some((t) => t.nombre === 'Alberca aérea'), 'sin alberca no hay Alberca aérea');
+  assert.ok(f2.some((t) => t.nombre === 'Jardín aérea'), 'pero si hay Jardín aérea');
+});
+
+test('F35: droneScaleTargets incluye derivados + fijos + kind:drone preexistentes, sin duplicados', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Alberca', { zona: 'exterior' });
+  // un espacio kind:'drone' preexistente (drone-piso viejo).
+  state.espacios.push({ id: 'old-drone-1', nombre: 'Fachada aerea vieja', kind: 'drone', zona: 'exterior', estados: {} });
+  const targets = logic.droneScaleTargets(state);
+  const ids = targets.map((t) => t.id);
+  // derivados.
+  const albercaId = state.espacios.find((e) => e.nombre === 'Alberca').id;
+  assert.ok(ids.includes('drone-feat-' + albercaId), 'incluye el feature derivado de la alberca');
+  // fijos property-wide + contexto.
+  assert.ok(ids.includes('drone-fixed-salida-contexto'), 'incluye Salida a contexto');
+  assert.ok(ids.includes('drone-fixed-fachada-orbita'), 'incluye Fachada/Órbita');
+  assert.ok(ids.includes('drone-fixed-cenital-giratorio'), 'incluye Cenital giratorio');
+  assert.ok(ids.includes('drone-fixed-inmediato'), 'incluye Inmediato');
+  assert.ok(ids.includes('drone-fixed-ubicacion'), 'incluye Ubicación');
+  // camino de compat.
+  assert.ok(ids.includes('old-drone-1'), 'incluye el espacio kind:drone preexistente');
+  // sin duplicados.
+  assert.equal(new Set(ids).size, ids.length, 'no hay ids duplicados');
+  // todos los targets de drone son kind:'drone'.
+  assert.ok(targets.every((t) => t.kind === 'drone'), 'todos los targets son kind:drone');
+});
+
+test('F35: escala amenidades presente solo donde aplica', () => {
+  // Departamento: amenidades aplica por tipo.
+  let depto = logic.createDefaultState();
+  depto.guide = Object.assign({}, depto.guide, { tipoPropiedad: 'departamento' });
+  depto = logic.addSpacesFromText(depto, 'Roof garden', { zona: 'amenidades' });
+  assert.equal(logic.droneAmenidadesAplica(depto), true, 'depto: amenidades aplica');
+  const tD = logic.droneScaleTargets(depto);
+  assert.ok(tD.some((t) => t.scale === 'amenidades'), 'depto incluye targets de amenidades');
+
+  // Casa sin subtipo ni espacios de amenidad: no aplica.
+  let casa = logic.createDefaultState();
+  casa.guide = Object.assign({}, casa.guide, { tipoPropiedad: 'casa' });
+  casa = logic.addSpacesFromText(casa, 'Jardín', { zona: 'exterior' });
+  assert.equal(logic.droneAmenidadesAplica(casa), false, 'casa simple: amenidades no aplica');
+  const tC = logic.droneScaleTargets(casa);
+  assert.ok(!tC.some((t) => t.scale === 'amenidades'), 'casa simple no incluye amenidades');
+
+  // Casa con un espacio real de zona amenidades: si aplica.
+  let casa2 = logic.createDefaultState();
+  casa2.guide = Object.assign({}, casa2.guide, { tipoPropiedad: 'casa' });
+  casa2 = logic.addSpacesFromText(casa2, 'Casa club', { zona: 'amenidades' });
+  assert.equal(logic.droneAmenidadesAplica(casa2), true, 'casa con amenidad real: aplica');
+});
+
+test('F35: targetsForMode("drone") devuelve droneScaleTargets (no state.espacios)', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Sala\nAlberca', { zona: 'exterior' });
+  const fromMode = logic.targetsForMode(state, 'drone').map((t) => t.id).sort();
+  const direct = logic.droneScaleTargets(state).map((t) => t.id).sort();
+  assert.deepEqual(fromMode, direct, 'targetsForMode drone == droneScaleTargets');
+  // y NO es state.espacios.
+  const espIds = state.espacios.map((e) => e.id);
+  assert.ok(!fromMode.some((id) => espIds.includes(id)), 'ningun target es un espacio de cuarto');
+  // video sigue devolviendo espacios.
+  assert.deepEqual(logic.targetsForMode(state, 'video'), state.espacios);
+});
+
+test('F35: camerasForEspacio NO mete drone en interiores ni en exteriores/roof/amenidades de cuarto', () => {
+  const state = logic.createDefaultState();
+  for (const zona of ['interior', 'exterior', 'roof', 'amenidades']) {
+    const cams = logic.camerasForEspacio(state, { zona });
+    assert.ok(!cams.some((c) => c.mode === 'drone'), zona + ': sin drone en espacio de cuarto');
+    assert.ok(cams.some((c) => c.id === 'sony-main'), zona + ': con Sony');
+  }
+  // SI da drones a un target kind:'drone'.
+  const droneCams = logic.camerasForEspacio(state, { kind: 'drone', zona: 'exterior' });
+  assert.equal(droneCams.length, 2, 'el target kind:drone recibe los dos drones');
+  assert.ok(droneCams.every((c) => c.mode === 'drone'));
+});
+
+test('F35: incluirDrone se infiere true al cargar estado viejo con drone (espacio kind:drone)', () => {
+  const viejo = {
+    version: 3,
+    espacios: [{ id: 'd1', nombre: 'Fachada aerea', kind: 'drone', zona: 'exterior', piso: 'Drone', estados: {} }],
+    mediaFiles: [],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  const norm = logic.normalizeChecklistData(viejo);
+  assert.equal(norm.guide.incluirDrone, true, 'se infiere true por espacio kind:drone');
+});
+
+test('F35: incluirDrone se infiere true al cargar estado viejo con mediaFile de camara drone', () => {
+  const viejo = {
+    version: 3,
+    espacios: [{ id: 'e1', nombre: 'Fachada', zona: 'exterior', piso: 'Exterior', estados: {} }],
+    mediaFiles: [{ id: 'm1', cameraId: 'drone-dji', targetId: 'e1', kind: 'take', fileToken: 'DJI0001' }],
+    cameras: [{ id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' }],
+    sequenceSegments: [],
+  };
+  const norm = logic.normalizeChecklistData(viejo);
+  assert.equal(norm.guide.incluirDrone, true, 'se infiere true por mediaFile de camara drone');
+});
+
+test('F35: incluirDrone se infiere false sin rastro de drone, y se respeta si ya viene', () => {
+  const sinDrone = {
+    version: 3,
+    espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
+    mediaFiles: [],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  assert.equal(logic.normalizeChecklistData(sinDrone).guide.incluirDrone, false, 'sin rastro -> false');
+
+  // Si ya trae el campo, se respeta aunque haya rastro.
+  const conCampo = {
+    version: 3,
+    guide: { tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false },
+    espacios: [{ id: 'd1', nombre: 'Aerea', kind: 'drone', zona: 'exterior', estados: {} }],
+    mediaFiles: [],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  assert.equal(logic.normalizeChecklistData(conCampo).guide.incluirDrone, false, 'campo presente se respeta');
+});
+
+test('F35 MIGRACION: estado viejo drone-piso + 1 toma -> la toma NO queda omitted y su target es alcanzable', () => {
+  const viejo = {
+    version: 3,
+    espacios: [
+      // pseudo-cuarto de drone viejo (F17/F18): kind:'drone' / piso 'Drone'.
+      { id: 'drone-old', nombre: 'Fachada aerea', kind: 'drone', zona: 'exterior', piso: 'Drone', estados: {} },
+    ],
+    cameras: [{ id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' }],
+    activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
+    sequenceSegments: [
+      { id: 'seg1', cameraId: 'drone-dji', counterWidth: 4, counterNext: 247, prefixHint: '' },
+    ],
+    mediaFiles: [
+      { id: 'm1', cameraId: 'drone-dji', targetId: 'drone-old', kind: 'take', segmentId: 'seg1', fileCounter: 246 },
+    ],
+  };
+  const norm = logic.normalizeChecklistData(viejo);
+  const file = norm.mediaFiles.find((f) => f.id === 'm1');
+  assert.ok(file, 'la toma sobrevive');
+  // (a) NO quedo omitted y conserva su targetId.
+  assert.equal(file.kind, 'take', 'la toma NO quedo omitted');
+  assert.equal(file.targetId, 'drone-old', 'conserva su targetId');
+  // (b) el target sigue siendo alcanzable via targetsForMode('drone').
+  const alcanzable = logic.targetsForMode(norm, 'drone').some((t) => t.id === 'drone-old');
+  assert.ok(alcanzable, 'el target viejo es alcanzable en la lane de drone');
+  // y se enciende incluirDrone para que la lane lo muestre.
+  assert.equal(norm.guide.incluirDrone, true, 'incluirDrone inferido true');
+});
+
+test('F35: el sujeto terreno expone las 14 tomas y version:1 intacto', () => {
+  const state = { guide: { tipoPropiedad: 'terreno' }, espacios: [] };
+  const terreno = logic.terrenoSingleSubject(state);
+  const sugs = logic.suggestionsForTarget(state, 'drone', terreno.subject);
+  assert.equal(sugs.length, 14, 'el sujeto terreno expone las 14 tomas del pool nuevo');
+  assert.equal(sugs.filter((s) => s.must === true).length, 7, '7 must, must primero');
+  assert.ok(sugs.slice(0, 7).every((s) => s.must === true), 'los 7 must van primero');
+
+  const exp = logic.buildExport(logic.createDefaultState(), {});
+  assert.equal(exp.version, 1, 'version:1 intacto');
 });
