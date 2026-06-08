@@ -201,3 +201,62 @@ test('catalogByZone terreno vacío', () => {
 - Modelo de datos / `version:1` / `normalizeChecklistData` intactos → invariantes + F44 compat. ✔
 - Terreno y drone intactos → invariantes + F43/F44 no-regresión. ✔
 - portal.html fuera de alcance → backlog. ✔
+
+---
+
+## Ronda de ajustes (feedback Bruno, 2026-06-08 — F45 motor, F46 UI)
+
+Feedback sobre el preview de F40–F44. Decisiones tomadas con Bruno:
+
+1. **Hoja "Agregar cuarto":** tocar el mosaico AGREGA (como hoy); cada mosaico con conteo ≥1 muestra un
+   **ícono de basura** para quitar uno de ese concepto (deshacer sin salir de la hoja).
+2. **Arranque rápido por piso:** el stepper "Pisos" define cuántos bloques aparecen; **cada bloque**
+   (Planta baja, Planta alta, Planta 3…) trae sus propios steppers Recámaras/Baños/Medios baños **y** sus
+   toggles de típicos (Sala/Comedor/Cocina) — "por piso también". **Fachada** queda como toggle general
+   (exterior). Resuelve "¿de qué piso es cada cosa?" desde el origen (sin auto-asignación sorpresa).
+3. **Mover de piso:** botón visible de "mover de piso" en cada renglón interior (reusa `cambiarPisoEspacio`).
+4. **Amenidades disponibles para casa** (y enriquecer quinta/depto): Alberca, Casa club, Gimnasio, Cancha,
+   Áreas verdes, Caseta, Asadores, Palapa, Cocina exterior, Jardines.
+5. **Nombres de piso unificados:** Planta baja / Planta alta / Planta 3 / Planta 4. "Agregar planta" agrega la
+   siguiente planta con este esquema (+ "Otro…" texto libre); se quitan las sugerencias legacy
+   (Sótano/Piso N/Exterior/Amenidades/Casa principal).
+6. **Secciones vacías discretas** (no caja-placeholder que parece rota) + **fallback de ícono real**
+   (no `ti-square`).
+7. **Arranque rápido colapsado** si ya hay cuartos en el estado.
+
+### F45 — Motor: amenidades para casa, `planSkeleton` por piso, naming de pisos (con tests)
+**Archivos:** `frontend/checklist-logic.js`, `frontend/checklist-logic.test.js`.
+
+- **`BASE_CONCEPTS.casa` gana zona amenidades** (Alberca, Casa club, Gimnasio, Cancha, Áreas verdes, Caseta,
+  Asadores, Palapa, Cocina exterior, Jardines) con íconos Tabler razonables; enriquecer quinta/depto con los que
+  falten (Caseta, Asadores, Palapa, Cocina exterior). `catalogByZone('casa').amenidades` deja de ser `[]`.
+- **`planSkeleton(tipo, spec)` nueva firma:** `spec = { floors: [{ rec, ban, med, opts:{Sala,Comedor,Cocina} }, …],
+  fachada: bool }`. `floors[i]` → piso `logic.floorLabel(i)`. Numeración de recámaras/baños/medios **global**
+  (PB primero, luego PA…) para que los nombres sean únicos e identificables (Recámara principal, Recámara 2, 3…).
+  Típicos (Sala/Comedor/Cocina) por piso según `opts`. `fachada` → exterior, una vez.
+- **`floorLabel(index)`** → 'Planta baja' (0), 'Planta alta' (1), 'Planta '+(i+1) (≥2). **`nextFloorName(pisos)`**
+  → el siguiente label no usado, saltando pisos drone.
+- **Tests:** `catalogByZone('casa').amenidades` incluye 'Caseta' y 'Alberca'; `planSkeleton` por-piso coloca las
+  recámaras en su piso y numera global; `floorLabel`/`nextFloorName` dan la secuencia esperada. Mantener 219+ verde.
+- **Gate motor** (ambos archivos) → PASA. **Commit:** `F45 — motor: amenidades casa, planSkeleton por piso, naming pisos (tests)`.
+
+### F46 — UI: arranque rápido por piso, basura en hoja, mover de piso, naming/limpieza
+**Archivos:** `frontend/checklist.html`.
+
+- **`renderArranqueRapido` por piso:** stepper "Pisos" arriba; un bloque por piso (`floorLabel`) con steppers
+  Recámaras/Baños/Medios baños + toggles Sala/Comedor/Cocina; toggle general Fachada. Estado UI
+  `qsValores = { floors:[{rec,ban,med,opts}], fachada }`; al cambiar "Pisos" crece/encoge `floors`. `generarEsqueleto`
+  llama la nueva `logic.planSkeleton(setupTipo, qsValores)` (idempotente por nombre). **`qsCollapsed = true`** por
+  defecto si `state.espacios` ya tiene cuartos.
+- **Hoja:** en `renderHojaAgregar`, cada mosaico con `cnt ≥ 1` muestra un botón de basura
+  (`onclick` → `quitarUnoDesdeHoja(zona, base)` que borra la última instancia de ese concepto en el ámbito).
+  Tocar el cuerpo del mosaico sigue llamando `agregarDesdeHoja`.
+- **Mover de piso:** en `setupRoomRow` (solo interior, no drone) un botón visible (ícono `ti-stairs`/`ti-arrows-up-down`)
+  → `cambiarPisoEspacio(id)` (modal existente). 
+- **`agregarPiso` unificado:** agrega `logic.nextFloorName(state.pisos)` directo (sin el modal de sugerencias
+  legacy); conservar una opción "Otro…" de texto libre. Quitar Exterior/Amenidades/Casa principal/Piso N de cualquier
+  lista de pisos.
+- **Secciones vacías discretas:** `.setup-sec-empty` como línea sutil (no caja). **Fallback de ícono** en
+  `setupRoomIcon`/`setupIconClass` → ícono real (p. ej. `ti-door` interior, `ti-building` amenidades) en vez de
+  `ti-square`. Cubrir en `SETUP_ICON_MAP` los íconos nuevos de amenidades (asadores/palapa/cocina exterior/jardines).
+- **Gate UI** → PASA. **Commit:** `F46 — UI: arranque rapido por piso, basura en hoja, mover de piso, naming/limpieza`.
