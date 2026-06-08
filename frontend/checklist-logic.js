@@ -8,7 +8,11 @@
   const CAMERA_DEFAULTS = [
     { id: 'sony-main', label: 'Sony principal', mode: 'video', kind: 'sony' },
     { id: 'osmo-pocket-3', label: 'Osmo Pocket 3', mode: 'video', kind: 'dji', optional: true },
-    { id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' },
+    // F18 (B) — dos drones por defecto, cada uno con su patron/consecutivo propio.
+    // Se conserva el id legacy 'drone-dji' (ahora DJI Air 3) para compatibilidad con
+    // estado viejo, contadores y la camara drone activa por defecto.
+    { id: 'drone-dji', label: 'DJI Air 3', mode: 'drone', kind: 'dji' },
+    { id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', mode: 'drone', kind: 'dji' },
     { id: 'sony-asesor', label: 'Sony FX30', mode: 'asesor', kind: 'sony', role: 'video' },
     { id: 'osmo-asesor', label: 'Osmo + DJI Mic', mode: 'asesor', kind: 'dji', role: 'audio' },
   ];
@@ -1105,7 +1109,82 @@
     return value || 'interior';
   }
 
-  const PISOS_DEFAULT = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades'];
+  const PISOS_DEFAULT = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades', 'Drone'];
+
+  // ─── F18 — Piso Drone + zonas exteriores + camara por zona ────────────────────
+  // El piso Drone es un piso especial cuyos espacios son sujetos aereos (F17). Se
+  // marca de forma robusta por el nombre del piso del espacio (campo `piso`).
+  const DRONE_PISO = 'Drone';
+  const DRONE_PISOS = new Set(['Drone', 'drone']);
+
+  // Zonas donde el drone es una camara valida ADEMAS de Sony/Osmo. Se leen del
+  // campo `zona` del espacio (normalizado por normNombre): exterior, roof y
+  // amenidades. 'roof' no es un valor canonico de `zona` hoy, pero se incluye por
+  // robustez ante datos que lo usen como zona.
+  const EXTERIOR_ZONAS = new Set(['exterior', 'roof', 'amenidades']);
+
+  // El terreno se representa como un sujeto unico (no lista de cuartos).
+  const TERRENO_SUBJECT_ID = 'terreno-unico';
+
+  function isDronePiso(piso) {
+    if (!piso) return false;
+    return DRONE_PISOS.has(piso) || normNombre(piso) === normNombre(DRONE_PISO);
+  }
+
+  // Devuelve true si el espacio vive en el piso Drone (sus tomas son aereas).
+  function espacioEsDrone(espacio) {
+    if (!espacio || typeof espacio !== 'object') return false;
+    if (espacio.kind === 'drone') return true;
+    return isDronePiso(espacio.piso);
+  }
+
+  // Zona normalizada del espacio para resolver la camara. Se lee el campo `piso`
+  // (para el piso Drone) y el campo `zona` (interior/exterior/amenidades), que es
+  // el campo real, siempre presente y normalizado por normalizeChecklistData.
+  function zonaOfEspacio(espacio) {
+    if (espacioEsDrone(espacio)) return 'drone';
+    return normNombre(espacio && espacio.zona) || 'interior';
+  }
+
+  // F18 — camaras disponibles para un espacio segun su piso/zona:
+  //   piso Drone            -> solo camaras drone (los dos drones por defecto).
+  //   Exterior/Roof/Amenid. -> Sony/Osmo + drones.
+  //   interiores            -> solo Sony/Osmo (el drone NO aparece en interiores).
+  // La UI usa esto en el switch de camara del loop (reemplaza el filtro por rol de F14).
+  function camerasForEspacio(state, espacio) {
+    const cameras = getCameras(state).filter((cam) => cam && cam.mode !== 'asesor');
+    const drones = cameras.filter((cam) => cam.mode === 'drone');
+    const terrestres = cameras.filter((cam) => cam.mode !== 'drone');
+    const zona = zonaOfEspacio(espacio);
+    if (zona === 'drone') return drones;
+    if (EXTERIOR_ZONAS.has(zona)) return terrestres.concat(drones);
+    return terrestres;
+  }
+
+  // F18 — Terreno como sujeto unico. Con guide.tipoPropiedad === 'terreno' el modelo
+  // representa un solo espacio "El terreno" en vez de lista de cuartos; sus
+  // sugerencias son las aereas del terreno (biblioteca aerea de F17).
+  function terrenoSingleSubject(state) {
+    const guide = state && state.guide ? state.guide : {};
+    const existing = (state && Array.isArray(state.espacios) ? state.espacios : [])
+      .find((esp) => esp && esp.id === TERRENO_SUBJECT_ID);
+    const subject = existing || {
+      id: TERRENO_SUBJECT_ID,
+      nombre: 'El terreno',
+      parentId: null,
+      orden: 1,
+      clave: true,
+      zona: 'exterior',
+      piso: 'Exterior',
+      categoria: undefined,
+      estados: blankEstados(),
+    };
+    return {
+      isTerreno: guide.tipoPropiedad === 'terreno',
+      subject,
+      suggestions: aerialSuggestionsForSubject('terreno_completo'),
+    };
+  }
 
   function pisoFromZona(zona) {
     if (zona === 'amenidades') return 'Amenidades';
@@ -2081,6 +2160,15 @@
     aerialSubjectFromName,
     aerialSuggestionsForSubject,
     suggestedAerialSubjects,
+    DRONE_PISO,
+    DRONE_PISOS,
+    EXTERIOR_ZONAS,
+    TERRENO_SUBJECT_ID,
+    isDronePiso,
+    espacioEsDrone,
+    zonaOfEspacio,
+    camerasForEspacio,
+    terrenoSingleSubject,
     findSuggestion,
     suggestionProgress,
     proposalShotsFor,

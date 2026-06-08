@@ -1924,3 +1924,113 @@ test('F17 (C): buildExport lleva el label aereo por archivo de drone sin cambiar
   assert.equal(archivo.tipoTomaLabel, logic.getDroneShotTypes()['orbita'].label, 'lleva el label aereo (Órbita)');
   assert.equal(archivo.tipoTomaLabel, 'Órbita');
 });
+
+// ─── F18 — piso Drone + camerasForEspacio por zona + dos drones + terreno ──────
+
+test('F18 (B): existen los dos drones por defecto, cada uno con su id propio', () => {
+  const drones = logic.CAMERA_DEFAULTS.filter((c) => c.mode === 'drone');
+  assert.equal(drones.length, 2, 'hay exactamente dos drones por defecto');
+  const labels = drones.map((c) => c.label);
+  assert.ok(labels.includes('DJI Air 3'), 'incluye DJI Air 3');
+  assert.ok(labels.includes('DJI Mini 4 Pro'), 'incluye DJI Mini 4 Pro');
+  const ids = drones.map((c) => c.id);
+  assert.ok(ids.includes('drone-dji'), 'conserva el id legacy drone-dji (Air 3)');
+  assert.ok(ids.includes('drone-mini-4-pro'), 'agrega el id del Mini 4 Pro');
+  assert.equal(new Set(ids).size, ids.length, 'cada drone tiene id (consecutivo) propio');
+
+  // En un estado nuevo, getCameras tambien expone ambos drones.
+  const state = logic.createDefaultState();
+  const droneState = logic.getCameras(state).filter((c) => c.mode === 'drone');
+  assert.equal(droneState.length, 2, 'getCameras expone los dos drones');
+});
+
+test('F18: el piso Drone se marca de forma robusta', () => {
+  assert.ok(logic.createDefaultState().pisos.includes('Drone'), 'el piso Drone existe en los pisos por defecto');
+  assert.ok(logic.isDronePiso('Drone'), 'Drone es piso drone');
+  assert.ok(logic.isDronePiso('drone'), 'reconoce variante en minusculas');
+  assert.ok(!logic.isDronePiso('Exterior'), 'Exterior no es piso drone');
+  assert.ok(!logic.isDronePiso(''), 'vacio no es piso drone');
+
+  assert.ok(logic.espacioEsDrone({ piso: 'Drone' }), 'espacio en piso Drone es aereo');
+  assert.ok(logic.espacioEsDrone({ kind: 'drone' }), 'espacio con kind drone es aereo');
+  assert.ok(!logic.espacioEsDrone({ piso: 'Piso 1', zona: 'interior' }), 'interior no es aereo');
+});
+
+test('F18: camerasForEspacio en interiores devuelve solo Sony/Osmo (sin drone)', () => {
+  const state = logic.createDefaultState();
+  const espacio = { piso: 'Piso 1', zona: 'interior' };
+  const cams = logic.camerasForEspacio(state, espacio);
+  assert.ok(cams.length > 0, 'hay camaras');
+  assert.ok(!cams.some((c) => c.mode === 'drone'), 'el drone NO aparece en interiores');
+  assert.ok(cams.some((c) => c.id === 'sony-main'), 'incluye Sony principal');
+  assert.ok(cams.some((c) => c.id === 'osmo-pocket-3'), 'incluye Osmo Pocket 3');
+  assert.ok(!cams.some((c) => c.mode === 'asesor'), 'no incluye camaras de asesor');
+});
+
+test('F18: camerasForEspacio en exterior/roof/amenidades devuelve Sony/Osmo + dos drones', () => {
+  const state = logic.createDefaultState();
+  for (const zona of ['exterior', 'roof', 'amenidades']) {
+    const cams = logic.camerasForEspacio(state, { piso: 'Exterior', zona });
+    const drones = cams.filter((c) => c.mode === 'drone');
+    assert.equal(drones.length, 2, zona + ': incluye los dos drones');
+    assert.ok(cams.some((c) => c.id === 'sony-main'), zona + ': incluye Sony');
+    assert.ok(cams.some((c) => c.id === 'osmo-pocket-3'), zona + ': incluye Osmo');
+  }
+});
+
+test('F18: camerasForEspacio en el piso Drone devuelve solo los dos drones', () => {
+  const state = logic.createDefaultState();
+  const cams = logic.camerasForEspacio(state, { piso: 'Drone', zona: 'exterior' });
+  assert.equal(cams.length, 2, 'solo los dos drones');
+  assert.ok(cams.every((c) => c.mode === 'drone'), 'todas son camaras drone');
+  const ids = cams.map((c) => c.id).sort();
+  assert.deepEqual(ids, ['drone-dji', 'drone-mini-4-pro']);
+});
+
+test('F18: terrenoSingleSubject representa un solo sujeto con sus tomas aereas', () => {
+  const terreno = logic.terrenoSingleSubject({ guide: { tipoPropiedad: 'terreno' }, espacios: [] });
+  assert.equal(terreno.isTerreno, true, 'detecta tipoPropiedad terreno');
+  assert.equal(terreno.subject.nombre, 'El terreno', 'sujeto unico "El terreno"');
+  assert.equal(terreno.subject.id, logic.TERRENO_SUBJECT_ID);
+  assert.ok(terreno.suggestions.length > 0, 'trae tomas sugeridas');
+  assert.ok(
+    terreno.suggestions.every((s) => logic.getDroneShotTypes()[s.shotType]),
+    'sus sugerencias usan el vocabulario aereo del terreno'
+  );
+
+  // Con otro tipo de propiedad, isTerreno es false (opt-in, no cambia el modelo).
+  const casa = logic.terrenoSingleSubject({ guide: { tipoPropiedad: 'casa' }, espacios: [] });
+  assert.equal(casa.isTerreno, false, 'casa no activa el sujeto unico');
+});
+
+test('F18: estado viejo sin piso Drone sigue cargando y conserva las tomas de drone', () => {
+  // Estado v3 sin piso Drone, con una toma de drone ya pegada a un espacio (F2).
+  const viejo = {
+    version: 3,
+    servicios: { foto: true, t360: true, video: true, drone: true },
+    pisos: ['Exterior', 'Piso 1'],
+    espacios: [
+      { id: 'e1', nombre: 'Fachada', zona: 'exterior', piso: 'Exterior', estados: {} },
+    ],
+    cameras: [{ id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' }],
+    activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
+    sequenceSegments: [
+      { id: 'seg1', cameraId: 'drone-dji', counterWidth: 4, counterNext: 247, prefixHint: '' },
+    ],
+    mediaFiles: [
+      { id: 'm1', cameraId: 'drone-dji', targetId: 'e1', kind: 'take', segmentId: 'seg1', fileCounter: 246 },
+    ],
+  };
+  const norm = logic.normalizeChecklistData(viejo);
+
+  // Migracion: el estado viejo carga y conserva sus pisos (sin forzar el piso Drone).
+  assert.deepEqual(norm.pisos, ['Exterior', 'Piso 1'], 'respeta los pisos del estado viejo');
+  // La toma de drone sigue pegada a su espacio.
+  const file = norm.mediaFiles.find((f) => f.id === 'm1');
+  assert.ok(file, 'la toma de drone no se pierde');
+  assert.equal(file.targetId, 'e1', 'sigue ligada a su espacio');
+  assert.equal(file.kind, 'take', 'sigue siendo una toma valida');
+  // El segundo drone por defecto se agrega de forma aditiva al cargar.
+  assert.ok(norm.cameras.some((c) => c.id === 'drone-mini-4-pro'), 'aparece el Mini 4 Pro al normalizar');
+  assert.ok(norm.cameras.some((c) => c.id === 'drone-dji'), 'conserva el drone legacy');
+});
