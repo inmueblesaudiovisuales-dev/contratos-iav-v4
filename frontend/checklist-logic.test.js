@@ -1811,3 +1811,116 @@ test('F15: una toma LIBRE puede registrarse con shotType+movement sin sugerencia
   const exported = out.archivos.find((a) => a.tipoToma === 'detalle');
   assert.equal(exported.movimientoLabel, 'Travel');
 });
+
+// ─── F17 — Biblioteca aerea + vocabulario aereo + sujetos de drone ─────────────
+
+test('F17: getDroneShotTypes expone el vocabulario aereo de tomas', () => {
+  const types = logic.getDroneShotTypes();
+  assert.ok(types && typeof types === 'object', 'devuelve un objeto');
+  for (const id of ['establecimiento', 'orbita', 'cenital', 'reveal_aereo', 'fly_through', 'empuje_acceso', 'entorno']) {
+    assert.ok(types[id], 'incluye el tipo aereo: ' + id);
+    assert.ok(typeof types[id].label === 'string' && types[id].label.length > 0, id + ' tiene label');
+  }
+  // Acentos en los labels visibles.
+  assert.equal(types.orbita.label, 'Órbita');
+  assert.equal(types.reveal_aereo.label, 'Reveal aéreo');
+});
+
+test('F17: AERIAL_SUBJECTS contiene los sujetos aereos definidos en el plan', () => {
+  const labels = Object.values(logic.AERIAL_SUBJECTS).map((s) => s.label);
+  for (const esperado of [
+    'Fachada aérea', 'Órbita de la casa', 'Entorno / colonia', 'Vista que vende',
+    'Jardín aéreo', 'Alberca aérea', 'Roof / terraza', 'Golden hour',
+    'Terreno completo', 'Perímetro / colindancias', 'Acceso / calle', 'Cercanía a vialidades',
+  ]) {
+    assert.ok(labels.includes(esperado), 'incluye el sujeto aereo: ' + esperado);
+  }
+  // Cada sujeto trae tomas aereas cuyo shotType vive en el vocabulario aereo.
+  const droneTypes = logic.getDroneShotTypes();
+  for (const subject of Object.values(logic.AERIAL_SUBJECTS)) {
+    assert.ok(subject.shots.length > 0, subject.label + ' tiene tomas');
+    for (const shot of subject.shots) {
+      assert.ok(droneTypes[shot.shotType], subject.label + ': shotType aereo valido ' + shot.shotType);
+    }
+  }
+});
+
+test('F17: aerialSuggestionsForSubject empareja por id y por nombre del espacio', () => {
+  const porId = logic.aerialSuggestionsForSubject('fachada_aerea');
+  assert.ok(porId.length > 0, 'por id devuelve tomas');
+  assert.ok(porId.some((s) => s.id === 'aereo.fachada.establecimiento'));
+
+  const porNombre = logic.aerialSuggestionsForSubject('Fachada aerea');
+  assert.deepEqual(porNombre.map((s) => s.id), porId.map((s) => s.id), 'por nombre empareja al mismo sujeto');
+
+  assert.deepEqual(logic.aerialSuggestionsForSubject('Cuarto interior sin sujeto aereo'), [], 'sin match devuelve vacio');
+});
+
+test('F17 (A): suggestedAerialSubjects sesga por tipo de propiedad', () => {
+  const casa = logic.suggestedAerialSubjects({}, 'casa').map((s) => s.id);
+  assert.ok(casa.includes('fachada_aerea') && casa.includes('orbita_casa'), 'casa sugiere fachada/orbita de la casa');
+
+  const depto = logic.suggestedAerialSubjects({}, 'departamento').map((s) => s.id);
+  assert.ok(depto.includes('roof_terraza') && depto.includes('entorno_colonia'), 'depto sugiere roof/entorno');
+
+  const quinta = logic.suggestedAerialSubjects({}, 'quinta').map((s) => s.id);
+  assert.ok(quinta.includes('terreno_completo') && quinta.includes('alberca_aerea'), 'quinta sugiere terreno/alberca');
+
+  const terreno = logic.suggestedAerialSubjects({}, 'terreno').map((s) => s.id);
+  assert.ok(terreno.includes('terreno_completo') && terreno.includes('perimetro_colindancias') && terreno.includes('cercania_vialidades'),
+    'terreno sugiere terreno completo/colindancias/vialidades');
+
+  // Tipo desconocido cae a casa.
+  assert.deepEqual(logic.suggestedAerialSubjects({}, 'inexistente').map((s) => s.id), casa);
+
+  // Sin tipo explicito usa el del guide.
+  const delGuide = logic.suggestedAerialSubjects({ guide: { tipoPropiedad: 'terreno' } }).map((s) => s.id);
+  assert.deepEqual(delGuide, terreno, 'toma el tipoPropiedad del guide cuando no se pasa argumento');
+});
+
+test('F17: suggestionsForTarget en modo drone devuelve las sugerencias aereas del sujeto', () => {
+  const state = logic.addSpacesFromText(logic.createDefaultState(), 'Fachada aerea');
+  const target = state.espacios[0];
+
+  const drone = logic.suggestionsForTarget(state, 'drone', target);
+  assert.ok(drone.some((s) => s.id === 'aereo.fachada.establecimiento'), 'usa el vocabulario aereo de la fachada');
+  assert.ok(drone.every((s) => logic.getDroneShotTypes()[s.shotType]), 'todas las sugerencias son aereas');
+
+  // Modo no-drone NO cambia: sigue usando las sugerencias de espacio.
+  const video = logic.suggestionsForTarget(state, 'video', target);
+  const baseVideo = logic.suggestionsForSpace(target.categoria || logic.detectCategoria(target.nombre), target.nombre);
+  assert.deepEqual(video.map((s) => s.id), baseVideo.map((s) => s.id), 'video conserva su comportamiento');
+});
+
+test('F17: suggestionsForTarget en drone con sujeto sin match conserva el comportamiento previo', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Cuarto raro');
+  state.guide = Object.assign({}, state.guide, { tipoPropiedad: 'casa' });
+  const target = state.espacios[0];
+
+  const drone = logic.suggestionsForTarget(state, 'drone', target);
+  const previo = logic.suggestionsForDrone('casa');
+  assert.deepEqual(drone.map((s) => s.id), previo.map((s) => s.id), 'cae al comportamiento previo por tipo de propiedad');
+});
+
+test('F17 (C): buildExport lleva el label aereo por archivo de drone sin cambiar version:1', () => {
+  let state = logic.addSpacesFromText(logic.createDefaultState(), 'Fachada aerea');
+  const fachadaId = state.espacios[0].id;
+  state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
+  state = logic.registerMediaFile(state, {
+    cameraId: 'drone-dji',
+    targetId: fachadaId,
+    kind: 'take',
+    autor: 'Bruno',
+    shotType: 'orbita',
+    movement: 'orbit',
+    suggestionId: 'aereo.orbita.completa',
+  });
+
+  const exp = logic.buildExport(state, { folio: 'IAV-1', nombreCliente: 'Cliente X' });
+  assert.equal(exp.version, 1, 'version sigue siendo 1');
+
+  const archivo = exp.archivos.find((a) => a.tipoToma === 'orbita');
+  assert.ok(archivo, 'hay un archivo de drone con shotType aereo');
+  assert.equal(archivo.tipoTomaLabel, logic.getDroneShotTypes()['orbita'].label, 'lleva el label aereo (Órbita)');
+  assert.equal(archivo.tipoTomaLabel, 'Órbita');
+});

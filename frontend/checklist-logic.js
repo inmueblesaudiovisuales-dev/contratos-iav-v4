@@ -358,6 +358,77 @@
     ]) },
   });
 
+  // ─── F17 — Vocabulario aereo propio (tomas de drone) ──────────────────────────
+  // Tipos de toma aereos, independientes de SHOT_TYPES (que es para video/foto).
+  // Aditivo: no reemplaza SHOT_TYPES ni MOVEMENTS; los ids no chocan con ellos.
+  const DRONE_SHOT_TYPES = Object.freeze({
+    establecimiento: { label: 'Establecimiento',  hint: 'Encuadra la propiedad completa desde altura media.' },
+    orbita:          { label: 'Órbita',           hint: 'Vuelo circular alrededor del sujeto.' },
+    cenital:         { label: 'Cenital',          hint: 'Top-down mostrando dimensión y distribución.' },
+    reveal_aereo:    { label: 'Reveal aéreo',     hint: 'El sujeto se descubre subiendo o avanzando.' },
+    fly_through:     { label: 'Fly-through',      hint: 'Vuelo continuo a baja altura cruzando el espacio.' },
+    empuje_acceso:   { label: 'Empuje al acceso', hint: 'Desciende y avanza hacia el acceso principal.' },
+    entorno:         { label: 'Entorno',          hint: 'Paneo de contexto: colonia, vialidades, plusvalía.' },
+  });
+
+  // ─── F17 — Biblioteca de sujetos aereos ───────────────────────────────────────
+  // Cada sujeto trae sus tomas aereas sugeridas (shotType apunta a DRONE_SHOT_TYPES).
+  // keywords sirven para emparejar el nombre de un espacio del piso Drone con su sujeto.
+  const AERIAL_SUBJECTS = Object.freeze({
+    fachada_aerea: { label: 'Fachada aérea', keywords: ['fachada'], shots: Object.freeze([
+      { id: 'aereo.fachada.establecimiento', nombre: 'Establecimiento de fachada', shotType: 'establecimiento', movement: 'static',  enfoque: 'Propiedad completa desde altura media.',          priority: 'must' },
+      { id: 'aereo.fachada.empuje',          nombre: 'Empuje hacia la fachada',    shotType: 'empuje_acceso',   movement: 'push_in', enfoque: 'Desciende y avanza hacia el frente.',              priority: 'nice' },
+    ]) },
+    orbita_casa: { label: 'Órbita de la casa', keywords: ['orbita', 'órbita', 'casa'], shots: Object.freeze([
+      { id: 'aereo.orbita.completa', nombre: 'Órbita 360 grados', shotType: 'orbita', movement: 'orbit', enfoque: 'Órbita completa alrededor de la propiedad.', priority: 'must' },
+      { id: 'aereo.orbita.cenital',  nombre: 'Cenital del lote',  shotType: 'cenital',movement: 'static',enfoque: 'Top-down mostrando distribución del terreno.', priority: 'nice' },
+    ]) },
+    entorno_colonia: { label: 'Entorno / colonia', keywords: ['entorno', 'colonia', 'ubicacion', 'ubicación', 'vecindario'], shots: Object.freeze([
+      { id: 'aereo.entorno.paneo',   nombre: 'Paneo de contexto', shotType: 'entorno', movement: 'pan', enfoque: 'Colonia, vialidades y plusvalía del sector.', priority: 'must' },
+    ]) },
+    vista_que_vende: { label: 'Vista que vende', keywords: ['vista'], shots: Object.freeze([
+      { id: 'aereo.vista.reveal', nombre: 'Reveal de la vista', shotType: 'reveal_aereo', movement: 'tilt', enfoque: 'Descubre la vista panorámica como argumento de venta.', priority: 'must' },
+    ]) },
+    jardin_aereo: { label: 'Jardín aéreo', keywords: ['jardin', 'jardín'], shots: Object.freeze([
+      { id: 'aereo.jardin.cenital',     nombre: 'Cenital del jardín',     shotType: 'cenital',     movement: 'static', enfoque: 'Top-down mostrando extensión de las áreas verdes.', priority: 'must' },
+      { id: 'aereo.jardin.flythrough',  nombre: 'Fly-through del jardín',  shotType: 'fly_through', movement: 'travel', enfoque: 'Vuela a baja altura entre la vegetación.',          priority: 'nice' },
+    ]) },
+    alberca_aerea: { label: 'Alberca aérea', keywords: ['alberca', 'piscina'], shots: Object.freeze([
+      { id: 'aereo.alberca.cenital', nombre: 'Cenital de la alberca', shotType: 'cenital', movement: 'static', enfoque: 'Top-down sobre el vaso y el área social.', priority: 'must' },
+      { id: 'aereo.alberca.reveal',  nombre: 'Reveal del agua',       shotType: 'reveal_aereo', movement: 'pull_out', enfoque: 'Aleja ascendiendo descubriendo la alberca.', priority: 'nice' },
+    ]) },
+    roof_terraza: { label: 'Roof / terraza', keywords: ['roof', 'terraza', 'azotea'], shots: Object.freeze([
+      { id: 'aereo.roof.reveal',  nombre: 'Reveal de la terraza', shotType: 'reveal_aereo', movement: 'tilt',  enfoque: 'Descubre el roof y su vista.',           priority: 'must' },
+      { id: 'aereo.roof.orbita',  nombre: 'Órbita del roof',      shotType: 'orbita',       movement: 'orbit', enfoque: 'Órbita cerrada al nivel de la terraza.', priority: 'nice' },
+    ]) },
+    golden_hour: { label: 'Golden hour', keywords: ['golden', 'atardecer'], shots: Object.freeze([
+      { id: 'aereo.golden.establecimiento', nombre: 'Establecimiento al atardecer', shotType: 'establecimiento', movement: 'static', enfoque: 'Luz cálida del atardecer sobre la propiedad.', priority: 'must' },
+      { id: 'aereo.golden.orbita',          nombre: 'Órbita con sol bajo',          shotType: 'orbita',         movement: 'orbit',  enfoque: 'Órbita aprovechando los reflejos de la hora dorada.', priority: 'nice' },
+    ]) },
+    terreno_completo: { label: 'Terreno completo', keywords: ['terreno'], shots: Object.freeze([
+      { id: 'aereo.terreno.cenital',         nombre: 'Cenital de límites',          shotType: 'cenital',        movement: 'static', enfoque: 'Top-down mostrando forma y dimensión del lote.', priority: 'must' },
+      { id: 'aereo.terreno.establecimiento', nombre: 'Establecimiento desde altura', shotType: 'establecimiento', movement: 'static', enfoque: 'Muestra el terreno en su contexto.',             priority: 'must' },
+    ]) },
+    perimetro_colindancias: { label: 'Perímetro / colindancias', keywords: ['perimetro', 'perímetro', 'colindancia', 'colindancias'], shots: Object.freeze([
+      { id: 'aereo.perimetro.vuelo', nombre: 'Vuelo de perímetro', shotType: 'fly_through', movement: 'travel', enfoque: 'Recorre el perímetro mostrando colindancias.', priority: 'must' },
+    ]) },
+    acceso_calle: { label: 'Acceso / calle', keywords: ['acceso', 'calle', 'entrada'], shots: Object.freeze([
+      { id: 'aereo.acceso.empuje', nombre: 'Empuje al acceso', shotType: 'empuje_acceso', movement: 'push_in', enfoque: 'Desciende hacia el acceso principal desde la calle.', priority: 'must' },
+    ]) },
+    cercania_vialidades: { label: 'Cercanía a vialidades', keywords: ['vialidad', 'vialidades', 'avenida', 'carretera'], shots: Object.freeze([
+      { id: 'aereo.vialidades.entorno', nombre: 'Entorno de vialidades', shotType: 'entorno', movement: 'pan', enfoque: 'Muestra cercanía a avenidas y conectividad.', priority: 'must' },
+    ]) },
+  });
+
+  // ─── F17 (A) — Sesgo de sujetos aereos por tipo de propiedad ──────────────────
+  // Ids de AERIAL_SUBJECTS en orden de prioridad por tipo. casa es el fallback.
+  const AERIAL_SUBJECTS_BY_PROPERTY = Object.freeze({
+    casa:         Object.freeze(['fachada_aerea', 'orbita_casa', 'jardin_aereo', 'entorno_colonia', 'vista_que_vende', 'golden_hour']),
+    departamento: Object.freeze(['fachada_aerea', 'roof_terraza', 'entorno_colonia', 'vista_que_vende', 'golden_hour']),
+    quinta:       Object.freeze(['terreno_completo', 'alberca_aerea', 'jardin_aereo', 'orbita_casa', 'entorno_colonia']),
+    terreno:      Object.freeze(['terreno_completo', 'perimetro_colindancias', 'cercania_vialidades', 'acceso_calle', 'entorno_colonia']),
+  });
+
   const AMENITY_GUIDE = Object.freeze({
     alberca: { label: 'Alberca/piscina', shots: Object.freeze([
       { id: 'amenity.alberca.reveal',  nombre: 'Reveal del agua',             shotType: 'reveal',    movement: 'pull_out', enfoque: 'Reflejo y color del agua; empieza en el detalle y abre a la alberca completa.',priority: 'must' },
@@ -508,6 +579,8 @@
   function getDroneGuide()     { return _effectiveDroneGuide     || DRONE_GUIDE; }
   function getAmenityGuide()   { return _effectiveAmenityGuide   || AMENITY_GUIDE; }
   function getRoomCategories() { return _effectiveRoomCategories || ROOM_CATEGORIES; }
+  // F17 — el vocabulario aereo no es configurable por ahora; devuelve la constante.
+  function getDroneShotTypes() { return DRONE_SHOT_TYPES; }
 
   function getCameras(state) {
     const result = CAMERA_DEFAULTS.map((camera) => Object.assign({}, camera));
@@ -726,6 +799,43 @@
     return Array.from((droneLib[tipoPropiedad] || droneLib.casa).shots);
   }
 
+  // ─── F17 — Sujetos aereos: emparejado por nombre y sugerencias aereas ─────────
+  // Devuelve el id del sujeto aereo cuyo keyword aparezca en el nombre del espacio.
+  function aerialSubjectFromName(nombre) {
+    const n = normNombre(nombre || '');
+    if (!n) return null;
+    const words = new Set(n.split(' ').filter(Boolean));
+    for (const [id, subject] of Object.entries(AERIAL_SUBJECTS)) {
+      for (const kw of subject.keywords) {
+        const kwNorm = normNombre(kw);
+        if (kwNorm.includes(' ') ? n.includes(kwNorm) : words.has(kwNorm)) return id;
+      }
+    }
+    return null;
+  }
+
+  // Sugerencias aereas (tomas) de un sujeto dado: por id o por nombre del espacio.
+  function aerialSuggestionsForSubject(subjectOrName) {
+    if (!subjectOrName) return [];
+    const direct = AERIAL_SUBJECTS[subjectOrName];
+    if (direct) return Array.from(direct.shots);
+    const matchedId = aerialSubjectFromName(subjectOrName);
+    if (matchedId) return Array.from(AERIAL_SUBJECTS[matchedId].shots);
+    return [];
+  }
+
+  // F17 (A) — sesgo por tipo de propiedad: devuelve la lista ordenada de sujetos
+  // aereos sugeridos { id, label, shots }. Si no se pasa tipo, usa el del guide.
+  function suggestedAerialSubjects(state, tipoPropiedad) {
+    const tipo = tipoPropiedad != null
+      ? tipoPropiedad
+      : (state && state.guide ? state.guide.tipoPropiedad : null);
+    const ids = AERIAL_SUBJECTS_BY_PROPERTY[tipo] || AERIAL_SUBJECTS_BY_PROPERTY.casa;
+    return ids
+      .filter((id) => AERIAL_SUBJECTS[id])
+      .map((id) => ({ id, label: AERIAL_SUBJECTS[id].label, shots: Array.from(AERIAL_SUBJECTS[id].shots) }));
+  }
+
   function findSuggestion(id, state) {
     const lib = getGuideLibrary();
     for (const cat of Object.values(lib)) {
@@ -771,7 +881,13 @@
   function suggestionsForTarget(state, mode, target) {
     let base;
     if (mode === 'drone') {
-      base = suggestionsForDrone(state.guide ? state.guide.tipoPropiedad : null);
+      // F17 — si el sujeto (target) empareja con un sujeto aereo, usa su vocabulario
+      // aereo; si no (estado viejo, espacios sin sujeto aereo), conserva el
+      // comportamiento previo basado en el tipo de propiedad.
+      const aereas = target ? aerialSuggestionsForSubject(target.nombre) : [];
+      base = aereas.length
+        ? aereas
+        : suggestionsForDrone(state.guide ? state.guide.tipoPropiedad : null);
     } else {
       const cat = target.categoria || detectCategoria(target.nombre);
       base = suggestionsForSpace(cat, target.nombre);
@@ -1810,7 +1926,13 @@
       const espacio = (servicio === 'drone' || servicio === 'asesor') ? null : (state.espacios || []).find((e) => e.id === f.targetId);
 
       const tipoToma = f.shotType || null;
-      const tipoTomaLabel = tipoToma && shotTypes[tipoToma] ? shotTypes[tipoToma].label : null;
+      // F17 (C) — resuelve el label contra SHOT_TYPES (video) o, si es un tipo
+      // aereo de drone, contra DRONE_SHOT_TYPES. Aditivo: no cambia version:1.
+      const droneShotTypes = getDroneShotTypes();
+      const tipoTomaLabel = tipoToma
+        ? (shotTypes[tipoToma] ? shotTypes[tipoToma].label
+          : (droneShotTypes[tipoToma] ? droneShotTypes[tipoToma].label : null))
+        : null;
       const movimiento = f.movement || null;
       const movimientoLabel = movimiento && movements[movimiento] ? movements[movimiento].label : null;
       const sugerencia = f.suggestionId || null;
@@ -1932,6 +2054,9 @@
     MOVEMENTS,
     CURATED_SHOT_TYPES,
     CURATED_MOVEMENTS,
+    DRONE_SHOT_TYPES,
+    AERIAL_SUBJECTS,
+    AERIAL_SUBJECTS_BY_PROPERTY,
     GUIDE_LIBRARY,
     DRONE_GUIDE,
     AMENITY_GUIDE,
@@ -1944,6 +2069,7 @@
     getDroneGuide,
     getAmenityGuide,
     getRoomCategories,
+    getDroneShotTypes,
     getCameras,
     applyGuideConfig,
     resetGuideConfig,
@@ -1952,6 +2078,9 @@
     amenityFromName,
     suggestionsForSpace,
     suggestionsForDrone,
+    aerialSubjectFromName,
+    aerialSuggestionsForSubject,
+    suggestedAerialSubjects,
     findSuggestion,
     suggestionProgress,
     proposalShotsFor,
