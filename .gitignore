@@ -2,7 +2,8 @@ node_modules/
 .wrangler/
 .DS_Store
 **/.DS_Store
-.claude/
+.claude/*
+!.claude/skills/
 .superpowers/
 .playwright-mcp/
 /*.png
