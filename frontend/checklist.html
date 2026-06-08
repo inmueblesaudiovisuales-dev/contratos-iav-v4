@@ -2379,6 +2379,22 @@ function renderCapNav(label, changeFn) {
   </div>`;
 }
 
+// F26 — barra de navegacion de cuarto para el loop vivo (renderMediaCapture).
+// El header ya ofrece "Cuartos" (abrirCambiarCuarto) como home para elegir
+// destino, asi que aqui la barra entrega solo anterior / Cambiar / siguiente sin
+// duplicar ese chevron: usa siguienteCuarto(±1) (respeta recorrido y limites de
+// piso) y, segun el contexto del target, ofrece "Cambiar" hacia el dialogo
+// correcto — abrirCambiarPunto() si el target es punto/sujeto y existe, o
+// abrirCambiarCuarto() (drone y cuartos normales). Los extremos los maneja
+// siguienteCuarto (muestra toast y no rompe la captura).
+function renderLoopNav(isDrone, target) {
+  const esPunto = !isDrone && target && target.tipo && target.tipo !== 'drone'
+    && typeof abrirCambiarPunto === 'function';
+  const label = esPunto ? 'punto' : 'cuarto';
+  const changeFn = esPunto ? 'abrirCambiarPunto()' : 'abrirCambiarCuarto()';
+  return renderCapNav(label, changeFn);
+}
+
 function discardShort(file) {
   return { empty: 'vacío', failed: 'fallida', unrelated: 'no relacionado' }[file.discardReason] || 'descarte';
 }
@@ -2435,13 +2451,13 @@ function renderMediaCapture() {
   const head = `
   <section class="cap-focus">
     <div class="cap-focus-head">
-      <button class="cap-back" onclick="abrirCambiarCuarto()" aria-label="Cambiar cuarto"><i class="ti ti-chevron-left"></i>Cuartos</button>
       <div class="cap-focus-copy">
         <h2 class="cap-room">${parentName ? `<span class="cap-parent">${esc(parentName)}</span>` : ''}${esc(target.nombre)}</h2>
         <span class="cap-floor"><i class="ti ti-stairs-up"></i>${esc(piso)}</span>
       </div>
       <button class="cap-focus-opts" onclick="abrirAccionesFoco()" aria-label="Opciones del cuarto"><i class="ti ti-dots-vertical"></i></button>
     </div>
+    ${renderLoopNav(isDrone, target)}
   </section>`;
 
   if (noAplicaVideo) {
