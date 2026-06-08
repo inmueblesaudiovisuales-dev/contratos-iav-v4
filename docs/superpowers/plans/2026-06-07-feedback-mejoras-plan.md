@@ -77,8 +77,17 @@ profundidad sutil, dorado solo como acento, jerarquía tipográfica clara, mejor
 **De-riesgo (orden obligatorio):**
 1. **R1 — Pantalla de referencia:** restilizar SOLO el loop de captura (`renderMediaCapture` y sus capas) como
    referencia del lenguaje visual. Deploy a preview. **Bruno valida el feel en celular y aprueba el rumbo.**
-2. **R2+ — Propagación:** solo con OK de Bruno, aplicar el mismo lenguaje al resto (setup, cobertura, cierre,
-   edición, config), una vista por fase con gate + captura. No propagar antes del visto bueno.
+2. **R2+ — Propagación (aprobada por Bruno):** aplicar el sistema R1 (tokens `--sp-*`/`--ts-*`/`--el-*`,
+   `--tint`/`--tint-line`, clases `.surface`/`.card`/`.card-raised`, dorado solo en acción primaria, contraste AA,
+   áreas ≥44px) al resto de vistas, **una vista por fase con gate + captura**:
+   - **R2 — Setup (Armar cuartos):** `renderSetup` y sus piezas (tipo, pisos, buscador, sugeridos, lista,
+     sub-cuartos, piso Drone, terreno).
+   - **R3 — Captura overview (lista de cuartos por piso):** tarjetas de cuarto (serif + estado).
+   - **R4 — Cierre:** banner, faltantes, conciliación, línea de tiempo. **Arreglar el CTA tapado por la barra de
+     pestañas** (auditoría): padding inferior ≥ alto de tabbar + safe-area.
+   - **R5 — Edición:** **arreglar el layout roto de la tarjeta "Exportar para edición"** + tokens a la lista de archivos.
+   - **R6 — Cobertura (roles Fer/Danna):** rejilla por piso; aplicar tokens.
+   - Config (`?config=1`) al final / opcional.
 
 ## F27 — Etiquetar plano/movimiento en la tira de "recién grabada" (post-toma)
 **Archivos:** `frontend/checklist.html`. **Invariantes:** `version: 1`. **Aprobado por Bruno; interacción: colapsado que se abre al tocar.**
