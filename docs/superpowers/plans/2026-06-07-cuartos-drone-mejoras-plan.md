@@ -48,6 +48,13 @@ drone en exteriores), con Terreno como un solo sujeto.
 - Define el **vocabulario aéreo de tomas** (tipos): Establecimiento, Órbita, Cenital, Reveal aéreo,
   Fly-through, Empuje al acceso, Entorno. Expón `getDroneShotTypes()`/sugerencias aéreas por sujeto.
 - `suggestionsForTarget` en modo drone devuelve las **sugerencias aéreas** del sujeto (no las de video).
+- **(A) Sesgo por tipo de propiedad:** los sujetos aéreos sugeridos cambian según `guide.tipoPropiedad`:
+  casa → fachada/órbita de la casa; depto → exterior del edificio/roof/amenidades/entorno; quinta →
+  terreno/alberca/palapa/cabañas; terreno → terreno completo/colindancias/vialidades. Helper
+  `suggestedAerialSubjects(state, tipoPropiedad)`.
+- **(C) Vocabulario aéreo en el export:** confirma que `buildExport` lleva el `tipoToma`/label aéreo
+  (Órbita/Cenital/Fly-through…) por archivo, **sin cambiar `version:1`**. Test: un archivo de drone con
+  shotType aéreo aparece con su label en el export.
 - No borres `SHOT_TYPES`/`MOVEMENTS` existentes (compat). Tests de las nuevas listas/getters.
 
 ## F18 — Motor: piso Drone + cámara por zona + terreno
@@ -55,8 +62,10 @@ drone en exteriores), con Terreno como un solo sujeto.
 - **Piso Drone:** un piso especial (p. ej. `state.pisos` incluye "Drone" y se marca con `kind:'drone'` vía
   un set/lista `DRONE_PISOS` o un campo). Sus espacios son sujetos aéreos.
 - **Cámara por zona:** helper `camerasForEspacio(state, espacio)` que devuelve las cámaras disponibles según
-  el piso/zona del espacio: piso Drone → cámara(s) drone; Exterior/Roof/Amenidades → Sony/Osmo **+** drone;
+  el piso/zona del espacio: piso Drone → cámaras drone; Exterior/Roof/Amenidades → Sony/Osmo **+** drones;
   interiores → solo Sony/Osmo. La UI usará esto en el switch (reemplaza el filtro por rol de F14 para el loop).
+- **(B) Dos drones por defecto:** las cámaras drone por defecto son **DJI Air 3** y **DJI Mini 4 Pro**
+  (ambas), cada una con su patrón/consecutivo; `camerasForEspacio` devuelve ambas donde el drone aplica.
 - **Terreno:** helper para que, con `guide.tipoPropiedad==='terreno'`, el modelo represente **un solo
   sujeto** (un espacio único "El terreno") en vez de lista de cuartos; sus sugerencias son las del terreno.
 - Migración: estado viejo sin piso Drone sigue cargando; las tomas de drone ya pegadas a espacios no se pierden.
@@ -84,6 +93,8 @@ drone en exteriores), con Terreno como un solo sujeto.
 ## F21 — UI: loop con cámara drone por espacio + sugerencias aéreas + terreno
 **Archivos:** `frontend/checklist.html`. **Mockup:** 06 (C). **Invariantes:** `version: 1`.
 - El switch de cámara del loop usa `camerasForEspacio` (F18): drone solo en piso Drone/exteriores.
+- **(B)** El switch muestra **ambos drones** (Air 3 / Mini 4 Pro) donde aplica; elegir uno fija esa cámara
+  y su contador propio.
 - En modo drone, el panel "Sugeridas" muestra el **vocabulario aéreo** (F17) y el token dice "siguiente
   video" + "+ foto" (ya existe). En piso Drone la cámara entra en drone por defecto.
 - **Terreno**: el loop opera contra el sujeto único con sus tomas aéreas sugeridas.
@@ -94,7 +105,8 @@ drone en exteriores), con Terreno como un solo sujeto.
 - Playwright: armar cuartos (buscador, auto-sugerencia, sub-cuartos, piso Drone, terreno); loop de drone con
   vocabulario aéreo; drone NO aparece en interiores. Export `version:1`. Todo en la rama, sin deploy.
 
-## Después de este plan (trío pendiente, fases sueltas)
-- F22 — dos drones por defecto (DJI Air 3 + DJI Mini 4 Pro) en el editor/cámaras.
-- F23 — limpieza de código muerto restante (renderModeArea/abrirLane/renderHeader y otros).
-- F24 — íconos offline (auto-hospedar la fuente de íconos o inline) para que la app se vea sin señal.
+## Después de este plan (fases sueltas)
+- F22 — limpieza de código muerto restante (renderModeArea/abrirLane/renderHeader y otros).
+- F23 — íconos offline (auto-hospedar la fuente de íconos o inline) para que la app se vea sin señal.
+
+(Los dos drones por defecto se integraron en F18/F21, ya no son fase suelta.)
