@@ -1965,6 +1965,16 @@
       { base: 'Cochera', zona: 'exterior', icon: 'car', repeatable: true },
       { base: 'Patio', zona: 'exterior', icon: 'fence' },
       { base: 'Roof garden', zona: 'exterior', icon: 'building' },
+      { base: 'Alberca', zona: 'amenidades', icon: 'pool' },
+      { base: 'Casa club', zona: 'amenidades', icon: 'building' },
+      { base: 'Gimnasio', zona: 'amenidades', icon: 'barbell' },
+      { base: 'Cancha', zona: 'amenidades', icon: 'ball' },
+      { base: 'Áreas verdes', zona: 'amenidades', icon: 'trees' },
+      { base: 'Caseta', zona: 'amenidades', icon: 'shield' },
+      { base: 'Asadores', zona: 'amenidades', icon: 'flame' },
+      { base: 'Palapa', zona: 'amenidades', icon: 'umbrella' },
+      { base: 'Cocina exterior', zona: 'amenidades', icon: 'cup' },
+      { base: 'Jardines', zona: 'amenidades', icon: 'plant-2' },
     ],
     departamento: [
       { base: 'Recibidor', zona: 'interior', icon: 'door' },
@@ -1986,6 +1996,9 @@
       { base: 'Cancha', zona: 'amenidades', icon: 'ball' },
       { base: 'Áreas verdes', zona: 'amenidades', icon: 'trees' },
       { base: 'Caseta', zona: 'amenidades', icon: 'shield' },
+      { base: 'Asadores', zona: 'amenidades', icon: 'flame' },
+      { base: 'Palapa', zona: 'amenidades', icon: 'umbrella' },
+      { base: 'Cocina exterior', zona: 'amenidades', icon: 'cup' },
     ],
     quinta: [
       { base: 'Sala', zona: 'interior', icon: 'sofa' },
@@ -2003,6 +2016,10 @@
       { base: 'Casa club', zona: 'amenidades', icon: 'building' },
       { base: 'Cancha', zona: 'amenidades', icon: 'ball' },
       { base: 'Áreas verdes', zona: 'amenidades', icon: 'trees' },
+      { base: 'Asadores', zona: 'amenidades', icon: 'flame' },
+      { base: 'Palapa', zona: 'amenidades', icon: 'umbrella' },
+      { base: 'Cocina exterior', zona: 'amenidades', icon: 'cup' },
+      { base: 'Jardines', zona: 'amenidades', icon: 'plant-2' },
     ],
   };
 
@@ -2071,23 +2088,43 @@
     return base + ' ' + n;
   }
 
-  // Nombre de planta por indice (0 -> 'Planta baja', 1 -> 'Planta alta', 2 -> 'Planta 3'…).
-  function floorName(i) {
+  // floorLabel(index) -> nombre canonico de planta por indice de piso.
+  // 0 -> 'Planta baja', 1 -> 'Planta alta', >=2 -> 'Planta '+(index+1).
+  function floorLabel(index) {
+    const i = Math.max(0, parseInt(index, 10) || 0);
     if (i === 0) return 'Planta baja';
     if (i === 1) return 'Planta alta';
     return 'Planta ' + (i + 1);
   }
+  // Alias historico interno.
+  const floorName = floorLabel;
 
-  // planSkeleton(tipo, { rec, ban, med, pisos, opts }) -> arreglo ordenado de
-  // { nombre, zona, piso, parentId:null } que el UI materializa con nuevoEspacio.
-  // Idempotente por nombre dentro del propio plan. Exterior/amenidades con piso null.
-  function planSkeleton(tipo, options) {
-    const opts = options || {};
-    const rec = Math.max(0, parseInt(opts.rec, 10) || 0);
-    const ban = Math.max(0, parseInt(opts.ban, 10) || 0);
-    const med = Math.max(0, parseInt(opts.med, 10) || 0);
-    const pisos = Math.max(1, parseInt(opts.pisos, 10) || 1);
-    const toggles = opts.opts || {};
+  // nextFloorName(pisos) -> el siguiente floorLabel que NO este ya en `pisos`,
+  // recorriendo indices 0,1,2,…; ignora los pisos drone (isDronePiso) al comparar.
+  function nextFloorName(pisos) {
+    const usados = new Set();
+    (Array.isArray(pisos) ? pisos : []).forEach((p) => {
+      if (p == null || isDronePiso(p)) return;
+      usados.add(normNombre(String(p)));
+    });
+    for (let i = 0; ; i++) {
+      const label = floorLabel(i);
+      if (!usados.has(normNombre(label))) return label;
+    }
+  }
+
+  // planSkeleton(tipo, spec) -> arreglo ordenado de { nombre, zona, piso, parentId:null }
+  // que el UI materializa con nuevoEspacio.
+  // spec = { floors: [ { rec, ban, med, opts:{Sala,Comedor,Cocina} }, … ], fachada: bool }.
+  //   floors[i] corresponde al piso floorLabel(i) (0 = 'Planta baja', 1 = 'Planta alta', …).
+  // Numeracion GLOBAL de recamaras/baños/medios a traves de los pisos (PB primero):
+  //   la 1a recamara = firstName ('Recámara principal'), luego 'Recámara 2', 3… aunque
+  //   esten en pisos distintos. Igual baños/medios baños. Tipicos (Sala/Comedor/Cocina)
+  //   por piso segun opts. fachada:true -> 'Fachada' (exterior, piso null) UNA vez.
+  // Idempotente por nombre dentro del propio plan.
+  function planSkeleton(tipo, spec) {
+    const s = spec || {};
+    const floors = Array.isArray(s.floors) ? s.floors : [];
     const concepts = BASE_CONCEPTS[tipo] || [];
     const conceptByBase = (b) => concepts.find((c) => normNombre(c.base) === normNombre(b));
 
@@ -2100,45 +2137,53 @@
       plan.push({ nombre: nombre, zona: zona, piso: piso, parentId: null });
     };
 
-    const plantaBaja = floorName(0);
-    const plantaRec = pisos > 1 ? floorName(1) : plantaBaja;
+    const recConcept = conceptByBase('Recámara') || { base: 'Recámara', firstName: 'Recámara principal' };
+    const banConcept = conceptByBase('Baño') || { base: 'Baño' };
+    const medConcept = conceptByBase('Medio baño') || { base: 'Medio baño' };
+    // Acumuladores globales de nombres para numeracion continua entre pisos.
+    const recNames = [];
+    const banNames = [];
+    const medNames = [];
 
-    // Tipicos de interior en Planta baja.
-    ['Sala', 'Comedor', 'Cocina'].forEach((b) => {
-      if (toggles[b]) {
-        const c = conceptByBase(b);
-        push(b, c ? c.zona : 'interior', plantaBaja);
+    floors.forEach((floor, i) => {
+      const f = floor || {};
+      const piso = floorLabel(i);
+      const rec = Math.max(0, parseInt(f.rec, 10) || 0);
+      const ban = Math.max(0, parseInt(f.ban, 10) || 0);
+      const med = Math.max(0, parseInt(f.med, 10) || 0);
+      const toggles = f.opts || {};
+
+      // Tipicos de interior de este piso.
+      ['Sala', 'Comedor', 'Cocina'].forEach((b) => {
+        if (toggles[b]) {
+          const c = conceptByBase(b);
+          push(b, c ? c.zona : 'interior', piso);
+        }
+      });
+      // Recamaras de este piso (numeracion global).
+      for (let r = 0; r < rec; r++) {
+        const nombre = nextRoomName(recNames, recConcept);
+        recNames.push(nombre);
+        push(nombre, 'interior', piso);
+      }
+      // Baños de este piso (numeracion global).
+      for (let b = 0; b < ban; b++) {
+        const nombre = nextRoomName(banNames, banConcept);
+        banNames.push(nombre);
+        push(nombre, 'interior', piso);
+      }
+      // Medios baños de este piso (numeracion global).
+      for (let m = 0; m < med; m++) {
+        const nombre = nextRoomName(medNames, medConcept);
+        medNames.push(nombre);
+        push(nombre, 'interior', piso);
       }
     });
-    // Fachada al exterior.
-    if (toggles.Fachada) {
+
+    // Fachada al exterior, una sola vez.
+    if (s.fachada) {
       const c = conceptByBase('Fachada');
       push('Fachada', c ? c.zona : 'exterior', null);
-    }
-
-    // Recamaras numeradas.
-    const recConcept = conceptByBase('Recámara');
-    const recNames = [];
-    for (let i = 0; i < rec; i++) {
-      const nombre = nextRoomName(recNames, recConcept || { base: 'Recámara', firstName: 'Recámara principal' });
-      recNames.push(nombre);
-      push(nombre, 'interior', plantaRec);
-    }
-    // Baños numerados.
-    const banConcept = conceptByBase('Baño');
-    const banNames = [];
-    for (let i = 0; i < ban; i++) {
-      const nombre = nextRoomName(banNames, banConcept || { base: 'Baño' });
-      banNames.push(nombre);
-      push(nombre, 'interior', plantaRec);
-    }
-    // Medios baños en Planta baja.
-    const medConcept = conceptByBase('Medio baño');
-    const medNames = [];
-    for (let i = 0; i < med; i++) {
-      const nombre = nextRoomName(medNames, medConcept || { base: 'Medio baño' });
-      medNames.push(nombre);
-      push(nombre, 'interior', plantaBaja);
     }
 
     return plan;
@@ -3214,6 +3259,8 @@
     baseConcept,
     nextRoomName,
     planSkeleton,
+    floorLabel,
+    nextFloorName,
     createDefaultState,
     normalizeChecklistData,
     parseSpacesText,

@@ -2959,15 +2959,56 @@ test('baseConcept normaliza', () => {
   assert.equal(logic.baseConcept('Recamara principal'), 'Recámara');
 });
 
-test('planSkeleton arma plantas y numera', () => {
-  const plan = logic.planSkeleton('casa', { rec: 3, ban: 2, med: 1, pisos: 2, opts: { Sala: true, Cocina: true, Fachada: true } });
-  const nombres = plan.map(p => p.nombre);
-  assert.ok(nombres.includes('Sala'));
-  assert.ok(nombres.includes('Recámara principal') && nombres.includes('Recámara 3'));
-  assert.ok(plan.find(p => p.nombre === 'Recámara principal').piso === 'Planta alta');
-  assert.ok(plan.find(p => p.nombre === 'Fachada').zona === 'exterior');
+test('planSkeleton por piso: numeracion global y zonas', () => {
+  const plan = logic.planSkeleton('casa', {
+    floors: [
+      { rec: 1, ban: 1, med: 1, opts: { Sala: true, Cocina: true } },
+      { rec: 2, ban: 1, med: 0, opts: {} },
+    ],
+    fachada: true,
+  });
+  const byName = (n) => plan.find((p) => p.nombre === n);
+  // Numeracion global a traves de pisos (PB primero).
+  assert.ok(byName('Recámara principal'), 'tiene Recámara principal');
+  assert.equal(byName('Recámara principal').piso, 'Planta baja');
+  assert.ok(byName('Recámara 2'), 'tiene Recámara 2');
+  assert.equal(byName('Recámara 2').piso, 'Planta alta');
+  assert.ok(byName('Recámara 3'), 'tiene Recámara 3');
+  assert.equal(byName('Recámara 3').piso, 'Planta alta');
+  // Tipicos por piso (PB).
+  assert.equal(byName('Sala').piso, 'Planta baja');
+  assert.equal(byName('Sala').zona, 'interior');
+  assert.equal(byName('Cocina').piso, 'Planta baja');
+  // Fachada exterior, una vez, piso null.
+  const fachadas = plan.filter((p) => p.nombre === 'Fachada');
+  assert.equal(fachadas.length, 1);
+  assert.equal(fachadas[0].zona, 'exterior');
+  assert.equal(fachadas[0].piso, null);
 });
 
 test('catalogByZone terreno vacío', () => {
   assert.deepEqual(logic.catalogByZone('terreno'), {});
+});
+
+// ─── F45 — Amenidades casa, planSkeleton por piso, naming de pisos ───────────
+
+test('catalogByZone casa incluye amenidades (Alberca y Caseta)', () => {
+  const cat = logic.catalogByZone('casa');
+  assert.ok(Array.isArray(cat.amenidades) && cat.amenidades.length > 0);
+  assert.ok(cat.amenidades.some((c) => c.base === 'Alberca'), 'tiene Alberca');
+  assert.ok(cat.amenidades.some((c) => c.base === 'Caseta'), 'tiene Caseta');
+});
+
+test('floorLabel da la secuencia de pisos', () => {
+  assert.equal(logic.floorLabel(0), 'Planta baja');
+  assert.equal(logic.floorLabel(1), 'Planta alta');
+  assert.equal(logic.floorLabel(2), 'Planta 3');
+});
+
+test('nextFloorName devuelve el siguiente piso libre', () => {
+  assert.equal(logic.nextFloorName(['Planta baja']), 'Planta alta');
+  assert.equal(logic.nextFloorName(['Planta baja', 'Planta alta']), 'Planta 3');
+  // Salta pisos drone.
+  assert.equal(logic.nextFloorName([]), 'Planta baja');
+  assert.equal(logic.nextFloorName(['Drone', 'Planta baja']), 'Planta alta');
 });
