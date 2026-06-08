@@ -80,6 +80,21 @@ profundidad sutil, dorado solo como acento, jerarquía tipográfica clara, mejor
 2. **R2+ — Propagación:** solo con OK de Bruno, aplicar el mismo lenguaje al resto (setup, cobertura, cierre,
    edición, config), una vista por fase con gate + captura. No propagar antes del visto bueno.
 
+## F27 — Etiquetar plano/movimiento en la tira de "recién grabada" (post-toma)
+**Archivos:** `frontend/checklist.html`. **Invariantes:** `version: 1`. **Aprobado por Bruno; interacción: colapsado que se abre al tocar.**
+- En `renderCapLatest` (capa 3, la tira "recién grabada" con Favorita/Buena/describir) agregar una línea **Etiqueta**
+  compacta y **colapsada** por defecto: dos ranuras tappables (Plano · Movimiento) que muestran el valor actual de la
+  toma (`file.shotType`/`file.movement`, con sus labels curados) o un prompt tenue si están vacías.
+- Al tocar, despliega **los mismos componentes que `renderCapSugStrip`**: chips de Plano (`cap-plano-chip`) y rejilla de
+  Movimiento (`cap-mv` + `MOV_SVGS`). Reúso de clases/estilos R1; sin vocabulario nuevo. Usa el MISMO conjunto de
+  opciones (planoIds/movIds) y helpers (`curatedPlano`/`curatedMovement`/`planoLabel`) que la capa de sugeridas, para
+  que pre-toma y post-toma sean idénticos. En modo drone, idéntico a lo que ya muestra la capa de sugeridas.
+- Seleccionar **actualiza la toma recién grabada** (no la siguiente): persiste `shotType`/`movement` en ese `file`
+  reutilizando el mismo camino que ya usa el panel "Etiquetar toma" (F15) o `logic.updateMediaFile`. Re-render.
+- Estado de expansión propio (p. ej. `latestTagOpen`), independiente del strip de sugeridas. No rompas describir/Favorita/Buena.
+- Consistente con R1: colapsado y silencioso hasta tocarse; áreas táctiles ≥44px; sin emojis.
+
 ## Después
-- F27 — limpieza de código muerto (`renderModeArea`/`abrirLane`/`renderHeader`/`renderCapNav` viejo si queda sin uso).
-- F28 — íconos offline (auto-hospedar/inline la fuente Tabler).
+- F28 — limpieza de código muerto (`renderModeArea`/`abrirLane`/`renderHeader`/`renderCapNav` viejo si queda sin uso).
+- F29 — íconos offline (auto-hospedar/inline la fuente Tabler).
+- R2+ — propagación del sistema visual R1 al resto de vistas (setup, cobertura, cierre, edición), con OK de Bruno.
