@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Mockup — Armar cuartos v3</title>
+<style>
+  :root{
+    --bg:#f4f1ea; --surface:#fbf9f4; --card:#ffffff; --line:#e3ddd0;
+    --ink-1:#23201a; --ink-2:#6b6457; --ink-3:#9a9384;
+    --tint:#efeadd; --tint-line:#d8cfb8;
+    --gold:#b89243; --gold-leaf:#caa15a;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px;
+    --radius:12px;
+    --ts-cap:12px; --ts-body:14px; --ts-base:16px; --ts-lg:18px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink-1);font-size:var(--ts-base);line-height:1.4}
+  .wrap{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+  .top{position:sticky;top:0;background:var(--bg);padding:var(--sp-4) var(--sp-4) var(--sp-2);border-bottom:1px solid var(--line);z-index:5}
+  .top h1{font-size:var(--ts-lg);margin:0 0 2px;font-weight:700}
+  .top p{margin:0;color:var(--ink-2);font-size:var(--ts-cap)}
+  .body{padding:var(--sp-4);flex:1;padding-bottom:120px}
+  .block{margin-bottom:var(--sp-5)}
+  .lbl{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);font-size:var(--ts-cap);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin-bottom:var(--sp-3)}
+  .seg{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+  .seg-btn{min-height:44px;padding:0 var(--sp-4);border:1px solid var(--line);border-radius:var(--radius);background:var(--card);color:var(--ink-2);font-weight:600;font-size:var(--ts-body)}
+  .seg-btn.active{border-color:var(--tint-line);background:var(--tint);color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--tint-line)}
+  .chips{display:flex;flex-wrap:wrap;gap:var(--sp-2)}
+  .chip{min-height:44px;display:inline-flex;align-items:center;gap:6px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink-1);font-size:var(--ts-body);font-weight:600;user-select:none}
+  .chip .ic{font-size:15px;color:var(--ink-3)}
+  .chip.on{background:var(--tint);border-color:var(--tint-line);box-shadow:inset 0 0 0 1px var(--tint-line)}
+  .chip.on .ic{color:var(--gold)}
+  .chip .count{font-variant-numeric:tabular-nums;color:var(--ink-2);font-weight:700}
+  .chip .minus{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin:0 -6px 0 2px;border-radius:999px;background:#fff;border:1px solid var(--tint-line);color:var(--ink-2);font-weight:800;font-size:16px;line-height:1}
+  .floorbar{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--ts-cap);font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-2)}
+  .floorbar select{font:inherit;font-weight:700;color:var(--ink-1);border:1px solid var(--line);background:var(--card);border-radius:8px;padding:6px 8px;min-height:34px}
+  .floorbar .addfloor{border:1px dashed var(--tint-line);background:transparent;color:var(--ink-2);border-radius:8px;padding:6px 10px;min-height:34px;font-weight:700}
+  .floorgroup{margin-bottom:var(--sp-4)}
+  .floorgroup .fg-name{font-size:var(--ts-cap);font-weight:700;color:var(--ink-3);margin:0 0 var(--sp-2)}
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:0 12px;min-height:48px;color:var(--ink-3)}
+  .search input{border:0;outline:0;flex:1;font:inherit;color:var(--ink-1);background:transparent}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:14px var(--sp-4);min-height:56px;margin-top:var(--sp-4)}
+  .toggle-row .t-copy b{font-weight:700}
+  .toggle-row .t-copy span{display:block;color:var(--ink-2);font-size:var(--ts-cap)}
+  .sw{width:52px;height:30px;border-radius:999px;border:1px solid var(--tint-line);background:var(--tint);position:relative;flex:0 0 auto}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15);transition:left .15s}
+  .sw.on{background:var(--gold);border-color:var(--gold)}
+  .sw.on::after{left:24px}
+  .foot{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(to top,var(--bg) 70%,transparent);padding:var(--sp-3) var(--sp-4) var(--sp-5)}
+  .foot .inner{max-width:430px;margin:0 auto}
+  .count-line{text-align:center;color:var(--ink-2);font-size:var(--ts-cap);margin-bottom:var(--sp-2);font-weight:600}
+  .primary{display:block;width:100%;min-height:52px;border:0;border-radius:var(--radius);background:var(--gold);color:#241c08;font-weight:800;font-size:var(--ts-base)}
+  .primary:disabled{background:var(--tint);color:var(--ink-3)}
+  .note{max-width:430px;margin:0 auto;padding:10px var(--sp-4);color:var(--ink-3);font-size:11px;text-align:center}
+  .ic{font-style:normal}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Armar cuartos</h1>
+    <p>Mockup v3 — toca para agregar/quitar. Solo es una maqueta.</p>
+  </div>
+  <div class="body" id="body"></div>
+  <div class="foot">
+    <div class="inner">
+      <div class="count-line" id="countLine"></div>
+      <button class="primary" id="listo" disabled>Listo, a capturar</button>
+    </div>
+  </div>
+  <div class="note">Mockup de diseño · sin datos reales · iav</div>
+</div>
+<script>
+  var TIPOS = ["Casa","Depto","Quinta","Terreno"];
+  var tipo = "Casa";
+  // Cuartos comunes por zona, en orden natural de recorrido. rep = repetible (contador).
+  var LIB = {
+    interior: ["Recibidor","Sala","Comedor","Antecomedor","Cocina","Recámara*","Baño*","Medio baño*","Estudio","Cuarto de TV","Lavandería","Cuarto de servicio"],
+    exterior: ["Fachada","Jardín","Terraza","Cochera","Patio","Roof"],
+    amenidades: ["Alberca","Casa club","Gimnasio","Cancha","Áreas verdes","Caseta"]
+  };
+  function isRep(n){ return n.indexOf("*")>=0; }
+  function clean(n){ return n.replace("*",""); }
+
+  // Estado: interior por planta -> {nombre:count}; exterior/amenidades property-wide.
+  var floors = ["Planta baja"];
+  var activeFloor = 0;
+  var interior = [{}]; // un objeto de counts por planta
+  var exterior = {};
+  var amenidades = {};
+
+  function tapChip(zone, name){
+    var rep = isRep(name); var key = clean(name);
+    var store = zone==="interior" ? interior[activeFloor] : (zone==="exterior"?exterior:amenidades);
+    if(rep){ store[key] = (store[key]||0)+1; }
+    else { store[key] = store[key]? 0 : 1; if(!store[key]) delete store[key]; }
+    render();
+  }
+  function decChip(zone, key){
+    var store = zone==="interior" ? interior[activeFloor] : (zone==="exterior"?exterior:amenidades);
+    store[key] = (store[key]||0)-1; if(store[key]<=0) delete store[key];
+    render();
+  }
+  function addFloor(){
+    floors.push(floors.length===1?"Planta alta":("Planta "+(floors.length+1)));
+    interior.push({}); activeFloor=floors.length-1; render();
+  }
+  function setFloor(i){ activeFloor=+i; render(); }
+  function setTipo(t){ tipo=t; render(); }
+
+  function chipHTML(zone, name){
+    var rep=isRep(name); var key=clean(name);
+    var store = zone==="interior" ? interior[activeFloor] : (zone==="exterior"?exterior:amenidades);
+    var c = store[key]||0;
+    if(rep){
+      if(c<=0) return '<div class="chip" onclick="tapChip(\''+zone+'\',\''+name+'\')"><span class="ic">+</span>'+key+'</div>';
+      return '<div class="chip on"><span class="minus" onclick="decChip(\''+zone+'\',\''+key+'\')">−</span>'+key+' <span class="count">×'+c+'</span><span class="ic" onclick="tapChip(\''+zone+'\',\''+name+'\')" style="margin-left:2px">+</span></div>';
+    }
+    var on = c>0;
+    return '<div class="chip'+(on?' on':'')+'" onclick="tapChip(\''+zone+'\',\''+name+'\')"><span class="ic">'+(on?'✓':'+')+'</span>'+key+'</div>';
+  }
+
+  function totalCuartos(){
+    var n=0; interior.forEach(function(f){ for(var k in f) n+=f[k]; });
+    for(var k in exterior) n+=exterior[k]; for(var k2 in amenidades) n+=amenidades[k2];
+    return n;
+  }
+
+  function render(){
+    var h = "";
+    // Tipo
+    h += '<div class="block"><div class="lbl">Tipo de propiedad</div><div class="seg">'+
+      TIPOS.map(function(t){return '<button class="seg-btn'+(t===tipo?' active':'')+'" onclick="setTipo(\''+t+'\')">'+t+'</button>';}).join('')+'</div></div>';
+
+    if(tipo==="Terreno"){
+      h += '<div class="block"><div class="lbl">Terreno</div><div class="chip on"><span class="ic">✓</span>El terreno</div><p style="color:var(--ink-2);font-size:13px;margin-top:10px">Un solo sujeto; sus tomas son sugeridas (no se arman cuartos).</p></div>';
+      document.getElementById("body").innerHTML=h;
+      finishFoot(); return;
+    }
+
+    // INTERIOR con plantas
+    h += '<div class="block"><div class="lbl">Interior <span class="floorbar">'+
+      '<select onchange="setFloor(this.value)">'+floors.map(function(f,i){return '<option value="'+i+'"'+(i===activeFloor?' selected':'')+'>'+f+'</option>';}).join('')+'</select>'+
+      '<button class="addfloor" onclick="addFloor()">+ planta</button></span></div>';
+    h += '<div class="chips">'+LIB.interior.map(function(n){return chipHTML("interior",n);}).join('')+'</div>';
+    // Resumen de otras plantas con cuartos
+    var otras = floors.map(function(f,i){ if(i===activeFloor) return ''; var cnt=0; for(var k in interior[i]) cnt+=interior[i][k]; return cnt? '<div class="fg-name" style="margin-top:10px">'+f+': '+cnt+' '+(cnt===1?'cuarto':'cuartos')+'</div>':''; }).join('');
+    h += otras + '</div>';
+
+    // EXTERIOR
+    h += '<div class="block"><div class="lbl">Exterior</div><div class="chips">'+LIB.exterior.map(function(n){return chipHTML("exterior",n);}).join('')+'</div></div>';
+    // AMENIDADES
+    h += '<div class="block"><div class="lbl">Amenidades</div><div class="chips">'+LIB.amenidades.map(function(n){return chipHTML("amenidades",n);}).join('')+'</div></div>';
+
+    // Buscar (secundario)
+    h += '<div class="block"><div class="search"><span class="ic">⌕</span><input placeholder="buscar otro cuarto…"></div></div>';
+    // Drone toggle
+    h += '<div class="toggle-row"><div class="t-copy"><b>Incluir tomas de drone</b><span>Sesión aérea aparte, fuera de los cuartos</span></div><div class="sw" id="droneSw" onclick="this.classList.toggle(\'on\')"></div></div>';
+
+    document.getElementById("body").innerHTML=h;
+    finishFoot();
+  }
+  function finishFoot(){
+    var n=totalCuartos();
+    var plantasConCuartos = interior.filter(function(f){return Object.keys(f).length>0;}).length;
+    document.getElementById("countLine").textContent = n? (n+" "+(n===1?"cuarto":"cuartos")+(plantasConCuartos>1?(" · "+plantasConCuartos+" plantas"):"")) : "Toca un cuarto para empezar";
+    var b=document.getElementById("listo"); b.disabled = n===0;
+  }
+  render();
+</script>
+</body>
+</html>

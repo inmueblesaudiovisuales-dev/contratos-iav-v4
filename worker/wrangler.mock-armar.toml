@@ -1,0 +1,9 @@
+# Worker SOLO para el mockup de diseno de "Armar cuartos" (estatico, sin D1, sin produccion).
+# Deploy: npx wrangler deploy -c wrangler.mock-armar.toml
+name = "iav-mock-armar-cuartos"
+account_id = "0d0d6aaf107ae092f9fb5da06ddb338c"
+compatibility_date = "2024-01-01"
+workers_dev = true
+
+[assets]
+directory = "./mock-armar-cuartos"
