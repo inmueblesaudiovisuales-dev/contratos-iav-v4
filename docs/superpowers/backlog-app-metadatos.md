@@ -38,7 +38,29 @@ La resolución depende de cámara **y** orientación — por eso el manifiesto l
 - **Sin** aviso de restricción en campo (Bruno lo descartó), pero la resolución sí se considera como dato (alimenta el manifiesto y, a futuro, el armado de secuencias).
 - Si algún día se quiere rastrear cobertura de verticales, ahí sí se etiquetaría por toma (no ahora).
 
+## 6. Sync de proyectos por git (en vez de iCloud) — workflow del equipo
+Problema: hoy todo vive en una carpeta de iCloud y se sincroniza TODO (incluida la media pesada). Bruno quiere que
+**solo se sincronicen los archivos chicos** (el `.aep` de After Effects, el `.prproj` de Premiere, el JSON de
+metadatos, notas) **y la media NO** (subir media cuesta y es lento). iCloud no hace esa distinción (todo-o-nada).
+
+**Solución: git con `.gitignore`** (ya usan GitHub).
+- Repo privado (uno "proyectos" o uno por proyecto). Cada proyecto = carpeta con `.aep`, `.prproj`, JSON de
+  metadatos, notas.
+- `.gitignore` excluye la media (`*.mp4 *.mov *.mxf *.wav *.cr3 *.dng *.braw`, cachés de AE/Premiere, proxies,
+  renders). La media nunca sube.
+- Cada quien hace `pull` → baja todo el contexto de todos los proyectos en segundos (KB), sin transferir GB.
+- Bonus: versionado de los `.aep`/`.prproj` (puedes regresar a una versión anterior); iCloud no lo da.
+- Caveats: al abrir un proyecto sin la media, AE/Premiere muestra "media offline" (relinkeas al editar; para
+  contexto no importa). `.aep`/`.prproj` son binarios: git los versiona pero no hace merge — ok para equipo de 3
+  donde un proyecto lo lleva una persona.
+- Para Fer/Danna sin terminal: **GitHub Desktop** (botón Pull/Push) o un script de sync de un clic.
+- Alternativa (cero git): Dropbox "Online-only"/Smart Sync — media como placeholder en la nube, archivos chicos
+  locales; pero la media SÍ ocupa almacenamiento en la nube y se sube una vez. Menos limpio que git.
+- **Pendiente cuando se retome:** armar la estructura del repo + el `.gitignore` con extensiones de media y cachés
+  de AE/Premiere como referencia.
+
 ## Orden sugerido (para la sesión futura)
 1. Manifiesto de sesión en el export (lado checklist — barato).
 2. Columnas XMP (lado metadatos).
 3. Generar secuencias de Premiere (lado metadatos — el grande, con su propio brainstorm).
+4. (Aparte) Migrar el sync de proyectos de iCloud a git (workflow del equipo, no toca código de las apps).
