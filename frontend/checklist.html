@@ -733,6 +733,26 @@
     .hoja-drop-item .hoja-di-add { font-size: 11px; color: var(--ink-3); font-weight: 700; flex: none; }
     .hoja-drop-empty { color: var(--ink-3); font-size: var(--ts-body); padding: var(--sp-2) 0; font-style: italic; text-align: center; }
 
+    /* F43 — Arranque rápido: card colapsable con steppers + toggles + "Generar esqueleto". */
+    .qs { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); padding: var(--sp-4); }
+    .qs-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); width: 100%; min-height: 44px; border: 0; background: transparent; color: var(--ink-1); text-align: left; padding: 0; }
+    .qs-head h2 { font-size: var(--ts-body); font-weight: 700; }
+    .qs-head h2 span { color: var(--ink-3); font-weight: 600; }
+    .qs-head .qs-chev { font-size: 20px; color: var(--ink-3); flex: none; }
+    .qs-sub { color: var(--ink-2); font-size: var(--ts-cap); margin: 6px 0 var(--sp-3); }
+    .qs-stepper { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; border-top: 1px solid var(--line); }
+    .qs-stepper .qs-lab { font-size: var(--ts-body); font-weight: 600; }
+    .qs-ctrls { display: flex; align-items: center; gap: var(--sp-3); flex: none; }
+    .qs-rb { width: 44px; height: 44px; flex: none; border-radius: 999px; border: 1px solid var(--tint-line); background: var(--tint); color: var(--ink-1); font-size: 22px; font-weight: 800; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .qs-rb:disabled { opacity: .35; }
+    .qs-num { min-width: 24px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .qs-opts { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+    .qs-opt { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink-2); font-size: var(--ts-body); font-weight: 600; }
+    .qs-opt.on { background: var(--tint); border-color: var(--tint-line); color: var(--ink-1); }
+    .qs-opt i { font-size: 16px; }
+    .qs-go { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; margin-top: var(--sp-4); border: 0; border-radius: var(--radius); background: var(--black); color: #fff; font-size: var(--ts-body); font-weight: 700; }
+    .qs-go i { font-size: 18px; }
+
     /* F36 — Rótulo discreto de escala del target de drone (breadcrumb / micro-texto). */
     .cap-scale { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-bottom: 2px; }
     .cap-scale i { font-size: 14px; color: var(--ink-3); }
@@ -1090,7 +1110,6 @@ let selectedAction = null;
 let activeRoomId = null;
 let setupOpen = false;
 let setupTipo = 'casa';
-let setupPiso = null;
 // F20 — Modo Cuartos v2: texto del buscador (toda la biblioteca) y el id del
 // cuarto con el selector rapido de sub-cuarto (Closet / Bano / Otro) abierto.
 let setupQuery = '';
@@ -1100,6 +1119,9 @@ let hojaOpen = false;
 let hojaZona = 'interior';
 let hojaPiso = 'Planta baja';
 let hojaQuery = '';
+// F43 — Estado del arranque rápido (solo UI, no se persiste en el contrato).
+let qsCollapsed = false;
+let qsValores = { rec: 3, ban: 2, med: 1, pisos: 1, opts: { Sala: true, Comedor: true, Cocina: true, Fachada: true } };
 let searchTerm = '';
 let saveTimer = null;
 let retryTimer = null;
@@ -1686,14 +1708,6 @@ function renderActiveView() {
 
 const TIPO_LABEL = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', quinta: 'Quinta' };
 
-function getFocusPiso() {
-  // F24 — Sin pisos no hay foco posible: devolvemos null y el render muestra
-  // los chips de "añadir primer piso" en vez de sugeridos de un piso inexistente.
-  const pisos = state.pisos && state.pisos.length ? state.pisos : [];
-  if (!pisos.length) return null;
-  return setupPiso && pisos.includes(setupPiso) ? setupPiso : pisos[0];
-}
-
 // F36 — Interruptor "Incluir tomas de drone". Reemplaza al piso Drone con sus
 // pseudo-cuartos: el drone deja de curarse en Armar cuartos y pasa a volarse en
 // la lane de Captura. Setea state.guide.incluirDrone (true/false). Estilo R1,
@@ -1719,6 +1733,85 @@ function toggleIncluirDrone() {
   render();
 }
 
+// F43 — Arranque rápido: card colapsable con steppers (Recámaras/Baños/Medios
+// baños/Pisos) + toggles (Sala/Comedor/Cocina/Fachada) + "Generar esqueleto".
+// Estado solo de UI (qsCollapsed/qsValores); no se persiste en el contrato. El
+// esqueleto se materializa con generarEsqueleto() de forma idempotente.
+function renderArranqueRapido() {
+  const v = qsValores;
+  const steppers = [['Recámaras', 'rec'], ['Baños', 'ban'], ['Medios baños', 'med'], ['Pisos', 'pisos']].map((p) => {
+    const lab = p[0]; const k = p[1];
+    const min = k === 'pisos' ? 1 : 0;
+    const dis = v[k] <= min ? ' disabled' : '';
+    return `<div class="qs-stepper"><span class="qs-lab">${lab}</span><span class="qs-ctrls">
+      <button class="qs-rb"${dis} onclick="qsStep('${k}',-1)" aria-label="Menos ${lab}">−</button>
+      <span class="qs-num">${v[k]}</span>
+      <button class="qs-rb" onclick="qsStep('${k}',1)" aria-label="Más ${lab}">+</button></span></div>`;
+  }).join('');
+  const opts = ['Sala', 'Comedor', 'Cocina', 'Fachada'].map((o) => {
+    const on = !!(v.opts && v.opts[o]);
+    return `<button class="qs-opt${on ? ' on' : ''}" onclick="qsToggleOpt('${o}')"><i class="ti ${on ? 'ti-check' : 'ti-plus'}"></i>${o}</button>`;
+  }).join('');
+  return `<div class="qs${qsCollapsed ? ' collapsed' : ''}">
+    <button class="qs-head" onclick="qsToggleCollapse()" aria-expanded="${qsCollapsed ? 'false' : 'true'}">
+      <h2>Arranque rápido <span>(opcional)</span></h2>
+      <i class="ti ${qsCollapsed ? 'ti-chevron-down' : 'ti-chevron-up'} qs-chev"></i>
+    </button>
+    ${qsCollapsed ? '' : `<div class="qs-inner">
+      <p class="qs-sub">Dinos el tamaño y armamos el esqueleto; luego ajustas abajo.</p>
+      ${steppers}
+      <div class="qs-opts">${opts}</div>
+      <button class="qs-go" onclick="generarEsqueleto()"><i class="ti ti-wand"></i>Generar esqueleto</button>
+    </div>`}
+  </div>`;
+}
+
+// F43 — Ajusta un stepper del arranque rápido (clamp en mínimo: Pisos ≥1, resto ≥0).
+function qsStep(k, delta) {
+  const min = k === 'pisos' ? 1 : 0;
+  qsValores[k] = Math.max(min, (qsValores[k] || 0) + delta);
+  render();
+}
+// F43 — Alterna un toggle (Sala/Comedor/Cocina/Fachada) del arranque rápido.
+function qsToggleOpt(o) {
+  if (!qsValores.opts) qsValores.opts = {};
+  qsValores.opts[o] = !qsValores.opts[o];
+  render();
+}
+// F43 — Colapsa/expande la card del arranque rápido.
+function qsToggleCollapse() { qsCollapsed = !qsCollapsed; render(); }
+
+// F43 — Genera el esqueleto desde el plan (logic.planSkeleton). Asegura las
+// plantas del plan en state.pisos (sin duplicar, respetando 'Planta baja' antes
+// que 'Planta alta', …) y materializa cada item OMITIENDO los nombres que ya
+// existan en su ámbito (interior: misma planta; exterior/amenidades: global).
+// Idempotente contra state.espacios: pulsar "Generar" otra vez no duplica.
+function generarEsqueleto() {
+  const plan = logic.planSkeleton(setupTipo, qsValores);
+  if (!state.pisos) state.pisos = [];
+  // Asegura plantas en orden ('Planta baja','Planta alta',…). El plan ya viene
+  // ordenado, así que insertamos en orden de aparición evitando duplicados.
+  plan.forEach((item) => {
+    if (item.piso && !state.pisos.includes(item.piso)) state.pisos.push(item.piso);
+  });
+  // Existentes por ámbito para no duplicar nombres (compara por baseConcept para
+  // que "Recámara principal"/"Recámara 2" no se re-creen).
+  const norm = (s) => logic.baseConcept(s, setupTipo).toLowerCase();
+  const existe = (nombre, zona, piso) => state.espacios.some((e) => {
+    if (e.parentId) return false;
+    if (setupZona(e) !== zona) return false;
+    if (zona === 'interior' && (e.piso || 'Planta baja') !== (piso || 'Planta baja')) return false;
+    return norm(e.nombre) === norm(nombre);
+  });
+  plan.forEach((item) => {
+    if (existe(item.nombre, item.zona, item.piso)) return;
+    nuevoEspacio(item.nombre, item.piso, item.zona, null, logic.detectCategoria(item.nombre));
+  });
+  qsCollapsed = true;
+  scheduleSave();
+  render();
+}
+
 function renderSetup() {
   const tipoSeg = `<div class="setup-block">
       <label class="setup-lbl">Tipo de propiedad</label>
@@ -1727,35 +1820,13 @@ function renderSetup() {
   // F20 — Terreno: un solo sujeto, no se arman cuartos. Vive en su propia vista.
   if (setupTipo === 'terreno') return renderSetupTerreno(tipoSeg);
 
-  const pisos = state.pisos && state.pisos.length ? state.pisos : [];
-  const focusP = getFocusPiso();
-  // F24 — Sin pisos: arrancar vacío. La fila "Pisos" muestra un texto guía y
-  // chips de un toque para añadir el primer piso (cada uno toma foco al instante).
-  if (!pisos.length) {
-    return `<section class="setup">
-      <div class="setup-hd"><h2>Armar cuartos</h2><p>Arrancas de cero. Agrega tu primer piso para empezar a sumar cuartos.</p></div>
-      ${tipoSeg}
-      <div class="setup-block">
-        <label class="setup-lbl">Pisos</label>
-        <p class="setup-hint">Agrega tu primer piso</p>
-        ${renderPisoAddChips()}
-      </div>
-      ${renderDroneToggle()}
-    </section>`;
-  }
-  // F42 — La nube de chips sugeridos y el buscador inline se retiran: ese rol
-  // pasa íntegro a la hoja inferior (renderHojaAgregar). El esquema vivo es la
-  // superficie principal; agregar es por botón global (footer) o contextual.
+  // F43 — Pisos opcionales: ya no se exige crear un piso antes de agregar. El
+  // orden final es Tipo → Arranque rápido → Esquema vivo → Drone → footer fijo.
+  // El esquema (F41) usa 'Planta baja' por defecto y trae "Agregar planta".
   return `<section class="setup">
-    <div class="setup-hd"><h2>Armar cuartos</h2><p>Arma la casa como la caminas. Toca "Agregar cuarto" o el botón de cada sección.</p></div>
+    <div class="setup-hd"><h2>Armar cuartos</h2><p>Arma la casa como la caminas. Usa el arranque rápido o toca "Agregar cuarto".</p></div>
     ${tipoSeg}
-    <div class="setup-block">
-      <label class="setup-lbl">Pisos</label>
-      <div class="chips">${pisos.map((p) => {
-        const dr = logic.isDronePiso(p);
-        return `<button class="chip${dr ? ' drone' : ''}${p === focusP ? ' active' : ''}" onclick="setSetupPiso('${esc(p)}')">${dr ? '<i class="ti ti-drone"></i>' : ''}${esc(p)}<i class="ti ti-x chip-x" onclick="event.stopPropagation();quitarPiso('${esc(p)}')"></i></button>`;
-      }).join('')}<button class="chip add" onclick="agregarPiso()"><i class="ti ti-plus"></i>piso</button></div>
-    </div>
+    <div class="setup-block">${renderArranqueRapido()}</div>
     <div class="setup-block">${renderSetupList()}</div>
     ${renderDroneToggle()}
     <div class="setup-foot">
@@ -2117,7 +2188,6 @@ function setSetupTipo(t) {
   scheduleSave();
   render();
 }
-function setSetupPiso(p) { setupPiso = p; setupQuery = ''; setupSubFor = null; render(); }
 function abrirSetup() {
   setupOpen = true;
   // Re-entrable: arranca con el tipo ya elegido si lo hay.
@@ -2129,20 +2199,6 @@ function abrirSetup() {
 // state.espacios; de lo contrario showSetup (que fuerza el setup con espacios vacios)
 // nunca dejaria avanzar al loop. Idempotente y no-op para no-terreno.
 function cerrarSetup() { materializarTerrenoSiAplica(); setupOpen = false; render(); }
-
-// F24 — Chips de un toque para añadir el primer piso cuando el estado arranca
-// sin pisos. Cada chip llama a confirmarPiso(p), que agrega el piso y lo pone en
-// foco. El chip "+ otro…" abre el sheet de agregarPiso() para un nombre libre.
-function renderPisoAddChips() {
-  // F36 — el drone ya NO es un piso curable: se quita "Drone" de los chips de
-  // primer piso. Las tomas de drone se activan con el interruptor "Incluir tomas
-  // de drone" (state.guide.incluirDrone) y se vuelan en la lane de Captura.
-  const sug = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades'].filter((p) => !(state.pisos || []).includes(p));
-  return `<div class="chips">${sug.map((p) => {
-    const dr = logic.isDronePiso(p);
-    return `<button class="chip${dr ? ' drone' : ''}" onclick="confirmarPiso('${esc(p)}')">${dr ? '<i class="ti ti-drone"></i>' : '<i class="ti ti-plus"></i>'}${esc(p)}</button>`;
-  }).join('')}<button class="chip add" onclick="agregarPiso()"><i class="ti ti-plus"></i>otro…</button></div>`;
-}
 
 function agregarPiso() {
   // F36 — sin "Drone" en la lista de pisos: el drone dejó de ser un piso.
@@ -2158,7 +2214,6 @@ function agregarPiso() {
 function confirmarPiso(p) {
   if (!state.pisos) state.pisos = [];
   if (!state.pisos.includes(p)) state.pisos.push(p);
-  setupPiso = p;
   cerrarModal(); scheduleSave(); render();
 }
 
@@ -2170,7 +2225,6 @@ function confirmarPisoInput() {
 function quitarPiso(p) {
   if (state.espacios.some((e) => (e.piso || '') === p)) return showToast('Ese piso tiene cuartos');
   state.pisos = (state.pisos || []).filter((x) => x !== p);
-  if (setupPiso === p) setupPiso = null;
   scheduleSave(); render();
 }
 
