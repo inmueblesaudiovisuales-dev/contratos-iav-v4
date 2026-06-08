@@ -671,6 +671,31 @@
     .setup-toggle .st-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 999px; background: var(--card); box-shadow: var(--el-1); transition: transform .15s ease; }
     .setup-toggle.on .st-sw::after { transform: translateX(18px); }
 
+    /* ===== F41 — Esquema vivo (secciones por piso/zona) ===== */
+    .setup-sec { margin-bottom: var(--sp-5); }
+    .setup-sec-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-2); }
+    .setup-sec-name { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--ts-cap); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+    .setup-sec-name i { font-size: 16px; color: var(--ink-3); }
+    .setup-sec-cnt { font-size: 11px; color: var(--ink-3); font-weight: 700; flex: none; }
+    .setup-sec-empty { color: var(--ink-3); font-size: var(--ts-body); padding: var(--sp-2) 0; font-style: italic; }
+    /* Renglón del cuarto: ícono + nombre + acciones (+1 / quitar), todo en sitio. */
+    .setup-room-ic { width: 36px; height: 36px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); background: var(--tint); color: var(--gold); }
+    .setup-room-ic i { font-size: 20px; }
+    .setup-room-acts { display: flex; align-items: center; gap: var(--sp-1); flex: none; }
+    .setup-room-plus { display: inline-flex; align-items: center; gap: 2px; min-width: 44px; height: 44px; padding: 0 var(--sp-2); border: 1px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--card); color: var(--ink-2); font-size: var(--ts-body); font-weight: 800; }
+    .setup-room-plus i { font-size: 16px; }
+    /* Barra de chips punteados de sub-cuarto, en sitio bajo el renglón. */
+    .setup-subbar { margin: var(--sp-1) 0 0 calc(36px + var(--sp-3)); display: flex; flex-wrap: wrap; gap: 6px; }
+    .setup-subchip { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 var(--sp-3); border: 1px dashed var(--tint-line); border-radius: 999px; background: transparent; color: var(--ink-2); font-size: var(--ts-cap); font-weight: 600; }
+    .setup-subchip i { font-size: 15px; }
+    /* Sub-cuartos listados bajo el padre, con su X. */
+    .setup-sublist { margin: var(--sp-1) 0 0 calc(36px + var(--sp-3)); }
+    .setup-sub-row { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; padding: 0 var(--sp-2); border-top: 1px dashed var(--line); }
+    .setup-sub-row i.setup-sub-ic { font-size: 16px; color: var(--ink-3); flex: none; }
+    .setup-sub-name { flex: 1; min-width: 0; font-size: var(--ts-body); }
+    .setup-addfloor { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 46px; border: 1px dashed var(--tint-line); border-radius: var(--radius); background: transparent; color: var(--ink-2); font-size: var(--ts-body); font-weight: 700; margin: 0 0 var(--sp-5); }
+    .setup-addfloor i { font-size: 16px; }
+
     /* F36 — Rótulo discreto de escala del target de drone (breadcrumb / micro-texto). */
     .cap-scale { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-bottom: 2px; }
     .cap-scale i { font-size: 14px; color: var(--ink-3); }
@@ -1763,25 +1788,105 @@ function chipYaEnFoco(nombre) {
   return state.espacios.some((e) => !e.parentId && (e.piso || 'Sin piso') === focusP && e.nombre.toLowerCase() === n);
 }
 
+// F41 — Mapa de íconos del catálogo (BASE_CONCEPTS.icon, sin prefijo) a clases
+// Tabler `ti ti-*`. Fallback a `ti-square` para nombres no contemplados.
+const SETUP_ICON_MAP = {
+  door: 'ti-door', sofa: 'ti-sofa', cup: 'ti-cup', bed: 'ti-bed', bath: 'ti-bath',
+  droplet: 'ti-droplet', books: 'ti-books', tv: 'ti-device-tv', wash: 'ti-wash-machine',
+  home: 'ti-home', 'plant-2': 'ti-plant-2', sun: 'ti-sun', car: 'ti-car', fence: 'ti-fence',
+  building: 'ti-building', pool: 'ti-pool', barbell: 'ti-barbell', ball: 'ti-ball-basketball',
+  trees: 'ti-trees', shield: 'ti-shield', hanger: 'ti-hanger', shirt: 'ti-shirt-sport',
+};
+function setupIconClass(name) { return SETUP_ICON_MAP[name] || 'ti-square'; }
+
+// F41 — Concepto base de un espacio dentro del tipo actual (para ícono y numeración).
+function setupConceptFor(sp) {
+  const list = logic.BASE_CONCEPTS[setupTipo] || [];
+  const base = logic.baseConcept(sp.nombre, setupTipo);
+  return list.find((c) => c.base === base) || null;
+}
+// F41 — Clase de ícono Tabler para un espacio raíz, según su concepto/zona.
+function setupRoomIcon(sp) {
+  const concept = setupConceptFor(sp);
+  if (concept) return setupIconClass(concept.icon);
+  const z = setupZona(sp);
+  return z === 'exterior' ? 'ti-home' : (z === 'amenidades' ? 'ti-building' : 'ti-square');
+}
+// F41 — Zona efectiva de un espacio: la guardada o, si falta, inferida por categoría.
+function setupZona(sp) {
+  if (sp.zona === 'interior' || sp.zona === 'exterior' || sp.zona === 'amenidades') return sp.zona;
+  const cat = sp.categoria || logic.detectCategoria(sp.nombre);
+  if (cat === 'exterior' || cat === 'amenidades') return cat;
+  return 'interior';
+}
+
+// F41 — Esquema vivo por secciones, en orden: cada planta (cuartos interior),
+// luego "Agregar planta", luego Exterior, luego Amenidades (property-wide).
 function renderSetupList() {
-  const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(state.espacios.map((e) => e.piso || 'Sin piso'))];
-  return pisos.map((p) => {
-    const rooms = state.espacios.filter((e) => (e.piso || 'Sin piso') === p && !e.parentId).sort((a, b) => (a.orden || 0) - (b.orden || 0));
-    if (!rooms.length) return '';
-    return `<div class="setup-piso-group"><div class="setup-piso-name">${esc(p)}</div>${rooms.map(setupRoomRow).join('')}</div>`;
-  }).join('');
+  const raiz = state.espacios.filter((e) => !e.parentId);
+  const pisos = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : ['Planta baja'];
+  let h = '';
+  pisos.forEach((p) => {
+    const rooms = raiz
+      .filter((e) => setupZona(e) === 'interior' && (e.piso || 'Planta baja') === p)
+      .sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    h += setupSection('ti-stairs', esc(p), rooms, 'Sin cuartos en esta planta todavía.');
+  });
+  h += `<button class="setup-addfloor" onclick="agregarPiso()"><i class="ti ti-plus"></i>Agregar planta</button>`;
+  const ext = raiz.filter((e) => setupZona(e) === 'exterior').sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  const ame = raiz.filter((e) => setupZona(e) === 'amenidades').sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  h += setupSection('ti-plant-2', 'Exterior', ext, 'Sin espacios exteriores.');
+  h += setupSection('ti-pool', 'Amenidades', ame, 'Sin amenidades.');
+  return h;
+}
+
+function setupSection(iconClass, nombre, rooms, vacio) {
+  const n = rooms.length;
+  const cnt = `${n} ${n === 1 ? 'cuarto' : 'cuartos'}`;
+  const inner = n ? rooms.map(setupRoomRow).join('') : `<div class="setup-sec-empty">${vacio}</div>`;
+  return `<div class="setup-sec">
+    <div class="setup-sec-h"><div class="setup-sec-name"><i class="ti ${iconClass}"></i>${nombre}</div><div class="setup-sec-cnt">${cnt}</div></div>
+    ${inner}
+  </div>`;
 }
 
 function setupRoomRow(room) {
   // En el piso Drone los sujetos aereos no tienen sub-cuartos (sin closet/bano).
-  const drone = logic.isDronePiso(room.piso);
+  const drone = logic.isDronePiso(room.piso) || room.kind === 'drone';
   const subs = state.espacios.filter((e) => e.parentId === room.id).sort((a, b) => (a.orden || 0) - (b.orden || 0));
-  return `<div class="setup-room"><span class="setup-room-name">${esc(room.nombre)}</span>
-    ${drone ? '' : `<button class="setup-room-sub" onclick="toggleSubPick('${room.id}')">+ sub-cuarto</button>`}
-    <button class="setup-room-x" onclick="quitarEspacio('${room.id}')" aria-label="Quitar ${esc(room.nombre)}"><i class="ti ti-x"></i></button></div>
-    ${!drone && setupSubFor === room.id ? renderSubPick(room) : ''}
-    ${subs.map((s) => `<div class="setup-room sub"><span class="setup-room-name">${esc(s.nombre)}</span>
-      <button class="setup-room-x" onclick="quitarEspacio('${s.id}')" aria-label="Quitar ${esc(s.nombre)}"><i class="ti ti-x"></i></button></div>`).join('')}`;
+  const ic = setupRoomIcon(room);
+  return `<div class="setup-room"><span class="setup-room-ic"><i class="ti ${ic}"></i></span><span class="setup-room-name" onclick="accionesEspacio('${room.id}')">${esc(room.nombre)}</span>
+    <div class="setup-room-acts">
+      ${drone ? '' : `<button class="setup-room-plus" onclick="duplicarEspacio('${room.id}')" aria-label="Agregar otro ${esc(room.nombre)}"><i class="ti ti-plus"></i>1</button>`}
+      <button class="setup-room-x" onclick="quitarEspacio('${room.id}')" aria-label="Quitar ${esc(room.nombre)}"><i class="ti ti-trash"></i></button>
+    </div></div>
+    ${drone ? '' : `<div class="setup-subbar">
+      <button class="setup-subchip" onclick="addSubRapido('${room.id}','Clóset')"><i class="ti ti-hanger"></i>Clóset</button>
+      <button class="setup-subchip" onclick="addSubRapido('${room.id}','Baño')"><i class="ti ti-bath"></i>Baño</button>
+      <button class="setup-subchip" onclick="addSubRapido('${room.id}','Vestidor','vestidor')"><i class="ti ti-shirt-sport"></i>Vestidor</button>
+      <button class="setup-subchip" onclick="addSubRapido('${room.id}','Balcón / Terraza','terraza')"><i class="ti ti-sun"></i>Balcón</button>
+    </div>`}
+    ${subs.length ? `<div class="setup-sublist">${subs.map((s) => `<div class="setup-sub-row"><i class="ti ti-corner-down-right setup-sub-ic"></i><span class="setup-sub-name">${esc(s.nombre)}</span>
+      <button class="setup-room-x" onclick="quitarEspacio('${s.id}')" aria-label="Quitar ${esc(s.nombre)}"><i class="ti ti-x"></i></button></div>`).join('')}</div>` : ''}`;
+}
+
+// F41 — Duplicar: agrega otra instancia del mismo concepto base, numerada con
+// nextRoomName. Ámbito de numeración: misma planta para interior, global para
+// exterior/amenidades. Crea con nuevoEspacio (mismo piso/zona/categoría).
+function duplicarEspacio(id) {
+  const sp = state.espacios.find((e) => e.id === id);
+  if (!sp) return;
+  const zona = setupZona(sp);
+  const concept = setupConceptFor(sp) || { base: logic.baseConcept(sp.nombre, setupTipo) };
+  const ambito = state.espacios.filter((e) => {
+    if (e.parentId) return false;
+    if (setupZona(e) !== zona) return false;
+    if (zona === 'interior') return (e.piso || 'Planta baja') === (sp.piso || 'Planta baja');
+    return true;
+  }).map((e) => e.nombre);
+  const nombre = logic.nextRoomName(ambito, concept);
+  nuevoEspacio(nombre, sp.piso, zona, null, sp.categoria || logic.detectCategoria(nombre));
+  scheduleSave(); render();
 }
 
 // F20 — Selector rapido de sub-cuarto: Closet / Bano de un toque + Otro (texto libre).
