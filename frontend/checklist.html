@@ -851,6 +851,13 @@
     .cap-plano-chip.sel { border-color: var(--ink-2); box-shadow: 0 0 0 1px var(--ink-2); background: var(--tint); font-weight: 600; }
     .cap-plano-chip.done { color: var(--green); background: var(--green-soft); border-color: #BFE0CC; }
     .cap-plano-chip.done i { color: var(--green); }
+    /* F29 — sub-control contextual (Sentido / Pared) debajo de la rejilla de Movimiento.
+       Dos opciones, seleccion en tinte neutro (no azul), area tactil >=44px. */
+    .cap-subgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .cap-subopt { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 8px 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--ink-2); text-align: center; }
+    .cap-subopt svg { width: 24px; height: 24px; color: var(--ink-2); flex: none; }
+    .cap-subopt.sub-on { border-color: var(--ink-2); box-shadow: 0 0 0 1px var(--ink-2); background: var(--tint); color: var(--ink-1); font-weight: 600; }
+    .cap-subopt.sub-on svg { color: var(--ink-1); }
     /* F27 — linea "Etiqueta" de la toma recien grabada: colapsada (ranuras tappables),
        se abre al tocar para mostrar los mismos chips/rejilla que la capa de sugeridas. */
     .cap-lt { margin-top: var(--sp-2); }
@@ -1034,6 +1041,8 @@ let activeSugId = null;
 // F7 — etiqueta de la proxima toma (no se auto-avanza)
 let pendingShotType = null;   // id de SHOT_TYPES seleccionado en la tira de sugerencias
 let pendingMovement = null;   // id de MOVEMENTS seleccionado
+let pendingSentido = null;    // F29 — sub-control Sentido (solo push_pull): 'in'|'out'|null
+let pendingPared = null;      // F29 — sub-control Pared (solo reveal): 'izq'|'der'|null
 let sugStripOpen = false;     // panel "Sugeridas" plegable (colapsado por defecto, F15/F16)
 let latestTagOpen = false;    // F27 — etiqueta plano/movimiento de la toma recien grabada (colapsado por defecto)
 let tagLibre = false;         // F16 — modo libre: detalle plano/movimiento sin sugerencia activa
@@ -2694,6 +2703,7 @@ const PLANO_LABELS = { general: 'Abierto', detalle: 'Detalle' };
 
 // SVGs de los 7 movimientos reales (copiados del mockup recomendacion.html).
 const MOV_SVGS = {
+  push_pull:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4M12 5v14"/></svg>',
   push_in:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 12h3M17 12h-3M11 10l2 2-2 2M15 10l-2 2 2 2"/></svg>',
   pull_out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M10 12H7M14 12h3M9 10l-2 2 2 2M15 10l2 2-2 2"/></svg>',
   pan:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>',
@@ -2702,6 +2712,36 @@ const MOV_SVGS = {
   orbit:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="12" rx="9" ry="5"/><path d="M11 7l3 1.5-3 1.5"/></svg>',
   reveal:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 4v16M6 12h11M14 8l4 4-4 4"/></svg>',
 };
+
+// F29 — iconos literales de Pared: cuadro (frame) con la barra de pared a un lado.
+// izq = barra a la izquierda del frame; der = a la derecha. Estilo consistente (viewBox 24, stroke).
+const PARED_SVGS = {
+  izq: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="6" width="3" height="12" rx="1" fill="currentColor"/><rect x="9" y="6" width="11" height="12" rx="2"/></svg>',
+  der: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="6" width="11" height="12" rx="2"/><rect x="17" y="6" width="3" height="12" rx="1" fill="currentColor"/></svg>',
+};
+
+// F29 — renderiza el sub-control contextual (Sentido para push_pull, Pared para reveal)
+// debajo de la rejilla de Movimiento. `movCur` es el movimiento curado activo; `activeVal`
+// el valor ya elegido (sentido/pared); `onclickFn` el nombre de la funcion a invocar con
+// (idOpcion). Devuelve '' si el movimiento no tiene variante. Mismo componente en ambos taggers.
+function renderSubControl(movCur, activeVal, onclickArgPrefix) {
+  if (movCur === 'push_pull') {
+    const opts = (logic.SENTIDO_OPTS || ['in', 'out']).map((id) => {
+      const on = activeVal === id;
+      return `<button class="cap-subopt${on ? ' sub-on' : ''}" onclick="${onclickArgPrefix}'${esc(id)}')"><span>${esc(logic.sentidoLabel(id) || id)}</span></button>`;
+    }).join('');
+    return `<div class="cap-mini-lbl" style="margin-top:12px">Sentido</div><div class="cap-subgrid">${opts}</div>`;
+  }
+  if (movCur === 'reveal') {
+    const opts = (logic.PARED_OPTS || ['izq', 'der']).map((id) => {
+      const on = activeVal === id;
+      const svg = PARED_SVGS[id] || '';
+      return `<button class="cap-subopt${on ? ' sub-on' : ''}" onclick="${onclickArgPrefix}'${esc(id)}')">${svg}<span>${esc(logic.paredLabel(id) || id)}</span></button>`;
+    }).join('');
+    return `<div class="cap-mini-lbl" style="margin-top:12px">Pared</div><div class="cap-subgrid">${opts}</div>`;
+  }
+  return '';
+}
 
 function planoLabel(id) {
   const shotTypes = logic.getShotTypes();
@@ -2758,6 +2798,9 @@ function renderCapSugStrip(target, isDrone) {
     const parts = [];
     if (pendingShotType) parts.push(planoLabel(curatedPlano(pendingShotType) || pendingShotType));
     if (pendingMovement) parts.push((movements[curatedMovement(pendingMovement)] || movements[pendingMovement] || {}).label || pendingMovement);
+    const curMovSel = curatedMovement(pendingMovement);
+    if (curMovSel === 'push_pull' && pendingSentido) parts.push(logic.sentidoLabel(pendingSentido));
+    else if (curMovSel === 'reveal' && pendingPared) parts.push(logic.paredLabel(pendingPared));
     selLine = parts.length ? `<b>${esc(parts.join(' · '))}</b>` : '<b>Libre</b>';
   } else {
     selLine = `<b>${doneN} / ${suggestions.length}</b>`;
@@ -2790,12 +2833,16 @@ function renderCapSugStrip(target, isDrone) {
       return `<button class="cap-mv${on ? ' mv-on' : ''}" onclick="seleccionarMovimiento('${esc(id)}')">${svg}<span>${esc((movements[id] || {}).label || id)}</span></button>`;
     }).join('');
 
+    const subActive = curMov === 'push_pull' ? pendingSentido : (curMov === 'reveal' ? pendingPared : null);
+    const subControl = renderSubControl(curMov, subActive, 'seleccionarSubControl(');
+
     detailHtml = `<div class="cap-sug-detail">
       ${guideHtml}
       <div class="cap-mini-lbl">Plano</div>
       <div class="chips cap-plano-chips">${planoChips}</div>
       <div class="cap-mini-lbl" style="margin-top:12px">Movimiento</div>
       <div class="cap-mvgrid">${movGrid}</div>
+      ${subControl}
     </div>`;
   }
 
@@ -2818,7 +2865,13 @@ function renderCapLatest(file) {
   const movements = logic.getMovements();
   const parts = [];
   if (file.shotType) parts.push(planoLabel(curatedPlano(file.shotType)));
-  if (file.movement) parts.push((movements[file.movement] || {}).label || file.movement);
+  if (file.movement) {
+    const mc = curatedMovement(file.movement);
+    let mt = (movements[mc] || movements[file.movement] || {}).label || file.movement;
+    if (mc === 'push_pull' && file.sentido) mt += ' · ' + (logic.sentidoLabel(file.sentido) || file.sentido);
+    else if (mc === 'reveal' && file.pared) mt += ' · ' + (logic.paredLabel(file.pared) || file.pared);
+    parts.push(mt);
+  }
   const meta = parts.length ? ' · ' + esc(parts.join(' · ')) : '';
   const noteHtml = file.note
     ? `<button class="cap-notef has" onclick="agregarNotaArchivo('${esc(file.id)}')"><i class="ti ti-note"></i>${esc(file.note)}</button>`
@@ -2847,7 +2900,10 @@ function renderLatestTag(file) {
   const planoCur = curatedPlano(file.shotType);
   const movCur = curatedMovement(file.movement);
   const planoSlot = planoCur ? esc(planoLabel(planoCur)) : '<span class="lt-empty"><i class="ti ti-plus"></i>plano</span>';
-  const movSlot = movCur ? esc((movements[movCur] || {}).label || movCur) : '<span class="lt-empty"><i class="ti ti-plus"></i>movimiento</span>';
+  let movText = movCur ? ((movements[movCur] || {}).label || movCur) : '';
+  if (movCur === 'push_pull' && file.sentido) movText += ' · ' + (logic.sentidoLabel(file.sentido) || file.sentido);
+  else if (movCur === 'reveal' && file.pared) movText += ' · ' + (logic.paredLabel(file.pared) || file.pared);
+  const movSlot = movCur ? esc(movText) : '<span class="lt-empty"><i class="ti ti-plus"></i>movimiento</span>';
 
   let body = '';
   if (latestTagOpen) {
@@ -2860,11 +2916,14 @@ function renderLatestTag(file) {
       const svg = MOV_SVGS[id] || '';
       return `<button class="cap-mv${on ? ' mv-on' : ''}" onclick="etiquetarMovimientoToma('${esc(file.id)}','${esc(id)}')">${svg}<span>${esc((movements[id] || {}).label || id)}</span></button>`;
     }).join('');
+    const subActive = movCur === 'push_pull' ? (file.sentido || null) : (movCur === 'reveal' ? (file.pared || null) : null);
+    const subControl = renderSubControl(movCur, subActive, `etiquetarSubControlToma('${esc(file.id)}',`);
     body = `<div class="cap-sug-detail lt-detail">
       <div class="cap-mini-lbl">Plano</div>
       <div class="chips cap-plano-chips">${planoChips}</div>
       <div class="cap-mini-lbl" style="margin-top:12px">Movimiento</div>
       <div class="cap-mvgrid">${movGrid}</div>
+      ${subControl}
     </div>`;
   }
 
@@ -2898,11 +2957,40 @@ function etiquetarPlanoToma(fileId, id) {
 }
 
 // F27 — etiqueta el MOVIMIENTO de la toma ya grabada (file). Persiste movement en ese file.
+// F29 — al cambiar de movimiento, limpia el sub-valor (sentido/pared) que ya no aplica.
 function etiquetarMovimientoToma(fileId, mvId) {
   const file = state.mediaFiles.find((f) => f.id === fileId);
   const next = (file && curatedMovement(file.movement) === mvId) ? null : mvId;
-  state = logic.updateMediaFile(state, fileId, { movement: next });
+  const patch = { movement: next };
+  if (next !== 'push_pull') patch.sentido = null;
+  if (next !== 'reveal') patch.pared = null;
+  state = logic.updateMediaFile(state, fileId, patch);
   scheduleSave(); render();
+}
+
+// F29 — etiqueta el SENTIDO (push_pull) de la toma ya grabada. Toggle: re-tap limpia (null).
+function etiquetarSentidoToma(fileId, id) {
+  const file = state.mediaFiles.find((f) => f.id === fileId);
+  const next = (file && file.sentido === id) ? null : id;
+  state = logic.updateMediaFile(state, fileId, { sentido: next });
+  scheduleSave(); render();
+}
+
+// F29 — etiqueta la PARED (reveal) de la toma ya grabada. Toggle: re-tap limpia (null).
+function etiquetarParedToma(fileId, id) {
+  const file = state.mediaFiles.find((f) => f.id === fileId);
+  const next = (file && file.pared === id) ? null : id;
+  state = logic.updateMediaFile(state, fileId, { pared: next });
+  scheduleSave(); render();
+}
+
+// F29 — despacha el sub-control de la toma grabada al campo correcto segun su movimiento.
+function etiquetarSubControlToma(fileId, id) {
+  const file = state.mediaFiles.find((f) => f.id === fileId);
+  if (!file) return;
+  const movCur = curatedMovement(file.movement);
+  if (movCur === 'push_pull') etiquetarSentidoToma(fileId, id);
+  else if (movCur === 'reveal') etiquetarParedToma(fileId, id);
 }
 
 function pendingTakeLabel() {
@@ -2926,8 +3014,24 @@ function seleccionarPlano(id) {
 }
 
 // F16 — cambiar el movimiento del detalle. Conserva la sugerencia activa.
+// F29 — al cambiar de movimiento, limpia el sub-valor que ya no aplica.
 function seleccionarMovimiento(mvId) {
   pendingMovement = curatedMovement(pendingMovement) === mvId ? null : mvId;
+  const curMov = curatedMovement(pendingMovement);
+  if (curMov !== 'push_pull') pendingSentido = null;
+  if (curMov !== 'reveal') pendingPared = null;
+  render();
+}
+
+// F29 — fija/limpia el sub-control (Sentido para push_pull, Pared para reveal) de la
+// PROXIMA toma. Re-tap del mismo valor lo limpia (patron de seleccionarPlano).
+function seleccionarSubControl(id) {
+  const curMov = curatedMovement(pendingMovement);
+  if (curMov === 'push_pull') {
+    pendingSentido = pendingSentido === id ? null : id;
+  } else if (curMov === 'reveal') {
+    pendingPared = pendingPared === id ? null : id;
+  }
   render();
 }
 
@@ -2935,8 +3039,15 @@ function seleccionarMovimiento(mvId) {
 // y el suggestionId de la sugerencia activa (null si es Libre o sin etiquetar). Asi la
 // sugerencia se marca hecha (palomita) al capturar. No auto-avanza a la siguiente.
 function darToma(targetId) {
+  const curMov = curatedMovement(pendingMovement);
   const ctx = (pendingShotType || pendingMovement || activeSugId)
-    ? { shotType: pendingShotType, movement: pendingMovement, suggestionId: activeSugId }
+    ? {
+        shotType: pendingShotType,
+        movement: pendingMovement,
+        suggestionId: activeSugId,
+        sentido: curMov === 'push_pull' ? pendingSentido : null,
+        pared: curMov === 'reveal' ? pendingPared : null,
+      }
     : null;
   registrarArchivo(targetId, 'take', undefined, ctx);
 }
@@ -3023,6 +3134,8 @@ function seleccionarSugerencia(id) {
     pendingShotType = sug ? (curatedPlano(sug.shotType) || null) : null;
     pendingMovement = sug ? (curatedMovement(sug.movement) || null) : null;
   }
+  pendingSentido = null;
+  pendingPared = null;
   render();
 }
 
@@ -3039,6 +3152,8 @@ function entrarLibre() {
     pendingShotType = null;
     pendingMovement = null;
   }
+  pendingSentido = null;
+  pendingPared = null;
   render();
 }
 
@@ -3729,7 +3844,7 @@ function setActiveRoom(id) {
   activeRoomId = id;
   localStorage.setItem(roomKey(), id);
   // F7 — al cambiar de cuarto se limpia la etiqueta de la proxima toma; sin cuestionario "cual quedo".
-  pendingShotType = null; pendingMovement = null; activeSugId = null; tagLibre = false;
+  pendingShotType = null; pendingMovement = null; pendingSentido = null; pendingPared = null; activeSugId = null; tagLibre = false;
   cerrarModal();
   render();
 }
@@ -3957,13 +4072,13 @@ function registrarArchivo(targetId, kind, discardReason, ctx) {
   const previous = state;
   let suggFields = {};
   if (ctx && (ctx.shotType || ctx.movement || ctx.suggestionId)) {
-    suggFields = { shotType: ctx.shotType || null, movement: ctx.movement || null, suggestionId: ctx.suggestionId || null };
+    suggFields = { shotType: ctx.shotType || null, movement: ctx.movement || null, suggestionId: ctx.suggestionId || null, sentido: ctx.sentido || null, pared: ctx.pared || null };
   }
   state = logic.registerMediaFile(state, { cameraId: camera.id, targetId, kind, discardReason, autor: miNombre(), now: new Date(), ...suggFields });
   if (state === previous) return showToast('Reactiva este elemento antes de registrar');
   activeRoomId = targetId; localStorage.setItem(roomKey(), targetId);
   // No auto-avance: la etiqueta de la proxima toma se limpia tras grabar.
-  if (kind === 'take') { pendingShotType = null; pendingMovement = null; activeSugId = null; tagLibre = false; }
+  if (kind === 'take') { pendingShotType = null; pendingMovement = null; pendingSentido = null; pendingPared = null; activeSugId = null; tagLibre = false; }
   render(); scheduleSave();
 }
 
