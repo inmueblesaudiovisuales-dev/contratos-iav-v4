@@ -2731,7 +2731,7 @@ function renderCapLatest(file) {
   const shotTypes = logic.getShotTypes();
   const movements = logic.getMovements();
   const parts = [];
-  if (file.shotType) parts.push((shotTypes[file.shotType] || {}).label || file.shotType);
+  if (file.shotType) parts.push(planoLabel(curatedPlano(file.shotType)));
   if (file.movement) parts.push((movements[file.movement] || {}).label || file.movement);
   const meta = parts.length ? ' · ' + esc(parts.join(' · ')) : '';
   const noteHtml = file.note
@@ -3585,7 +3585,7 @@ function renderCapTakes(files) {
     else if (file.favorite) badge = `<span class="cap-badge fav"><i class="ti ti-star-filled"></i>favorita</span>`;
     else if (file.good) badge = `<span class="cap-badge good"><i class="ti ti-check"></i>buena</span>`;
     const parts = [];
-    if (file.shotType) parts.push((shotTypes[file.shotType] || {}).label || file.shotType);
+    if (file.shotType) parts.push(planoLabel(curatedPlano(file.shotType)));
     if (file.movement) parts.push((movements[file.movement] || {}).label || file.movement);
     const meta = parts.length ? parts.join(' · ') : (isFail ? mediaKindLabel(file) : (file.note || mediaKindLabel(file)));
     return `<button class="cap-take${isFail ? ' fail' : ''}" onclick="abrirArchivo('${esc(file.id)}')">
