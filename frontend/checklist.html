@@ -536,6 +536,7 @@
     .setup-block { margin-top: 20px; }
     .setup-lbl { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; }
     .setup-lbl b { color: var(--gold); font-weight: 600; }
+    .setup-hint { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; }
     .seg { display: flex; flex-wrap: wrap; gap: 7px; }
     .seg-btn { height: 38px; padding: 0 14px; border: 1.5px solid var(--line-2, #D2C9B3); border-radius: 8px; background: var(--card); color: var(--ink-2); font-weight: 600; font-size: 13px; }
     .seg-btn.active { border-color: var(--gold-leaf); background: var(--gold-soft); color: var(--ink-1); }
@@ -1486,7 +1487,10 @@ function renderActiveView() {
 const TIPO_LABEL = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', quinta: 'Quinta' };
 
 function getFocusPiso() {
-  const pisos = state.pisos && state.pisos.length ? state.pisos : ['Piso 1'];
+  // F24 — Sin pisos no hay foco posible: devolvemos null y el render muestra
+  // los chips de "añadir primer piso" en vez de sugeridos de un piso inexistente.
+  const pisos = state.pisos && state.pisos.length ? state.pisos : [];
+  if (!pisos.length) return null;
   return setupPiso && pisos.includes(setupPiso) ? setupPiso : pisos[0];
 }
 
@@ -1498,8 +1502,21 @@ function renderSetup() {
   // F20 — Terreno: un solo sujeto, no se arman cuartos. Vive en su propia vista.
   if (setupTipo === 'terreno') return renderSetupTerreno(tipoSeg);
 
-  const pisos = state.pisos && state.pisos.length ? state.pisos : ['Piso 1'];
+  const pisos = state.pisos && state.pisos.length ? state.pisos : [];
   const focusP = getFocusPiso();
+  // F24 — Sin pisos: arrancar vacío. La fila "Pisos" muestra un texto guía y
+  // chips de un toque para añadir el primer piso (cada uno toma foco al instante).
+  if (!pisos.length) {
+    return `<section class="setup">
+      <div class="setup-hd"><h2>Armar cuartos</h2><p>Arrancas de cero. Agrega tu primer piso para empezar a sumar cuartos.</p></div>
+      ${tipoSeg}
+      <div class="setup-block">
+        <label class="setup-lbl">Pisos</label>
+        <p class="setup-hint">Agrega tu primer piso</p>
+        ${renderPisoAddChips()}
+      </div>
+    </section>`;
+  }
   const drone = logic.isDronePiso(focusP);
   // Cuartos raiz en el piso en foco (para el conteo del encabezado).
   const enFoco = state.espacios.filter((e) => (e.piso || 'Sin piso') === focusP && !e.parentId).length;
@@ -1764,6 +1781,17 @@ function agregarSujetoAereo(nombre) {
   espacio.kind = 'drone';
   scheduleSave();
   render();
+}
+
+// F24 — Chips de un toque para añadir el primer piso cuando el estado arranca
+// sin pisos. Cada chip llama a confirmarPiso(p), que agrega el piso y lo pone en
+// foco. El chip "+ otro…" abre el sheet de agregarPiso() para un nombre libre.
+function renderPisoAddChips() {
+  const sug = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades', 'Drone'].filter((p) => !(state.pisos || []).includes(p));
+  return `<div class="chips">${sug.map((p) => {
+    const dr = logic.isDronePiso(p);
+    return `<button class="chip${dr ? ' drone' : ''}" onclick="confirmarPiso('${esc(p)}')">${dr ? '<i class="ti ti-drone"></i>' : '<i class="ti ti-plus"></i>'}${esc(p)}</button>`;
+  }).join('')}<button class="chip add" onclick="agregarPiso()"><i class="ti ti-plus"></i>otro…</button></div>`;
 }
 
 function agregarPiso() {

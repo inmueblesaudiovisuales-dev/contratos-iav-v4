@@ -575,9 +575,10 @@ test('does not register legacy captures for targets marked no aplica', () => {
 });
 
 test('default state includes an editable list of pisos', () => {
+  // F24: el estado nuevo arranca SIN pisos (el usuario los agrega a mano).
   const state = logic.createDefaultState();
   assert.equal(Array.isArray(state.pisos), true);
-  assert.equal(state.pisos.length > 0, true);
+  assert.equal(state.pisos.length, 0);
 });
 
 test('preserves an explicit piso on a version 2 space', () => {
@@ -1945,7 +1946,9 @@ test('F18 (B): existen los dos drones por defecto, cada uno con su id propio', (
 });
 
 test('F18: el piso Drone se marca de forma robusta', () => {
-  assert.ok(logic.createDefaultState().pisos.includes('Drone'), 'el piso Drone existe en los pisos por defecto');
+  // F24: el estado nuevo arranca sin pisos; el reconocimiento de "Drone" como piso
+  // drone es independiente del default (el usuario lo agrega a mano).
+  assert.equal(logic.createDefaultState().pisos.length, 0, 'el estado nuevo arranca sin pisos');
   assert.ok(logic.isDronePiso('Drone'), 'Drone es piso drone');
   assert.ok(logic.isDronePiso('drone'), 'reconoce variante en minusculas');
   assert.ok(!logic.isDronePiso('Exterior'), 'Exterior no es piso drone');
@@ -2159,4 +2162,41 @@ test('F19: cambios aditivos: version export sigue en 1 y normalizeChecklistData 
   assert.equal(exp.version, 1, 'el export sigue en version 1');
   const norm = logic.normalizeChecklistData({ espacios: [], servicios: {} });
   assert.ok(norm, 'normalizeChecklistData sigue cargando estado viejo');
+});
+
+test('F24: el estado nuevo arranca sin pisos', () => {
+  const state = logic.createDefaultState();
+  assert.ok(Array.isArray(state.pisos), 'pisos es un array');
+  assert.deepEqual(state.pisos, [], 'pisos arranca vacio');
+});
+
+test('F24: normalizeChecklistData conserva un pisos explicito sin pisarlo', () => {
+  const norm = logic.normalizeChecklistData({
+    version: 3,
+    pisos: ['Exterior', 'Piso 1'],
+    espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
+  });
+  assert.deepEqual(norm.pisos, ['Exterior', 'Piso 1'], 'respeta los pisos explicitos del estado entrante');
+});
+
+test('F24: normalizeChecklistData respeta un pisos vacio explicito', () => {
+  // El flujo nuevo guarda estado con pisos:[] a proposito; no debe derivarse.
+  const norm = logic.normalizeChecklistData({
+    version: 3,
+    pisos: [],
+    espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
+  });
+  assert.deepEqual(norm.pisos, [], 'respeta el pisos vacio puesto a proposito');
+});
+
+test('F24: estado legacy SIN pisos deriva los pisos de los espacios', () => {
+  const norm = logic.normalizeChecklistData({
+    version: 3,
+    espacios: [
+      { id: 'a', nombre: 'Fachada', zona: 'exterior', piso: 'Exterior', estados: {} },
+      { id: 'b', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} },
+      { id: 'c', nombre: 'Cocina', zona: 'interior', piso: 'Piso 1', estados: {} },
+    ],
+  });
+  assert.deepEqual(norm.pisos, ['Exterior', 'Piso 1'], 'deriva los pisos de los espacios cuando pisos viene ausente');
 });

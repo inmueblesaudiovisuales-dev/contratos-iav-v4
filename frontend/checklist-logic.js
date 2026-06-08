@@ -1415,7 +1415,7 @@
     return {
       version: 3,
       servicios: clone(SERVICES_DEFAULT),
-      pisos: PISOS_DEFAULT.slice(),
+      pisos: [],
       modoActual: 'video',
       espacios: [],
       droneItems: [],
@@ -1500,7 +1500,10 @@
       // 'Exterior' (zona 'exterior') y reasignamos el targetId de esos mediaFiles, preservando
       // todo lo demas del mediaFile. Los droneItems no usados se descartan. No se pierden archivos.
       migrateDroneItemsToEspacios(normalized);
-      normalized.pisos = Array.isArray(data.pisos) && data.pisos.length ? data.pisos.slice() : derivePisos(normalized.espacios);
+      // Migracion de pisos: si el estado entrante trae `pisos` como array (incluido `[]` vacio a
+      // proposito por el flujo nuevo de "arrancar sin pisos"), se respeta tal cual. Solo cuando
+      // `pisos` viene ausente/undefined/null (estado legacy) se deriva de los espacios.
+      normalized.pisos = Array.isArray(data && data.pisos) ? data.pisos.slice() : derivePisos(normalized.espacios);
       normalized.asesorPuntos = (normalized.asesorPuntos && normalized.asesorPuntos.length ? normalized.asesorPuntos : createAsesorPuntos())
         .map((p, index) => ({
           id: p.id || makeId('asesor'),
