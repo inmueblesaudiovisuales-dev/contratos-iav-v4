@@ -656,6 +656,28 @@
     .setup-single .single-name { font-family: var(--font-display); font-size: var(--ts-lg); font-weight: 500; }
     .setup-single .single-desc { font-size: var(--ts-cap); color: var(--ink-2); margin-top: var(--sp-1); }
 
+    /* F36 — Interruptor "Incluir tomas de drone" (estilo R1, tinte neutro; el
+       dorado se reserva a la acción primaria). Área táctil ≥44px en toda la fila. */
+    .setup-toggle { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 56px; padding: var(--sp-3) var(--sp-4);
+      border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--el-1); text-align: left; }
+    .setup-toggle.on { border-color: var(--tint-line); background: var(--tint); }
+    .setup-toggle .st-icon { font-size: 22px; color: var(--ink-3); flex: none; }
+    .setup-toggle.on .st-icon { color: var(--ink-1); }
+    .setup-toggle .st-copy { flex: 1; min-width: 0; }
+    .setup-toggle .st-title { font-size: var(--ts-body); font-weight: 600; color: var(--ink-1); }
+    .setup-toggle .st-sub { font-size: var(--ts-cap); color: var(--ink-2); margin-top: 2px; line-height: 1.4; }
+    .setup-toggle .st-sw { position: relative; flex: none; width: 46px; height: 28px; border-radius: 999px; background: var(--muted); border: 1px solid var(--tint-line); transition: background .15s ease; }
+    .setup-toggle.on .st-sw { background: var(--ink-1); border-color: var(--ink-1); }
+    .setup-toggle .st-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 999px; background: var(--card); box-shadow: var(--el-1); transition: transform .15s ease; }
+    .setup-toggle.on .st-sw::after { transform: translateX(18px); }
+
+    /* F36 — Rótulo discreto de escala del target de drone (breadcrumb / micro-texto). */
+    .cap-scale { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-bottom: 2px; }
+    .cap-scale i { font-size: 14px; color: var(--ink-3); }
+    /* F36 — Encabezados de escala en el selector "Cambiar" de la lane de drone. */
+    .cuarto-scale { font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); margin: var(--sp-4) var(--sp-1) var(--sp-2); }
+    .cuarto-scale:first-child { margin-top: var(--sp-1); }
+
     /* ===== Cobertura foto/360 — rejilla (R6) al sistema R1 =====
        renderCoverage()/covTile(): rejilla por piso, un toque cicla estado.
        Espaciado --sp-*, tipografía consistente (piso/cuarto), celdas en .card
@@ -1546,6 +1568,31 @@ function getFocusPiso() {
   return setupPiso && pisos.includes(setupPiso) ? setupPiso : pisos[0];
 }
 
+// F36 — Interruptor "Incluir tomas de drone". Reemplaza al piso Drone con sus
+// pseudo-cuartos: el drone deja de curarse en Armar cuartos y pasa a volarse en
+// la lane de Captura. Setea state.guide.incluirDrone (true/false). Estilo R1,
+// tinte neutro, área táctil ≥44px (la fila completa es el control).
+function renderDroneToggle() {
+  const on = !!(state.guide && state.guide.incluirDrone);
+  return `<div class="setup-block">
+    <button class="setup-toggle${on ? ' on' : ''}" role="switch" aria-checked="${on ? 'true' : 'false'}" onclick="toggleIncluirDrone()">
+      <i class="ti ti-drone st-icon"></i>
+      <span class="st-copy">
+        <span class="st-title">Incluir tomas de drone</span>
+        <span class="st-sub">${on ? 'Las tomas aéreas se vuelan por escalas en Captura.' : 'Actívalo si esta propiedad lleva tomas aéreas.'}</span>
+      </span>
+      <span class="st-sw" aria-hidden="true"></span>
+    </button>
+  </div>`;
+}
+
+function toggleIncluirDrone() {
+  if (!state.guide) state.guide = {};
+  state.guide.incluirDrone = !state.guide.incluirDrone;
+  scheduleSave();
+  render();
+}
+
 function renderSetup() {
   const tipoSeg = `<div class="setup-block">
       <label class="setup-lbl">Tipo de propiedad</label>
@@ -1567,6 +1614,7 @@ function renderSetup() {
         <p class="setup-hint">Agrega tu primer piso</p>
         ${renderPisoAddChips()}
       </div>
+      ${renderDroneToggle()}
     </section>`;
   }
   const drone = logic.isDronePiso(focusP);
@@ -1590,6 +1638,7 @@ function renderSetup() {
       <label class="setup-lbl${drone ? ' sky' : ''}">${drone ? 'Sugeridos para Drone' : `Sugeridos para ${esc(focusP)} · ${TIPO_LABEL[setupTipo]}`}</label>
       ${renderSetupSuggest(focusP, drone)}
     </div>`}
+    ${renderDroneToggle()}
     ${state.espacios.length ? `<div class="setup-block"><label class="setup-lbl${drone ? ' sky' : ''}">En ${esc(focusP)} · ${enFoco} ${enFoco === 1 ? 'cuarto' : 'cuartos'}</label>${renderSetupList()}</div>
       <button class="primary block" onclick="cerrarSetup()">Listo, a capturar</button>` : ''}
   </section>`;
@@ -1845,7 +1894,10 @@ function agregarSujetoAereo(nombre) {
 // sin pisos. Cada chip llama a confirmarPiso(p), que agrega el piso y lo pone en
 // foco. El chip "+ otro…" abre el sheet de agregarPiso() para un nombre libre.
 function renderPisoAddChips() {
-  const sug = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades', 'Drone'].filter((p) => !(state.pisos || []).includes(p));
+  // F36 — el drone ya NO es un piso curable: se quita "Drone" de los chips de
+  // primer piso. Las tomas de drone se activan con el interruptor "Incluir tomas
+  // de drone" (state.guide.incluirDrone) y se vuelan en la lane de Captura.
+  const sug = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades'].filter((p) => !(state.pisos || []).includes(p));
   return `<div class="chips">${sug.map((p) => {
     const dr = logic.isDronePiso(p);
     return `<button class="chip${dr ? ' drone' : ''}" onclick="confirmarPiso('${esc(p)}')">${dr ? '<i class="ti ti-drone"></i>' : '<i class="ti ti-plus"></i>'}${esc(p)}</button>`;
@@ -1853,7 +1905,8 @@ function renderPisoAddChips() {
 }
 
 function agregarPiso() {
-  const sug = ['Sótano', 'Piso 1', 'Piso 2', 'Piso 3', 'Roof', 'Exterior', 'Amenidades', 'Casa principal', 'Drone'].filter((p) => !(state.pisos || []).includes(p));
+  // F36 — sin "Drone" en la lista de pisos: el drone dejó de ser un piso.
+  const sug = ['Sótano', 'Piso 1', 'Piso 2', 'Piso 3', 'Roof', 'Exterior', 'Amenidades', 'Casa principal'].filter((p) => !(state.pisos || []).includes(p));
   abrirModal(`<div class="sheet-head"><h2>Agregar piso</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="chips" style="margin-bottom:12px">${sug.map((p) => {
       const dr = logic.isDronePiso(p);
@@ -2292,10 +2345,20 @@ function cycleCobertura(id) {
   render();
 }
 
+// F36 — Targets del modo activo. En modo drone son los targets VIRTUALES por
+// escala (droneScaleTargets via targetsForMode); NO viven en state.espacios (eso
+// recrearía los pseudo-cuartos). En el resto, los espacios reales. La lane de
+// drone lee esto directamente: nunca materializa los targets virtuales.
+function currentTargets() {
+  if (state.modoActual === 'asesor') return state.asesorPuntos || [];
+  if (state.modoActual === 'drone') return logic.targetsForMode(state, 'drone') || [];
+  return state.espacios;
+}
+
 function activeTarget() {
-  // Tras F2 el drone comparte espacios; ya no usa state.droneItems.
-  const list = state.modoActual === 'asesor' ? (state.asesorPuntos || [])
-    : state.espacios;
+  // Tras F2 el drone comparte espacios; ya no usa state.droneItems. F36 — en modo
+  // drone la lista son los targets virtuales por escala (currentTargets).
+  const list = currentTargets();
   if (!list.length) return null;
   if (activeRoomId) {
     const found = list.find((item) => item.id === activeRoomId);
@@ -2332,15 +2395,45 @@ function recorridoEspacios(servicio) {
   return [...valid, ...missing];
 }
 
+// F36 — orden de escalas de la lane de drone (Propiedad → Amenidades →
+// Inmediato → Ubicación). Una sola secuencia plana ordenada por escala.
+const DRONE_SCALE_ORDER = ['propiedad', 'amenidades', 'inmediato', 'ubicacion'];
+function droneScaleIndex(target) {
+  const i = DRONE_SCALE_ORDER.indexOf(target && target.scale);
+  return i < 0 ? DRONE_SCALE_ORDER.length : i;
+}
+
+// F36 — recorrido de la lane de drone: targets virtuales (targetsForMode) en una
+// lista plana ordenada por escala. No usa state.recorrido (los targets no se
+// persisten); el orden es canónico por escala.
+function recorridoDrone() {
+  return (logic.targetsForMode(state, 'drone') || [])
+    .slice()
+    .map((t, i) => ({ t, i }))
+    .sort((a, b) => (droneScaleIndex(a.t) - droneScaleIndex(b.t)) || (a.i - b.i))
+    .map((x) => x.t.id);
+}
+
 function recorridoTargets(servicio) {
   // Drone comparte espacios tras F2: usa el mismo recorrido que video.
   if (servicio === 'asesor') return (state.asesorPuntos || []).slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0)).map((t) => t.id);
+  // F36 — drone: lista plana de targets virtuales ordenada por escala.
+  if (servicio === 'drone') return recorridoDrone();
   return recorridoEspacios(servicio);
+}
+
+// F36 — ¿tiene este target de drone alguna toma buena ya registrada? (para que
+// "Siguiente" salte los targets ya cubiertos, como con los cuartos hechos).
+function droneTargetTieneToma(id) {
+  const droneCamIds = new Set((state.cameras || []).filter((c) => c && c.mode === 'drone').map((c) => c.id));
+  return (state.mediaFiles || []).some((f) => f && f.kind === 'take' && f.good && f.targetId === id && droneCamIds.has(f.cameraId));
 }
 
 function esPendiente(id, servicio) {
   // Drone comparte espacios tras F2: su pendiente se lee del estado por servicio.
   if (servicio === 'asesor') { const it = (state.asesorPuntos || []).find((x) => x.id === id); return !!it && it.estado !== 'hecho'; }
+  // F36 — drone: el target virtual está "pendiente" si aún no tiene toma buena.
+  if (servicio === 'drone') return !droneTargetTieneToma(id);
   const sp = state.espacios.find((x) => x.id === id);
   if (!sp) return false;
   const st = (sp.estados[servicio] || {}).estado;
@@ -2439,11 +2532,78 @@ function renderCapNav(label, changeFn) {
 // abrirCambiarCuarto() (drone y cuartos normales). Los extremos los maneja
 // siguienteCuarto (muestra toast y no rompe la captura).
 function renderLoopNav(isDrone, target) {
+  // F36 — en la lane de drone "Cambiar" abre el selector de targets de escala
+  // (abrirCambiarDrone), agrupados por escala. El label dice "toma".
+  if (isDrone) return renderCapNav('toma', 'abrirCambiarDrone()');
   const esPunto = !isDrone && target && target.tipo && target.tipo !== 'drone'
     && typeof abrirCambiarPunto === 'function';
   const label = esPunto ? 'punto' : 'cuarto';
   const changeFn = esPunto ? 'abrirCambiarPunto()' : 'abrirCambiarCuarto()';
   return renderCapNav(label, changeFn);
+}
+
+// F36 — al entrar a la lane de drone (o al encender incluirDrone), si el target
+// activo no es válido en la lane (no está en targetsForMode('drone')), selecciona
+// el primer target válido. NO persiste targets virtuales en state.espacios (a
+// diferencia de materializarTerrenoSiAplica); solo fija activeRoomId. Sigue el
+// patrón anti-atorón del fix de terreno pero sin materializar.
+function asegurarTargetDroneValido() {
+  if (state.modoActual !== 'drone') return;
+  const targets = recorridoDrone();
+  if (!targets.length) return;
+  if (activeRoomId && targets.includes(activeRoomId)) return;
+  // Prefiere el primer pendiente; si todos están cubiertos, el primero de la lista.
+  const primero = targets.find((id) => esPendiente(id, 'drone')) || targets[0];
+  activeRoomId = primero;
+  localStorage.setItem(roomKey(), primero);
+}
+
+// F36 — label de una escala de drone (usa DRONE_SCALES del motor). Devuelve '' si
+// el target no trae escala (p.ej. targets de drone viejos por compat).
+function droneScaleLabel(scaleId) {
+  if (!scaleId) return '';
+  const def = (logic.DRONE_SCALES || []).find((s) => s.id === scaleId);
+  return def ? def.label : '';
+}
+
+// F36 — selector "Cambiar" de la lane de drone: los targets virtuales agrupados
+// bajo encabezados de escala (Propiedad · Amenidades · Inmediato / colonia ·
+// Ubicación / contexto), usando los labels de DRONE_SCALES. Tocar uno lo activa
+// (setActiveRoom) sin materializar nada. Los targets de drone viejos sin escala
+// (compat) caen en un grupo "Otras tomas".
+function abrirCambiarDrone() {
+  const targets = logic.targetsForMode(state, 'drone') || [];
+  const curId = (activeTarget() || {}).id;
+  const grupos = (logic.DRONE_SCALES || []).map((s) => ({ id: s.id, label: s.label }));
+  let body = grupos.map((g) => {
+    const items = targets.filter((t) => t.scale === g.id);
+    if (!items.length) return '';
+    const rows = items.map((t) => {
+      const hecho = droneTargetTieneToma(t.id);
+      const active = t.id === curId;
+      return `<button class="cuarto-row${active ? ' active' : ''}" onclick="setActiveRoom('${esc(t.id)}')">
+        <span class="cuarto-name">${esc(t.nombre)}</span>
+        ${hecho ? `<span class="cuarto-done"><i class="ti ti-check"></i>grabado</span>` : ''}
+      </button>`;
+    }).join('');
+    return `<div class="cuarto-scale">${esc(g.label)}</div>${rows}`;
+  }).join('');
+  // Compat: targets de drone viejos (sin escala conocida) -> "Otras tomas".
+  const scaleIds = new Set((logic.DRONE_SCALES || []).map((s) => s.id));
+  const otros = targets.filter((t) => !scaleIds.has(t.scale));
+  if (otros.length) {
+    body += `<div class="cuarto-scale">Otras tomas</div>` + otros.map((t) => {
+      const hecho = droneTargetTieneToma(t.id);
+      const active = t.id === curId;
+      return `<button class="cuarto-row${active ? ' active' : ''}" onclick="setActiveRoom('${esc(t.id)}')">
+        <span class="cuarto-name">${esc(t.nombre)}</span>
+        ${hecho ? `<span class="cuarto-done"><i class="ti ti-check"></i>grabado</span>` : ''}
+      </button>`;
+    }).join('');
+  }
+  if (!body) body = '<p class="sheet-note">No hay tomas de drone. Activa "Incluir tomas de drone" en Armar cuartos.</p>';
+  abrirModal(`<div class="sheet-head"><h2>Cambiar toma de drone</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="cuarto-list">${body}</div>`);
 }
 
 function discardShort(file) {
@@ -2477,6 +2637,10 @@ function renderMediaCapture() {
   // en state.espacios, se materializa una sola vez (zona exterior + kind drone)
   // para que el loop tenga target; sus sugerencias salen de suggestionsForTarget.
   materializarTerrenoSiAplica();
+  // F36 — lane de drone: el target activo debe ser un target virtual válido de la
+  // lane (targetsForMode('drone')). Si no lo es, se reencuadra al primero válido
+  // SIN materializar (no toca state.espacios). Evita que el usuario quede atorado.
+  asegurarTargetDroneValido();
   const target = activeTarget();
   if (!target) {
     return `<div class="empty"><h2>Sin espacios todavía</h2><p>Agrega cuartos para empezar a registrar.</p><button class="primary" onclick="abrirSetup()" style="margin-top:12px">Armar cuartos</button></div>`;
@@ -2498,13 +2662,22 @@ function renderMediaCapture() {
   const parentName = !isDrone && target.parentId ? (state.espacios.find((e) => e.id === target.parentId) || {}).nombre : '';
   const noAplicaVideo = state.modoActual === 'video' && target.estados && (target.estados.video || {}).estado === 'no_aplica';
 
-  // Header con regreso a Cuartos + nombre + piso (mockup 02)
+  // F36 — en drone, el target porta su escala (Propiedad / Amenidades / Inmediato
+  // / Ubicación). Se muestra como rótulo discreto (breadcrumb) sobre el nombre, en
+  // vez de la línea de piso. El piso ("Stairs") no aplica a un target aéreo.
+  const scaleLbl = isDrone ? droneScaleLabel(target.scale) : '';
+  const topLine = isDrone
+    ? (scaleLbl ? `<span class="cap-scale"><i class="ti ti-drone"></i>${esc(scaleLbl)}</span>` : '')
+    : `<span class="cap-floor"><i class="ti ti-stairs-up"></i>${esc(piso)}</span>`;
+
+  // Header con regreso a Cuartos + nombre + piso/escala (mockup 02)
   const head = `
   <section class="cap-focus">
     <div class="cap-focus-head">
       <div class="cap-focus-copy">
+        ${isDrone ? topLine : ''}
         <h2 class="cap-room">${parentName ? `<span class="cap-parent">${esc(parentName)}</span>` : ''}${esc(target.nombre)}</h2>
-        <span class="cap-floor"><i class="ti ti-stairs-up"></i>${esc(piso)}</span>
+        ${isDrone ? '' : topLine}
       </div>
       <button class="cap-focus-opts" onclick="abrirAccionesFoco()" aria-label="Opciones del cuarto"><i class="ti ti-dots-vertical"></i></button>
     </div>
@@ -2517,8 +2690,14 @@ function renderMediaCapture() {
     <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>`;
   }
 
-  // Capa 1 — switch de camara (camerasForEspacio, F18/F21) + token del siguiente archivo
-  const camStrip = renderCapCamSwitch(camera, isDrone, nextTok, camsForTarget);
+  // Capa 1 — switch de camara (camerasForEspacio, F18/F21) + token del siguiente
+  // archivo. F36 — con "Incluir tomas de drone" activo, el switch tambien sirve de
+  // salto de lane: en un cuarto ofrece los dos drones (Air 3 + Mini 4 Pro) para
+  // entrar a la lane de drone; en la lane de drone ofrece las camaras terrestres
+  // para volver. Selecciona una y setCamera fija el modo (video/drone) y el render
+  // siguiente recorre los targets correctos (currentTargets). Sin drone, intacto.
+  const switchCams = camsForLoopSwitch(target, camsForTarget, isDrone);
+  const camStrip = renderCapCamSwitch(camera, isDrone, nextTok, switchCams);
 
   // Capa 2 — sugerencias (tira plegable, secundaria) — etiqueta la proxima toma
   const sugStrip = renderCapSugStrip(target, isDrone);
@@ -2555,6 +2734,30 @@ function renderMediaCapture() {
 // espacio del piso Drone entra en drone por defecto. Reusa setCamera SIN abrir el
 // loop a deltas de render (no llama render/scheduleSave; es idempotente en cada
 // renderMediaCapture). Aditivo: si la camara ya aplica, no toca nada.
+// F36 — camaras del switch del loop. Por defecto las del target (camerasForEspacio).
+// Con incluirDrone activo y rol que opera ambas lanes (video+drone), el switch suma
+// la otra lane como salto: en cuarto -> + los dos drones; en lane de drone -> + las
+// terrestres. De-dup por id, preservando el orden (primero las del target). Sin
+// incluirDrone (o terreno/asesor) devuelve camsForTarget tal cual: comportamiento
+// previo intacto.
+function camsForLoopSwitch(target, camsForTarget, isDrone) {
+  const base = Array.isArray(camsForTarget) ? camsForTarget.slice() : [];
+  const incluir = !!(state.guide && state.guide.incluirDrone);
+  if (!incluir) return base;
+  const modes = loopModesForRole();
+  if (!modes.includes('drone') || !modes.includes('video')) return base;
+  // Terreno usa su sujeto materializado (kind:'drone' real); no se le aplica el
+  // salto de lane (no hay lane virtual de drone separada).
+  if (state.guide && state.guide.tipoPropiedad === 'terreno') return base;
+  const cams = logic.getCameras(state).filter((c) => c && c.mode !== 'asesor');
+  const extra = isDrone
+    ? cams.filter((c) => c.mode !== 'drone')   // en lane de drone: ofrecer terrestres para volver
+    : cams.filter((c) => c.mode === 'drone');  // en cuarto: ofrecer los dos drones para entrar
+  const seen = new Set(base.map((c) => c.id));
+  extra.forEach((c) => { if (!seen.has(c.id)) { seen.add(c.id); base.push(c); } });
+  return base;
+}
+
 function reencuadrarCamaraSiAplica(target, camsForTarget) {
   if (!Array.isArray(camsForTarget) || !camsForTarget.length) return;
   const actual = activeCamera();
@@ -3640,11 +3843,17 @@ function abrirAccionesFoco() {
   const target = activeTarget();
   if (!target) return;
   const tipo = state.modoActual;
-  const noAplica = tipo === 'video' && (target.estados.video || {}).estado === 'no_aplica';
+  const estados = target.estados || {};
+  const noAplica = tipo === 'video' && (estados.video || {}).estado === 'no_aplica';
+  // F36 — los targets de drone son virtuales (no viven en state.espacios): no se
+  // renombran (su nombre se deriva del espacio real / es fijo). Solo se ofrece
+  // "Cambiar nombre" cuando el target es un espacio/punto real.
+  const esVirtual = tipo === 'drone' && !((state.espacios || []).some((e) => e && e.id === target.id));
   abrirModal(`<div class="sheet-head"><h2>${esc(target.nombre)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">
-      <button class="btn" onclick="renombrarFoco()"><i class="ti ti-pencil"></i> Cambiar nombre</button>
+      ${esVirtual ? '' : `<button class="btn" onclick="renombrarFoco()"><i class="ti ti-pencil"></i> Cambiar nombre</button>`}
       ${tipo === 'video' ? `<button class="btn" onclick="toggleNoAplicaVideo()"><i class="ti ti-${noAplica ? 'video' : 'video-off'}"></i> ${noAplica ? 'Reactivar video aquí' : 'Este cuarto no lleva video'}</button>` : ''}
+      ${esVirtual ? `<p class="sheet-note">Las tomas de drone se vuelan por escala; el nombre se deriva de la propiedad.</p>` : ''}
     </div>`);
 }
 
