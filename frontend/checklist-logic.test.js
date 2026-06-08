@@ -2076,6 +2076,22 @@ test('F19: suggestedSpacesFor quinta Amenidades trae alberca y palapa', () => {
   assert.ok(nombres.includes('palapa'), 'falta palapa en quinta amenidades');
 });
 
+test('F25: suggestedSpacesFor casa Amenidades trae set de privada/coto (alberca, gimnasio, +3 chips)', () => {
+  const chips = logic.suggestedSpacesFor({}, 'Amenidades', 'casa');
+  const nombres = chips.map((c) => logic.normNombre(c.nombre));
+  for (const esperado of ['alberca', 'gimnasio', 'casa club', 'cancha', 'caseta / acceso']) {
+    assert.ok(nombres.includes(esperado), 'falta el chip ' + esperado + ' en Amenidades de casa');
+  }
+  assert.ok(chips.length > 3, 'Amenidades de casa debe ofrecer mas de 3 chips, hay ' + chips.length);
+});
+
+test('F25: suggestedSpacesFor casa Amenidades conserva Roof garden y Bodega', () => {
+  const chips = logic.suggestedSpacesFor({}, 'Amenidades', 'casa');
+  const nombres = chips.map((c) => logic.normNombre(c.nombre));
+  assert.ok(nombres.includes('roof garden'), 'debe conservar Roof garden');
+  assert.ok(nombres.includes('bodega'), 'debe conservar Bodega');
+});
+
 test('F19: suggestedSpacesFor usa el tipo del guide cuando no se pasa tipoPropiedad', () => {
   const state = { guide: { tipoPropiedad: 'casa' } };
   const chips = logic.suggestedSpacesFor(state, 'Piso 1');
