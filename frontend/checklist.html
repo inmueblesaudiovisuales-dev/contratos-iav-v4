@@ -508,27 +508,36 @@
     .role-opt-copy span { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
     .role-opt-chev { font-size: 20px; color: var(--ink-3); flex: none; }
 
-    /* ===== Landing en la propiedad: lista de cuartos por piso (F5) ===== */
-    .landing { padding: 8px 0 16px; }
-    .floor { margin-top: 14px; }
-    .floor-h { display: flex; align-items: center; justify-content: space-between; padding: 6px 4px;
-      color: var(--gold); font-size: 12px; font-weight: 600; letter-spacing: .02em; }
-    .floor-cnt { color: var(--ink-3); font-weight: 500; font-family: var(--font-mono); font-size: 10.5px; }
-    .room { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
-      background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; margin-top: 8px; cursor: pointer; text-align: left; }
-    .room:active { transform: scale(.995); }
-    .room.sub { margin-left: 16px; }
-    .room-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-    .room-name { font-family: var(--font-display); font-size: 16px; font-weight: 500; }
-    .pills { display: flex; gap: 6px; flex-wrap: wrap; }
-    .rpill { font-size: 10.5px; font-family: var(--font-mono); padding: 2px 7px; border-radius: 999px;
-      border: 1px solid var(--line); color: var(--ink-3); background: var(--page); }
-    .rpill.good { color: var(--ok); border-color: #bfe0cd; background: #eef7f1; }
-    .rpill.fav { color: #7a5a12; border-color: #e4d39a; background: #f7efd8; }
-    .rpill.pend { color: var(--warn); border-color: #e7cdb0; background: #f8efe4; }
-    .room-chev { color: var(--line); font-size: 20px; flex: none; }
-    .addroom { width: 100%; margin-top: 14px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 13px;
-      text-align: center; color: var(--ink-3); font-size: 13px; font-weight: 600; background: transparent; cursor: pointer; }
+    /* ===== Captura overview: lista de cuartos por piso (F5) — sistema R1 =====
+       Tokens --sp-*/--ts-*/--el-*; tarjeta con elevación (no borde plano);
+       nombre en display serif; estado en --ts-cap sobre --ink-2; estados de
+       cuarto con color semántico (verde/dorado/ámbar); áreas táctiles ≥44px.
+       Clases acotadas a esta vista (no compartidas con otras pantallas). ===== */
+    .landing { padding: var(--sp-2) 0 var(--sp-4); }
+    .floor { margin-top: var(--sp-5); }
+    .floor-h { display: flex; align-items: baseline; justify-content: space-between; padding: 0 var(--sp-1) var(--sp-2);
+      color: var(--ink-2); font-size: var(--ts-cap); font-weight: 600; letter-spacing: .01em; }
+    .floor-cnt { color: var(--ink-3); font-weight: 500; font-family: var(--font-mono); font-size: 11px; }
+    .room { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); width: 100%;
+      min-height: 60px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+      box-shadow: var(--el-1); padding: var(--sp-3) var(--sp-4); margin-top: var(--sp-2); cursor: pointer; text-align: left;
+      transition: box-shadow .14s ease, transform .14s ease; }
+    .room:active { transform: scale(.995); box-shadow: var(--el-0); }
+    .room.sub { margin-left: var(--sp-4); }
+    .room-info { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+    .room-name { font-family: var(--font-display); font-size: var(--ts-base); font-weight: 500; color: var(--ink-1); }
+    .pills { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+    .rpill { font-size: var(--ts-cap); font-family: var(--font-mono); padding: 2px var(--sp-2); border-radius: 999px;
+      border: 1px solid var(--line); color: var(--ink-2); background: var(--page); }
+    .rpill.good { color: var(--green); border-color: #BFE0CD; background: var(--green-soft); }
+    .rpill.fav { color: var(--gold); border-color: #E4D39A; background: var(--gold-soft); }
+    .rpill.pend { color: var(--ink-2); border-color: var(--line); background: var(--page); }
+    .room-chev { color: var(--ink-3); font-size: 20px; flex: none; }
+    .addroom { width: 100%; min-height: 52px; margin-top: var(--sp-5); border: 1.5px dashed var(--tint-line); border-radius: var(--radius);
+      padding: var(--sp-3) var(--sp-4); display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+      color: var(--ink-2); font-size: var(--ts-body); font-weight: 600; background: var(--tint); cursor: pointer; }
+    .addroom:active { transform: scale(.995); }
+    .addroom i { font-size: 17px; color: var(--ink-3); }
     .back-prop { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 2px; border: none; background: transparent;
       color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 2px; }
     .back-prop i { font-size: 18px; }
