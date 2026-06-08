@@ -2034,3 +2034,129 @@ test('F18: estado viejo sin piso Drone sigue cargando y conserva las tomas de dr
   assert.ok(norm.cameras.some((c) => c.id === 'drone-mini-4-pro'), 'aparece el Mini 4 Pro al normalizar');
   assert.ok(norm.cameras.some((c) => c.id === 'drone-dji'), 'conserva el drone legacy');
 });
+
+// ─── F19 — Biblioteca de cuartos por piso/tipo + busqueda ─────────────────────
+
+test('F19: suggestedSpacesFor casa Piso 1 trae recibidor, sala, comedor, cocina, pasillo y bano de visitas', () => {
+  const chips = logic.suggestedSpacesFor({}, 'Piso 1', 'casa');
+  const nombres = chips.map((c) => logic.normNombre(c.nombre));
+  for (const esperado of ['recibidor', 'sala', 'comedor', 'cocina', 'pasillo', 'bano de visitas']) {
+    assert.ok(nombres.includes(esperado), 'falta el chip ' + esperado + ' en Piso 1 de casa');
+  }
+  // Forma del retorno: cada chip trae nombre, zona, categoria, clave.
+  const sala = chips.find((c) => logic.normNombre(c.nombre) === 'sala');
+  assert.equal(sala.zona, 'interior');
+  assert.equal(sala.categoria, 'sala');
+  assert.equal(sala.clave, true);
+});
+
+test('F19: suggestedSpacesFor casa Exterior trae fachada, jardin, cochera y alberca', () => {
+  const chips = logic.suggestedSpacesFor({}, 'Exterior', 'casa');
+  const nombres = chips.map((c) => logic.normNombre(c.nombre));
+  for (const esperado of ['fachada', 'jardin', 'cochera', 'alberca']) {
+    assert.ok(nombres.includes(esperado), 'falta el chip ' + esperado + ' en Exterior de casa');
+  }
+});
+
+test('F19: suggestedSpacesFor departamento Amenidades trae lobby, alberca y gimnasio', () => {
+  const chips = logic.suggestedSpacesFor({}, 'Amenidades', 'departamento');
+  const nombres = chips.map((c) => logic.normNombre(c.nombre));
+  for (const esperado of ['lobby', 'alberca', 'gimnasio']) {
+    assert.ok(nombres.includes(esperado), 'falta el chip ' + esperado + ' en Amenidades de departamento');
+  }
+});
+
+test('F19: suggestedSpacesFor quinta Amenidades trae alberca y palapa', () => {
+  const chips = logic.suggestedSpacesFor({}, 'Amenidades', 'quinta');
+  const nombres = chips.map((c) => logic.normNombre(c.nombre));
+  assert.ok(nombres.includes('alberca'), 'falta alberca en quinta amenidades');
+  assert.ok(nombres.includes('palapa'), 'falta palapa en quinta amenidades');
+});
+
+test('F19: suggestedSpacesFor usa el tipo del guide cuando no se pasa tipoPropiedad', () => {
+  const state = { guide: { tipoPropiedad: 'casa' } };
+  const chips = logic.suggestedSpacesFor(state, 'Piso 1');
+  assert.ok(chips.length > 0, 'debe resolver el tipo desde el guide');
+  assert.ok(chips.some((c) => logic.normNombre(c.nombre) === 'sala'));
+});
+
+test('F19: suggestedSpacesFor empareja el piso sin acentos/case', () => {
+  const chips = logic.suggestedSpacesFor({}, 'piso 1', 'casa');
+  assert.ok(chips.length > 0, 'debe emparejar "piso 1" con "Piso 1"');
+});
+
+test('F19: suggestedSpacesFor devuelve [] para piso/tipo inexistente', () => {
+  assert.deepEqual(logic.suggestedSpacesFor({}, 'Piso 9', 'casa'), []);
+  assert.deepEqual(logic.suggestedSpacesFor({}, 'Piso 1', 'inexistente'), []);
+});
+
+test('F19: la biblioteca incluye Pasillo y Entrada/Recibidor con sus tomas en GUIDE_LIBRARY', () => {
+  // Pasillo y Entrada/Recibidor existen como categorias con tomas sugeridas.
+  assert.ok(logic.GUIDE_LIBRARY.pasillo, 'GUIDE_LIBRARY.pasillo existe');
+  assert.ok(logic.GUIDE_LIBRARY.pasillo.shots.length > 0, 'pasillo tiene tomas');
+  assert.ok(logic.GUIDE_LIBRARY.entrada, 'GUIDE_LIBRARY.entrada existe');
+  assert.ok(logic.GUIDE_LIBRARY.entrada.shots.length > 0, 'entrada tiene tomas');
+
+  // Y aparecen como espacios en la biblioteca indexada (categoria pasillo/entrada).
+  const idx = logic.SPACE_LIBRARY_INDEX;
+  const pasillo = idx.find((e) => logic.normNombre(e.nombre) === 'pasillo');
+  assert.ok(pasillo, 'Pasillo esta en la biblioteca de espacios');
+  assert.equal(pasillo.categoria, 'pasillo');
+
+  const recibidor = idx.find((e) => e.categoria === 'entrada');
+  assert.ok(recibidor, 'Entrada/Recibidor esta en la biblioteca de espacios');
+
+  // Sus tomas se resuelven por categoria.
+  assert.ok(logic.suggestionsForSpace('pasillo', 'Pasillo').length > 0);
+  assert.ok(logic.suggestionsForSpace('entrada', 'Recibidor').length > 0);
+});
+
+test('F19: searchSpaces empareja sin acentos y case-insensitive', () => {
+  const r1 = logic.searchSpaces('recamara');
+  assert.ok(r1.some((e) => e.kind === 'match' && logic.normNombre(e.nombre) === 'recamara principal'),
+    'encuentra "Recámara principal" buscando sin acento');
+
+  const r2 = logic.searchSpaces('COCINA');
+  assert.ok(r2.some((e) => e.kind === 'match' && logic.normNombre(e.nombre) === 'cocina'),
+    'es case-insensitive');
+
+  const r3 = logic.searchSpaces('jardín');
+  assert.ok(r3.some((e) => e.kind === 'match' && logic.normNombre(e.nombre) === 'jardin'),
+    'empareja query con acento contra biblioteca sin acento');
+});
+
+test('F19: searchSpaces ofrece "crear nuevo" para texto sin coincidencia', () => {
+  const r = logic.searchSpaces('cava de vinos');
+  const create = r.find((e) => e.kind === 'create');
+  assert.ok(create, 'incluye la opcion crear nuevo');
+  assert.equal(create.id, 'create-nuevo');
+  assert.equal(create.nombre, 'cava de vinos', 'conserva el texto original (con acentos)');
+  assert.ok(!r.some((e) => e.kind === 'match'), 'no hay coincidencias para texto inexistente');
+});
+
+test('F19: searchSpaces siempre anexa "crear nuevo" cuando hay query, aun con coincidencias', () => {
+  const r = logic.searchSpaces('sala');
+  assert.ok(r.some((e) => e.kind === 'match'), 'hay coincidencias');
+  assert.equal(r[r.length - 1].kind, 'create', 'la ultima entrada es crear nuevo');
+});
+
+test('F19: searchSpaces con query vacio devuelve toda la biblioteca sin crear nuevo', () => {
+  const r = logic.searchSpaces('');
+  assert.ok(r.length > 0);
+  assert.ok(r.every((e) => e.kind === 'match'), 'sin opcion crear nuevo con query vacio');
+  assert.equal(r.length, logic.SPACE_LIBRARY_INDEX.length, 'devuelve la biblioteca completa');
+});
+
+test('F19: searchSpaces deduplica espacios repetidos entre pisos/tipos', () => {
+  const r = logic.searchSpaces('sala');
+  const salas = r.filter((e) => e.kind === 'match' && logic.normNombre(e.nombre) === 'sala');
+  assert.equal(salas.length, 1, 'Sala aparece una sola vez aunque este en varios tipos');
+});
+
+test('F19: cambios aditivos: version export sigue en 1 y normalizeChecklistData carga estado viejo', () => {
+  const state = logic.createDefaultState();
+  const exp = logic.buildExport(state);
+  assert.equal(exp.version, 1, 'el export sigue en version 1');
+  const norm = logic.normalizeChecklistData({ espacios: [], servicios: {} });
+  assert.ok(norm, 'normalizeChecklistData sigue cargando estado viejo');
+});

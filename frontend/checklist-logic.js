@@ -1186,6 +1186,207 @@
     };
   }
 
+  // ─── F19 — Biblioteca de cuartos indexada por piso + tipo de propiedad ────────
+  // Amplia la biblioteca de espacios (TEMPLATE_DEFS/SPACE_SUGGESTIONS) e indexa los
+  // chips tipicos por PISO (nombre del piso, como en PISOS_DEFAULT) y por TIPO de
+  // propiedad. Cada chip es { nombre, zona, categoria, clave } donde:
+  //   - nombre: etiqueta visible (con acentos/ñ).
+  //   - zona:   interior | exterior | amenidades (la zona canonica del espacio).
+  //   - categoria: id de ROOM_CATEGORIES para resolver las tomas sugeridas.
+  //   - clave:  espacio clave (must) que se sugiere por defecto.
+  // Incluye Pasillo y Entrada/Recibidor como espacios de primera clase (sus tomas
+  // viven en GUIDE_LIBRARY.pasillo / GUIDE_LIBRARY.entrada y sus keywords en
+  // ROOM_CATEGORIES). El piso 'Exterior' y 'Amenidades' son compartidos por tipo.
+  // Aditivo: no altera TEMPLATE_DEFS ni sus consumidores.
+  function _chip(nombre, zona, categoria, clave) {
+    return Object.freeze({ nombre, zona, categoria, clave: !!clave });
+  }
+
+  const SPACE_LIBRARY_BY_FLOOR = Object.freeze({
+    casa: Object.freeze({
+      'Exterior': Object.freeze([
+        _chip('Fachada', 'exterior', 'exterior', true),
+        _chip('Jardín', 'exterior', 'exterior', true),
+        _chip('Cochera', 'exterior', 'garaje', false),
+        _chip('Alberca', 'exterior', 'exterior', false),
+        _chip('Patio', 'exterior', 'exterior', false),
+        _chip('Terraza', 'exterior', 'terraza', false),
+      ]),
+      'Piso 1': Object.freeze([
+        _chip('Recibidor', 'interior', 'entrada', true),
+        _chip('Sala', 'interior', 'sala', true),
+        _chip('Comedor', 'interior', 'comedor', true),
+        _chip('Cocina', 'interior', 'cocina', true),
+        _chip('Pasillo', 'interior', 'pasillo', false),
+        _chip('Baño de visitas', 'interior', 'medio_bano', false),
+        _chip('Estudio', 'interior', 'estudio', false),
+        _chip('Lavandería', 'interior', 'lavado', false),
+      ]),
+      'Piso 2': Object.freeze([
+        _chip('Pasillo', 'interior', 'pasillo', false),
+        _chip('Recámara principal', 'interior', 'recamara', true),
+        _chip('Baño principal', 'interior', 'bano', false),
+        _chip('Clóset', 'interior', 'vestidor', false),
+        _chip('Recámara 2', 'interior', 'recamara', false),
+        _chip('Recámara 3', 'interior', 'recamara', false),
+        _chip('Baño', 'interior', 'bano', false),
+        _chip('Family room', 'interior', 'family', false),
+      ]),
+      'Amenidades': Object.freeze([
+        _chip('Roof garden', 'amenidades', 'terraza', false),
+        _chip('Asadores', 'amenidades', 'asadores', false),
+        _chip('Bodega', 'amenidades', 'bodega', false),
+      ]),
+    }),
+    departamento: Object.freeze({
+      'Exterior': Object.freeze([
+        _chip('Balcón / Terraza', 'exterior', 'terraza', true),
+        _chip('Vista exterior', 'exterior', 'exterior', false),
+      ]),
+      'Piso 1': Object.freeze([
+        _chip('Acceso', 'interior', 'entrada', true),
+        _chip('Sala', 'interior', 'sala', true),
+        _chip('Comedor', 'interior', 'comedor', true),
+        _chip('Cocina', 'interior', 'cocina', true),
+        _chip('Pasillo', 'interior', 'pasillo', false),
+        _chip('Baño de visitas', 'interior', 'medio_bano', false),
+        _chip('Recámara principal', 'interior', 'recamara', true),
+        _chip('Baño principal', 'interior', 'bano', false),
+        _chip('Clóset', 'interior', 'vestidor', false),
+        _chip('Recámara secundaria', 'interior', 'recamara', false),
+        _chip('Lavandería', 'interior', 'lavado', false),
+      ]),
+      'Amenidades': Object.freeze([
+        _chip('Lobby', 'amenidades', 'entrada', true),
+        _chip('Alberca', 'amenidades', 'alberca', true),
+        _chip('Gimnasio', 'amenidades', 'gimnasio', true),
+        _chip('Terraza común', 'amenidades', 'terraza', true),
+        _chip('Salón de eventos', 'amenidades', 'salon_eventos', false),
+        _chip('Asadores', 'amenidades', 'asadores', false),
+        _chip('Elevadores', 'amenidades', 'elevadores', false),
+      ]),
+    }),
+    quinta: Object.freeze({
+      'Exterior': Object.freeze([
+        _chip('Fachada', 'exterior', 'exterior', true),
+        _chip('Acceso / Caseta', 'exterior', 'entrada', false),
+        _chip('Estacionamiento', 'exterior', 'garaje', false),
+        _chip('Jardines', 'exterior', 'exterior', true),
+      ]),
+      'Piso 1': Object.freeze([
+        _chip('Recibidor', 'interior', 'entrada', false),
+        _chip('Sala', 'interior', 'sala', true),
+        _chip('Comedor', 'interior', 'comedor', true),
+        _chip('Cocina', 'interior', 'cocina', true),
+        _chip('Pasillo', 'interior', 'pasillo', false),
+        _chip('Recámara principal', 'interior', 'recamara', true),
+        _chip('Baño principal', 'interior', 'bano', false),
+        _chip('Recámara 2', 'interior', 'recamara', false),
+        _chip('Baño de visitas', 'interior', 'medio_bano', false),
+      ]),
+      'Amenidades': Object.freeze([
+        _chip('Alberca', 'amenidades', 'alberca', true),
+        _chip('Palapa', 'amenidades', 'palapa', true),
+        _chip('Asadores', 'amenidades', 'asadores', false),
+        _chip('Cocina exterior', 'amenidades', 'cocina', false),
+        _chip('Jardines', 'amenidades', 'jardin', true),
+        _chip('Cancha', 'amenidades', 'cancha', false),
+        _chip('Cabañas', 'amenidades', 'generico', false),
+        _chip('Baño de alberca', 'amenidades', 'bano', false),
+      ]),
+    }),
+    terreno: Object.freeze({
+      'Exterior': Object.freeze([
+        _chip('Frente del terreno', 'exterior', 'exterior', true),
+        _chip('Vista desde calle', 'exterior', 'exterior', true),
+        _chip('Acceso', 'exterior', 'entrada', true),
+        _chip('Perímetro / colindancias', 'exterior', 'exterior', false),
+        _chip('Vista panorámica', 'exterior', 'exterior', true),
+        _chip('Servicios / entorno', 'exterior', 'exterior', false),
+      ]),
+    }),
+  });
+
+  // F19 — devuelve los chips tipicos de un piso + tipo de propiedad. Si no se pasa
+  // tipoPropiedad usa el del guide. Si el piso/tipo no existe en la biblioteca,
+  // devuelve []. Devuelve copias (no las instancias congeladas) para que la UI las
+  // pueda usar como base mutable. Forma del retorno: array de
+  //   { nombre, zona, categoria, clave }.
+  function suggestedSpacesFor(state, piso, tipoPropiedad) {
+    const tipo = tipoPropiedad != null
+      ? tipoPropiedad
+      : (state && state.guide ? state.guide.tipoPropiedad : null);
+    const byFloor = SPACE_LIBRARY_BY_FLOOR[tipo];
+    if (!byFloor || !piso) return [];
+    // Empareja el nombre del piso de forma robusta (case/acentos-insensible).
+    let chips = byFloor[piso];
+    if (!chips) {
+      const pisoNorm = normNombre(piso);
+      const match = Object.keys(byFloor).find((k) => normNombre(k) === pisoNorm);
+      chips = match ? byFloor[match] : null;
+    }
+    if (!chips) return [];
+    return chips.map((c) => ({ nombre: c.nombre, zona: c.zona, categoria: c.categoria, clave: c.clave }));
+  }
+
+  // F19 — Indice plano de toda la biblioteca de espacios para el buscador. Cada
+  // entrada es { id, nombre, zona, categoria, tipo, piso, clave }. Se deduplica por
+  // nombre normalizado para no repetir el mismo espacio que aparece en varios pisos
+  // o tipos (p. ej. Sala, Pasillo, Baño). El id es el nombre normalizado.
+  const SPACE_LIBRARY_INDEX = (() => {
+    const out = [];
+    const seen = new Set();
+    for (const [tipo, byFloor] of Object.entries(SPACE_LIBRARY_BY_FLOOR)) {
+      for (const [piso, chips] of Object.entries(byFloor)) {
+        for (const c of chips) {
+          const key = normNombre(c.nombre);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push(Object.freeze({
+            id: key,
+            nombre: c.nombre,
+            zona: c.zona,
+            categoria: c.categoria,
+            tipo,
+            piso,
+            clave: c.clave,
+          }));
+        }
+      }
+    }
+    return Object.freeze(out);
+  })();
+
+  // F19 — Buscador sobre TODA la biblioteca de espacios (normalizado: sin acentos,
+  // case-insensitive). La UI de F20 consume este formato.
+  //
+  // Retorno: array de entradas. Cada coincidencia de biblioteca tiene la forma:
+  //   { kind: 'match', id, nombre, zona, categoria, tipo, piso, clave }
+  // Si el texto de busqueda no es vacio, SIEMPRE se anexa al final una entrada
+  // especial para crear un espacio nuevo con ese texto literal:
+  //   { kind: 'create', id: 'create-nuevo', nombre: <texto original>, zona: 'interior' }
+  // Con query vacio devuelve toda la biblioteca (sin la opcion crear nuevo).
+  function searchSpaces(query) {
+    const raw = String(query == null ? '' : query).trim();
+    const q = normNombre(raw);
+    const matches = (q
+      ? SPACE_LIBRARY_INDEX.filter((entry) => normNombre(entry.nombre).includes(q))
+      : SPACE_LIBRARY_INDEX
+    ).map((entry) => ({
+      kind: 'match',
+      id: entry.id,
+      nombre: entry.nombre,
+      zona: entry.zona,
+      categoria: entry.categoria,
+      tipo: entry.tipo,
+      piso: entry.piso,
+      clave: entry.clave,
+    }));
+    if (!raw) return matches;
+    matches.push({ kind: 'create', id: 'create-nuevo', nombre: raw, zona: 'interior' });
+    return matches;
+  }
+
   function pisoFromZona(zona) {
     if (zona === 'amenidades') return 'Amenidades';
     if (zona === 'exterior') return 'Exterior';
@@ -2169,6 +2370,10 @@
     zonaOfEspacio,
     camerasForEspacio,
     terrenoSingleSubject,
+    SPACE_LIBRARY_BY_FLOOR,
+    SPACE_LIBRARY_INDEX,
+    suggestedSpacesFor,
+    searchSpaces,
     findSuggestion,
     suggestionProgress,
     proposalShotsFor,
