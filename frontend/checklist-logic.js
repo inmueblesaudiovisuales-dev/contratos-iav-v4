@@ -545,7 +545,10 @@
     Object.freeze({ id: 'pool.aereo.terreno.hito',           label: 'Referencia a un hito',               shotType: 'entorno',        movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['terreno']) }),
     Object.freeze({ id: 'pool.aereo.terreno.entorno_vecino', label: 'Entorno / desarrollo vecino',        shotType: 'entorno',        movement: 'pan',     scale: 'inmediato', must: false, tipos: Object.freeze(['terreno']) }),
     Object.freeze({ id: 'pool.aereo.terreno.perimetro',      label: 'Perímetro / colindancias',           shotType: 'fly_through',    movement: 'travel',  scale: 'propiedad', must: false, tipos: Object.freeze(['terreno']) }),
-  ]);
+  // Cada toma expone `nombre` (= `label`): el resto del motor, la UI (capa de
+  // sugeridas) y el export resuelven el texto visible por `nombre`. Sin esto, las
+  // sugeridas del pool mostraban el id crudo (p.ej. "pool.aereo.terreno.cenital_limites").
+  ].map((shot) => Object.freeze(Object.assign({ nombre: shot.label }, shot))));
 
   // ─── F34 — Catalogo de movimientos "standout" reutilizables por feature ───────
   // Vocabulario aereo compartido que un feature derivado (alberca, jardin, roof…)

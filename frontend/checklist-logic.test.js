@@ -2450,6 +2450,10 @@ test('F34: cada toma del pool tiene la forma esperada y shotType aereo valido', 
   for (const shot of logic.AERIAL_POOL) {
     assert.equal(typeof shot.id, 'string');
     assert.equal(typeof shot.label, 'string');
+    // El texto visible se resuelve por `nombre` (UI/export); debe existir, igual al
+    // label, y NUNCA ser el id crudo (regresion del bug "pool.aereo.* en pantalla").
+    assert.equal(shot.nombre, shot.label, shot.id + ': nombre = label');
+    assert.notEqual(shot.nombre, shot.id, shot.id + ': nombre no es el id crudo');
     assert.ok(droneTypes[shot.shotType], shot.id + ': shotType aereo valido ' + shot.shotType);
     assert.equal(typeof shot.movement, 'string');
     assert.ok(scaleIds.has(shot.scale), shot.id + ': scale valida ' + shot.scale);
