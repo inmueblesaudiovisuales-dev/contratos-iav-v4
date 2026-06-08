@@ -191,6 +191,7 @@
   const MOVEMENTS = Object.freeze({
     // Los 7 movimientos reales user-facing (F15). NO borrar los demas: estado viejo
     // y sugerencias pueden referenciar ids historicos (static, dolly, umbral, etc.).
+    push_pull:   { label: 'Push/Pull',                    hint: 'Movimiento de profundidad: acercarse o alejarse del foco.' },
     push_in:     { label: 'Push in',                      hint: 'Avanzar lento hacia un foco.' },
     pull_out:    { label: 'Pull out',                     hint: 'Retroceder lento revelando contexto.' },
     pan:         { label: 'Paneo',                        hint: 'Giro horizontal sobre eje fijo.' },
@@ -215,7 +216,17 @@
   // Plano: solo Abierto (general) y Detalle (detalle). El vocabulario es chico.
   // Movimiento: los 7 reales en el orden del mockup recomendacion.html.
   const CURATED_SHOT_TYPES = Object.freeze(['general', 'detalle']);
-  const CURATED_MOVEMENTS = Object.freeze(['push_in', 'pull_out', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
+  const CURATED_MOVEMENTS = Object.freeze(['push_pull', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
+
+  // ─── Sub-controles contextuales (F28): Sentido (Push/Pull) y Pared (Reveal) ───
+  // Opcionales y aditivos. Ids del sistema sin acentos; labels visibles con acentos.
+  const SENTIDO_OPTS = Object.freeze(['in', 'out']);
+  const SENTIDO_LABELS = Object.freeze({ in: 'Push in', out: 'Pull out' });
+  function sentidoLabel(id) { return SENTIDO_LABELS[id] || null; }
+
+  const PARED_OPTS = Object.freeze(['izq', 'der']);
+  const PARED_LABELS = Object.freeze({ izq: 'Izquierda', der: 'Derecha' });
+  function paredLabel(id) { return PARED_LABELS[id] || null; }
 
   const GUIDE_LIBRARY = Object.freeze({
     entrada: { label: 'Entrada/recibidor', shots: Object.freeze([
@@ -1548,6 +1559,12 @@
         if (typeof file.favorite !== 'boolean') file.favorite = false;
         file.shotType = file.shotType || null;
         file.movement = file.movement || null;
+        file.sentido = file.sentido != null ? file.sentido : null;
+        file.pared = file.pared != null ? file.pared : null;
+        // F28: fusion Push/Pull. Tomas viejas con push_in/pull_out migran a push_pull
+        // conservando el sentido. El resto de movimientos se respeta.
+        if (file.movement === 'push_in') { file.movement = 'push_pull'; if (file.sentido == null) file.sentido = 'in'; }
+        else if (file.movement === 'pull_out') { file.movement = 'push_pull'; if (file.sentido == null) file.sentido = 'out'; }
         file.suggestionId = file.suggestionId || null;
       });
       normalized.sequenceSegments.forEach((segment) => {
@@ -1797,6 +1814,8 @@
       createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
       shotType: options.shotType || null,
       movement: options.movement || null,
+      sentido: options.sentido != null ? options.sentido : null,
+      pared: options.pared != null ? options.pared : null,
       suggestionId: options.suggestionId || null,
     });
     const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
@@ -1920,6 +1939,8 @@
     if (changes.note !== undefined) file.note = changes.note;
     if (changes.shotType !== undefined) file.shotType = changes.shotType;
     if (changes.movement !== undefined) file.movement = changes.movement;
+    if (changes.sentido !== undefined) file.sentido = changes.sentido;
+    if (changes.pared !== undefined) file.pared = changes.pared;
     if (changes.suggestionId !== undefined) file.suggestionId = changes.suggestionId;
     if (file.kind === 'discard' && file.discardReason === 'unrelated') {
       file.targetId = null;
@@ -2195,7 +2216,13 @@
     }
     const prefijo = file.ordenEdicion != null ? '[E' + file.ordenEdicion + '] ' : '';
     const tipo = file.tipoTomaLabel || null;
-    const mov = file.movimientoLabel || null;
+    // F28: tokens consistentes y buscables. Push/Pull con sentido -> "Push/Pull (in)";
+    // Reveal con pared -> "Reveal · pared izq". Sin sub-dato, el label del movimiento como hoy.
+    let mov = file.movimientoLabel || null;
+    if (mov) {
+      if (file.movimiento === 'push_pull' && file.sentido) mov = mov + ' (' + file.sentido + ')';
+      else if (file.movimiento === 'reveal' && file.pared) mov = mov + ' · pared ' + file.pared;
+    }
     const sufijo = (tipo || mov) ? ' · ' + [tipo, mov].filter(Boolean).join(' / ') : '';
     return prefijo + base + sufijo;
   }
@@ -2226,12 +2253,17 @@
         : null;
       const movimiento = f.movement || null;
       const movimientoLabel = movimiento && movements[movimiento] ? movements[movimiento].label : null;
+      // F28: sub-datos discretos. sentido solo aplica a push_pull; pared solo a reveal.
+      const sentido = (movimiento === 'push_pull' && f.sentido) ? f.sentido : null;
+      const pared = (movimiento === 'reveal' && f.pared) ? f.pared : null;
+      const sentidoLabelVal = sentidoLabel(sentido);
+      const paredLabelVal = paredLabel(pared);
       const sugerencia = f.suggestionId || null;
       const sug = sugerencia ? findSuggestion(sugerencia) : null;
       const prioridad = sug ? sug.priority : null;
       const ordenEdicion = tipoToma != null ? (EDIT_ORDER[tipoToma] !== undefined ? EDIT_ORDER[tipoToma] : null) : null;
 
-      const enrichedFile = { kind: f.kind, good: f.good, discardReason: f.discardReason, ordenEdicion, tipoTomaLabel, movimientoLabel };
+      const enrichedFile = { kind: f.kind, good: f.good, discardReason: f.discardReason, ordenEdicion, tipoTomaLabel, movimiento, movimientoLabel, sentido, pared };
 
       return {
         archivo: f.fileToken,
@@ -2258,6 +2290,10 @@
         tipoTomaLabel,
         movimiento,
         movimientoLabel,
+        sentido,
+        sentidoLabel: sentidoLabelVal,
+        pared,
+        paredLabel: paredLabelVal,
         sugerencia,
         prioridad,
         ordenEdicion,
@@ -2345,6 +2381,10 @@
     MOVEMENTS,
     CURATED_SHOT_TYPES,
     CURATED_MOVEMENTS,
+    SENTIDO_OPTS,
+    sentidoLabel,
+    PARED_OPTS,
+    paredLabel,
     DRONE_SHOT_TYPES,
     AERIAL_SUBJECTS,
     AERIAL_SUBJECTS_BY_PROPERTY,

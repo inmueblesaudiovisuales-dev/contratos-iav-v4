@@ -1768,7 +1768,7 @@ test('F15: MOVEMENTS incluye los 7 movimientos reales por id con labels en espa�
     assert.ok(movements[id], `MOVEMENTS debe conservar el id historico "${id}"`);
   }
   // Listas curadas user-facing.
-  assert.deepEqual(logic.CURATED_MOVEMENTS, ['push_in', 'pull_out', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
+  assert.deepEqual(logic.CURATED_MOVEMENTS, ['push_pull', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
   assert.deepEqual(logic.CURATED_SHOT_TYPES, ['general', 'detalle']);
 });
 
@@ -2215,4 +2215,117 @@ test('F24: estado legacy SIN pisos deriva los pisos de los espacios', () => {
     ],
   });
   assert.deepEqual(norm.pisos, ['Exterior', 'Piso 1'], 'deriva los pisos de los espacios cuando pisos viene ausente');
+});
+
+// ─── F28: Fusión Push/Pull + sentido/pared + migración + export ──────────────
+
+test('F28: CURATED_MOVEMENTS tiene 6, incluye push_pull y no push_in/pull_out', () => {
+  assert.equal(logic.CURATED_MOVEMENTS.length, 6);
+  assert.ok(logic.CURATED_MOVEMENTS.includes('push_pull'));
+  assert.ok(!logic.CURATED_MOVEMENTS.includes('push_in'));
+  assert.ok(!logic.CURATED_MOVEMENTS.includes('pull_out'));
+  assert.deepEqual(logic.CURATED_MOVEMENTS, ['push_pull', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
+});
+
+test('F28: push_pull sigue en MOVEMENTS con label exacto y push_in/pull_out se conservan', () => {
+  assert.equal(logic.MOVEMENTS.push_pull.label, 'Push/Pull');
+  assert.ok(logic.MOVEMENTS.push_in, 'push_in conservado por compatibilidad');
+  assert.ok(logic.MOVEMENTS.pull_out, 'pull_out conservado por compatibilidad');
+});
+
+test('F28: helpers/labels de sentido y pared', () => {
+  assert.deepEqual(logic.SENTIDO_OPTS, ['in', 'out']);
+  assert.equal(logic.sentidoLabel('in'), 'Push in');
+  assert.equal(logic.sentidoLabel('out'), 'Pull out');
+  assert.deepEqual(logic.PARED_OPTS, ['izq', 'der']);
+  assert.equal(logic.paredLabel('izq'), 'Izquierda');
+  assert.equal(logic.paredLabel('der'), 'Derecha');
+});
+
+test('F28: migración push_in -> push_pull + sentido in', () => {
+  const viejo = {
+    version: 3,
+    espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
+    mediaFiles: [{ id: 'm1', cameraId: 'sony-main', targetId: 'e1', kind: 'take', fileToken: 'PIB0001', movement: 'push_in' }],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  const s = logic.normalizeChecklistData(viejo);
+  const m = s.mediaFiles.find((x) => x.id === 'm1');
+  assert.equal(m.movement, 'push_pull');
+  assert.equal(m.sentido, 'in');
+});
+
+test('F28: migración pull_out -> push_pull + sentido out', () => {
+  const viejo = {
+    version: 3,
+    espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
+    mediaFiles: [{ id: 'm1', cameraId: 'sony-main', targetId: 'e1', kind: 'take', fileToken: 'PIB0001', movement: 'pull_out' }],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  const s = logic.normalizeChecklistData(viejo);
+  const m = s.mediaFiles.find((x) => x.id === 'm1');
+  assert.equal(m.movement, 'push_pull');
+  assert.equal(m.sentido, 'out');
+});
+
+test('F28: movimientos distintos a push_in/pull_out no se tocan en la migración', () => {
+  const viejo = {
+    version: 3,
+    espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
+    mediaFiles: [{ id: 'm1', cameraId: 'sony-main', targetId: 'e1', kind: 'take', fileToken: 'PIB0001', movement: 'reveal' }],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  const s = logic.normalizeChecklistData(viejo);
+  const m = s.mediaFiles.find((x) => x.id === 'm1');
+  assert.equal(m.movement, 'reveal');
+  assert.equal(m.sentido, null);
+});
+
+test('F28: export de push_pull con sentido in lleva token y campo discreto', () => {
+  let s = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  s.espacios[0].piso = 'Piso 1';
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: s.espacios[0].id, kind: 'take', movement: 'push_pull', sentido: 'in' });
+  const exp = logic.buildExport(s, {});
+  const a = exp.archivos[0];
+  assert.equal(a.sentido, 'in');
+  assert.equal(a.sentidoLabel, 'Push in');
+  assert.ok(a.premiere.Description.includes('Push/Pull (in)'), a.premiere.Description);
+});
+
+test('F28: export de reveal con pared izq lleva token y campo discreto', () => {
+  let s = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  s.espacios[0].piso = 'Piso 1';
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: s.espacios[0].id, kind: 'take', movement: 'reveal', pared: 'izq' });
+  const exp = logic.buildExport(s, {});
+  const a = exp.archivos[0];
+  assert.equal(a.pared, 'izq');
+  assert.equal(a.paredLabel, 'Izquierda');
+  assert.ok(a.premiere.Description.includes('Reveal · pared izq'), a.premiere.Description);
+});
+
+test('F28: buildExport version sigue siendo 1 con sentido/pared', () => {
+  let s = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: s.espacios[0].id, kind: 'take', movement: 'push_pull', sentido: 'out' });
+  const exp = logic.buildExport(s, {});
+  assert.equal(exp.version, 1);
+});
+
+test('F28: estado viejo sin sentido/pared carga sin romper (default null)', () => {
+  const viejo = {
+    version: 3,
+    espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
+    mediaFiles: [{ id: 'm1', cameraId: 'sony-main', targetId: 'e1', kind: 'take', fileToken: 'PIB0001', movement: 'pan' }],
+    cameras: [],
+    sequenceSegments: [],
+  };
+  const s = logic.normalizeChecklistData(viejo);
+  const m = s.mediaFiles.find((x) => x.id === 'm1');
+  assert.equal(m.sentido, null);
+  assert.equal(m.pared, null);
 });
