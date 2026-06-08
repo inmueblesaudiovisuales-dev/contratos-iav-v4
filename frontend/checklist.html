@@ -424,17 +424,18 @@
     .cuarto-done i { font-size: 14px; }
 
     /* ===== Topbar onyx + chip de lane ===== */
-    .topbar-onyx { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px;
+    .topbar-onyx { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px;
       background: var(--black); border-bottom: 1.5px solid var(--gold-leaf);
       padding: max(12px, env(safe-area-inset-top)) 14px 11px; }
-    .ob-brand { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+    .ob-brand { display: inline-flex; align-items: center; gap: 9px; min-width: 0; flex: 1 1 auto; }
     .ob-logo { font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: .02em;
       color: var(--black); background: var(--gold-leaf); border-radius: 6px; padding: 3px 7px; line-height: 1; flex: none; }
     .ob-prop { display: flex; flex-direction: column; min-width: 0; }
     .ob-name { font-family: var(--font-display); font-weight: 500; font-size: 15px; color: #fff;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42vw; }
-    .ob-folio { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,.5); }
-    .ob-spacer { flex: 1; }
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
+    .ob-folio { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,.5);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .ob-spacer { flex: 0 1 8px; min-width: 0; }
     .ob-lane { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; flex: none;
       border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
       color: #fff; font-size: 13px; font-weight: 600; }
@@ -442,19 +443,27 @@
     .ob-chev { font-size: 15px; color: rgba(255,255,255,.5); }
     .ob-sync { display: inline-flex; align-items: center; gap: 5px; color: rgba(255,255,255,.55); font-size: 10px; font-weight: 600; flex: none; }
     .ob-sync .dot { width: 7px; height: 7px; }
-    .demo-reset-btn { height: 28px; padding: 0 10px; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.75); font-size: 11px; font-weight: 600; flex: none; cursor: pointer; }
+    .demo-reset-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      height: 28px; width: 28px; padding: 0; border: 1px solid rgba(255,255,255,.25); border-radius: 8px;
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.75); font-size: 11px; font-weight: 600; flex: none; cursor: pointer; }
+    .demo-reset-btn i { font-size: 15px; }
+    .demo-reset-txt { display: none; }
+    @media (min-width: 560px) {
+      .demo-reset-btn { width: auto; padding: 0 10px; }
+      .demo-reset-txt { display: inline; }
+    }
 
     /* ===== Chip de rol (F5) ===== */
-    .rolechip { display: inline-flex; align-items: center; gap: 7px; flex: none; cursor: pointer;
+    .rolechip { display: inline-flex; align-items: center; gap: 7px; flex: 0 1 auto; min-width: 0; cursor: pointer;
       background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
       border-radius: 999px; padding: 4px 9px 4px 4px; }
     .rc-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--gold-leaf); color: var(--black);
       font-family: var(--font-display); font-weight: 600; font-size: 10px; display: flex; align-items: center; justify-content: center; flex: none; }
     .rc-avatar.lg { width: 44px; height: 44px; font-size: 15px; }
     .rc-avatar.sm { width: 22px; height: 22px; font-size: 9px; }
-    .rc-text { display: flex; flex-direction: column; line-height: 1.1; text-align: left; }
-    .rc-text b { font-size: 12px; font-weight: 600; color: #fff; }
-    .rc-text span { font-size: 9.5px; color: rgba(255,255,255,.55); }
+    .rc-text { display: flex; flex-direction: column; line-height: 1.1; text-align: left; min-width: 0; }
+    .rc-text b { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30vw; }
+    .rc-text span { font-size: 9.5px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30vw; }
     .rc-caret { font-size: 14px; color: rgba(255,255,255,.5); }
 
     /* ===== Selector de rol (F5) ===== */
@@ -1261,10 +1270,10 @@ function renderHeader() {
   const lane = SERVICE_UI[state.modoActual] ? SERVICE_UI[state.modoActual].short : 'Video';
   return `<header class="topbar-onyx">
     <span class="ob-brand"><span class="ob-logo">IAV</span>
-      <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span><span class="ob-folio">${esc(meta.folio || '')}</span></span>
+      <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span>${meta.folio ? `<span class="ob-folio">${esc(meta.folio)}</span>` : ''}</span>
     </span>
     <span class="ob-spacer"></span>
-    ${DEMO ? `<button class="demo-reset-btn" onclick="reiniciarDemo()">Reiniciar demo</button>` : ''}
+    ${DEMO ? `<button class="demo-reset-btn" onclick="reiniciarDemo()" aria-label="Reiniciar demo" title="Reiniciar demo"><i class="ti ti-refresh"></i><span class="demo-reset-txt">Reiniciar demo</span></button>` : ''}
     <button class="ob-lane" onclick="abrirLane()"><i class="ti ti-${laneIcon(state.modoActual)}"></i>${esc(lane)}<i class="ti ti-chevron-down ob-chev"></i></button>
     <span class="ob-sync"><span class="dot" id="sync-dot"></span><span id="sync-label">en vivo</span></span>
   </header>`;
@@ -1283,10 +1292,10 @@ function renderShellHeader() {
   const def = role ? ROLE_DEF[role] : null;
   return `<header class="topbar-onyx">
     <span class="ob-brand"><span class="ob-logo">IAV</span>
-      <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span><span class="ob-folio">${esc(meta.folio || '')}</span></span>
+      <span class="ob-prop"><span class="ob-name">${esc(meta.nombreCliente || 'Sesión')}</span>${meta.folio ? `<span class="ob-folio">${esc(meta.folio)}</span>` : ''}</span>
     </span>
     <span class="ob-spacer"></span>
-    ${DEMO ? `<button class="demo-reset-btn" onclick="reiniciarDemo()">Reiniciar demo</button>` : ''}
+    ${DEMO ? `<button class="demo-reset-btn" onclick="reiniciarDemo()" aria-label="Reiniciar demo" title="Reiniciar demo"><i class="ti ti-refresh"></i><span class="demo-reset-txt">Reiniciar demo</span></button>` : ''}
     ${def ? `<button class="rolechip" onclick="abrirCambiarRol()" title="Tocar para cambiar de rol">
       <span class="rc-avatar">${esc(def.initials)}</span>
       <span class="rc-text"><b>${esc(def.label)}</b><span>${esc(def.sub)}</span></span>
