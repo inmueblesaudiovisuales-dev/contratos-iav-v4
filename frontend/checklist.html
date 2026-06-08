@@ -559,13 +559,17 @@
     .action-stack .btn, .action-stack .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 
     /* ===== Armar cuartos (setup) ===== */
-    .setup { padding: 18px 0 28px; max-width: 620px; margin: 0 auto; }
-    .setup-hd h2 { font-family: var(--font-display); font-weight: 500; font-size: 24px; }
-    .setup-hd p { color: var(--ink-2); font-size: 13px; margin-top: 4px; line-height: 1.45; }
-    .setup-block { margin-top: 20px; }
-    .setup-lbl { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; }
-    .setup-lbl b { color: var(--gold); font-weight: 600; }
-    .setup-hint { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; }
+    /* ===== Setup "Armar cuartos" — sistema R1 (tokens --sp-*/--ts-*/--el-*,
+       tinte neutro en estados activos, dorado solo en el CTA, ≥44px). Los
+       overrides de .chip/.chips se acotan a .setup para no tocar el loop ni
+       los selectores de categoría/config que comparten esas clases. ===== */
+    .setup { padding: var(--sp-5) 0 var(--sp-6); max-width: 620px; margin: 0 auto; }
+    .setup-hd h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--ts-display); }
+    .setup-hd p { color: var(--ink-2); font-size: var(--ts-body); margin-top: var(--sp-2); line-height: 1.5; }
+    .setup-block { margin-top: var(--sp-6); }
+    .setup-lbl { display: block; font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); margin-bottom: var(--sp-3); }
+    .setup-lbl b { color: var(--ink-1); font-weight: 600; }
+    .setup-hint { font-size: var(--ts-body); color: var(--ink-2); margin: 0 0 var(--sp-3); }
     .seg { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
     /* Chip de cámara: área táctil ≥44px. Cámara seleccionada = estado activo →
        tinte neutro + borde marcado + tinta fuerte, NO dorado (reservado a Toma). */
@@ -582,20 +586,33 @@
     .chips.suggest .chip i { color: var(--gold); }
     .chip.added { color: var(--green); background: var(--green-soft); border-color: #BFE0CC; cursor: default; }
     .chip.added i { color: var(--green); }
+    /* Chips dentro del setup: área táctil ≥44px y tipografía de la escala. */
+    .setup .chips { gap: var(--sp-2); }
+    .setup .chip { min-height: 44px; padding: 0 var(--sp-4); font-size: var(--ts-body); border-color: var(--line); }
+    .setup .chip i { font-size: 16px; color: var(--ink-2); }
+    /* Piso en foco = estado activo → tinte neutro + borde marcado, NO dorado
+       (reservado al CTA "Listo, a capturar"). */
+    .setup .chip.active { border-color: var(--tint-line); background: var(--tint); color: var(--ink-1); box-shadow: inset 0 0 0 1px var(--tint-line); }
+    .setup .chip.active i { color: var(--ink-1); }
+    .setup .chip.active .chip-x { color: var(--ink-2); }
+    .setup .chips.suggest { margin-top: var(--sp-3); }
+    .setup .chips.suggest .chip i { color: var(--ink-2); }
+    .setup .muted { display: inline-block; font-size: var(--ts-body); color: var(--ink-2); }
     .setup-addhint { font-size: 12.5px; color: var(--ink-2); margin: 4px 0 9px; }
     .setup-addhint b { color: var(--ink-1); font-weight: 600; }
-    .setup-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-    .setup-add .field { width: 100%; height: 44px; padding: 0 12px; border: 1.5px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--card); font-size: 14px; }
+    .setup-add { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-2); }
+    .setup-add .field { width: 100%; height: 44px; padding: 0 var(--sp-3); border: 1.5px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--card); font-size: var(--ts-body); }
     .setup-add .btn { height: 44px; }
-    .setup-piso-group { margin-top: 12px; }
-    .setup-piso-name { font-size: 12px; font-weight: 600; color: var(--gold); margin-bottom: 5px; }
-    .setup-room { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 8px 0 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); margin-bottom: 6px; box-shadow: var(--shadow); }
-    .setup-room.sub { margin-left: 18px; border-left: 2px solid var(--line-2, #D2C9B3); }
-    .setup-room-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 500; }
-    .setup-room-sub { font-size: 12px; font-weight: 600; color: var(--gold); flex: none; background: transparent; border: 0; padding: 6px 8px; white-space: nowrap; }
-    .setup-room-x { width: 30px; height: 30px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid var(--line-2, #D2C9B3); background: var(--page); color: var(--red); }
-    .setup-room-x i { font-size: 16px; }
-    .setup-mini { display: inline-flex; align-items: center; gap: 3px; height: 30px; padding: 0 9px; border: 1px solid var(--line-2, #D2C9B3); border-radius: 8px; background: var(--page); color: var(--ink-2); font-size: 12px; font-weight: 600; flex: none; }
+    .setup-piso-group { margin-top: var(--sp-4); }
+    .setup-piso-name { font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); margin-bottom: var(--sp-2); }
+    /* Lista de cuartos agregados: tarjetas limpias (consistentes con el overview). */
+    .setup-room { display: flex; align-items: center; gap: var(--sp-2); min-height: 48px; padding: 0 var(--sp-2) 0 var(--sp-3); border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); margin-bottom: var(--sp-2); box-shadow: var(--el-1); }
+    .setup-room.sub { margin-left: var(--sp-5); border-left: 2px solid var(--line-2, #D2C9B3); }
+    .setup-room-name { flex: 1; min-width: 0; font-size: var(--ts-base); font-weight: 500; }
+    .setup-room-sub { min-height: 44px; font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); flex: none; background: transparent; border: 0; padding: 0 var(--sp-2); white-space: nowrap; }
+    .setup-room-x { width: 44px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius); border: 1px solid transparent; background: transparent; color: var(--red); }
+    .setup-room-x i { font-size: 18px; }
+    .setup-mini { display: inline-flex; align-items: center; gap: 3px; min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--page); color: var(--ink-2); font-size: var(--ts-cap); font-weight: 600; flex: none; }
     .setup-mini i { font-size: 14px; }
     .setup-mini.del { color: var(--red); border-color: #E8C9C3; }
     .primary.block { width: 100%; margin-top: 18px; min-height: 50px; border-radius: var(--radius); font-size: 15px; }
@@ -607,6 +624,7 @@
     /* Piso Drone: estilo azul distinto del resto de los pisos. */
     .chip.drone { border-color: #BCD0E6; color: var(--blue); background: var(--blue-soft); }
     .chip.drone.active { border-color: var(--blue); box-shadow: 0 0 0 1.5px #9CC0E6; background: #E3EDF7; }
+    .setup .chip.drone i, .setup .chip.drone.active i { color: var(--blue); }
     .chip.drone i { color: var(--blue); }
     /* Chips aereos (sujetos de drone y tomas del terreno). */
     .chips.suggest.sky .chip { border-color: #BCD0E6; background: var(--blue-soft); }
@@ -614,31 +632,34 @@
     .chips.suggest.sky .chip.added { color: var(--blue); background: #E3EDF7; border-color: #9CC0E6; }
     .setup-lbl.sky { color: var(--blue); }
     .setup-piso-name.sky { color: var(--blue); }
-    /* Buscador de toda la biblioteca. */
+    /* Buscador de toda la biblioteca. Borde neutro en reposo; el canto dorado
+       se reserva al foco como acento (no como relleno permanente). */
     .setup-search { position: relative; }
-    .setup-search-box { display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 13px; border: 1.5px solid var(--gold-leaf, #C9A84C); border-radius: var(--radius); background: var(--card); }
+    .setup-search-box { display: flex; align-items: center; gap: var(--sp-3); min-height: 48px; padding: 0 var(--sp-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--el-1); }
+    .setup-search-box:focus-within { border-color: var(--gold-leaf, #C9A84C); box-shadow: 0 0 0 3px var(--gold-soft); }
     .setup-search-box.sky { border-color: #BCD0E6; }
-    .setup-search-box i { font-size: 19px; color: var(--gold); flex: none; }
+    .setup-search-box.sky:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+    .setup-search-box i { font-size: 19px; color: var(--ink-2); flex: none; }
     .setup-search-box.sky i { color: var(--blue); }
-    .setup-search-box input { flex: 1; min-width: 0; border: 0; background: transparent; font-size: 14px; color: var(--ink-1); outline: none; }
-    .setup-search-box input::placeholder { color: var(--ink-3); }
-    .setup-drop { margin-top: 8px; border: 1px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--card); overflow: hidden; box-shadow: var(--shadow); }
-    .setup-drop-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 13px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; font-size: 14px; color: var(--ink-1); }
+    .setup-search-box input { flex: 1; min-width: 0; border: 0; background: transparent; font-size: var(--ts-body); color: var(--ink-1); outline: none; }
+    .setup-search-box input::placeholder { color: var(--ink-2); }
+    .setup-drop { margin-top: var(--sp-2); border: 1px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--card); overflow: hidden; box-shadow: var(--el-2); }
+    .setup-drop-item { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); width: 100%; min-height: 48px; padding: var(--sp-3); border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; font-size: var(--ts-body); color: var(--ink-1); }
     .setup-drop-item:last-child { border-bottom: 0; }
     .setup-drop-item:disabled { color: var(--green); }
-    .setup-drop-item .di-add { font-size: 12px; font-weight: 600; color: var(--gold); white-space: nowrap; flex: none; }
+    .setup-drop-item .di-add { font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); white-space: nowrap; flex: none; }
     .setup-drop-item:disabled .di-add { color: var(--green); }
     .setup-drop-item.create { color: var(--ink-2); }
-    .setup-drop-item.create .di-add { color: var(--ink-3); font-weight: 500; }
-    .setup-drop-empty { padding: 12px 13px; font-size: 13px; color: var(--ink-3); }
-    /* Sub-cuarto rapido: Closet / Bano / Otro. */
-    .setup-subpick { margin: -2px 0 10px 18px; border-left: 2px solid var(--gold-leaf, #C9A84C); padding: 9px 0 9px 12px; }
-    .setup-subpick .subpick-lbl { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; }
+    .setup-drop-item.create .di-add { color: var(--ink-2); font-weight: 500; }
+    .setup-drop-empty { padding: var(--sp-3); font-size: var(--ts-body); color: var(--ink-2); }
+    /* Sub-cuarto rapido: Closet / Bano / Otro. Acento neutro en el borde. */
+    .setup-subpick { margin: 0 0 var(--sp-3) var(--sp-5); border-left: 2px solid var(--tint-line); padding: var(--sp-2) 0 var(--sp-2) var(--sp-3); }
+    .setup-subpick .subpick-lbl { display: block; font-size: var(--ts-cap); color: var(--ink-2); margin-bottom: var(--sp-2); }
     .setup-subpick .subpick-lbl b { color: var(--ink-1); font-weight: 600; }
-    /* Terreno: sujeto unico. */
-    .setup-single { border: 1px solid #BCD0E6; background: var(--blue-soft); border-radius: var(--radius); padding: 16px; text-align: center; }
-    .setup-single .single-name { font-family: var(--font-display); font-size: 20px; font-weight: 500; }
-    .setup-single .single-desc { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+    /* Terreno: sujeto unico (azul = drone, semántico). */
+    .setup-single { border: 1px solid #BCD0E6; background: var(--blue-soft); border-radius: var(--radius); padding: var(--sp-4); text-align: center; }
+    .setup-single .single-name { font-family: var(--font-display); font-size: var(--ts-lg); font-weight: 500; }
+    .setup-single .single-desc { font-size: var(--ts-cap); color: var(--ink-2); margin-top: var(--sp-1); }
 
     /* ===== Cobertura foto/360 ===== */
     .cov-hd { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 0 8px; }
