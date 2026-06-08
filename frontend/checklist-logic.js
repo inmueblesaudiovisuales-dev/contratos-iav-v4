@@ -486,14 +486,14 @@
     Object.freeze({ id: 'pool.aereo.reveal_barda',      label: 'Reveal sobre barda',       shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']), situacional: true }),
     Object.freeze({ id: 'pool.aereo.roof_azotea',       label: 'Roof / azotea',            shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']), feature: 'roof' }),
     Object.freeze({ id: 'pool.aereo.vista_que_vende',   label: 'Vista que vende',          shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
-    Object.freeze({ id: 'pool.aereo.patio_jardin_alberca', label: 'Patio / jardín / alberca aéreo', shotType: 'cenital', movement: 'static', scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.patio_jardin_alberca', label: 'Patio / jardín / alberca aéreo', shotType: 'cenital', movement: 'static', scale: 'propiedad', must: false, derivable: true, tipos: Object.freeze(['casa']) }),
 
     // Quinta — property-wide
     Object.freeze({ id: 'pool.aereo.orbita_propiedad',  label: 'Órbita de la propiedad',   shotType: 'orbita',          movement: 'orbit',   scale: 'propiedad', must: true,  tipos: Object.freeze(['quinta']) }),
     Object.freeze({ id: 'pool.aereo.alberca_palapa',    label: 'Alberca / palapa aérea',   shotType: 'cenital',         movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['quinta']), feature: 'alberca' }),
     Object.freeze({ id: 'pool.aereo.casa_principal',    label: 'Casa principal / fachada aérea', shotType: 'establecimiento', movement: 'static', scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']) }),
     Object.freeze({ id: 'pool.aereo.jardines',          label: 'Jardines / áreas verdes',  shotType: 'cenital',         movement: 'static',  scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']), feature: 'jardin' }),
-    Object.freeze({ id: 'pool.aereo.cancha_cabanas',    label: 'Cancha / cabañas / área de evento', shotType: 'establecimiento', movement: 'static', scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.cancha_cabanas',    label: 'Cancha / cabañas / área de evento', shotType: 'establecimiento', movement: 'static', scale: 'propiedad', must: false, derivable: true, tipos: Object.freeze(['quinta']) }),
     Object.freeze({ id: 'pool.aereo.vista_terraza',     label: 'Vista desde terraza',      shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']) }),
     Object.freeze({ id: 'pool.aereo.reveal_vista',      label: 'Reveal de la vista',       shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['quinta', 'departamento']) }),
 
@@ -504,13 +504,13 @@
 
     // ── Amenidades ─────────────────────────────────────────────────────────────
     // Casa (si privada/coto)
-    Object.freeze({ id: 'pool.aereo.casa_club',         label: 'Casa club',                shotType: 'establecimiento', movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.casa_club',         label: 'Casa club',                shotType: 'establecimiento', movement: 'static',  scale: 'amenidades', must: false, derivable: true, tipos: Object.freeze(['casa']) }),
     Object.freeze({ id: 'pool.aereo.alberca_comun',     label: 'Alberca común',            shotType: 'cenital',         movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['casa']), feature: 'alberca' }),
     Object.freeze({ id: 'pool.aereo.areas_verdes',      label: 'Áreas verdes',             shotType: 'cenital',         movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['casa']), feature: 'jardin' }),
     // Departamento (amenidades del edificio)
     Object.freeze({ id: 'pool.aereo.roof_garden',       label: 'Roof garden / terraza común', shotType: 'reveal_aereo', movement: 'tilt',  scale: 'amenidades', must: true,  tipos: Object.freeze(['departamento']), feature: 'roof' }),
     Object.freeze({ id: 'pool.aereo.alberca_comunes',   label: 'Alberca / áreas comunes',  shotType: 'cenital',         movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['departamento']), feature: 'alberca' }),
-    Object.freeze({ id: 'pool.aereo.lobby_acceso',      label: 'Lobby / acceso',           shotType: 'empuje_acceso',   movement: 'push_in', scale: 'amenidades', must: false, tipos: Object.freeze(['departamento']) }),
+    Object.freeze({ id: 'pool.aereo.lobby_acceso',      label: 'Lobby / acceso',           shotType: 'empuje_acceso',   movement: 'push_in', scale: 'amenidades', must: false, derivable: true, tipos: Object.freeze(['departamento']) }),
 
     // ── Inmediato / colonia (targets fijos) ────────────────────────────────────
     Object.freeze({ id: 'pool.aereo.calle_acceso',      label: 'Calle y acceso',           shotType: 'empuje_acceso',   movement: 'push_in', scale: 'inmediato', must: false, tipos: Object.freeze(['casa']) }),
@@ -1590,12 +1590,14 @@
     const amenidades = droneAmenidadesAplica(state);
     const scaleOrder = DRONE_SCALES.map((s) => s.id);
 
-    // (1) Fijas: tomas del pool sin feature, por escala, must primero. (aerialPoolForScale
-    // ya ordena must primero e incluye la canonica 'all' en 'propiedad'.)
+    // (1) Fijas: SOLO tomas que siempre se hacen (property-wide / contexto). Se
+    // excluyen las de feature, las `situacional` (p.ej. Reveal sobre barda, solo si
+    // hay barda/porton) y las `derivable` (Casa club, Patio/jardin/alberca, Cancha/
+    // cabanas, Lobby): esas salen UNA por espacio via derivacion (paso 2), no fijas.
     const fixedByScale = Object.create(null);
     scaleOrder.forEach((scale) => {
       if (scale === 'amenidades' && !amenidades) { fixedByScale[scale] = []; return; }
-      fixedByScale[scale] = aerialPoolForScale(scale, tipo).filter((s) => !s.feature);
+      fixedByScale[scale] = aerialPoolForScale(scale, tipo).filter((s) => !s.feature && !s.situacional && !s.derivable);
     });
 
     // (2) Derivadas: una por espacio exterior/amenidad real.

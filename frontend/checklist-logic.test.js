@@ -2910,3 +2910,30 @@ test('F38: version:1 intacto', () => {
   const exp = logic.buildExport(logic.createDefaultState(), {});
   assert.equal(exp.version, 1, 'version:1 intacto');
 });
+
+test('F38 curacion: las tomas de espacio (derivable) y situacional NO salen como fijas; los features solo por derivacion', () => {
+  const s = logic.createDefaultState();
+  s.guide = Object.assign({}, s.guide, { tipoPropiedad: 'casa', incluirDrone: true });
+  s.espacios = [
+    { id: 'e1', nombre: 'Recibidor', zona: 'interior', estados: {} },
+    { id: 'e2', nombre: 'Jardin', zona: 'exterior', estados: {} },
+    { id: 'e3', nombre: 'Alberca', zona: 'amenidades', estados: {} },
+  ];
+  const sesion = logic.targetsForMode(s, 'drone').find((t) => t.id === 'drone-session');
+  const sug = logic.suggestionsForTarget(s, 'drone', sesion);
+  const nombres = sug.map((x) => x.nombre);
+  // No aparecen como fijas: Casa club (no hay casa club), Patio/jardin/alberca (derivable),
+  // ni Reveal sobre barda (situacional).
+  assert.ok(!nombres.some((n) => /Casa club/i.test(n)), 'Casa club no sale sin espacio');
+  assert.ok(!nombres.some((n) => /Patio \/ jard/i.test(n)), 'Patio/jardin/alberca no sale como fija');
+  assert.ok(!nombres.some((n) => /sobre barda/i.test(n)), 'Reveal sobre barda (situacional) no sale');
+  // Los features salen UNA vez por derivacion, atados al espacio (featOf).
+  const derivadas = sug.filter((x) => x.featOf);
+  assert.equal(derivadas.length, 2, 'una derivada por espacio exterior/amenidad (Jardin, Alberca)');
+  assert.equal(derivadas.filter((x) => x.featOf === 'e2').length, 1, 'una sola Jardin');
+  assert.equal(derivadas.filter((x) => x.featOf === 'e3').length, 1, 'una sola Alberca');
+  assert.ok(!derivadas.some((x) => x.featOf === 'e1'), 'el interior Recibidor no aporta');
+  // Las fijas que SIEMPRE se hacen siguen ahi.
+  assert.ok(nombres.some((n) => /Salida a contexto/i.test(n)), 'Salida a contexto sigue (must)');
+  assert.ok(nombres.some((n) => /Fachada a/i.test(n)), 'Fachada sigue');
+});
