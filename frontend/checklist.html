@@ -787,6 +787,10 @@
        "siguiente archivo" como caption ≥12px en tinta. Sin dorado de relleno. */
     .cap-cam2 { margin-top: var(--sp-4); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-3); box-shadow: var(--el-1); }
     .cap-cam-seg { width: 100%; }
+    /* F37 — conmutador de carril Video | Drone (solo con incluir-drone). Reusa .seg/.seg-btn R1. */
+    .lane-switch { width: 100%; margin-bottom: var(--sp-3); }
+    .lane-switch .seg-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-1); }
+    .lane-switch .seg-btn i { font-size: 18px; }
     .cap-next-row { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-3); margin-top: var(--sp-3); }
     .cap-next { min-width: 0; }
     .cap-next-lbl { display: block; font-size: var(--ts-cap); color: var(--ink-2); }
@@ -2630,6 +2634,54 @@ function materializarTerrenoSiAplica() {
   scheduleSave();
 }
 
+// F37 — Conmutador de carril Video | Drone. Entrada explícita a la lane de drone
+// (antes solo se alcanzaba tocando un dron en el switch de cámara, poco visible).
+// Aplica solo cuando: "incluir tomas de drone" activo, el rol opera ambos carriles
+// (Bruno: video+drone) y NO es terreno (en terreno el drone es el sujeto único, sin
+// carril de video) ni asesor.
+function laneSwitchAplica() {
+  if (state.modoActual === 'asesor') return false;
+  if (!(state.guide && state.guide.incluirDrone)) return false;
+  if (state.guide && state.guide.tipoPropiedad === 'terreno') return false;
+  const modes = loopModesForRole();
+  return modes.includes('video') && modes.includes('drone');
+}
+
+function renderLaneSwitch() {
+  if (!laneSwitchAplica()) return '';
+  const enDrone = state.modoActual === 'drone';
+  return `<div class="seg lane-switch" role="tablist" aria-label="Carril de captura">
+    <button class="seg-btn${enDrone ? '' : ' active'}" role="tab" aria-selected="${enDrone ? 'false' : 'true'}" onclick="setLane('video')"><i class="ti ti-video"></i>Video</button>
+    <button class="seg-btn${enDrone ? ' active' : ''}" role="tab" aria-selected="${enDrone ? 'true' : 'false'}" onclick="setLane('drone')"><i class="ti ti-drone"></i>Drone</button>
+  </div>`;
+}
+
+// F37 — cambia de carril (video <-> drone): fija el modo, una cámara válida del
+// carril y reencuadra el target activo al recorrido del carril (sin materializar
+// nada; la lane de drone es virtual). asegurarTargetDroneValido afina el target en
+// el render. No-op si el carril ya está activo o el rol no lo opera.
+function setLane(mode) {
+  if (mode !== 'video' && mode !== 'drone') return;
+  if (state.modoActual === mode) return;
+  if (!loopModesForRole().includes(mode)) return;
+  state.modoActual = mode;
+  if (!state.activeCameraByMode) state.activeCameraByMode = {};
+  let camId = state.activeCameraByMode[mode];
+  if (!(state.cameras || []).some((c) => c.id === camId && c.mode === mode)) {
+    const first = (state.cameras || []).find((c) => c.mode === mode);
+    if (first) camId = first.id;
+  }
+  if (camId) state.activeCameraByMode[mode] = camId;
+  localStorage.setItem(laneKey(), mode);
+  const recorrido = recorridoTargets(mode);
+  if (!recorrido.includes(activeRoomId)) {
+    activeRoomId = recorrido.find((id) => esPendiente(id, mode)) || recorrido[0] || activeRoomId;
+  }
+  if (activeRoomId) localStorage.setItem(roomKey(), activeRoomId);
+  scheduleSave();
+  render();
+}
+
 // ===== F7 — Loop de captura (3 capas, segun mockup 02-loop-captura) =====
 function renderMediaCapture() {
   // F21 — Terreno: el loop opera contra el sujeto unico ("El terreno") con sus
@@ -2685,7 +2737,7 @@ function renderMediaCapture() {
   </section>`;
 
   if (noAplicaVideo) {
-    return `${head}
+    return `${renderLaneSwitch()}${head}
     <section class="cap-takes"><p class="cap-empty">Este cuarto no lleva video.</p></section>
     <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>`;
   }
@@ -2714,7 +2766,7 @@ function renderMediaCapture() {
     tomaSubLabel = `<span class="cap-toma-sub">+1 · ${esc(nextTok)}</span>`;
   }
 
-  return `${head}
+  return `${renderLaneSwitch()}${head}
   ${camStrip}
   ${sugStrip}
   <section class="cap-takes">
@@ -2741,21 +2793,11 @@ function renderMediaCapture() {
 // incluirDrone (o terreno/asesor) devuelve camsForTarget tal cual: comportamiento
 // previo intacto.
 function camsForLoopSwitch(target, camsForTarget, isDrone) {
-  const base = Array.isArray(camsForTarget) ? camsForTarget.slice() : [];
-  const incluir = !!(state.guide && state.guide.incluirDrone);
-  if (!incluir) return base;
-  const modes = loopModesForRole();
-  if (!modes.includes('drone') || !modes.includes('video')) return base;
-  // Terreno usa su sujeto materializado (kind:'drone' real); no se le aplica el
-  // salto de lane (no hay lane virtual de drone separada).
-  if (state.guide && state.guide.tipoPropiedad === 'terreno') return base;
-  const cams = logic.getCameras(state).filter((c) => c && c.mode !== 'asesor');
-  const extra = isDrone
-    ? cams.filter((c) => c.mode !== 'drone')   // en lane de drone: ofrecer terrestres para volver
-    : cams.filter((c) => c.mode === 'drone');  // en cuarto: ofrecer los dos drones para entrar
-  const seen = new Set(base.map((c) => c.id));
-  extra.forEach((c) => { if (!seen.has(c.id)) { seen.add(c.id); base.push(c); } });
-  return base;
+  // F37 — el switch de cámara muestra SOLO las cámaras del carril actual
+  // (camerasForEspacio). El cambio de carril video<->drone lo hace el conmutador
+  // explícito renderLaneSwitch/setLane, no el switch de cámara. (Antes, F36, este
+  // helper inyectaba la otra lane como salto oculto; era poco visible.)
+  return Array.isArray(camsForTarget) ? camsForTarget.slice() : [];
 }
 
 function reencuadrarCamaraSiAplica(target, camsForTarget) {
