@@ -2343,12 +2343,44 @@ function discardShort(file) {
   return { empty: 'vacío', failed: 'fallida', unrelated: 'no relacionado' }[file.discardReason] || 'descarte';
 }
 
+// F21 — Terreno: materializa el sujeto unico "El terreno" en state.espacios una
+// sola vez (cuando guide.tipoPropiedad === 'terreno' y no hay ya espacios), para
+// que el loop de captura tenga un target. Es exterior + kind drone, asi
+// camerasForEspacio ofrece Sony/Osmo + drones y suggestionsForTarget devuelve las
+// tomas aereas del terreno (terreno_completo). Aditivo: si ya hay espacios, no toca.
+function materializarTerrenoSiAplica() {
+  const t = logic.terrenoSingleSubject(state);
+  if (!t.isTerreno) return;
+  if (!Array.isArray(state.espacios)) state.espacios = [];
+  if (state.espacios.some((e) => e && e.id === t.subject.id)) return;
+  if (state.espacios.length) return;
+  const espacio = nuevoEspacio(t.subject.nombre, t.subject.piso || 'Exterior', 'exterior', null, undefined);
+  espacio.id = t.subject.id;
+  espacio.kind = 'drone';
+  espacio.clave = true;
+  activeRoomId = espacio.id;
+  localStorage.setItem(roomKey(), espacio.id);
+  scheduleSave();
+}
+
 // ===== F7 — Loop de captura (3 capas, segun mockup 02-loop-captura) =====
 function renderMediaCapture() {
+  // F21 — Terreno: el loop opera contra el sujeto unico ("El terreno") con sus
+  // tomas aereas sugeridas. Si la propiedad es terreno y aun no existe el sujeto
+  // en state.espacios, se materializa una sola vez (zona exterior + kind drone)
+  // para que el loop tenga target; sus sugerencias salen de suggestionsForTarget.
+  materializarTerrenoSiAplica();
   const target = activeTarget();
   if (!target) {
     return `<div class="empty"><h2>Sin espacios todavía</h2><p>Agrega cuartos para empezar a registrar.</p><button class="primary" onclick="abrirSetup()" style="margin-top:12px">Armar cuartos</button></div>`;
   }
+  // F21 — la camara disponible la decide el espacio (camerasForEspacio, F18), no
+  // el rol: piso Drone -> solo drones; Exterior/Roof/Amenidades -> Sony/Osmo +
+  // drones; interiores -> solo Sony/Osmo (el drone NO aparece en interiores). Si
+  // la camara activa no aplica a este espacio, se reencuadra a la primera valida
+  // (en piso Drone eso entra en drone por defecto).
+  const camsForTarget = logic.camerasForEspacio(state, target);
+  reencuadrarCamaraSiAplica(target, camsForTarget);
   const isDrone = state.modoActual === 'drone';
   const camera = activeCamera();
   const seq = camera && logic.getCameraSequence(state, camera.id);
@@ -2378,8 +2410,8 @@ function renderMediaCapture() {
     <div class="cap-thumb"><button class="cap-btn-toma" style="grid-column:1 / -1" onclick="reactivarVideoFoco()">Reactivar video aquí</button></div>`;
   }
 
-  // Capa 1 — switch de camara (getCameras del modo) + token grande del siguiente archivo
-  const camStrip = renderCapCamSwitch(camera, isDrone, nextTok);
+  // Capa 1 — switch de camara (camerasForEspacio, F18/F21) + token del siguiente archivo
+  const camStrip = renderCapCamSwitch(camera, isDrone, nextTok, camsForTarget);
 
   // Capa 2 — sugerencias (tira plegable, secundaria) — etiqueta la proxima toma
   const sugStrip = renderCapSugStrip(target, isDrone);
@@ -2410,12 +2442,35 @@ function renderMediaCapture() {
   </div>`;
 }
 
+// F21 — reencuadre de camara por espacio: si la camara activa no esta entre las
+// validas para este espacio (camerasForEspacio), conmuta a la primera valida y
+// fija su modo. Asi un espacio interior nunca queda con el drone activo, y un
+// espacio del piso Drone entra en drone por defecto. Reusa setCamera SIN abrir el
+// loop a deltas de render (no llama render/scheduleSave; es idempotente en cada
+// renderMediaCapture). Aditivo: si la camara ya aplica, no toca nada.
+function reencuadrarCamaraSiAplica(target, camsForTarget) {
+  if (!Array.isArray(camsForTarget) || !camsForTarget.length) return;
+  const actual = activeCamera();
+  if (actual && camsForTarget.some((c) => c.id === actual.id)) return;
+  const elegida = camsForTarget[0];
+  if (!state.activeCameraByMode) state.activeCameraByMode = {};
+  if (elegida.mode) {
+    state.modoActual = elegida.mode;
+    state.activeCameraByMode[elegida.mode] = elegida.id;
+    localStorage.setItem(laneKey(), elegida.mode);
+  } else {
+    state.activeCameraByMode[state.modoActual] = elegida.id;
+  }
+}
+
 // Capa 1 — switch de camara como segmented control + token grande + (drone) + foto
-// El switch NO filtra por modoActual: muestra las camaras de todos los modos del rol
-// (Bruno → video + drone). Elegir una camara cambia el modo activo (ver setCamera).
-function renderCapCamSwitch(camera, isDrone, nextTok) {
-  const modes = loopModesForRole();
-  const cams = logic.getCameras(state).filter((c) => modes.includes(c.mode));
+// F21 — el switch usa camerasForEspacio (F18), no el filtro por rol de F14: el
+// drone solo es alcanzable en piso Drone / exteriores (Exterior, Roof, Amenidades),
+// nunca en interiores, y muestra AMBOS drones (Air 3 / Mini 4 Pro) donde aplica,
+// cada uno con su contador propio. Elegir una camara cambia el modo activo (ver
+// setCamera). camsForTarget se calcula en renderMediaCapture.
+function renderCapCamSwitch(camera, isDrone, nextTok, camsForTarget) {
+  const cams = Array.isArray(camsForTarget) ? camsForTarget : [];
   const segHtml = cams.length
     ? `<div class="seg cap-cam-seg">${cams.map((c) => `<button class="seg-btn${camera && camera.id === c.id ? ' active' : ''}" onclick="setCamera('${esc(c.id)}')">${esc(c.label)}</button>`).join('')}</div>`
     : `<div class="cap-cam-lbl">Sin cámara</div>`;
