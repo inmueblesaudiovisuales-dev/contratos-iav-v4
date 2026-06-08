@@ -562,6 +562,43 @@
     .sheet-note { color: var(--ink-2); font-size: 13px; margin-bottom: 12px; line-height: 1.45; }
     .cuarto-meta { font-size: 11px; color: var(--ink-3); }
 
+    /* ===== Modo Cuartos v2 (F20): buscador + drone + terreno ===== */
+    /* Piso Drone: estilo azul distinto del resto de los pisos. */
+    .chip.drone { border-color: #BCD0E6; color: var(--blue); background: var(--blue-soft); }
+    .chip.drone.active { border-color: var(--blue); box-shadow: 0 0 0 1.5px #9CC0E6; background: #E3EDF7; }
+    .chip.drone i { color: var(--blue); }
+    /* Chips aereos (sujetos de drone y tomas del terreno). */
+    .chips.suggest.sky .chip { border-color: #BCD0E6; background: var(--blue-soft); }
+    .chips.suggest.sky .chip i { color: var(--blue); }
+    .chips.suggest.sky .chip.added { color: var(--blue); background: #E3EDF7; border-color: #9CC0E6; }
+    .setup-lbl.sky { color: var(--blue); }
+    .setup-piso-name.sky { color: var(--blue); }
+    /* Buscador de toda la biblioteca. */
+    .setup-search { position: relative; }
+    .setup-search-box { display: flex; align-items: center; gap: 9px; height: 46px; padding: 0 13px; border: 1.5px solid var(--gold-leaf, #C9A84C); border-radius: var(--radius); background: var(--card); }
+    .setup-search-box.sky { border-color: #BCD0E6; }
+    .setup-search-box i { font-size: 19px; color: var(--gold); flex: none; }
+    .setup-search-box.sky i { color: var(--blue); }
+    .setup-search-box input { flex: 1; min-width: 0; border: 0; background: transparent; font-size: 14px; color: var(--ink-1); outline: none; }
+    .setup-search-box input::placeholder { color: var(--ink-3); }
+    .setup-drop { margin-top: 8px; border: 1px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--card); overflow: hidden; box-shadow: var(--shadow); }
+    .setup-drop-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 13px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; font-size: 14px; color: var(--ink-1); }
+    .setup-drop-item:last-child { border-bottom: 0; }
+    .setup-drop-item:disabled { color: var(--green); }
+    .setup-drop-item .di-add { font-size: 12px; font-weight: 600; color: var(--gold); white-space: nowrap; flex: none; }
+    .setup-drop-item:disabled .di-add { color: var(--green); }
+    .setup-drop-item.create { color: var(--ink-2); }
+    .setup-drop-item.create .di-add { color: var(--ink-3); font-weight: 500; }
+    .setup-drop-empty { padding: 12px 13px; font-size: 13px; color: var(--ink-3); }
+    /* Sub-cuarto rapido: Closet / Bano / Otro. */
+    .setup-subpick { margin: -2px 0 10px 18px; border-left: 2px solid var(--gold-leaf, #C9A84C); padding: 9px 0 9px 12px; }
+    .setup-subpick .subpick-lbl { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 8px; }
+    .setup-subpick .subpick-lbl b { color: var(--ink-1); font-weight: 600; }
+    /* Terreno: sujeto unico. */
+    .setup-single { border: 1px solid #BCD0E6; background: var(--blue-soft); border-radius: var(--radius); padding: 16px; text-align: center; }
+    .setup-single .single-name { font-family: var(--font-display); font-size: 20px; font-weight: 500; }
+    .setup-single .single-desc { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+
     /* ===== Cobertura foto/360 ===== */
     .cov-hd { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 0 8px; }
     .cov-title { font-family: var(--font-display); font-weight: 500; font-size: 24px; }
@@ -824,6 +861,10 @@ let activeRoomId = null;
 let setupOpen = false;
 let setupTipo = 'casa';
 let setupPiso = null;
+// F20 — Modo Cuartos v2: texto del buscador (toda la biblioteca) y el id del
+// cuarto con el selector rapido de sub-cuarto (Closet / Bano / Otro) abierto.
+let setupQuery = '';
+let setupSubFor = null;
 let searchTerm = '';
 let saveTimer = null;
 let retryTimer = null;
@@ -1441,32 +1482,93 @@ function getFocusPiso() {
 }
 
 function renderSetup() {
+  const tipoSeg = `<div class="setup-block">
+      <label class="setup-lbl">Tipo de propiedad</label>
+      <div class="seg">${['casa', 'departamento', 'terreno', 'quinta'].map((t) => `<button class="seg-btn${setupTipo === t ? ' active' : ''}" onclick="setSetupTipo('${t}')">${TIPO_LABEL[t]}</button>`).join('')}</div>
+    </div>`;
+  // F20 — Terreno: un solo sujeto, no se arman cuartos. Vive en su propia vista.
+  if (setupTipo === 'terreno') return renderSetupTerreno(tipoSeg);
+
   const pisos = state.pisos && state.pisos.length ? state.pisos : ['Piso 1'];
   const focusP = getFocusPiso();
-  // Chips sugeridos del tipo: cuartos raiz (no sub-espacios de plantilla).
-  const sugg = (logic.SPACE_SUGGESTIONS[setupTipo] || []).filter((row) => !row[3]);
+  const drone = logic.isDronePiso(focusP);
   // Cuartos raiz en el piso en foco (para el conteo del encabezado).
   const enFoco = state.espacios.filter((e) => (e.piso || 'Sin piso') === focusP && !e.parentId).length;
   return `<section class="setup">
-    <div class="setup-hd"><h2>Armar cuartos</h2><p>Arrancas de cero. Toca un chip para agregar al piso en foco; toca la X para quitar.</p></div>
-    <div class="setup-block">
-      <label class="setup-lbl">Tipo de propiedad</label>
-      <div class="seg">${['casa', 'departamento', 'terreno', 'quinta'].map((t) => `<button class="seg-btn${setupTipo === t ? ' active' : ''}" onclick="setSetupTipo('${t}')">${TIPO_LABEL[t]}</button>`).join('')}</div>
-    </div>
+    <div class="setup-hd"><h2>Armar cuartos</h2><p>Arrancas de cero. Toca un chip para agregar al piso en foco; busca cualquier cuarto o crea uno nuevo.</p></div>
+    ${tipoSeg}
     <div class="setup-block">
       <label class="setup-lbl">Pisos</label>
-      <div class="chips">${pisos.map((p) => `<button class="chip${p === focusP ? ' active' : ''}" onclick="setSetupPiso('${esc(p)}')">${esc(p)}<i class="ti ti-x chip-x" onclick="event.stopPropagation();quitarPiso('${esc(p)}')"></i></button>`).join('')}<button class="chip add" onclick="agregarPiso()"><i class="ti ti-plus"></i>piso</button></div>
+      <div class="chips">${pisos.map((p) => {
+        const dr = logic.isDronePiso(p);
+        return `<button class="chip${dr ? ' drone' : ''}${p === focusP ? ' active' : ''}" onclick="setSetupPiso('${esc(p)}')">${dr ? '<i class="ti ti-drone"></i>' : ''}${esc(p)}<i class="ti ti-x chip-x" onclick="event.stopPropagation();quitarPiso('${esc(p)}')"></i></button>`;
+      }).join('')}<button class="chip add" onclick="agregarPiso()"><i class="ti ti-plus"></i>piso</button></div>
+    </div>
+    <div class="setup-block setup-search">
+      <div class="setup-search-box${drone ? ' sky' : ''}"><i class="ti ti-search"></i><input id="setup-input" type="text" value="${esc(setupQuery)}" placeholder="${drone ? 'Busca un sujeto aéreo…' : 'Busca cualquier cuarto (sala, alberca, palapa…)'}" autocomplete="off" oninput="onSetupSearch(this.value)" onkeydown="if(event.key==='Enter')agregarCuartoEscrito()"></div>
+      ${setupQuery.trim() ? renderSetupSearchDrop(focusP) : ''}
+    </div>
+    ${setupQuery.trim() ? '' : `<div class="setup-block">
+      <label class="setup-lbl${drone ? ' sky' : ''}">${drone ? 'Sugeridos para Drone' : `Sugeridos para ${esc(focusP)} · ${TIPO_LABEL[setupTipo]}`}</label>
+      ${renderSetupSuggest(focusP, drone)}
+    </div>`}
+    ${state.espacios.length ? `<div class="setup-block"><label class="setup-lbl${drone ? ' sky' : ''}">En ${esc(focusP)} · ${enFoco} ${enFoco === 1 ? 'cuarto' : 'cuartos'}</label>${renderSetupList()}</div>
+      <button class="primary block" onclick="cerrarSetup()">Listo, a capturar</button>` : ''}
+  </section>`;
+}
+
+// F20 — Chips auto-sugeridos: en el piso Drone son sujetos aereos
+// (suggestedAerialSubjects); en cualquier otro piso, espacios por piso+tipo
+// (suggestedSpacesFor). Un toque agrega (patron del Modo Cuartos existente).
+function renderSetupSuggest(focusP, drone) {
+  if (drone) {
+    const subjects = logic.suggestedAerialSubjects(state, setupTipo) || [];
+    if (!subjects.length) return '<span class="muted">Sin sujetos aéreos para este tipo.</span>';
+    return `<div class="chips suggest sky">${subjects.map((s) => {
+      const ya = chipYaEnFoco(s.label);
+      return `<button class="chip${ya ? ' added' : ''}" ${ya ? 'disabled' : `onclick="agregarSujetoAereo('${esc(s.label)}')"`}>${ya ? '<i class="ti ti-check"></i>' : '<i class="ti ti-plus"></i>'}${esc(s.label)}</button>`;
+    }).join('')}</div>`;
+  }
+  const chips = logic.suggestedSpacesFor(state, focusP, setupTipo) || [];
+  if (!chips.length) return '<span class="muted">Sin sugerencias para este piso. Usa el buscador.</span>';
+  return `<div class="chips suggest">${chips.map((c) => {
+    const ya = chipYaEnFoco(c.nombre);
+    return `<button class="chip${ya ? ' added' : ''}" ${ya ? 'disabled' : `onclick="agregarCuartoSugerido('${esc(c.nombre)}','${c.zona}','${c.categoria || ''}')"`}>${ya ? '<i class="ti ti-check"></i>' : '<i class="ti ti-plus"></i>'}${esc(c.nombre)}</button>`;
+  }).join('')}</div>`;
+}
+
+// F20 — Dropdown del buscador (searchSpaces): coincidencias de toda la
+// biblioteca + opcion "crear nuevo" al final con el texto literal.
+function renderSetupSearchDrop(focusP) {
+  const results = logic.searchSpaces(setupQuery) || [];
+  if (!results.length) return '<div class="setup-drop"><div class="setup-drop-empty">Sin coincidencias.</div></div>';
+  return `<div class="setup-drop">${results.map((r) => {
+    if (r.kind === 'create') {
+      return `<button class="setup-drop-item create" onclick="agregarDesdeBusqueda('create','${esc(r.nombre)}','${r.zona || 'interior'}','')"><span>Crear "${esc(r.nombre)}" como cuarto nuevo</span><span class="di-add">personalizado</span></button>`;
+    }
+    const ya = chipYaEnFoco(r.nombre);
+    return `<button class="setup-drop-item" ${ya ? 'disabled' : `onclick="agregarDesdeBusqueda('match','${esc(r.nombre)}','${r.zona || 'interior'}','${r.categoria || ''}')"`}><span>${esc(r.nombre)}</span><span class="di-add">${ya ? 'ya agregado' : `+ agregar a ${esc(focusP)}`}</span></button>`;
+  }).join('')}</div>`;
+}
+
+// F20 — Vista Terreno: sujeto unico "El terreno" con sus tomas sugeridas.
+function renderSetupTerreno(tipoSeg) {
+  const t = logic.terrenoSingleSubject(state);
+  // Tomas sugeridas del terreno = los sujetos aereos sesgados a terreno
+  // (Terreno completo, Perímetro/colindancias, Acceso/calle, Vista que vende,
+  // Cercanía a vialidades, Entorno y colonia), como en el mockup 06-B.
+  const shots = (logic.suggestedAerialSubjects(state, 'terreno') || []).map((s) => s.label).filter(Boolean);
+  return `<section class="setup">
+    <div class="setup-hd"><h2>Armar cuartos</h2><p>Para un terreno no se arman cuartos: es un solo sujeto y los puntos son tomas sugeridas.</p></div>
+    ${tipoSeg}
+    <div class="setup-block">
+      <div class="setup-single"><div class="single-name">${esc(t.subject.nombre)}</div><div class="single-desc">Un solo sujeto · cámara drone + piso</div></div>
     </div>
     <div class="setup-block">
-      <div class="setup-addhint">Toca para agregar a <b>${esc(focusP)}</b></div>
-      <div class="chips suggest">${sugg.length ? sugg.slice(0, 18).map((row) => {
-        const ya = chipYaEnFoco(row[0]);
-        return `<button class="chip${ya ? ' added' : ''}" ${ya ? 'disabled' : `onclick="agregarCuartoSugerido('${esc(row[0])}','${row[1]}')"`}>${ya ? '<i class="ti ti-check"></i>' : '<i class="ti ti-plus"></i>'}${esc(row[0])}</button>`;
-      }).join('') : '<span class="muted">Sin sugerencias para este tipo.</span>'}</div>
-      <div class="setup-add" style="margin-top:10px"><input class="field" id="setup-input" type="text" placeholder="Escribe para buscar o crear otro…" autocomplete="off" onkeydown="if(event.key==='Enter')agregarCuartoEscrito()"><button class="btn" onclick="agregarCuartoEscrito()">Agregar</button></div>
+      <label class="setup-lbl sky">Tomas sugeridas del terreno</label>
+      <div class="chips suggest sky">${shots.length ? shots.map((s) => `<span class="chip">${esc(s)}</span>`).join('') : '<span class="muted">Sin tomas sugeridas.</span>'}</div>
     </div>
-    ${state.espacios.length ? `<div class="setup-block"><label class="setup-lbl">En ${esc(focusP)} · ${enFoco} ${enFoco === 1 ? 'cuarto' : 'cuartos'}</label>${renderSetupList()}</div>
-      <button class="primary block" onclick="cerrarSetup()">Listo, a capturar</button>` : ''}
+    <button class="primary block" onclick="cerrarSetup()">Listo, a capturar</button>
   </section>`;
 }
 
@@ -1486,12 +1588,41 @@ function renderSetupList() {
 }
 
 function setupRoomRow(room) {
+  // En el piso Drone los sujetos aereos no tienen sub-cuartos (sin closet/bano).
+  const drone = logic.isDronePiso(room.piso);
   const subs = state.espacios.filter((e) => e.parentId === room.id).sort((a, b) => (a.orden || 0) - (b.orden || 0));
   return `<div class="setup-room"><span class="setup-room-name">${esc(room.nombre)}</span>
-    <button class="setup-room-sub" onclick="addSubSetup('${room.id}')">+ sub-cuarto</button>
+    ${drone ? '' : `<button class="setup-room-sub" onclick="toggleSubPick('${room.id}')">+ sub-cuarto</button>`}
     <button class="setup-room-x" onclick="quitarEspacio('${room.id}')" aria-label="Quitar ${esc(room.nombre)}"><i class="ti ti-x"></i></button></div>
+    ${!drone && setupSubFor === room.id ? renderSubPick(room) : ''}
     ${subs.map((s) => `<div class="setup-room sub"><span class="setup-room-name">${esc(s.nombre)}</span>
       <button class="setup-room-x" onclick="quitarEspacio('${s.id}')" aria-label="Quitar ${esc(s.nombre)}"><i class="ti ti-x"></i></button></div>`).join('')}`;
+}
+
+// F20 — Selector rapido de sub-cuarto: Closet / Bano de un toque + Otro (texto libre).
+function renderSubPick(room) {
+  return `<div class="setup-subpick">
+    <span class="subpick-lbl">Sub-cuarto de <b>${esc(room.nombre)}</b>:</span>
+    <div class="chips">
+      <button class="chip" onclick="addSubRapido('${room.id}','Clóset')"><i class="ti ti-plus"></i>Clóset</button>
+      <button class="chip" onclick="addSubRapido('${room.id}','Baño')"><i class="ti ti-plus"></i>Baño</button>
+      <button class="chip add" onclick="addSubSetup('${room.id}')">Otro…</button>
+    </div>
+  </div>`;
+}
+
+function toggleSubPick(roomId) {
+  setupSubFor = setupSubFor === roomId ? null : roomId;
+  render();
+}
+
+// Agrega un sub-cuarto Closet/Bano de un toque (hereda piso/zona del padre).
+function addSubRapido(parentId, nombre) {
+  const parent = state.espacios.find((e) => e.id === parentId);
+  if (!parent) return;
+  nuevoEspacio(nombre, parent.piso, parent.zona, parentId, logic.detectCategoria(nombre));
+  setupSubFor = null;
+  scheduleSave(); render();
 }
 
 function accionesEspacio(id) {
@@ -1558,36 +1689,70 @@ function nuevoEspacio(nombre, piso, zona, parentId, categoria) {
 function setSetupTipo(t) {
   setupTipo = t;
   if (state.guide) state.guide.tipoPropiedad = t;
+  setupQuery = ''; setupSubFor = null;
   scheduleSave();
   render();
 }
-function setSetupPiso(p) { setupPiso = p; render(); }
+function setSetupPiso(p) { setupPiso = p; setupQuery = ''; setupSubFor = null; render(); }
 function abrirSetup() {
   setupOpen = true;
   // Re-entrable: arranca con el tipo ya elegido si lo hay.
   if (state.guide && state.guide.tipoPropiedad && TIPO_LABEL[state.guide.tipoPropiedad]) setupTipo = state.guide.tipoPropiedad;
+  setupQuery = ''; setupSubFor = null;
   cerrarModal(); render();
 }
 function cerrarSetup() { setupOpen = false; render(); }
 
+// F20 — Buscador: refresca el dropdown sin perder el foco del input. Como el
+// dropdown se re-renderiza dentro del bloque del buscador, guardamos el foco
+// y la posicion del cursor para que escribir sea fluido.
+function onSetupSearch(value) {
+  setupQuery = value;
+  render();
+  const again = document.getElementById('setup-input');
+  if (again) { again.focus(); const n = again.value.length; again.setSelectionRange(n, n); }
+}
+
 function agregarCuartoEscrito() {
-  const input = document.getElementById('setup-input');
-  const value = input && input.value.trim();
+  const value = setupQuery.trim();
   if (!value) return;
   setupOpen = true;
   // Texto libre: la categoria se detecta (corregible despues con renombrar/acciones).
   nuevoEspacio(value, getFocusPiso(), 'interior', null, logic.detectCategoria(value));
+  setupQuery = '';
   scheduleSave();
   render();
   const again = document.getElementById('setup-input');
   if (again) again.focus();
 }
 
-function agregarCuartoSugerido(nombre, zona) {
+// F20 — Agregar desde el dropdown del buscador (searchSpaces). 'match' usa la
+// zona/categoria de la biblioteca; 'create' es texto libre. Limpia la busqueda.
+function agregarDesdeBusqueda(kind, nombre, zona, categoria) {
+  if (kind === 'match' && chipYaEnFoco(nombre)) return;
+  setupOpen = true;
+  nuevoEspacio(nombre, getFocusPiso(), zona || 'interior', null, categoria || logic.detectCategoria(nombre));
+  setupQuery = '';
+  scheduleSave();
+  render();
+}
+
+function agregarCuartoSugerido(nombre, zona, categoria) {
   if (chipYaEnFoco(nombre)) return;
   setupOpen = true;
-  // Chip: la categoria queda fijada desde el nombre estandar del chip.
-  nuevoEspacio(nombre, getFocusPiso(), zona, null, logic.detectCategoria(nombre));
+  // Chip: la categoria queda fijada desde la biblioteca (o se detecta del nombre).
+  nuevoEspacio(nombre, getFocusPiso(), zona, null, categoria || logic.detectCategoria(nombre));
+  scheduleSave();
+  render();
+}
+
+// F20 — Sujeto aereo (piso Drone): se agrega como espacio del piso Drone con
+// kind:'drone' y zona exterior, para que el motor lo trate como aereo.
+function agregarSujetoAereo(nombre) {
+  if (chipYaEnFoco(nombre)) return;
+  setupOpen = true;
+  const espacio = nuevoEspacio(nombre, getFocusPiso(), 'exterior', null, undefined);
+  espacio.kind = 'drone';
   scheduleSave();
   render();
 }
