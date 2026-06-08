@@ -1767,9 +1767,12 @@ function agregarSujetoAereo(nombre) {
 }
 
 function agregarPiso() {
-  const sug = ['Sótano', 'Piso 1', 'Piso 2', 'Piso 3', 'Roof', 'Exterior', 'Amenidades', 'Casa principal'].filter((p) => !(state.pisos || []).includes(p));
+  const sug = ['Sótano', 'Piso 1', 'Piso 2', 'Piso 3', 'Roof', 'Exterior', 'Amenidades', 'Casa principal', 'Drone'].filter((p) => !(state.pisos || []).includes(p));
   abrirModal(`<div class="sheet-head"><h2>Agregar piso</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
-    <div class="chips" style="margin-bottom:12px">${sug.map((p) => `<button class="chip" onclick="confirmarPiso('${esc(p)}')"><i class="ti ti-plus"></i>${esc(p)}</button>`).join('')}</div>
+    <div class="chips" style="margin-bottom:12px">${sug.map((p) => {
+      const dr = logic.isDronePiso(p);
+      return `<button class="chip${dr ? ' drone' : ''}" onclick="confirmarPiso('${esc(p)}')">${dr ? '<i class="ti ti-drone"></i>' : '<i class="ti ti-plus"></i>'}${esc(p)}</button>`;
+    }).join('')}</div>
     <div class="setup-add"><input class="field" id="piso-input" type="text" placeholder="Otro piso" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarPisoInput()"><button class="btn" onclick="confirmarPisoInput()">Agregar</button></div>`);
 }
 
