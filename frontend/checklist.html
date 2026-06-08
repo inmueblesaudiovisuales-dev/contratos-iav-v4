@@ -216,40 +216,54 @@
     .close-list { display: grid; gap: var(--sp-3);
       padding-bottom: calc(72px + env(safe-area-inset-bottom) + var(--sp-4)); }
 
-    /* F10 — vista Edicion: bitacora editable agrupada servicio > piso > cuarto */
-    .edit-svc { margin-top: 4px; }
-    .edit-svc-head { font-family: inherit; font-size: 11px; font-weight: 900; letter-spacing: .04em;
-      text-transform: uppercase; color: var(--gold); margin: 14px 2px 8px; }
-    .edit-svc:first-of-type .edit-svc-head { margin-top: 4px; }
-    .edit-grp { margin-bottom: 11px; }
-    .edit-grp-head { font-size: 12px; font-weight: 600; color: var(--ink-1); margin-bottom: 7px;
-      display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-    .edit-grp-head .crumb { color: var(--ink-3); font-weight: 700; font-size: 11px; }
-    .edit-grp-head .gcount { margin-left: auto; color: var(--ink-3); font-size: 10px; font-weight: 800; }
-    .erow { display: grid; grid-template-columns: auto 1fr auto; gap: 9px 10px; align-items: center;
-      padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius);
-      background: var(--card); margin-bottom: 7px; }
-    .erow.is-discard { background: var(--page); opacity: .82; }
-    .erow .etk { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; font-weight: 700;
+    /* F10 / R5 — vista Edicion al sistema R1: bitácora editable agrupada
+       servicio > piso > cuarto. Encabezados en tinta neutra (sin dorado de
+       relleno), micro-texto AA (--ink-2 ≥12px), filas en .card con elevación
+       sutil, token en mono legible, controles táctiles ≥44px. Clases acotadas
+       a esta vista. */
+    .edit-svc { margin-top: var(--sp-1); }
+    .edit-svc-head { font-family: inherit; font-size: var(--ts-cap); font-weight: 700;
+      letter-spacing: 0; color: var(--ink-2); margin: var(--sp-4) var(--sp-1) var(--sp-2); }
+    .edit-svc:first-of-type .edit-svc-head { margin-top: var(--sp-1); }
+    .edit-grp { margin-bottom: var(--sp-4); }
+    .edit-grp-head { font-size: var(--ts-cap); font-weight: 600; color: var(--ink-1); margin-bottom: var(--sp-2);
+      display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; }
+    .edit-grp-head .crumb { color: var(--ink-2); font-weight: 600; font-size: var(--ts-cap); }
+    .edit-grp-head .gcount { margin-left: auto; color: var(--ink-2); font-size: var(--ts-cap); font-weight: 600; }
+    /* Móvil: token + acciones en la primera fila; descripción a ancho completo
+       debajo (no se aplasta entre el token y los tres controles de 44px). */
+    .erow { display: grid; grid-template-columns: 1fr auto;
+      grid-template-areas: "tk acts" "desc desc"; gap: var(--sp-2) var(--sp-3); align-items: center;
+      padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--card); box-shadow: var(--el-1); margin-bottom: var(--sp-2); }
+    .erow > :first-child { grid-area: tk; min-width: 0; }
+    .erow .emid { grid-area: desc; }
+    .erow .eacts { grid-area: acts; }
+    @media (min-width: 560px) {
+      .erow { grid-template-columns: auto 1fr auto; grid-template-areas: "tk desc acts"; align-items: center; }
+    }
+    .erow.is-discard { background: var(--page); box-shadow: var(--el-0); opacity: .82; }
+    .erow .etk { font-family: var(--font-mono); font-size: var(--ts-cap); font-weight: 600;
       color: var(--ink-1); white-space: nowrap; }
-    .erow .emeta { font-size: 10px; color: var(--ink-3); font-weight: 700; margin-top: 2px; }
-    .erow .ekind { display: inline-block; font-size: 9px; font-weight: 900; color: var(--red);
-      text-transform: uppercase; letter-spacing: .03em; }
+    .erow .emeta { font-size: var(--ts-cap); color: var(--ink-2); font-weight: 600; margin-top: var(--sp-1); }
+    .erow .ekind { display: inline-block; font-size: var(--ts-cap); font-weight: 600; color: var(--red);
+      letter-spacing: 0; }
     .erow .emid { min-width: 0; }
-    .erow .edesc { width: 100%; resize: none; border: 1px solid var(--line); border-radius: 6px;
-      background: var(--page); color: var(--ink-1); font-size: 11.5px; font-family: inherit;
-      padding: 6px 8px; min-height: 34px; line-height: 1.35; }
-    .erow .edesc:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); outline: none; background: var(--card); }
-    .erow .eacts { display: flex; align-items: center; gap: 5px; justify-self: end; }
-    .eic { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--line);
+    .erow .edesc { width: 100%; resize: none; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--page); color: var(--ink-1); font-size: var(--ts-cap); font-family: inherit;
+      padding: var(--sp-2); min-height: 40px; line-height: 1.4; }
+    .erow .edesc::placeholder { color: var(--ink-3); }
+    .erow .edesc:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(176,141,46,.14); outline: none; background: var(--card); }
+    .erow .eacts { display: flex; align-items: center; gap: var(--sp-1); justify-self: end; }
+    .eic { width: 44px; height: 44px; border-radius: var(--radius); border: 1px solid var(--line);
       display: inline-flex; align-items: center; justify-content: center; background: var(--card);
-      color: var(--ink-3); cursor: pointer; padding: 0; }
-    .eic i { font-size: 16px; }
+      color: var(--ink-2); cursor: pointer; padding: 0; }
+    .eic i { font-size: 19px; }
     .eic.on.good { color: var(--green); background: var(--green-soft); border-color: #BFE0CD; }
     .eic.on.fav { color: #7A5A12; background: var(--gold-soft); border-color: #E4D39A; }
     .eic.more { color: var(--ink-2); }
     @media (min-width: 1024px) {
-      .edit-svc-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px 16px; align-items: start; }
+      .edit-svc-rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: var(--sp-3) var(--sp-4); align-items: start; }
       .edit-grp { margin-bottom: 0; }
     }
     .panel {
@@ -879,14 +893,32 @@
     .cov-foco-state.no_aplica { background: var(--muted); color: var(--ink-3); }
     .cov-foco-prog { margin-top: 12px; font-size: 13px; color: var(--ink-3); }
     .cov-vertodos { background: none; border: 0; color: var(--gold); font-weight: 600; font-size: 13px; text-decoration: underline; }
-    /* ===== Barra de exportar (Edición) ===== */
-    .export-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; margin-bottom: 9px; border: 1px solid var(--gold-leaf); background: var(--gold-soft); border-radius: var(--radius); }
-    .export-copy strong { display: block; font-size: 14px; font-weight: 600; }
-    .export-copy span { display: block; font-size: 12px; color: var(--ink-2); margin-top: 2px; }
-    .export-btns { display: flex; gap: 8px; flex: none; flex-wrap: wrap; }
-    .export-bar .primary, .export-bar .secondary { display: inline-flex; align-items: center; gap: 7px; flex: none; }
+    /* ===== Barra de exportar (Edición) — R5: sistema R1, reflujo móvil =====
+       Stack vertical: título (1 línea) → descripción a ancho completo (--ink-2,
+       nunca en columna angosta) → botones en su propia fila. "Exportar" es la
+       acción primaria (dorado, texto oscuro AA); "Guion de edición" secundaria
+       en tinte neutro. Áreas táctiles ≥44px. Lee limpio a 360–390px. */
+    .export-bar { display: flex; flex-direction: column; gap: var(--sp-3);
+      padding: var(--sp-4); margin-bottom: var(--sp-3);
+      border: 1px solid var(--gold-leaf); background: var(--gold-soft);
+      border-radius: var(--radius); box-shadow: var(--el-1); }
+    .export-copy { min-width: 0; }
+    .export-copy strong { display: block; font-size: var(--ts-base); font-weight: 600;
+      color: var(--ink-1); line-height: 1.25; }
+    .export-copy span { display: block; font-size: var(--ts-cap); color: var(--ink-2);
+      margin-top: var(--sp-1); line-height: 1.4; }
+    .export-btns { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+    .export-bar .primary, .export-bar .secondary { display: inline-flex; align-items: center;
+      justify-content: center; gap: 7px; min-height: 44px; flex: 1 1 auto; }
     .export-bar .primary i, .export-bar .secondary i { font-size: 18px; }
-    .export-bar .secondary { background: var(--card); border: 1.5px solid var(--line-2); color: var(--ink-1); }
+    .export-bar .secondary { background: var(--card); border: 1px solid var(--tint-line); color: var(--ink-1); }
+    /* En anchos cómodos los botones caben junto a la copia; la descripción
+       sigue a ancho completo dentro de su columna, sin partirse. */
+    @media (min-width: 560px) {
+      .export-bar { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+      .export-btns { flex: none; }
+      .export-bar .primary, .export-bar .secondary { flex: none; }
+    }
 
     /* ===== Categoría de cuarto (chip) ===== */
     .cat-chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px; border: 1px solid var(--line-2, #D2C9B3); border-radius: 999px; background: var(--card); color: var(--ink-2); font-size: 11px; font-weight: 600; margin-top: 5px; cursor: pointer; }
@@ -4273,7 +4305,7 @@ function renderExportBar() {
   return `<div class="export-bar">
     <div class="export-copy"><strong>Exportar para edición</strong><span>${n} archivo${n === 1 ? '' : 's'} · JSON para el programa de metadatos</span></div>
     <div class="export-btns">
-      <button class="secondary" onclick="imprimirGuionEdicion()"><i class="ti ti-files"></i> Guion de edicion</button>
+      <button class="secondary" onclick="imprimirGuionEdicion()"><i class="ti ti-files"></i> Guion de edición</button>
       <button class="primary" onclick="exportarBitacora()"><i class="ti ti-download"></i> Exportar</button>
     </div>
   </div>`;
@@ -4400,7 +4432,7 @@ function renderMediaEditView() {
     const svcLabel = SERVICE_UI[svc.mode] ? SERVICE_UI[svc.mode].label : 'Archivos';
     const pisosHtml = svc.pisos.map((p) => {
       const roomsHtml = p.groups.map((group) => renderEditRoomGroup(group)).join('');
-      return `<div class="mini-lbl" style="font-size:10px;font-weight:900;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;margin:2px 2px 6px">${esc(p.piso)}</div>
+      return `<div class="mini-lbl" style="font-size:var(--ts-cap);font-weight:600;color:var(--ink-2);letter-spacing:0;margin:var(--sp-1) var(--sp-1) var(--sp-2)">${esc(p.piso)}</div>
         <div class="edit-svc-rooms">${roomsHtml}</div>`;
     }).join('');
     return `<section class="edit-svc"><div class="edit-svc-head">${esc(svcLabel)}</div>${pisosHtml}</section>`;
