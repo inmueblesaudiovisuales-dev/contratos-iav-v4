@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modo cuartos rediseñado</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--paper-0:#F7F4EC;--paper-1:#FFFDF8;--paper-2:#EFEADF;--line:#E2DBCB;--onyx:#1C1C1E;--muted:#6F6A5E;--gold:#B08D2E;--gold-leaf:#C9A84C;--ok:#2F7D55;--danger:#B23A2B}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E1D3;font-family:'Inter',sans-serif;color:var(--onyx);padding:18px 12px 48px;display:flex;flex-direction:column;align-items:center;gap:14px}
+  .top{max-width:520px;text-align:center}
+  .top .tag{font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.06em;text-transform:uppercase}
+  .top h1{font-family:'Fraunces',serif;font-weight:600;font-size:21px;margin:4px 0 6px}
+  .top p{color:var(--muted);font-size:13.5px;line-height:1.5}
+  .phone{width:100%;max-width:392px;background:var(--paper-0);border-radius:32px;padding:8px;box-shadow:0 20px 44px -18px rgba(40,34,20,.45);border:1px solid #d8d1c0}
+  .screen{background:var(--paper-0);border-radius:25px;overflow:hidden;display:flex;flex-direction:column}
+  .hd{padding:13px 15px;background:var(--paper-1);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd .ti{font-family:'Fraunces',serif;font-size:18px;font-weight:600}
+  .done{background:var(--gold-leaf);color:#322806;border:none;border-radius:9px;padding:8px 15px;font-size:13px;font-weight:600}
+  .body{padding:14px}
+  .mini{font-size:9.5px;font-weight:600;color:var(--gold);letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px}
+  .blk{margin-bottom:16px}
+  .seg{display:flex;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+  .seg div{flex:1;text-align:center;padding:8px 0;font-size:12.5px;border-radius:7px;color:var(--muted)}
+  .seg div.on{background:var(--paper-1);color:var(--onyx);font-weight:600}
+  .floors{display:flex;gap:7px;flex-wrap:wrap}
+  .fl{font-size:12.5px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--paper-1);color:#46412f}
+  .fl.on{border-color:var(--gold);box-shadow:0 0 0 1.5px var(--gold-leaf);font-weight:600;background:#fbf3df}
+  .fl.add{border-style:dashed;color:var(--muted)}
+  .search{display:flex;align-items:center;gap:9px;border:1.5px solid var(--gold-leaf);border-radius:11px;padding:11px 13px;background:var(--paper-1);font-size:13.5px;color:var(--muted)}
+  .search svg{width:18px;height:18px;color:var(--gold)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-size:13px;padding:8px 13px;border-radius:999px;border:1px solid var(--line);background:var(--paper-1);color:#46412f;display:flex;align-items:center;gap:6px}
+  .chip .pl{color:var(--gold);font-weight:600}
+  .arow{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--paper-1);margin-bottom:8px}
+  .arow .an{font-family:'Fraunces',serif;font-size:15.5px;flex:1}
+  .arow .sub{font-size:11.5px;color:var(--gold);font-weight:600;white-space:nowrap}
+  .arow .x{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--paper-0);display:flex;align-items:center;justify-content:center;color:var(--danger)}
+  .subpick{margin:-4px 0 10px 14px;border-left:2px solid var(--gold-leaf);padding:8px 0 8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .subpick .lbl{font-size:11px;color:var(--muted);width:100%}
+  .subchip{font-size:12.5px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--paper-1);color:#46412f;font-weight:500}
+  .subchip.alt{border-style:dashed;color:var(--muted);font-weight:400}
+  .cta{width:100%;height:50px;border-radius:13px;border:none;background:var(--gold-leaf);color:#322806;font-size:15px;font-weight:600;margin-top:4px}
+
+  /* search-active inset */
+  .inset{width:100%;max-width:392px}
+  .drop{border:1px solid var(--line);border-radius:11px;background:var(--paper-1);overflow:hidden;margin-top:8px}
+  .di{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid var(--line);font-size:13.5px}
+  .di:last-child{border-bottom:none}
+  .di .add{color:var(--gold);font-weight:600;font-size:12px}
+  .di .where{font-size:10.5px;color:var(--muted)}
+  .why{max-width:392px;background:var(--paper-1);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:12.5px;color:#46412f;line-height:1.5}.why b{color:var(--gold)}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="tag">Modo cuartos · rediseño</div>
+    <h1>Auto-sugiere + buscador</h1>
+    <p>Los chips se adaptan al piso en foco y al tipo de propiedad. El buscador abarca toda la biblioteca para agregar cualquier cuarto. Sub-cuartos: clóset o baño de un toque.</p>
+  </div>
+
+  <div class="phone"><div class="screen">
+    <div class="hd"><span class="ti">Armar cuartos</span><button class="done">Listo</button></div>
+    <div class="body">
+
+      <div class="blk">
+        <div class="mini">Tipo de propiedad</div>
+        <div class="seg"><div class="on">Casa</div><div>Depto</div><div>Terreno</div><div>Quinta</div></div>
+      </div>
+
+      <div class="blk">
+        <div class="mini">Pisos</div>
+        <div class="floors">
+          <div class="fl">Exterior</div>
+          <div class="fl on">Piso 1</div>
+          <div class="fl">Piso 2</div>
+          <div class="fl">Roof</div>
+          <div class="fl">Amenidades</div>
+          <div class="fl add">+ piso</div>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          Busca cualquier cuarto (sala, alberca, palapa…)
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="mini">Sugeridos para Piso 1 · Casa</div>
+        <div class="chips">
+          <span class="chip"><span class="pl">+</span> Recibidor</span>
+          <span class="chip"><span class="pl">+</span> Sala</span>
+          <span class="chip"><span class="pl">+</span> Comedor</span>
+          <span class="chip"><span class="pl">+</span> Cocina</span>
+          <span class="chip"><span class="pl">+</span> Pasillo</span>
+          <span class="chip"><span class="pl">+</span> Baño de visitas</span>
+          <span class="chip"><span class="pl">+</span> Estudio</span>
+          <span class="chip"><span class="pl">+</span> Cuarto de TV</span>
+        </div>
+      </div>
+
+      <div class="blk">
+        <div class="mini">En Piso 1 · 3 cuartos</div>
+        <div class="arow"><span class="an">Recibidor</span><span class="sub">+ sub-cuarto</span><span class="x">✕</span></div>
+        <div class="arow"><span class="an">Recámara principal</span><span class="sub">+ sub-cuarto</span><span class="x">✕</span></div>
+        <div class="subpick">
+          <span class="lbl">Sub-cuarto de Recámara principal:</span>
+          <span class="subchip">Clóset</span>
+          <span class="subchip">Baño</span>
+          <span class="subchip alt">Otro…</span>
+        </div>
+        <div class="arow"><span class="an">Cocina</span><span class="sub">+ sub-cuarto</span><span class="x">✕</span></div>
+      </div>
+
+      <button class="cta">Listo, a capturar</button>
+    </div>
+  </div></div>
+
+  <div class="inset">
+    <div class="mini" style="color:var(--muted)">Al escribir en el buscador (toda la biblioteca):</div>
+    <div class="search" style="border-color:var(--gold)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <span style="color:var(--onyx)">alb</span>
+    </div>
+    <div class="drop">
+      <div class="di"><span>Alberca</span><span class="add">+ agregar a Piso 1</span></div>
+      <div class="di"><span>Alberca techada</span><span class="add">+ agregar</span></div>
+      <div class="di"><span>Cuarto de alberca / bombas</span><span class="add">+ agregar</span></div>
+      <div class="di" style="color:var(--muted)"><span>Crear "alb" como cuarto nuevo</span><span class="where">personalizado</span></div>
+    </div>
+  </div>
+
+  <div class="why">
+    <b>Cómo funciona.</b> Biblioteca grande detrás, pero no la ves toda: los <b>chips se auto-sugieren</b> por piso en foco + tipo de propiedad (Piso 1 de casa → recibidor/sala/pasillo; Exterior → fachada/jardín/alberca). Para cualquier otro, el <b>buscador</b> filtra toda la biblioteca y agregas de un toque (o creas uno nuevo). Sub-cuartos = <b>Clóset / Baño</b> directo, con "Otro…" para lo raro.
+  </div>
+</body>
+</html>

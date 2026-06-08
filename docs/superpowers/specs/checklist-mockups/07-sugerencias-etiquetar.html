@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recomendación — sugerencias + etiquetar</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--paper-0:#F7F4EC;--paper-1:#FFFDF8;--paper-2:#EFEADF;--line:#E2DBCB;--onyx:#1C1C1E;--muted:#6F6A5E;--gold:#B08D2E;--gold-leaf:#C9A84C;--ok:#2F7D55;--danger:#B23A2B}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E1D3;font-family:'Inter',sans-serif;color:var(--onyx);padding:18px 12px 48px;display:flex;flex-direction:column;align-items:center;gap:14px}
+  .top{max-width:520px;text-align:center}
+  .top .tag{font-size:11px;font-weight:600;color:var(--gold);letter-spacing:.06em;text-transform:uppercase}
+  .top h1{font-family:'Fraunces',serif;font-weight:600;font-size:21px;margin:4px 0 6px}
+  .top p{color:var(--muted);font-size:13.5px;line-height:1.5}
+  .nav{display:flex;gap:8px;margin:4px 0 6px}
+  .nav a{font-size:12.5px;text-decoration:none;color:#46412f;border:1px solid var(--line);background:var(--paper-1);border-radius:999px;padding:7px 14px}
+  .nav a.on{background:var(--gold-leaf);color:#322806;font-weight:600;border-color:var(--gold-leaf)}
+  .phone{width:100%;max-width:390px;background:var(--paper-0);border-radius:32px;padding:8px;box-shadow:0 20px 44px -18px rgba(40,34,20,.45);border:1px solid #d8d1c0}
+  .screen{background:var(--paper-0);border-radius:25px;overflow:hidden;display:flex;flex-direction:column}
+  .hd{padding:12px 15px;background:var(--paper-1);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+  .back{color:var(--muted);font-size:12px}.hroom{flex:1;text-align:right}
+  .hroom .rn{font-family:'Fraunces',serif;font-size:17px;font-weight:600;line-height:1}
+  .hroom .fl{font-family:'Spline Sans Mono',monospace;font-size:10px;color:var(--muted)}
+  .cam{padding:10px 14px;border-bottom:1px solid var(--line)}
+  .seg{display:flex;background:var(--paper-2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px}
+  .seg div{flex:1;text-align:center;padding:7px 0;font-size:12px;border-radius:6px;color:var(--muted)}
+  .seg div.on{background:var(--paper-1);color:var(--onyx);font-weight:600}
+  .tokl{font-size:10px;color:var(--muted);margin-top:8px}.tok{font-family:'Spline Sans Mono',monospace;font-size:22px;font-weight:600}
+  .sug{padding:12px 14px;background:#FBF8F0;border-bottom:1px solid var(--line)}
+  .sug-h{display:flex;align-items:center;justify-content:space-between}
+  .sug-h .t{font-size:11.5px;font-weight:600;color:var(--gold);display:flex;align-items:center;gap:6px}
+  .sug-h .c{font-family:'Spline Sans Mono',monospace;font-size:10px;color:var(--muted)}
+  .mini{font-size:9.5px;font-weight:600;color:var(--gold);letter-spacing:.04em;text-transform:uppercase;margin:12px 0 8px}
+  .typewrap{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-size:13px;padding:8px 13px;border-radius:999px;border:1px solid var(--line);background:var(--paper-1);color:#46412f;display:flex;align-items:center;gap:5px}
+  .chip.done{color:var(--ok);background:#eef7f1;border-color:#bfe0cd}
+  .chip.sel{border-color:var(--gold);box-shadow:0 0 0 1.5px var(--gold-leaf);font-weight:600;background:#fbf3df}
+  .chip.libre{border-style:dashed;color:var(--muted)}
+  .detail{margin-top:11px;border-top:1px dashed var(--line);padding-top:10px}
+  .qg{font-size:12.5px;color:#46412f;line-height:1.45;margin:0 0 2px}
+  .mvgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .mv{border:1px solid var(--line);background:var(--paper-1);border-radius:12px;padding:11px 6px;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .mv.on{border-color:var(--gold);box-shadow:0 0 0 1.5px var(--gold-leaf);background:#fbf3df}
+  .mv svg{width:27px;height:27px;color:#5c4a30}.mv span{font-size:11px;color:#46412f;font-weight:500;text-align:center;line-height:1.1}
+  .plan{font-size:11.5px;color:var(--muted);margin-top:12px}.plan b{color:#322806;font-weight:600}
+  .takes{padding:12px 14px;color:var(--muted);font-size:12px;min-height:48px}
+  .thumb{display:flex;gap:9px;padding:11px 14px 15px;background:var(--paper-1);border-top:1px solid var(--line)}
+  .big{flex:1;height:56px;border-radius:13px;font-size:15px;font-weight:600;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .big small{font-weight:400;font-size:10px;font-family:'Spline Sans Mono',monospace;margin-top:2px}
+  .big.toma{background:var(--gold-leaf);color:#322806}.big.no{background:var(--paper-2);color:var(--danger);border:1px solid #e6c4bd}
+  .why{max-width:390px;background:var(--paper-1);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:12.5px;color:#46412f;line-height:1.5}.why b{color:var(--gold)}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="tag">Recomendación · Opción B</div>
+    <h1>Sugerencias primero</h1>
+    <p>Ves qué grabar en el cuarto. Tocas una sugerencia y se etiqueta sola (plano + movimiento, editables). Para algo distinto, "Libre". Sin scroll horizontal; plegable.</p>
+  </div>
+  <div class="nav"><a class="on" href="recomendacion.html">Recomendación</a><a href="a.html">Opción A</a><a href="b.html">Opción B</a></div>
+
+  <div class="phone"><div class="screen">
+    <div class="hd"><span class="back">‹ Cuartos</span><div class="hroom"><div class="rn">Sala</div><div class="fl">Piso 1</div></div></div>
+    <div class="cam"><div class="seg"><div class="on">Sony</div><div>Osmo</div><div>Drone</div></div><div class="tokl">siguiente</div><div class="tok">PIB2820</div></div>
+    <div class="sug">
+      <div class="sug-h"><span class="t"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0012 2z"/></svg> Sugeridas para Sala</span><span class="c">2 / 4 ⌃</span></div>
+      <div class="mini">Qué grabar aquí</div>
+      <div class="typewrap">
+        <span class="chip done">✓ Establecimiento</span>
+        <span class="chip done">✓ Recorrido amplio</span>
+        <span class="chip sel">Detalle de acabados</span>
+        <span class="chip">Hacia el ventanal</span>
+        <span class="chip libre">＋ Libre</span>
+      </div>
+      <div class="detail">
+        <div class="qg">Qué grabar: un acabado o textura que venda — grifería, herrería, mármol.</div>
+        <div class="mini">Plano</div>
+        <div class="typewrap"><span class="chip">Abierto</span><span class="chip sel">Detalle</span></div>
+        <div class="mini">Movimiento</div>
+        <div class="mvgrid">
+          <div class="mv on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 12h3M17 12h-3M11 10l2 2-2 2M15 10l-2 2 2 2"/></svg><span>Push in</span></div>
+          <div class="mv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M10 12H7M14 12h3M9 10l-2 2 2 2M15 10l2 2-2 2"/></svg><span>Pull out</span></div>
+          <div class="mv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg><span>Paneo</span></div>
+          <div class="mv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/></svg><span>Tilt</span></div>
+          <div class="mv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="9" width="7" height="6" rx="1"/><path d="M15 12h5M18 10l2 2-2 2"/></svg><span>Travel</span></div>
+          <div class="mv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="12" rx="9" ry="5"/><path d="M11 7l3 1.5-3 1.5"/></svg><span>Órbita</span></div>
+          <div class="mv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 4v16M6 12h11M14 8l4 4-4 4"/></svg><span>Reveal</span></div>
+        </div>
+        <div class="plan">Próxima toma → <b>Detalle · Push in</b></div>
+      </div>
+    </div>
+    <div class="takes">Tomas en este cuarto · aún nada. Da Toma cuando grabes.</div>
+    <div class="thumb"><button class="big toma">Toma<small>Detalle · Push in</small></button><button class="big no">No sirve</button></div>
+  </div></div>
+
+  <div class="why">
+    <b>Por qué B.</b> Sin elegir nada, solo ves las <b>sugerencias del cuarto</b> (qué grabar) — glanceable, nada de saturación. El plano + movimiento (en íconos, sin scroll horizontal) aparecen solo cuando tocas una sugerencia o "Libre". Una decisión a la vez, y la lista de tomas del cuarto vuelve.
+  </div>
+</body>
+</html>
