@@ -2937,3 +2937,37 @@ test('F38 curacion: las tomas de espacio (derivable) y situacional NO salen como
   assert.ok(nombres.some((n) => /Salida a contexto/i.test(n)), 'Salida a contexto sigue (must)');
   assert.ok(nombres.some((n) => /Fachada a/i.test(n)), 'Fachada sigue');
 });
+
+// ─── F40 — Motor: catalogo por zona, numeracion y planner del esqueleto ──────
+
+test('catalogByZone agrupa por zona y dedupe recamaras', () => {
+  const cat = logic.catalogByZone('casa');
+  assert.ok(cat.interior.some(c => c.base === 'Recámara'));
+  assert.equal(cat.interior.filter(c => c.base === 'Recámara').length, 1);
+  assert.ok(cat.exterior.some(c => c.base === 'Fachada'));
+});
+
+test('nextRoomName numera con firstName', () => {
+  const rec = logic.BASE_CONCEPTS.casa.find(c => c.base === 'Recámara');
+  assert.equal(logic.nextRoomName([], rec), 'Recámara principal');
+  assert.equal(logic.nextRoomName(['Recámara principal'], rec), 'Recámara 2');
+  assert.equal(logic.nextRoomName(['Recámara principal', 'Recámara 2'], rec), 'Recámara 3');
+});
+
+test('baseConcept normaliza', () => {
+  assert.equal(logic.baseConcept('Recámara 2'), 'Recámara');
+  assert.equal(logic.baseConcept('Recamara principal'), 'Recámara');
+});
+
+test('planSkeleton arma plantas y numera', () => {
+  const plan = logic.planSkeleton('casa', { rec: 3, ban: 2, med: 1, pisos: 2, opts: { Sala: true, Cocina: true, Fachada: true } });
+  const nombres = plan.map(p => p.nombre);
+  assert.ok(nombres.includes('Sala'));
+  assert.ok(nombres.includes('Recámara principal') && nombres.includes('Recámara 3'));
+  assert.ok(plan.find(p => p.nombre === 'Recámara principal').piso === 'Planta alta');
+  assert.ok(plan.find(p => p.nombre === 'Fachada').zona === 'exterior');
+});
+
+test('catalogByZone terreno vacío', () => {
+  assert.deepEqual(logic.catalogByZone('terreno'), {});
+});

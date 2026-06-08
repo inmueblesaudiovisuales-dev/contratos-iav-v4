@@ -1940,6 +1940,210 @@
     };
   }
 
+  // ─── F40 — Catalogo por zona, numeracion y planner del esqueleto ─────────────
+  // Conceptos base curados para la hoja "Armar cuartos": un mosaico por concepto
+  // (la numeracion la hace nextRoomName). Derivan de SPACE_SUGGESTIONS deduplicados
+  // por concepto base + se completan con la biblioteca del mockup (LIB). `icon` es
+  // un nombre de icono Tabler (sin el prefijo `ti ti-`).
+  const BASE_CONCEPTS = {
+    casa: [
+      { base: 'Recibidor', zona: 'interior', icon: 'door' },
+      { base: 'Sala', zona: 'interior', icon: 'sofa' },
+      { base: 'Comedor', zona: 'interior', icon: 'cup' },
+      { base: 'Cocina', zona: 'interior', icon: 'cup' },
+      { base: 'Antecomedor', zona: 'interior', icon: 'cup' },
+      { base: 'Recámara', zona: 'interior', icon: 'bed', firstName: 'Recámara principal', repeatable: true },
+      { base: 'Baño', zona: 'interior', icon: 'bath', repeatable: true },
+      { base: 'Medio baño', zona: 'interior', icon: 'droplet', repeatable: true },
+      { base: 'Estudio', zona: 'interior', icon: 'books' },
+      { base: 'Cuarto de TV', zona: 'interior', icon: 'tv' },
+      { base: 'Lavandería', zona: 'interior', icon: 'wash' },
+      { base: 'Cuarto de servicio', zona: 'interior', icon: 'door' },
+      { base: 'Fachada', zona: 'exterior', icon: 'home' },
+      { base: 'Jardín', zona: 'exterior', icon: 'plant-2' },
+      { base: 'Terraza', zona: 'exterior', icon: 'sun' },
+      { base: 'Cochera', zona: 'exterior', icon: 'car', repeatable: true },
+      { base: 'Patio', zona: 'exterior', icon: 'fence' },
+      { base: 'Roof garden', zona: 'exterior', icon: 'building' },
+    ],
+    departamento: [
+      { base: 'Recibidor', zona: 'interior', icon: 'door' },
+      { base: 'Sala', zona: 'interior', icon: 'sofa' },
+      { base: 'Comedor', zona: 'interior', icon: 'cup' },
+      { base: 'Cocina', zona: 'interior', icon: 'cup' },
+      { base: 'Recámara', zona: 'interior', icon: 'bed', firstName: 'Recámara principal', repeatable: true },
+      { base: 'Baño', zona: 'interior', icon: 'bath', repeatable: true },
+      { base: 'Medio baño', zona: 'interior', icon: 'droplet', repeatable: true },
+      { base: 'Estudio', zona: 'interior', icon: 'books' },
+      { base: 'Cuarto de TV', zona: 'interior', icon: 'tv' },
+      { base: 'Lavandería', zona: 'interior', icon: 'wash' },
+      { base: 'Balcón', zona: 'exterior', icon: 'sun' },
+      { base: 'Terraza', zona: 'exterior', icon: 'sun' },
+      { base: 'Lobby', zona: 'amenidades', icon: 'building' },
+      { base: 'Alberca', zona: 'amenidades', icon: 'pool' },
+      { base: 'Gimnasio', zona: 'amenidades', icon: 'barbell' },
+      { base: 'Casa club', zona: 'amenidades', icon: 'building' },
+      { base: 'Cancha', zona: 'amenidades', icon: 'ball' },
+      { base: 'Áreas verdes', zona: 'amenidades', icon: 'trees' },
+      { base: 'Caseta', zona: 'amenidades', icon: 'shield' },
+    ],
+    quinta: [
+      { base: 'Sala', zona: 'interior', icon: 'sofa' },
+      { base: 'Comedor', zona: 'interior', icon: 'cup' },
+      { base: 'Cocina', zona: 'interior', icon: 'cup' },
+      { base: 'Recámara', zona: 'interior', icon: 'bed', firstName: 'Recámara principal', repeatable: true },
+      { base: 'Baño', zona: 'interior', icon: 'bath', repeatable: true },
+      { base: 'Medio baño', zona: 'interior', icon: 'droplet', repeatable: true },
+      { base: 'Fachada', zona: 'exterior', icon: 'home' },
+      { base: 'Caseta', zona: 'exterior', icon: 'shield' },
+      { base: 'Cochera', zona: 'exterior', icon: 'car', repeatable: true },
+      { base: 'Jardín', zona: 'exterior', icon: 'plant-2' },
+      { base: 'Terraza', zona: 'exterior', icon: 'sun' },
+      { base: 'Alberca', zona: 'amenidades', icon: 'pool' },
+      { base: 'Casa club', zona: 'amenidades', icon: 'building' },
+      { base: 'Cancha', zona: 'amenidades', icon: 'ball' },
+      { base: 'Áreas verdes', zona: 'amenidades', icon: 'trees' },
+    ],
+  };
+
+  // Indice base normalizado -> base canonico, por tipo (cache perezoso).
+  function baseIndexFor(tipo) {
+    const list = BASE_CONCEPTS[tipo] || [];
+    const idx = {};
+    list.forEach((c) => { idx[normNombre(c.base)] = c.base; });
+    return idx;
+  }
+
+  // catalogByZone(tipo) -> { interior:[...], exterior:[...], amenidades:[...] }
+  // agrupa los BASE_CONCEPTS del tipo por zona, en orden de recorrido.
+  // Para tipos sin catalogo (p. ej. terreno) devuelve {}.
+  function catalogByZone(tipo) {
+    const list = BASE_CONCEPTS[tipo];
+    if (!list) return {};
+    const out = { interior: [], exterior: [], amenidades: [] };
+    list.forEach((c) => {
+      if (out[c.zona]) out[c.zona].push(c);
+    });
+    return out;
+  }
+
+  // baseConcept(nombre [, tipo]) -> concepto base canonico de un nombre instanciado.
+  // "Recámara 2"/"Recámara principal" -> "Recámara". Compara sin acentos/minusculas.
+  // Si no coincide con ningun BASE_CONCEPTS, devuelve el nombre tal cual.
+  function baseConcept(nombre, tipo) {
+    const raw = String(nombre || '').trim();
+    if (!raw) return raw;
+    // Quitar sufijo numerico (" 2", " 3", …) y el calificador "principal".
+    let stripped = raw.replace(/\s+\d+\s*$/, '');
+    const norm = normNombre(stripped);
+    const tipos = tipo ? [tipo] : Object.keys(BASE_CONCEPTS);
+    for (let i = 0; i < tipos.length; i++) {
+      const idx = baseIndexFor(tipos[i]);
+      if (idx[norm]) return idx[norm];
+      // "recamara principal" -> firstName: mapear contra cada concepto con firstName.
+      const list = BASE_CONCEPTS[tipos[i]] || [];
+      for (let j = 0; j < list.length; j++) {
+        const c = list[j];
+        if (c.firstName && normNombre(c.firstName) === normNombre(raw)) return c.base;
+      }
+    }
+    return raw;
+  }
+
+  // nextRoomName(existingNames, concept) -> siguiente nombre para el concepto.
+  // Sin instancias: concept.firstName (si existe) o concept.base.
+  // Con instancias: base + ' ' + n, con n el menor entero >=2 libre (cuenta por baseConcept).
+  function nextRoomName(existingNames, concept) {
+    const base = concept && concept.base ? concept.base : '';
+    const names = Array.isArray(existingNames) ? existingNames : [];
+    const normBase = normNombre(base);
+    const usados = names.filter((n) => normNombre(baseConcept(n)) === normBase);
+    if (usados.length === 0) return concept && concept.firstName ? concept.firstName : base;
+    // Numeros ya tomados (firstName/base cuentan como "1").
+    const tomados = new Set([1]);
+    usados.forEach((n) => {
+      const m = String(n).match(/\s+(\d+)\s*$/);
+      if (m) tomados.add(parseInt(m[1], 10));
+      else tomados.add(1);
+    });
+    let n = 2;
+    while (tomados.has(n)) n += 1;
+    return base + ' ' + n;
+  }
+
+  // Nombre de planta por indice (0 -> 'Planta baja', 1 -> 'Planta alta', 2 -> 'Planta 3'…).
+  function floorName(i) {
+    if (i === 0) return 'Planta baja';
+    if (i === 1) return 'Planta alta';
+    return 'Planta ' + (i + 1);
+  }
+
+  // planSkeleton(tipo, { rec, ban, med, pisos, opts }) -> arreglo ordenado de
+  // { nombre, zona, piso, parentId:null } que el UI materializa con nuevoEspacio.
+  // Idempotente por nombre dentro del propio plan. Exterior/amenidades con piso null.
+  function planSkeleton(tipo, options) {
+    const opts = options || {};
+    const rec = Math.max(0, parseInt(opts.rec, 10) || 0);
+    const ban = Math.max(0, parseInt(opts.ban, 10) || 0);
+    const med = Math.max(0, parseInt(opts.med, 10) || 0);
+    const pisos = Math.max(1, parseInt(opts.pisos, 10) || 1);
+    const toggles = opts.opts || {};
+    const concepts = BASE_CONCEPTS[tipo] || [];
+    const conceptByBase = (b) => concepts.find((c) => normNombre(c.base) === normNombre(b));
+
+    const plan = [];
+    const seen = new Set();
+    const push = (nombre, zona, piso) => {
+      const key = normNombre(nombre);
+      if (seen.has(key)) return;
+      seen.add(key);
+      plan.push({ nombre: nombre, zona: zona, piso: piso, parentId: null });
+    };
+
+    const plantaBaja = floorName(0);
+    const plantaRec = pisos > 1 ? floorName(1) : plantaBaja;
+
+    // Tipicos de interior en Planta baja.
+    ['Sala', 'Comedor', 'Cocina'].forEach((b) => {
+      if (toggles[b]) {
+        const c = conceptByBase(b);
+        push(b, c ? c.zona : 'interior', plantaBaja);
+      }
+    });
+    // Fachada al exterior.
+    if (toggles.Fachada) {
+      const c = conceptByBase('Fachada');
+      push('Fachada', c ? c.zona : 'exterior', null);
+    }
+
+    // Recamaras numeradas.
+    const recConcept = conceptByBase('Recámara');
+    const recNames = [];
+    for (let i = 0; i < rec; i++) {
+      const nombre = nextRoomName(recNames, recConcept || { base: 'Recámara', firstName: 'Recámara principal' });
+      recNames.push(nombre);
+      push(nombre, 'interior', plantaRec);
+    }
+    // Baños numerados.
+    const banConcept = conceptByBase('Baño');
+    const banNames = [];
+    for (let i = 0; i < ban; i++) {
+      const nombre = nextRoomName(banNames, banConcept || { base: 'Baño' });
+      banNames.push(nombre);
+      push(nombre, 'interior', plantaRec);
+    }
+    // Medios baños en Planta baja.
+    const medConcept = conceptByBase('Medio baño');
+    const medNames = [];
+    for (let i = 0; i < med; i++) {
+      const nombre = nextRoomName(medNames, medConcept || { base: 'Medio baño' });
+      medNames.push(nombre);
+      push(nombre, 'interior', plantaBaja);
+    }
+
+    return plan;
+  }
+
   function legacyValueToState(value) {
     if (!value) return { estado: 'pendiente' };
     return { estado: 'hecho', autor: typeof value === 'string' ? value : '', hora: '' };
@@ -3005,6 +3209,11 @@
     parsePropuesta,
     guideCoverage,
     capasCubiertas,
+    BASE_CONCEPTS,
+    catalogByZone,
+    baseConcept,
+    nextRoomName,
+    planSkeleton,
     createDefaultState,
     normalizeChecklistData,
     parseSpacesText,
