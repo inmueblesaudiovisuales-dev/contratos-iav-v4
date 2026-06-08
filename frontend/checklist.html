@@ -665,13 +665,17 @@
     .cap-sug-t { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--gold); }
     .cap-sug-t i { font-size: 16px; }
     .cap-sug-c { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); }
-    .cap-sug-chips { margin-top: 10px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
-    .cap-sug-chips::-webkit-scrollbar { height: 0; }
-    .cap-sug-chip { white-space: nowrap; flex: none; }
+    .cap-sug-body { margin-top: 10px; }
+    /* F16 — la lista de sugerencias envuelve (wrap), sin scroll horizontal */
+    .cap-sug-chips { flex-wrap: wrap; gap: 8px; }
     .cap-sug-chip.done { color: var(--green); background: var(--green-soft); border-color: #BFE0CC; }
     .cap-sug-chip.done i { color: var(--green); }
-    .cap-sug-chip.sel { border-color: var(--gold-leaf); box-shadow: 0 0 0 1.5px var(--gold-leaf); background: var(--gold-soft); }
-    .cap-sug-detail { margin-top: 11px; border-top: 1px dashed var(--line); padding-top: 10px; }
+    .cap-sug-chip.sel { border-color: var(--gold-leaf); box-shadow: 0 0 0 1.5px var(--gold-leaf); background: var(--gold-soft); font-weight: 600; }
+    .cap-libre-chip { border-style: dashed; color: var(--ink-3); }
+    .cap-libre-chip i { font-size: 13px; }
+    .cap-libre-chip.sel { border-style: solid; border-color: var(--gold-leaf); box-shadow: 0 0 0 1.5px var(--gold-leaf); background: var(--gold-soft); color: var(--ink-1); font-weight: 600; }
+    .cap-sug-guide { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; margin-bottom: 11px; }
+    .cap-sug-detail { margin-top: 11px; border-top: 1px dashed var(--line); padding-top: 11px; }
     .cap-mini-lbl { font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: .03em; text-transform: uppercase; margin-bottom: 6px; }
     .cap-qg { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; margin-bottom: 11px; }
     .cap-mov-chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
@@ -834,7 +838,8 @@ let activeSugId = null;
 // F7 — etiqueta de la proxima toma (no se auto-avanza)
 let pendingShotType = null;   // id de SHOT_TYPES seleccionado en la tira de sugerencias
 let pendingMovement = null;   // id de MOVEMENTS seleccionado
-let sugStripOpen = false;     // panel "Etiquetar toma" plegable (colapsado por defecto, F15)
+let sugStripOpen = false;     // panel "Sugeridas" plegable (colapsado por defecto, F15/F16)
+let tagLibre = false;         // F16 — modo libre: detalle plano/movimiento sin sugerencia activa
 let configGuiaOpen = false;
 let guideConfigDraft = null;
 let currentGuideConfig = null;
@@ -2281,55 +2286,106 @@ function planoLabel(id) {
   return PLANO_LABELS[id] || (shotTypes[id] || {}).label || id;
 }
 
-// Capa 2 — panel "Etiquetar toma" plegable (F15). Pega plano + movimiento a CUALQUIER
-// toma (libre o sugerida), igual en Sony y Drone. Colapsado por defecto.
+// F16 — las sugerencias del motor usan ids historicos (wide, pov, gimbal_walk...).
+// Para el detalle de opcion B se normalizan al vocabulario curado del panel
+// (Abierto/Detalle + 7 movimientos), que es lo que ve y graba el usuario.
+const SHOT_TO_CURATED = {
+  general: 'general', wide: 'general', medio: 'general', pov: 'general',
+  transicion: 'general', contrapicado: 'general', ventana: 'general',
+  reveal: 'general', simetrica: 'general', exterior: 'general',
+  detalle: 'detalle', textura: 'detalle',
+};
+const MOV_TO_CURATED = {
+  push_in: 'push_in', pull_out: 'pull_out', pan: 'pan', tilt: 'tilt',
+  travel: 'travel', orbit: 'orbit', reveal: 'reveal',
+  // historicos -> mejor equivalente curado
+  static: 'push_in', dolly: 'travel', gimbal_walk: 'travel', umbral: 'reveal',
+  parallax: 'travel', tilt_up: 'tilt', slider: 'travel', tracking: 'travel',
+  pedestal: 'tilt', whip: 'pan',
+};
+function curatedPlano(shotType) {
+  if (!shotType) return null;
+  return SHOT_TO_CURATED[shotType] || 'general';
+}
+function curatedMovement(movement) {
+  if (!movement) return null;
+  return MOV_TO_CURATED[movement] || movement;
+}
+
+// Capa 2 — panel "Sugeridas para [cuarto]" plegable (F16, opcion B).
+// Expandido sin seleccion: solo la lista de sugerencias del cuarto (glanceable) + chip Libre.
+// Al tocar una sugerencia (o Libre) se despliega el detalle: guia + Plano + Movimiento.
 function renderCapSugStrip(target, isDrone) {
-  const shotTypes = logic.getShotTypes();
   const movements = logic.getMovements();
-  const planoIds = (logic.CURATED_SHOT_TYPES || ['general', 'detalle']).filter((id) => shotTypes[id]);
+  const planoIds = (logic.CURATED_SHOT_TYPES || ['general', 'detalle']);
   const movIds = (logic.CURATED_MOVEMENTS || ['push_in', 'pull_out', 'pan', 'tilt', 'travel', 'orbit', 'reveal']).filter((id) => movements[id]);
 
-  // Sugerencias del cuarto: usadas solo para marcar "ya lo hiciste" en los chips de plano.
+  // Sugerencias del cuarto (video o drone segun modoActual).
   const suggestions = logic.suggestionsForTarget(state, state.modoActual, target) || [];
-  const planoDone = {};
-  for (const s of suggestions) {
-    if (s.shotType && logic.suggestionProgress(state, state.modoActual, target.id, s.id).done) planoDone[s.shotType] = true;
-  }
+  const progress = suggestions.map((s) => ({
+    s,
+    done: logic.suggestionProgress(state, state.modoActual, target.id, s.id).done,
+  }));
+  const doneN = progress.filter((p) => p.done).length;
 
-  // Linea colapsada: "libre" o "Plano · Movimiento" si ya elegiste.
-  let selLine = 'libre';
-  if (pendingShotType || pendingMovement) {
+  const cuartoLbl = isDrone ? 'el dron' : (target.nombre || 'este cuarto');
+
+  // Linea colapsada: cuenta de sugerencias hechas, o la etiqueta activa.
+  let selLine;
+  if (activeSugId || tagLibre || pendingShotType || pendingMovement) {
     const parts = [];
-    if (pendingShotType) parts.push(planoLabel(pendingShotType));
-    if (pendingMovement) parts.push((movements[pendingMovement] || {}).label || pendingMovement);
-    selLine = `<b>${esc(parts.join(' · '))}</b>`;
+    if (pendingShotType) parts.push(planoLabel(curatedPlano(pendingShotType) || pendingShotType));
+    if (pendingMovement) parts.push((movements[curatedMovement(pendingMovement)] || movements[pendingMovement] || {}).label || pendingMovement);
+    selLine = parts.length ? `<b>${esc(parts.join(' · '))}</b>` : '<b>Libre</b>';
   } else {
-    selLine = '<b>libre</b>';
+    selLine = `<b>${doneN} / ${suggestions.length}</b>`;
   }
 
-  const planoChips = planoIds.map((id) => {
-    const sel = pendingShotType === id;
-    const done = !!planoDone[id];
+  // Chips de sugerencias del cuarto, con palomita las ya hechas.
+  const sugChips = progress.map(({ s, done }) => {
+    const sel = activeSugId === s.id;
     const check = done ? `<i class="ti ti-check"></i>` : '';
-    return `<button class="chip cap-plano-chip${done ? ' done' : ''}${sel ? ' sel' : ''}" onclick="seleccionarPlano('${esc(id)}')">${check}${esc(planoLabel(id))}</button>`;
+    return `<button class="chip cap-sug-chip${done ? ' done' : ''}${sel ? ' sel' : ''}" onclick="seleccionarSugerencia('${esc(s.id)}')">${check}${esc(s.nombre || s.id)}</button>`;
   }).join('');
+  const libreChip = `<button class="chip cap-libre-chip${tagLibre ? ' sel' : ''}" onclick="entrarLibre()"><i class="ti ti-plus"></i>Libre</button>`;
 
-  const movGrid = movIds.map((id) => {
-    const on = pendingMovement === id;
-    const svg = MOV_SVGS[id] || '';
-    return `<button class="cap-mv${on ? ' mv-on' : ''}" onclick="seleccionarMovimiento('${esc(id)}')">${svg}<span>${esc((movements[id] || {}).label || id)}</span></button>`;
-  }).join('');
+  // Detalle (plano + movimiento) — solo si hay sugerencia activa o modo libre.
+  let detailHtml = '';
+  if (activeSugId || tagLibre) {
+    const activeSug = activeSugId ? logic.findSuggestion(activeSugId, state) : null;
+    const guideTxt = activeSug ? (activeSug.enfoque || activeSug.ejemplo || '') : '';
+    const guideHtml = guideTxt ? `<div class="cap-sug-guide">Qué grabar: ${esc(guideTxt)}</div>` : '';
 
-  return `<div class="cap-sug">
-    <button class="cap-sug-h" onclick="toggleSugStrip()">
-      <span class="cap-sug-t"><i class="ti ti-tag"></i>Etiquetar toma</span>
-      <span class="cap-tag-sel">${selLine} <i class="ti ti-chevron-${sugStripOpen ? 'up' : 'down'}"></i></span>
-    </button>
-    ${sugStripOpen ? `<div class="cap-sug-detail" style="border-top:0;padding-top:8px">
+    const planoChips = planoIds.map((id) => {
+      const sel = curatedPlano(pendingShotType) === id;
+      return `<button class="chip cap-plano-chip${sel ? ' sel' : ''}" onclick="seleccionarPlano('${esc(id)}')">${esc(planoLabel(id))}</button>`;
+    }).join('');
+
+    const curMov = curatedMovement(pendingMovement);
+    const movGrid = movIds.map((id) => {
+      const on = curMov === id;
+      const svg = MOV_SVGS[id] || '';
+      return `<button class="cap-mv${on ? ' mv-on' : ''}" onclick="seleccionarMovimiento('${esc(id)}')">${svg}<span>${esc((movements[id] || {}).label || id)}</span></button>`;
+    }).join('');
+
+    detailHtml = `<div class="cap-sug-detail">
+      ${guideHtml}
       <div class="cap-mini-lbl">Plano</div>
       <div class="chips cap-plano-chips">${planoChips}</div>
       <div class="cap-mini-lbl" style="margin-top:12px">Movimiento</div>
       <div class="cap-mvgrid">${movGrid}</div>
+    </div>`;
+  }
+
+  return `<div class="cap-sug">
+    <button class="cap-sug-h" onclick="toggleSugStrip()">
+      <span class="cap-sug-t"><i class="ti ti-bulb"></i>Sugeridas para ${esc(cuartoLbl)}</span>
+      <span class="cap-tag-sel">${selLine} <i class="ti ti-chevron-${sugStripOpen ? 'up' : 'down'}"></i></span>
+    </button>
+    ${sugStripOpen ? `<div class="cap-sug-body">
+      <div class="cap-mini-lbl">Qué grabar aquí</div>
+      <div class="chips cap-sug-chips">${sugChips}${libreChip}</div>
+      ${detailHtml}
     </div>` : ''}
   </div>`;
 }
@@ -2358,8 +2414,8 @@ function renderCapLatest(file) {
 function pendingTakeLabel() {
   const movements = logic.getMovements();
   const parts = [];
-  if (pendingShotType) parts.push(planoLabel(pendingShotType));
-  if (pendingMovement) parts.push((movements[pendingMovement] || {}).label || pendingMovement);
+  if (pendingShotType) parts.push(planoLabel(curatedPlano(pendingShotType) || pendingShotType));
+  if (pendingMovement) parts.push((movements[curatedMovement(pendingMovement)] || movements[pendingMovement] || {}).label || pendingMovement);
   return parts.join(' · ');
 }
 
@@ -2368,23 +2424,26 @@ function toggleSugStrip() {
   render();
 }
 
-// F15 — elegir plano fija pendingShotType (toma libre, sin sugerencia). Tocar de nuevo lo limpia.
+// F16 — cambiar el plano del detalle. Conserva la sugerencia activa (el usuario puede
+// ajustar plano/movimiento sin perderla). Tocar de nuevo el mismo plano lo limpia.
 function seleccionarPlano(id) {
-  pendingShotType = pendingShotType === id ? null : id;
-  activeSugId = null;
+  pendingShotType = curatedPlano(pendingShotType) === id ? null : id;
   render();
 }
 
-// F15 — elegir movimiento fija pendingMovement para CUALQUIER toma. Tocar de nuevo lo limpia.
+// F16 — cambiar el movimiento del detalle. Conserva la sugerencia activa.
 function seleccionarMovimiento(mvId) {
-  pendingMovement = pendingMovement === mvId ? null : mvId;
-  activeSugId = null;
+  pendingMovement = curatedMovement(pendingMovement) === mvId ? null : mvId;
   render();
 }
 
-// Registrar una toma con la camara activa, el cuarto, y tipo/movimiento etiquetados (si hay).
+// F16 — registrar una toma con la camara activa, el cuarto, el plano/movimiento curados
+// y el suggestionId de la sugerencia activa (null si es Libre o sin etiquetar). Asi la
+// sugerencia se marca hecha (palomita) al capturar. No auto-avanza a la siguiente.
 function darToma(targetId) {
-  const ctx = (pendingShotType || pendingMovement) ? { shotType: pendingShotType, movement: pendingMovement, suggestionId: activeSugId } : null;
+  const ctx = (pendingShotType || pendingMovement || activeSugId)
+    ? { shotType: pendingShotType, movement: pendingMovement, suggestionId: activeSugId }
+    : null;
   registrarArchivo(targetId, 'take', undefined, ctx);
 }
 
@@ -2455,7 +2514,9 @@ function abrirGateSalida() {
   abrirModal(`<div class="sheet-head"><h2>Resumen de la propiedad</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>${verdictHtml}${body}`);
 }
 
-// F7 — tocar un chip etiqueta la proxima toma (tipo + movimiento recomendado), sin auto-avanzar.
+// F16 — tocar una sugerencia: fija activeSugId, sale del modo libre y preselecciona
+// plano/movimiento (normalizados al vocabulario curado) desde la sugerencia. Sin auto-avanzar.
+// Tocar de nuevo la misma sugerencia la deselecciona y limpia el detalle.
 function seleccionarSugerencia(id) {
   if (activeSugId === id) {
     activeSugId = null;
@@ -2463,9 +2524,26 @@ function seleccionarSugerencia(id) {
     pendingMovement = null;
   } else {
     activeSugId = id;
+    tagLibre = false;
     const sug = logic.findSuggestion(id, state);
-    pendingShotType = sug ? (sug.shotType || null) : null;
-    pendingMovement = sug ? (sug.movement || null) : null;
+    pendingShotType = sug ? (curatedPlano(sug.shotType) || null) : null;
+    pendingMovement = sug ? (curatedMovement(sug.movement) || null) : null;
+  }
+  render();
+}
+
+// F16 — chip "Libre": modo libre sin sugerencia. Despliega el mismo detalle (Plano +
+// Movimiento) pero sin preseleccion; las tomas quedan sin suggestionId. Tocar de nuevo sale.
+function entrarLibre() {
+  if (tagLibre) {
+    tagLibre = false;
+    pendingShotType = null;
+    pendingMovement = null;
+  } else {
+    tagLibre = true;
+    activeSugId = null;
+    pendingShotType = null;
+    pendingMovement = null;
   }
   render();
 }
@@ -3157,7 +3235,7 @@ function setActiveRoom(id) {
   activeRoomId = id;
   localStorage.setItem(roomKey(), id);
   // F7 — al cambiar de cuarto se limpia la etiqueta de la proxima toma; sin cuestionario "cual quedo".
-  pendingShotType = null; pendingMovement = null; activeSugId = null;
+  pendingShotType = null; pendingMovement = null; activeSugId = null; tagLibre = false;
   cerrarModal();
   render();
 }
@@ -3391,7 +3469,7 @@ function registrarArchivo(targetId, kind, discardReason, ctx) {
   if (state === previous) return showToast('Reactiva este elemento antes de registrar');
   activeRoomId = targetId; localStorage.setItem(roomKey(), targetId);
   // No auto-avance: la etiqueta de la proxima toma se limpia tras grabar.
-  if (kind === 'take') { pendingShotType = null; pendingMovement = null; activeSugId = null; }
+  if (kind === 'take') { pendingShotType = null; pendingMovement = null; activeSugId = null; tagLibre = false; }
   render(); scheduleSave();
 }
 
