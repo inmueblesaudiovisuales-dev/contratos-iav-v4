@@ -695,6 +695,43 @@
     .setup-sub-name { flex: 1; min-width: 0; font-size: var(--ts-body); }
     .setup-addfloor { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 46px; border: 1px dashed var(--tint-line); border-radius: var(--radius); background: transparent; color: var(--ink-2); font-size: var(--ts-body); font-weight: 700; margin: 0 0 var(--sp-5); }
     .setup-addfloor i { font-size: 16px; }
+    /* F42 — Botón "Agregar cuarto aquí" al final de cada sección del esquema. */
+    .setup-addhere { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 44px; border: 1px dashed var(--tint-line); border-radius: var(--radius); background: var(--page); color: var(--ink-2); font-size: 13px; font-weight: 700; margin-top: 2px; }
+    .setup-addhere i { font-size: 16px; }
+    /* F42 — Footer fijo del setup: "Agregar cuarto" (global) + "Listo, a capturar". */
+    .setup-foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-5); }
+    .setup-foot .setup-addbig { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; border: 0; border-radius: var(--radius); background: var(--black); color: #fff; font-size: 15px; font-weight: 800; }
+    .setup-foot .setup-addbig i { font-size: 20px; }
+    .setup-foot .primary { flex: none; min-height: 50px; padding: 0 18px; margin: 0; border-radius: var(--radius); font-size: 15px; }
+
+    /* F42 — Hoja inferior para agregar (bottom sheet con scrim, mosaicos por zona). */
+    .hoja-scrim { position: fixed; inset: 0; z-index: 110; background: rgba(16,16,16,.38); }
+    .hoja { position: fixed; left: 0; right: 0; bottom: 0; z-index: 111; max-width: 620px; margin: 0 auto; background: var(--page); border-radius: 16px 16px 0 0; box-shadow: var(--shadow); max-height: 86dvh; display: flex; flex-direction: column; }
+    .hoja-h { padding: var(--sp-4) var(--sp-4) var(--sp-2); }
+    .hoja-grab { width: 40px; height: 4px; border-radius: 99px; background: var(--tint-line); margin: 0 auto var(--sp-3); }
+    .hoja-h .hoja-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+    .hoja-h h2 { font-size: var(--ts-base); font-weight: 800; }
+    .hoja-x { width: 44px; height: 44px; flex: none; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); display: flex; align-items: center; justify-content: center; }
+    .hoja-x i { font-size: 20px; }
+    .hoja-tabs { display: flex; gap: 6px; margin-top: var(--sp-3); }
+    .hoja-tab { flex: 1; min-height: 44px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink-2); font-size: var(--ts-body); font-weight: 700; }
+    .hoja-tab.on { background: var(--tint); border-color: var(--tint-line); color: var(--ink-1); }
+    .hoja-floor { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); font-size: var(--ts-cap); color: var(--ink-2); font-weight: 600; }
+    .hoja-floor select { font: inherit; font-weight: 700; color: var(--ink-1); border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 0 var(--sp-2); min-height: 44px; }
+    .hoja-search { display: flex; align-items: center; gap: var(--sp-2); border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 0 var(--sp-3); min-height: 46px; margin: var(--sp-3) var(--sp-4) 0; color: var(--ink-3); }
+    .hoja-search i { font-size: 18px; }
+    .hoja-search input { border: 0; outline: 0; flex: 1; font: inherit; color: var(--ink-1); background: transparent; }
+    .hoja-hint { padding: var(--sp-2) var(--sp-4) 0; color: var(--ink-3); font-size: 11px; text-align: center; }
+    .hoja-tiles { overflow: auto; padding: var(--sp-3) var(--sp-4) var(--sp-5); display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .hoja-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 84px; padding: 14px 6px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink-1); }
+    .hoja-tile.added { border-color: var(--tint-line); background: var(--tint); }
+    .hoja-tile i { font-size: 26px; }
+    .hoja-tile .hoja-tl { font-size: 12px; font-weight: 700; text-align: center; line-height: 1.15; }
+    .hoja-badge { position: absolute; top: -8px; right: -8px; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 999px; background: var(--gold); color: #241c08; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    .hoja-drop { padding: var(--sp-3) var(--sp-4) 0; display: grid; gap: 6px; }
+    .hoja-drop-item { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%; min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink-1); font-size: var(--ts-body); font-weight: 600; text-align: left; }
+    .hoja-drop-item .hoja-di-add { font-size: 11px; color: var(--ink-3); font-weight: 700; flex: none; }
+    .hoja-drop-empty { color: var(--ink-3); font-size: var(--ts-body); padding: var(--sp-2) 0; font-style: italic; text-align: center; }
 
     /* F36 — Rótulo discreto de escala del target de drone (breadcrumb / micro-texto). */
     .cap-scale { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-bottom: 2px; }
@@ -1058,6 +1095,11 @@ let setupPiso = null;
 // cuarto con el selector rapido de sub-cuarto (Closet / Bano / Otro) abierto.
 let setupQuery = '';
 let setupSubFor = null;
+// F42 — Estado de la hoja para agregar (solo UI, no se persiste en el contrato).
+let hojaOpen = false;
+let hojaZona = 'interior';
+let hojaPiso = 'Planta baja';
+let hojaQuery = '';
 let searchTerm = '';
 let saveTimer = null;
 let retryTimer = null;
@@ -1419,6 +1461,7 @@ function render() {
     ${renderShellHeader()}
     <main class="content">${bodyHtml}</main>
     ${showBotnav ? renderBottomNav() : ''}
+    ${showSetup ? renderHojaAgregar() : ''}
   `;
   app.classList.toggle('has-thumb', !!app.querySelector('.cap-thumb'));
   app.classList.toggle('has-botnav', showBotnav);
@@ -1700,11 +1743,11 @@ function renderSetup() {
       ${renderDroneToggle()}
     </section>`;
   }
-  const drone = logic.isDronePiso(focusP);
-  // Cuartos raiz en el piso en foco (para el conteo del encabezado).
-  const enFoco = state.espacios.filter((e) => (e.piso || 'Sin piso') === focusP && !e.parentId).length;
+  // F42 — La nube de chips sugeridos y el buscador inline se retiran: ese rol
+  // pasa íntegro a la hoja inferior (renderHojaAgregar). El esquema vivo es la
+  // superficie principal; agregar es por botón global (footer) o contextual.
   return `<section class="setup">
-    <div class="setup-hd"><h2>Armar cuartos</h2><p>Arrancas de cero. Toca un chip para agregar al piso en foco; busca cualquier cuarto o crea uno nuevo.</p></div>
+    <div class="setup-hd"><h2>Armar cuartos</h2><p>Arma la casa como la caminas. Toca "Agregar cuarto" o el botón de cada sección.</p></div>
     ${tipoSeg}
     <div class="setup-block">
       <label class="setup-lbl">Pisos</label>
@@ -1713,52 +1756,141 @@ function renderSetup() {
         return `<button class="chip${dr ? ' drone' : ''}${p === focusP ? ' active' : ''}" onclick="setSetupPiso('${esc(p)}')">${dr ? '<i class="ti ti-drone"></i>' : ''}${esc(p)}<i class="ti ti-x chip-x" onclick="event.stopPropagation();quitarPiso('${esc(p)}')"></i></button>`;
       }).join('')}<button class="chip add" onclick="agregarPiso()"><i class="ti ti-plus"></i>piso</button></div>
     </div>
-    <div class="setup-block setup-search">
-      <div class="setup-search-box${drone ? ' sky' : ''}"><i class="ti ti-search"></i><input id="setup-input" type="text" value="${esc(setupQuery)}" placeholder="${drone ? 'Busca un sujeto aéreo…' : 'Busca cualquier cuarto (sala, alberca, palapa…)'}" autocomplete="off" oninput="onSetupSearch(this.value)" onkeydown="if(event.key==='Enter')agregarCuartoEscrito()"></div>
-      ${setupQuery.trim() ? renderSetupSearchDrop(focusP) : ''}
-    </div>
-    ${setupQuery.trim() ? '' : `<div class="setup-block">
-      <label class="setup-lbl${drone ? ' sky' : ''}">${drone ? 'Sugeridos para Drone' : `Sugeridos para ${esc(focusP)} · ${TIPO_LABEL[setupTipo]}`}</label>
-      ${renderSetupSuggest(focusP, drone)}
-    </div>`}
+    <div class="setup-block">${renderSetupList()}</div>
     ${renderDroneToggle()}
-    ${state.espacios.length ? `<div class="setup-block"><label class="setup-lbl${drone ? ' sky' : ''}">En ${esc(focusP)} · ${enFoco} ${enFoco === 1 ? 'cuarto' : 'cuartos'}</label>${renderSetupList()}</div>
-      <button class="primary block" onclick="cerrarSetup()">Listo, a capturar</button>` : ''}
+    <div class="setup-foot">
+      <button class="setup-addbig" onclick="abrirHojaAgregar()"><i class="ti ti-plus"></i>Agregar cuarto</button>
+      ${state.espacios.length ? `<button class="primary" onclick="cerrarSetup()">Listo, a capturar</button>` : ''}
+    </div>
   </section>`;
 }
 
-// F20 — Chips auto-sugeridos: en el piso Drone son sujetos aereos
-// (suggestedAerialSubjects); en cualquier otro piso, espacios por piso+tipo
-// (suggestedSpacesFor). Un toque agrega (patron del Modo Cuartos existente).
-function renderSetupSuggest(focusP, drone) {
-  if (drone) {
-    const subjects = logic.suggestedAerialSubjects(state, setupTipo) || [];
-    if (!subjects.length) return '<span class="muted">Sin sujetos aéreos para este tipo.</span>';
-    return `<div class="chips suggest sky">${subjects.map((s) => {
-      const ya = chipYaEnFoco(s.label);
-      return `<button class="chip${ya ? ' added' : ''}" ${ya ? 'disabled' : `onclick="agregarSujetoAereo('${esc(s.label)}')"`}>${ya ? '<i class="ti ti-check"></i>' : '<i class="ti ti-plus"></i>'}${esc(s.label)}</button>`;
-    }).join('')}</div>`;
+// F42 — Hoja inferior para agregar (bottom sheet). Reemplaza a renderSetupSuggest
+// y renderSetupSearchDrop: pestañas por zona + selector de planta (Interior) +
+// buscador + rejilla de mosaicos (un mosaico por concepto base, con badge del
+// conteo actual). Tocar un mosaico agrega y la hoja PERMANECE abierta. Se monta
+// en render() junto al #app (sobrevive a los re-render del esquema detrás).
+function renderHojaAgregar() {
+  if (!hojaOpen) return '';
+  const pisosI = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : ['Planta baja'];
+  if (!pisosI.includes(hojaPiso)) hojaPiso = pisosI[0] || 'Planta baja';
+  const tabs = [['interior', 'Interior'], ['exterior', 'Exterior'], ['amenidades', 'Amenidades']];
+  const tabsHtml = tabs.map((t) => `<button class="hoja-tab${hojaZona === t[0] ? ' on' : ''}" onclick="setHojaZona('${t[0]}')">${t[1]}</button>`).join('');
+  const floorHtml = hojaZona === 'interior'
+    ? `<div class="hoja-floor">Agregar a: <select onchange="setHojaPiso(this.value)">${pisosI.map((p) => `<option value="${esc(p)}"${p === hojaPiso ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select></div>`
+    : '';
+  const cat = logic.catalogByZone(setupTipo) || {};
+  const lib = (cat[hojaZona] || []);
+  const q = hojaQuery.trim().toLowerCase();
+  // Ámbito de conteo para el badge: misma planta para interior, global para
+  // exterior/amenidades. Cuenta por concepto base.
+  const ambito = state.espacios.filter((e) => {
+    if (e.parentId) return false;
+    if (setupZona(e) !== hojaZona) return false;
+    if (hojaZona === 'interior') return (e.piso || 'Planta baja') === hojaPiso;
+    return true;
+  });
+  const cuentaBase = (base) => ambito.filter((e) => logic.baseConcept(e.nombre, setupTipo) === base).length;
+  const libVis = q ? lib.filter((c) => c.base.toLowerCase().indexOf(q) >= 0) : lib;
+  const tilesHtml = libVis.map((c) => {
+    const cnt = cuentaBase(c.base);
+    return `<button class="hoja-tile${cnt ? ' added' : ''}" onclick="agregarDesdeHoja('${hojaZona}','${esc(c.base)}')">${cnt ? `<span class="hoja-badge">${cnt}</span>` : ''}<i class="ti ${setupIconClass(c.icon)}"></i><span class="hoja-tl">${esc(c.base)}</span></button>`;
+  }).join('');
+  // Con texto, además del catálogo filtrado mostramos resultados de searchSpaces
+  // (incluye "crear nuevo" con el texto literal) que caen fuera del catálogo base.
+  let dropHtml = '';
+  if (q) {
+    const results = logic.searchSpaces(hojaQuery) || [];
+    const baseSet = new Set(lib.map((c) => c.base.toLowerCase()));
+    const extra = results.filter((r) => r.kind === 'create' || !baseSet.has((r.nombre || '').toLowerCase()));
+    if (extra.length) {
+      dropHtml = `<div class="hoja-drop">${extra.map((r) => {
+        if (r.kind === 'create') {
+          return `<button class="hoja-drop-item" onclick="crearDesdeHoja('${esc(r.nombre)}')"><span>Crear "${esc(r.nombre)}" como cuarto nuevo</span><span class="hoja-di-add">personalizado</span></button>`;
+        }
+        return `<button class="hoja-drop-item" onclick="crearDesdeHoja('${esc(r.nombre)}')"><span>${esc(r.nombre)}</span><span class="hoja-di-add">agregar</span></button>`;
+      }).join('')}</div>`;
+    }
   }
-  const chips = logic.suggestedSpacesFor(state, focusP, setupTipo) || [];
-  if (!chips.length) return '<span class="muted">Sin sugerencias para este piso. Usa el buscador.</span>';
-  return `<div class="chips suggest">${chips.map((c) => {
-    const ya = chipYaEnFoco(c.nombre);
-    return `<button class="chip${ya ? ' added' : ''}" ${ya ? 'disabled' : `onclick="agregarCuartoSugerido('${esc(c.nombre)}','${c.zona}','${c.categoria || ''}')"`}>${ya ? '<i class="ti ti-check"></i>' : '<i class="ti ti-plus"></i>'}${esc(c.nombre)}</button>`;
-  }).join('')}</div>`;
+  const tilesBody = (libVis.length || dropHtml)
+    ? `${dropHtml}<div class="hoja-tiles">${tilesHtml}</div>`
+    : `<div class="hoja-tiles"><div class="hoja-drop-empty">Sin coincidencias en ${hojaZona}.</div></div>`;
+  return `<div class="hoja-scrim" onclick="cerrarHojaAgregar()"></div>
+    <div class="hoja" role="dialog" aria-modal="true" aria-label="Agregar cuarto" onclick="event.stopPropagation()">
+      <div class="hoja-h">
+        <div class="hoja-grab"></div>
+        <div class="hoja-row"><h2>Agregar cuarto</h2><button class="hoja-x" onclick="cerrarHojaAgregar()" aria-label="Cerrar"><i class="ti ti-x"></i></button></div>
+        <div class="hoja-tabs">${tabsHtml}</div>
+        ${floorHtml}
+      </div>
+      <div class="hoja-search"><i class="ti ti-search"></i><input id="hoja-input" type="text" value="${esc(hojaQuery)}" placeholder="buscar otro cuarto…" autocomplete="off" oninput="onHojaSearch(this.value)"></div>
+      <div class="hoja-hint">Toca un cuarto para agregarlo · la hoja se queda abierta para seguir</div>
+      ${tilesBody}
+    </div>`;
 }
 
-// F20 — Dropdown del buscador (searchSpaces): coincidencias de toda la
-// biblioteca + opcion "crear nuevo" al final con el texto literal.
-function renderSetupSearchDrop(focusP) {
-  const results = logic.searchSpaces(setupQuery) || [];
-  if (!results.length) return '<div class="setup-drop"><div class="setup-drop-empty">Sin coincidencias.</div></div>';
-  return `<div class="setup-drop">${results.map((r) => {
-    if (r.kind === 'create') {
-      return `<button class="setup-drop-item create" onclick="agregarDesdeBusqueda('create','${esc(r.nombre)}','${r.zona || 'interior'}','')"><span>Crear "${esc(r.nombre)}" como cuarto nuevo</span><span class="di-add">personalizado</span></button>`;
-    }
-    const ya = chipYaEnFoco(r.nombre);
-    return `<button class="setup-drop-item" ${ya ? 'disabled' : `onclick="agregarDesdeBusqueda('match','${esc(r.nombre)}','${r.zona || 'interior'}','${r.categoria || ''}')"`}><span>${esc(r.nombre)}</span><span class="di-add">${ya ? 'ya agregado' : `+ agregar a ${esc(focusP)}`}</span></button>`;
-  }).join('')}</div>`;
+// F42 — Cambia la pestaña/zona activa de la hoja.
+function setHojaZona(z) { hojaZona = z; render(); }
+// F42 — Cambia la planta destino (solo Interior).
+function setHojaPiso(p) { hojaPiso = p; render(); }
+// F42 — Buscador de la hoja: re-render conservando foco y cursor del input.
+function onHojaSearch(value) {
+  hojaQuery = value;
+  render();
+  const again = document.getElementById('hoja-input');
+  if (again) { again.focus(); const n = again.value.length; again.setSelectionRange(n, n); }
+}
+
+// F42 — Abre la hoja global (Interior, primera planta).
+function abrirHojaAgregar() {
+  const pisosI = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : [];
+  hojaZona = 'interior';
+  hojaPiso = pisosI[0] || 'Planta baja';
+  hojaQuery = '';
+  hojaOpen = true;
+  cerrarModal();
+  render();
+}
+// F42 — Abre la hoja contextual apuntando a una zona/piso de la sección.
+function abrirHojaAgregarEn(zona, piso) {
+  hojaZona = (zona === 'exterior' || zona === 'amenidades') ? zona : 'interior';
+  if (hojaZona === 'interior') hojaPiso = piso || 'Planta baja';
+  hojaQuery = '';
+  hojaOpen = true;
+  cerrarModal();
+  render();
+}
+// F42 — Cierra la hoja (botón X o toque en el scrim).
+function cerrarHojaAgregar() { hojaOpen = false; hojaQuery = ''; render(); }
+
+// F42 — Agrega un cuarto desde un mosaico. Numera con nextRoomName sobre el
+// ámbito (misma planta para interior; global para exterior/amenidades). La hoja
+// permanece abierta: scheduleSave + render re-pinta el esquema y el sheet.
+function agregarDesdeHoja(zona, base) {
+  const concept = (logic.BASE_CONCEPTS[setupTipo] || []).find((c) => c.base === base) || { base };
+  const interior = zona === 'interior';
+  const ambito = state.espacios.filter((e) => {
+    if (e.parentId) return false;
+    if (setupZona(e) !== zona) return false;
+    if (interior) return (e.piso || 'Planta baja') === hojaPiso;
+    return true;
+  }).map((e) => e.nombre);
+  const nombre = logic.nextRoomName(ambito, concept);
+  const piso = interior ? hojaPiso : null;
+  nuevoEspacio(nombre, piso, zona, null, logic.detectCategoria(nombre));
+  scheduleSave();
+  render();
+}
+
+// F42 — Crear desde resultado del buscador ("crear nuevo" o coincidencia fuera
+// del catálogo base): usa el texto literal y la zona activa de la hoja.
+function crearDesdeHoja(nombre) {
+  const zona = hojaZona;
+  const piso = zona === 'interior' ? hojaPiso : null;
+  nuevoEspacio(nombre, piso, zona, null, logic.detectCategoria(nombre));
+  hojaQuery = '';
+  scheduleSave();
+  render();
 }
 
 // F20 — Vista Terreno: sujeto unico "El terreno" con sus tomas sugeridas.
@@ -1780,12 +1912,6 @@ function renderSetupTerreno(tipoSeg) {
     </div>
     <button class="primary block" onclick="cerrarSetup()">Listo, a capturar</button>
   </section>`;
-}
-
-function chipYaEnFoco(nombre) {
-  const focusP = getFocusPiso();
-  const n = nombre.toLowerCase();
-  return state.espacios.some((e) => !e.parentId && (e.piso || 'Sin piso') === focusP && e.nombre.toLowerCase() === n);
 }
 
 // F41 — Mapa de íconos del catálogo (BASE_CONCEPTS.icon, sin prefijo) a clases
@@ -1830,23 +1956,28 @@ function renderSetupList() {
     const rooms = raiz
       .filter((e) => setupZona(e) === 'interior' && (e.piso || 'Planta baja') === p)
       .sort((a, b) => (a.orden || 0) - (b.orden || 0));
-    h += setupSection('ti-stairs', esc(p), rooms, 'Sin cuartos en esta planta todavía.');
+    h += setupSection('ti-stairs', esc(p), rooms, 'Sin cuartos en esta planta todavía.', 'interior', p);
   });
   h += `<button class="setup-addfloor" onclick="agregarPiso()"><i class="ti ti-plus"></i>Agregar planta</button>`;
   const ext = raiz.filter((e) => setupZona(e) === 'exterior').sort((a, b) => (a.orden || 0) - (b.orden || 0));
   const ame = raiz.filter((e) => setupZona(e) === 'amenidades').sort((a, b) => (a.orden || 0) - (b.orden || 0));
-  h += setupSection('ti-plant-2', 'Exterior', ext, 'Sin espacios exteriores.');
-  h += setupSection('ti-pool', 'Amenidades', ame, 'Sin amenidades.');
+  h += setupSection('ti-plant-2', 'Exterior', ext, 'Sin espacios exteriores.', 'exterior', null);
+  h += setupSection('ti-pool', 'Amenidades', ame, 'Sin amenidades.', 'amenidades', null);
   return h;
 }
 
-function setupSection(iconClass, nombre, rooms, vacio) {
+// F42 — Cada sección termina con "Agregar cuarto aquí" → abre la hoja apuntando
+// a esa zona/piso (contextual).
+function setupSection(iconClass, nombre, rooms, vacio, zona, piso) {
   const n = rooms.length;
   const cnt = `${n} ${n === 1 ? 'cuarto' : 'cuartos'}`;
   const inner = n ? rooms.map(setupRoomRow).join('') : `<div class="setup-sec-empty">${vacio}</div>`;
+  const pisoArg = piso == null ? 'null' : `'${esc(piso)}'`;
+  const addHere = `<button class="setup-addhere" onclick="abrirHojaAgregarEn('${zona}',${pisoArg})"><i class="ti ti-plus"></i>Agregar cuarto aquí</button>`;
   return `<div class="setup-sec">
     <div class="setup-sec-h"><div class="setup-sec-name"><i class="ti ${iconClass}"></i>${nombre}</div><div class="setup-sec-cnt">${cnt}</div></div>
     ${inner}
+    ${addHere}
   </div>`;
 }
 
@@ -1998,60 +2129,6 @@ function abrirSetup() {
 // state.espacios; de lo contrario showSetup (que fuerza el setup con espacios vacios)
 // nunca dejaria avanzar al loop. Idempotente y no-op para no-terreno.
 function cerrarSetup() { materializarTerrenoSiAplica(); setupOpen = false; render(); }
-
-// F20 — Buscador: refresca el dropdown sin perder el foco del input. Como el
-// dropdown se re-renderiza dentro del bloque del buscador, guardamos el foco
-// y la posicion del cursor para que escribir sea fluido.
-function onSetupSearch(value) {
-  setupQuery = value;
-  render();
-  const again = document.getElementById('setup-input');
-  if (again) { again.focus(); const n = again.value.length; again.setSelectionRange(n, n); }
-}
-
-function agregarCuartoEscrito() {
-  const value = setupQuery.trim();
-  if (!value) return;
-  setupOpen = true;
-  // Texto libre: la categoria se detecta (corregible despues con renombrar/acciones).
-  nuevoEspacio(value, getFocusPiso(), 'interior', null, logic.detectCategoria(value));
-  setupQuery = '';
-  scheduleSave();
-  render();
-  const again = document.getElementById('setup-input');
-  if (again) again.focus();
-}
-
-// F20 — Agregar desde el dropdown del buscador (searchSpaces). 'match' usa la
-// zona/categoria de la biblioteca; 'create' es texto libre. Limpia la busqueda.
-function agregarDesdeBusqueda(kind, nombre, zona, categoria) {
-  if (kind === 'match' && chipYaEnFoco(nombre)) return;
-  setupOpen = true;
-  nuevoEspacio(nombre, getFocusPiso(), zona || 'interior', null, categoria || logic.detectCategoria(nombre));
-  setupQuery = '';
-  scheduleSave();
-  render();
-}
-
-function agregarCuartoSugerido(nombre, zona, categoria) {
-  if (chipYaEnFoco(nombre)) return;
-  setupOpen = true;
-  // Chip: la categoria queda fijada desde la biblioteca (o se detecta del nombre).
-  nuevoEspacio(nombre, getFocusPiso(), zona, null, categoria || logic.detectCategoria(nombre));
-  scheduleSave();
-  render();
-}
-
-// F20 — Sujeto aereo (piso Drone): se agrega como espacio del piso Drone con
-// kind:'drone' y zona exterior, para que el motor lo trate como aereo.
-function agregarSujetoAereo(nombre) {
-  if (chipYaEnFoco(nombre)) return;
-  setupOpen = true;
-  const espacio = nuevoEspacio(nombre, getFocusPiso(), 'exterior', null, undefined);
-  espacio.kind = 'drone';
-  scheduleSave();
-  render();
-}
 
 // F24 — Chips de un toque para añadir el primer piso cuando el estado arranca
 // sin pisos. Cada chip llama a confirmarPiso(p), que agrega el piso y lo pone en
