@@ -14,6 +14,10 @@
     { id: 'drone-dji', label: 'DJI Air 3', mode: 'drone', kind: 'dji' },
     { id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', mode: 'drone', kind: 'dji' },
     { id: 'sony-asesor', label: 'Sony FX30', mode: 'asesor', kind: 'sony', role: 'video' },
+    // F75 (revision) — la Tascam es una camara mas, con su propia secuencia (kind:'tascam').
+    // Reemplaza a osmo-asesor como dispositivo de audio del asesor. osmo-asesor se conserva
+    // solo por retro-compat de estados viejos; registerAsesorFile NO lo usa.
+    { id: 'tascam-asesor', label: 'Tascam (DJI Mic)', mode: 'asesor', kind: 'tascam', role: 'audio' },
     { id: 'osmo-asesor', label: 'Osmo + DJI Mic', mode: 'asesor', kind: 'dji', role: 'audio' },
   ];
   const ASESOR_DEFAULTS = [
@@ -39,12 +43,10 @@
     });
     return 'P' + pad2(max + 1);
   }
-  // F75 — llave de pareo (ASCII seguro por construccion). audioSugerido es identico.
+  // F75 (revision) — llave de pareo (ASCII seguro por construccion). Identica en el
+  // registro Sony y el Tascam de la misma toma.
   function parAsesor(codigo, toma) {
     return `${codigo}_T${toma}`;
-  }
-  function audioSugeridoAsesor(codigo, toma) {
-    return parAsesor(codigo, toma);
   }
   const DRONE_DEFAULTS = [
     'Fachada aerea',
@@ -3354,87 +3356,102 @@
     return next;
   }
 
+  // F75 (revision) — empuja un mediaFile de una camara con secuencia (sony-asesor o
+  // tascam-asesor) usando su token REAL y avanzando su propio contador. Devuelve el
+  // mediaFile creado para que el llamador pueda leer su pairId/token.
+  function pushAsesorCameraFile(next, cameraId, ctx) {
+    const camera = getCamera(next, cameraId);
+    const sequence = getCameraSequence(next, cameraId);
+    const file = {
+      id: makeId('media'),
+      cameraId,
+      segmentId: sequence.segment.id,
+      fileCounter: sequence.segment.counterNext,
+      fileToken: formatFileToken(sequence.segment, sequence.segment.counterNext),
+      targetId: ctx.puntoId,
+      scene: ctx.scene,
+      scenePath: ctx.scene,
+      shotNumber: ctx.shotNumber,
+      kind: ctx.kind,
+      discardReason: ctx.discardReason,
+      good: false,
+      note: ctx.note,
+      pairId: ctx.pairId,
+      role: camera.role,
+      author: ctx.author,
+      createdAt: ctx.createdAt,
+      updatedAt: ctx.updatedAt,
+      shotType: null,
+      movement: null,
+      suggestionId: null,
+    };
+    next.mediaFiles.push(file);
+    const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
+    activeSegment.counterNext++;
+    return file;
+  }
+
   function registerAsesorFile(state, options) {
     const punto = (state.asesorPuntos || []).find((p) => p.id === options.puntoId);
     if (!punto) return state;
     const esVoz = punto.tipo === 'voz';
-    // F75 — el asesor ya no graba un par Sony+Osmo. El audio es externo (Tascam):
-    //  - Punto normal: UN mediaFile de video (sony-asesor) con audioExterno:true.
-    //  - Voz en off: UN mediaFile solo-audio (tascam-asesor) sin token de video.
+    // F75 (revision) — la Tascam es una camara mas, con su propia secuencia y token real:
+    //  - Punto normal: DOS mediaFiles, sony-asesor (video) y tascam-asesor (audio), cada uno
+    //    con su token/contador real (avanza AMBOS contadores), ligados por el mismo `par`.
+    //  - Voz en off: UN mediaFile tascam-asesor (audio) con token real, soloAudio:true.
     const kind = options.kind || 'take';
     const codigo = punto.codigo || nextAsesorCodigo(state);
     const createdAt = options.now ? new Date(options.now).toISOString() : new Date().toISOString();
-    const updatedAt = options.now ? new Date(options.now).toISOString() : new Date().toISOString();
+    const updatedAt = createdAt;
 
     if (esVoz) {
+      // Voz en off: solo requiere la secuencia de la Tascam.
+      if (!getCameraSequence(state, 'tascam-asesor').segment) return state;
       const next = clone(state);
       const nextPunto = next.asesorPuntos.find((p) => p.id === options.puntoId);
       const shotNumber = kind === 'take'
         ? next.mediaFiles.filter((file) => file.cameraId === 'tascam-asesor' && file.targetId === options.puntoId && file.kind === 'take').length + 1
         : null;
-      next.mediaFiles.push({
-        id: makeId('media'),
-        cameraId: 'tascam-asesor',
-        segmentId: null,
-        fileCounter: null,
-        fileToken: null,
-        targetId: options.puntoId,
+      const file = pushAsesorCameraFile(next, 'tascam-asesor', {
+        puntoId: options.puntoId,
         scene: punto.nombre,
-        scenePath: punto.nombre,
         shotNumber,
         kind,
         discardReason: options.discardReason || null,
-        good: false,
         note: options.note || '',
         pairId: parAsesor(codigo, shotNumber),
-        soloAudio: true,
-        audioExterno: true,
         author: options.autor || 'Anonimo',
         createdAt,
         updatedAt,
-        shotType: null,
-        movement: null,
-        suggestionId: null,
       });
+      file.soloAudio = true;
       if (kind === 'take') nextPunto.estado = 'hecho';
       return next;
     }
 
-    // Punto normal: un solo video en sony-asesor, audio externo en la Tascam.
+    // Punto normal: pareja Sony + Tascam. Requiere AMBAS secuencias inicializadas.
     if (!getCameraSequence(state, 'sony-asesor').segment) return state;
+    if (!getCameraSequence(state, 'tascam-asesor').segment) return state;
     const next = clone(state);
     const nextPunto = next.asesorPuntos.find((p) => p.id === options.puntoId);
-    const camera = getCamera(next, 'sony-asesor');
-    const sequence = getCameraSequence(next, 'sony-asesor');
     const shotNumber = kind === 'take'
       ? next.mediaFiles.filter((file) => file.cameraId === 'sony-asesor' && file.targetId === options.puntoId && file.kind === 'take').length + 1
       : null;
-    next.mediaFiles.push({
-      id: makeId('media'),
-      cameraId: 'sony-asesor',
-      segmentId: sequence.segment.id,
-      fileCounter: sequence.segment.counterNext,
-      fileToken: formatFileToken(sequence.segment, sequence.segment.counterNext),
-      targetId: options.puntoId,
+    const pairId = parAsesor(codigo, shotNumber);
+    const ctx = {
+      puntoId: options.puntoId,
       scene: punto.nombre,
-      scenePath: punto.nombre,
       shotNumber,
       kind,
       discardReason: options.discardReason || null,
-      good: false,
       note: options.note || '',
-      pairId: parAsesor(codigo, shotNumber),
-      audioExterno: true,
-      role: camera.role,
+      pairId,
       author: options.autor || 'Anonimo',
       createdAt,
       updatedAt,
-      shotType: null,
-      movement: null,
-      suggestionId: null,
-    });
-    const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
-    activeSegment.counterNext++;
+    };
+    pushAsesorCameraFile(next, 'sony-asesor', ctx);
+    pushAsesorCameraFile(next, 'tascam-asesor', ctx);
     if (kind === 'take') nextPunto.estado = 'hecho';
     return next;
   }
@@ -3841,20 +3858,17 @@
 
       const enrichedFile = { kind: f.kind, good: f.good, discardReason: f.discardReason, ordenEdicion, tipoTomaLabel, movimiento, movimientoLabel, sentido, pared };
 
-      // F75 — campos aditivos del asesor (no cambian version:1):
-      //  - par/audioSugerido = pairId; puntoId = targetId; audioExterno:true siempre.
-      //  - solo-audio (voz en off): soloAudio:true, archivo/consecutivo null,
-      //    camaraId 'tascam-asesor', camaraTipo null.
-      //  - video normal: camaraId 'sony-asesor', camaraTipo 'sony'.
+      // F75 (revision) — campos aditivos del asesor (no cambian version:1):
+      //  - par = pairId; puntoId = targetId.
+      //  - Tascam es una camara mas: kind 'tascam' -> camaraTipo 'tascam', con su token real.
+      //  - voz en off (soloAudio): mismo registro Tascam con su token real + soloAudio:true.
+      //  - YA NO se emiten audioExterno ni audioSugerido.
       const esAsesorRec = servicio === 'asesor';
       const esSoloAudio = esAsesorRec && f.soloAudio === true;
       const extraAsesor = esAsesorRec ? (() => {
-        const par = f.pairId || null;
         const base = {
           puntoId: f.targetId || null,
-          par,
-          audioExterno: true,
-          audioSugerido: par,
+          par: f.pairId || null,
         };
         if (esSoloAudio) {
           return Object.assign(base, { soloAudio: true });
@@ -3863,13 +3877,13 @@
       })() : null;
 
       return {
-        archivo: esSoloAudio ? null : f.fileToken,
-        consecutivo: esSoloAudio ? null : f.fileCounter,
+        archivo: f.fileToken,
+        consecutivo: f.fileCounter,
         ancho: seg.counterWidth || null,
         ejemploNombre: seg.exampleFilename || null,
         camara: cam.label || f.cameraId,
-        camaraId: esAsesorRec ? (esSoloAudio ? 'tascam-asesor' : 'sony-asesor') : f.cameraId,
-        camaraTipo: esAsesorRec ? (esSoloAudio ? null : 'sony') : (cam.kind || null),
+        camaraId: f.cameraId,
+        camaraTipo: cam.kind || null,
         servicio: servicio,
         escena: f.scene || null,
         escenaRuta: f.scenePath || null,
@@ -4077,7 +4091,6 @@
     registerAsesorFile,
     nextAsesorCodigo,
     parAsesor,
-    audioSugeridoAsesor,
     toggleMediaGood,
     toggleMediaFavorite,
     insertOmittedMediaFile,
