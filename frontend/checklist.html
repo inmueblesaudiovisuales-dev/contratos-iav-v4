@@ -607,6 +607,9 @@
     .setup-room-sub { min-height: 44px; font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); flex: none; background: transparent; border: 0; padding: 0 var(--sp-2); white-space: nowrap; }
     .setup-room-x { width: 44px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius); border: 1px solid transparent; background: transparent; color: var(--red); }
     .setup-room-x i { font-size: 18px; }
+    /* F46 — Mover de piso (renglón interior): icono discreto junto a +1 y basura. */
+    .setup-room-move { width: 44px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius); border: 1px solid transparent; background: transparent; color: var(--ink-3); }
+    .setup-room-move i { font-size: 18px; }
     .setup-mini { display: inline-flex; align-items: center; gap: 3px; min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--line-2, #D2C9B3); border-radius: var(--radius); background: var(--page); color: var(--ink-2); font-size: var(--ts-cap); font-weight: 600; flex: none; }
     .setup-mini i { font-size: 14px; }
     .setup-mini.del { color: var(--red); border-color: #E8C9C3; }
@@ -728,6 +731,9 @@
     .hoja-tile i { font-size: 26px; }
     .hoja-tile .hoja-tl { font-size: 12px; font-weight: 700; text-align: center; line-height: 1.15; }
     .hoja-badge { position: absolute; top: -8px; right: -8px; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 999px; background: var(--gold); color: #241c08; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    /* F46 — Botón de basura del mosaico (quita una instancia sin salir de la hoja). */
+    .hoja-tile-trash { position: absolute; top: -8px; left: -8px; width: 28px; height: 28px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--red); display: flex; align-items: center; justify-content: center; padding: 0; }
+    .hoja-tile-trash i { font-size: 15px; }
     .hoja-drop { padding: var(--sp-3) var(--sp-4) 0; display: grid; gap: 6px; }
     .hoja-drop-item { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%; min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink-1); font-size: var(--ts-body); font-weight: 600; text-align: left; }
     .hoja-drop-item .hoja-di-add { font-size: 11px; color: var(--ink-3); font-weight: 700; flex: none; }
@@ -752,6 +758,14 @@
     .qs-opt i { font-size: 16px; }
     .qs-go { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; margin-top: var(--sp-4); border: 0; border-radius: var(--radius); background: var(--black); color: #fff; font-size: var(--ts-body); font-weight: 700; }
     .qs-go i { font-size: 18px; }
+    /* F46 — Arranque rápido por piso: un bloque por planta + general (Fachada). */
+    .qs-stepper-top { border-top: 0; }
+    .qs-floor { margin-top: var(--sp-3); padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg, transparent); }
+    .qs-floor .qs-stepper:first-of-type { border-top: 0; padding-top: 0; }
+    .qs-floor-h { font-size: var(--ts-body); font-weight: 800; color: var(--ink-1); margin-bottom: var(--sp-1); }
+    .qs-general { margin-top: var(--sp-3); }
+    .qs-general-lab { display: block; font-size: var(--ts-cap); font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+    .qs-opts-general { margin-top: var(--sp-2); padding-top: 0; border-top: 0; }
 
     /* F36 — Rótulo discreto de escala del target de drone (breadcrumb / micro-texto). */
     .cap-scale { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-bottom: 2px; }
@@ -1119,9 +1133,16 @@ let hojaOpen = false;
 let hojaZona = 'interior';
 let hojaPiso = 'Planta baja';
 let hojaQuery = '';
-// F43 — Estado del arranque rápido (solo UI, no se persiste en el contrato).
+// F43/F46 — Estado del arranque rápido (solo UI, no se persiste en el contrato).
+// F46: por piso. floors[i] corresponde a logic.floorLabel(i) (Planta baja, alta…).
+// 'fachada' es un toggle general (exterior). qsInit marca si ya se inicializó el
+// colapso según el estado (colapsado si ya hay cuartos).
 let qsCollapsed = false;
-let qsValores = { rec: 3, ban: 2, med: 1, pisos: 1, opts: { Sala: true, Comedor: true, Cocina: true, Fachada: true } };
+let qsInit = false;
+let qsValores = {
+  floors: [{ rec: 3, ban: 2, med: 1, opts: { Sala: true, Comedor: true, Cocina: true } }],
+  fachada: true,
+};
 let searchTerm = '';
 let saveTimer = null;
 let retryTimer = null;
@@ -1733,51 +1754,88 @@ function toggleIncluirDrone() {
   render();
 }
 
-// F43 — Arranque rápido: card colapsable con steppers (Recámaras/Baños/Medios
-// baños/Pisos) + toggles (Sala/Comedor/Cocina/Fachada) + "Generar esqueleto".
-// Estado solo de UI (qsCollapsed/qsValores); no se persiste en el contrato. El
-// esqueleto se materializa con generarEsqueleto() de forma idempotente.
+// F46 — Arranque rápido POR PISO. Stepper "Pisos" arriba; debajo un bloque por
+// piso (logic.floorLabel(i)) con steppers Recámaras/Baños/Medios baños + toggles
+// Sala/Comedor/Cocina (por piso). Toggle general "Fachada" (exterior) fuera de
+// los bloques. Estado solo de UI (qsCollapsed/qsValores); no se persiste en el
+// contrato. El esqueleto se materializa con generarEsqueleto() (idempotente).
 function renderArranqueRapido() {
+  // Colapsado por defecto si ya hay cuartos en el estado (el usuario lo expande).
+  if (!qsInit) {
+    qsInit = true;
+    if ((state.espacios || []).some((e) => !e.parentId)) qsCollapsed = true;
+  }
   const v = qsValores;
-  const steppers = [['Recámaras', 'rec'], ['Baños', 'ban'], ['Medios baños', 'med'], ['Pisos', 'pisos']].map((p) => {
-    const lab = p[0]; const k = p[1];
-    const min = k === 'pisos' ? 1 : 0;
-    const dis = v[k] <= min ? ' disabled' : '';
-    return `<div class="qs-stepper"><span class="qs-lab">${lab}</span><span class="qs-ctrls">
-      <button class="qs-rb"${dis} onclick="qsStep('${k}',-1)" aria-label="Menos ${lab}">−</button>
-      <span class="qs-num">${v[k]}</span>
-      <button class="qs-rb" onclick="qsStep('${k}',1)" aria-label="Más ${lab}">+</button></span></div>`;
+  const nPisos = v.floors.length;
+  const pisoStepper = `<div class="qs-stepper qs-stepper-top"><span class="qs-lab">Pisos</span><span class="qs-ctrls">
+    <button class="qs-rb"${nPisos <= 1 ? ' disabled' : ''} onclick="qsStepPisos(-1)" aria-label="Menos pisos">−</button>
+    <span class="qs-num">${nPisos}</span>
+    <button class="qs-rb" onclick="qsStepPisos(1)" aria-label="Más pisos">+</button></span></div>`;
+  const bloques = v.floors.map((f, i) => {
+    const steppers = [['Recámaras', 'rec'], ['Baños', 'ban'], ['Medios baños', 'med']].map((p) => {
+      const lab = p[0]; const k = p[1];
+      const dis = (f[k] || 0) <= 0 ? ' disabled' : '';
+      return `<div class="qs-stepper"><span class="qs-lab">${lab}</span><span class="qs-ctrls">
+        <button class="qs-rb"${dis} onclick="qsStepFloor(${i},'${k}',-1)" aria-label="Menos ${lab}">−</button>
+        <span class="qs-num">${f[k] || 0}</span>
+        <button class="qs-rb" onclick="qsStepFloor(${i},'${k}',1)" aria-label="Más ${lab}">+</button></span></div>`;
+    }).join('');
+    const opts = ['Sala', 'Comedor', 'Cocina'].map((o) => {
+      const on = !!(f.opts && f.opts[o]);
+      return `<button class="qs-opt${on ? ' on' : ''}" onclick="qsToggleFloorOpt(${i},'${o}')"><i class="ti ${on ? 'ti-check' : 'ti-plus'}"></i>${o}</button>`;
+    }).join('');
+    return `<div class="qs-floor">
+      <div class="qs-floor-h">${esc(logic.floorLabel(i))}</div>
+      ${steppers}
+      <div class="qs-opts">${opts}</div>
+    </div>`;
   }).join('');
-  const opts = ['Sala', 'Comedor', 'Cocina', 'Fachada'].map((o) => {
-    const on = !!(v.opts && v.opts[o]);
-    return `<button class="qs-opt${on ? ' on' : ''}" onclick="qsToggleOpt('${o}')"><i class="ti ${on ? 'ti-check' : 'ti-plus'}"></i>${o}</button>`;
-  }).join('');
+  const fachada = `<button class="qs-opt${v.fachada ? ' on' : ''}" onclick="qsToggleFachada()"><i class="ti ${v.fachada ? 'ti-check' : 'ti-plus'}"></i>Fachada</button>`;
   return `<div class="qs${qsCollapsed ? ' collapsed' : ''}">
     <button class="qs-head" onclick="qsToggleCollapse()" aria-expanded="${qsCollapsed ? 'false' : 'true'}">
       <h2>Arranque rápido <span>(opcional)</span></h2>
       <i class="ti ${qsCollapsed ? 'ti-chevron-down' : 'ti-chevron-up'} qs-chev"></i>
     </button>
     ${qsCollapsed ? '' : `<div class="qs-inner">
-      <p class="qs-sub">Dinos el tamaño y armamos el esqueleto; luego ajustas abajo.</p>
-      ${steppers}
-      <div class="qs-opts">${opts}</div>
+      <p class="qs-sub">Dinos cuántos pisos y qué hay en cada uno; armamos el esqueleto y luego ajustas abajo.</p>
+      ${pisoStepper}
+      ${bloques}
+      <div class="qs-general"><span class="qs-lab qs-general-lab">Exterior</span><div class="qs-opts qs-opts-general">${fachada}</div></div>
       <button class="qs-go" onclick="generarEsqueleto()"><i class="ti ti-wand"></i>Generar esqueleto</button>
     </div>`}
   </div>`;
 }
 
-// F43 — Ajusta un stepper del arranque rápido (clamp en mínimo: Pisos ≥1, resto ≥0).
-function qsStep(k, delta) {
-  const min = k === 'pisos' ? 1 : 0;
-  qsValores[k] = Math.max(min, (qsValores[k] || 0) + delta);
+// F46 — Stepper de "Pisos": crece/encoge el arreglo floors (mín 1). Al crecer,
+// el bloque nuevo arranca con defaults; al encoger, se quitan los del final
+// conservando los valores de los bloques que quedan.
+function qsStepPisos(delta) {
+  const target = Math.max(1, qsValores.floors.length + delta);
+  while (qsValores.floors.length < target) {
+    qsValores.floors.push({ rec: 0, ban: 0, med: 0, opts: {} });
+  }
+  while (qsValores.floors.length > target) {
+    qsValores.floors.pop();
+  }
   render();
 }
-// F43 — Alterna un toggle (Sala/Comedor/Cocina/Fachada) del arranque rápido.
-function qsToggleOpt(o) {
-  if (!qsValores.opts) qsValores.opts = {};
-  qsValores.opts[o] = !qsValores.opts[o];
+// F46 — Ajusta un stepper (rec/ban/med) de un piso del arranque rápido (clamp ≥0).
+function qsStepFloor(i, k, delta) {
+  const f = qsValores.floors[i];
+  if (!f) return;
+  f[k] = Math.max(0, (f[k] || 0) + delta);
   render();
 }
+// F46 — Alterna un toggle de típicos (Sala/Comedor/Cocina) de un piso.
+function qsToggleFloorOpt(i, o) {
+  const f = qsValores.floors[i];
+  if (!f) return;
+  if (!f.opts) f.opts = {};
+  f.opts[o] = !f.opts[o];
+  render();
+}
+// F46 — Alterna el toggle general "Fachada" (exterior).
+function qsToggleFachada() { qsValores.fachada = !qsValores.fachada; render(); }
 // F43 — Colapsa/expande la card del arranque rápido.
 function qsToggleCollapse() { qsCollapsed = !qsCollapsed; render(); }
 
@@ -1789,10 +1847,11 @@ function qsToggleCollapse() { qsCollapsed = !qsCollapsed; render(); }
 function generarEsqueleto() {
   const plan = logic.planSkeleton(setupTipo, qsValores);
   if (!state.pisos) state.pisos = [];
-  // Asegura plantas en orden ('Planta baja','Planta alta',…). El plan ya viene
-  // ordenado, así que insertamos en orden de aparición evitando duplicados.
-  plan.forEach((item) => {
-    if (item.piso && !state.pisos.includes(item.piso)) state.pisos.push(item.piso);
+  // F46 — Asegura una planta por bloque del arranque rápido (logic.floorLabel(i)),
+  // en orden y sin duplicar, aunque un piso no genere cuartos (todo en cero/off).
+  (qsValores.floors || []).forEach((f, i) => {
+    const label = logic.floorLabel(i);
+    if (label && !state.pisos.includes(label)) state.pisos.push(label);
   });
   // Existentes por ámbito para no duplicar nombres (compara por baseConcept para
   // que "Recámara principal"/"Recámara 2" no se re-creen).
@@ -1865,7 +1924,11 @@ function renderHojaAgregar() {
   const libVis = q ? lib.filter((c) => c.base.toLowerCase().indexOf(q) >= 0) : lib;
   const tilesHtml = libVis.map((c) => {
     const cnt = cuentaBase(c.base);
-    return `<button class="hoja-tile${cnt ? ' added' : ''}" onclick="agregarDesdeHoja('${hojaZona}','${esc(c.base)}')">${cnt ? `<span class="hoja-badge">${cnt}</span>` : ''}<i class="ti ${setupIconClass(c.icon)}"></i><span class="hoja-tl">${esc(c.base)}</span></button>`;
+    // F46 — Con conteo ≥1, además del badge, un botón de basura que quita la
+    // última instancia de ese concepto en el ámbito (stopPropagation para no
+    // disparar el agregar del cuerpo del mosaico).
+    const trash = cnt ? `<button class="hoja-tile-trash" onclick="event.stopPropagation();quitarUnoDesdeHoja('${hojaZona}','${esc(c.base)}')" aria-label="Quitar un ${esc(c.base)}"><i class="ti ti-trash"></i></button>` : '';
+    return `<button class="hoja-tile${cnt ? ' added' : ''}" onclick="agregarDesdeHoja('${hojaZona}','${esc(c.base)}')">${cnt ? `<span class="hoja-badge">${cnt}</span>` : ''}${trash}<i class="ti ${setupIconClass(c.icon)}"></i><span class="hoja-tl">${esc(c.base)}</span></button>`;
   }).join('');
   // Con texto, además del catálogo filtrado mostramos resultados de searchSpaces
   // (incluye "crear nuevo" con el texto literal) que caen fuera del catálogo base.
@@ -1953,6 +2016,22 @@ function agregarDesdeHoja(zona, base) {
   render();
 }
 
+// F46 — Quitar uno desde la hoja: borra la ÚLTIMA instancia de ese concepto base
+// en el ámbito (misma planta hojaPiso para interior; global para
+// exterior/amenidades), identificando por logic.baseConcept y usando
+// quitarEspacio (cascada). La hoja permanece abierta (quitarEspacio re-render).
+function quitarUnoDesdeHoja(zona, base) {
+  const interior = zona === 'interior';
+  const candidatos = state.espacios.filter((e) => {
+    if (e.parentId) return false;
+    if (setupZona(e) !== zona) return false;
+    if (interior && (e.piso || 'Planta baja') !== hojaPiso) return false;
+    return logic.baseConcept(e.nombre, setupTipo) === base;
+  }).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  if (!candidatos.length) return;
+  quitarEspacio(candidatos[candidatos.length - 1].id);
+}
+
 // F42 — Crear desde resultado del buscador ("crear nuevo" o coincidencia fuera
 // del catálogo base): usa el texto literal y la zona activa de la hoja.
 function crearDesdeHoja(nombre) {
@@ -1985,16 +2064,19 @@ function renderSetupTerreno(tipoSeg) {
   </section>`;
 }
 
-// F41 — Mapa de íconos del catálogo (BASE_CONCEPTS.icon, sin prefijo) a clases
-// Tabler `ti ti-*`. Fallback a `ti-square` para nombres no contemplados.
+// F41/F46 — Mapa de íconos del catálogo (BASE_CONCEPTS.icon, sin prefijo) a clases
+// Tabler `ti ti-*`. Fallback a un ícono real (ti-door) para nombres no contemplados.
 const SETUP_ICON_MAP = {
   door: 'ti-door', sofa: 'ti-sofa', cup: 'ti-cup', bed: 'ti-bed', bath: 'ti-bath',
   droplet: 'ti-droplet', books: 'ti-books', tv: 'ti-device-tv', wash: 'ti-wash-machine',
   home: 'ti-home', 'plant-2': 'ti-plant-2', sun: 'ti-sun', car: 'ti-car', fence: 'ti-fence',
   building: 'ti-building', pool: 'ti-pool', barbell: 'ti-barbell', ball: 'ti-ball-basketball',
   trees: 'ti-trees', shield: 'ti-shield', hanger: 'ti-hanger', shirt: 'ti-shirt-sport',
+  // F46 — amenidades nuevas de F45 (Asadores/Palapa).
+  flame: 'ti-flame', umbrella: 'ti-umbrella',
 };
-function setupIconClass(name) { return SETUP_ICON_MAP[name] || 'ti-square'; }
+// F46 — Fallback de ícono real (ya no ti-square): puerta para conceptos sin mapa.
+function setupIconClass(name) { return SETUP_ICON_MAP[name] || 'ti-door'; }
 
 // F41 — Concepto base de un espacio dentro del tipo actual (para ícono y numeración).
 function setupConceptFor(sp) {
@@ -2006,8 +2088,9 @@ function setupConceptFor(sp) {
 function setupRoomIcon(sp) {
   const concept = setupConceptFor(sp);
   if (concept) return setupIconClass(concept.icon);
+  // F46 — Fallback de ícono real por zona (ya no ti-square).
   const z = setupZona(sp);
-  return z === 'exterior' ? 'ti-home' : (z === 'amenidades' ? 'ti-building' : 'ti-square');
+  return z === 'exterior' ? 'ti-home' : (z === 'amenidades' ? 'ti-building' : 'ti-door');
 }
 // F41 — Zona efectiva de un espacio: la guardada o, si falta, inferida por categoría.
 function setupZona(sp) {
@@ -2055,11 +2138,15 @@ function setupSection(iconClass, nombre, rooms, vacio, zona, piso) {
 function setupRoomRow(room) {
   // En el piso Drone los sujetos aereos no tienen sub-cuartos (sin closet/bano).
   const drone = logic.isDronePiso(room.piso) || room.kind === 'drone';
+  // F46 — Mover de piso: solo cuartos de interior que no sean drone (reusa el
+  // modal cambiarPisoEspacio). Exterior/amenidades son property-wide (sin piso).
+  const interior = setupZona(room) === 'interior';
   const subs = state.espacios.filter((e) => e.parentId === room.id).sort((a, b) => (a.orden || 0) - (b.orden || 0));
   const ic = setupRoomIcon(room);
   return `<div class="setup-room"><span class="setup-room-ic"><i class="ti ${ic}"></i></span><span class="setup-room-name" onclick="accionesEspacio('${room.id}')">${esc(room.nombre)}</span>
     <div class="setup-room-acts">
       ${drone ? '' : `<button class="setup-room-plus" onclick="duplicarEspacio('${room.id}')" aria-label="Agregar otro ${esc(room.nombre)}"><i class="ti ti-plus"></i>1</button>`}
+      ${(!drone && interior) ? `<button class="setup-room-move" onclick="cambiarPisoEspacio('${room.id}')" aria-label="Mover de piso ${esc(room.nombre)}"><i class="ti ti-stairs"></i></button>` : ''}
       <button class="setup-room-x" onclick="quitarEspacio('${room.id}')" aria-label="Quitar ${esc(room.nombre)}"><i class="ti ti-trash"></i></button>
     </div></div>
     ${drone ? '' : `<div class="setup-subbar">
@@ -2136,7 +2223,7 @@ function guardarNombreEspacio(id) {
 function cambiarPisoEspacio(id) {
   const sp = state.espacios.find((e) => e.id === id);
   if (!sp) return;
-  const pisos = state.pisos && state.pisos.length ? state.pisos : ['Piso 1'];
+  const pisos = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : ['Planta baja'];
   abrirModal(`<div class="sheet-head"><h2>Cambiar de piso</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">${pisos.map((p) => `<button class="${sp.piso === p ? 'primary' : 'btn'}" onclick="aplicarPisoEspacio('${id}','${esc(p)}')">${esc(p)}</button>`).join('')}</div>`);
 }
@@ -2181,15 +2268,17 @@ function abrirSetup() {
 // nunca dejaria avanzar al loop. Idempotente y no-op para no-terreno.
 function cerrarSetup() { materializarTerrenoSiAplica(); setupOpen = false; render(); }
 
+// F46 — Agregar planta unificada: agrega directo la siguiente planta con el
+// naming canónico (logic.nextFloorName → Planta baja/alta/3/4…), conservando una
+// opción "Otro…" de texto libre. Sin las sugerencias legacy (Sótano/Piso N/Roof/
+// Exterior/Amenidades/Casa principal) que ya no aplican al esquema por zona.
 function agregarPiso() {
-  // F36 — sin "Drone" en la lista de pisos: el drone dejó de ser un piso.
-  const sug = ['Sótano', 'Piso 1', 'Piso 2', 'Piso 3', 'Roof', 'Exterior', 'Amenidades', 'Casa principal'].filter((p) => !(state.pisos || []).includes(p));
-  abrirModal(`<div class="sheet-head"><h2>Agregar piso</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
-    <div class="chips" style="margin-bottom:12px">${sug.map((p) => {
-      const dr = logic.isDronePiso(p);
-      return `<button class="chip${dr ? ' drone' : ''}" onclick="confirmarPiso('${esc(p)}')">${dr ? '<i class="ti ti-drone"></i>' : '<i class="ti ti-plus"></i>'}${esc(p)}</button>`;
-    }).join('')}</div>
-    <div class="setup-add"><input class="field" id="piso-input" type="text" placeholder="Otro piso" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarPisoInput()"><button class="btn" onclick="confirmarPisoInput()">Agregar</button></div>`);
+  const siguiente = logic.nextFloorName(state.pisos || []);
+  abrirModal(`<div class="sheet-head"><h2>Agregar planta</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
+    <div class="chips" style="margin-bottom:12px">
+      <button class="chip" onclick="confirmarPiso('${esc(siguiente)}')"><i class="ti ti-plus"></i>${esc(siguiente)}</button>
+    </div>
+    <div class="setup-add"><input class="field" id="piso-input" type="text" placeholder="Otro… (nombre de la planta)" autocomplete="off" onkeydown="if(event.key==='Enter')confirmarPisoInput()"><button class="btn" onclick="confirmarPisoInput()">Agregar</button></div>`);
 }
 
 function confirmarPiso(p) {
@@ -4285,7 +4374,7 @@ function agregarCuartoRapido() {
   const el = document.getElementById('cuarto-rapido-input');
   const v = el && el.value.trim();
   if (!v) return;
-  const piso = (activeTarget() || {}).piso || (state.pisos && state.pisos[0]) || 'Piso 1';
+  const piso = (activeTarget() || {}).piso || (state.pisos && state.pisos[0]) || 'Planta baja';
   const nuevo = nuevoEspacio(v, piso, 'interior');
   activeRoomId = nuevo.id; localStorage.setItem(roomKey(), nuevo.id);
   scheduleSave(); abrirCambiarCuarto();
