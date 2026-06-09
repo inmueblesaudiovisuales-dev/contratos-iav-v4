@@ -1832,7 +1832,9 @@ function setupSectionRows(key) {
   const vis = setupVisibleFor(key, sc);
   const rows = vis.map((base, i) => setupStepperRow(key, base, i === 0)).join('');
   const open = !!setupPicker[key];
-  const addOther = `<button class="cs-addother" onclick="setupTogglePicker('${key}')"><i class="ti ${open ? 'ti-x' : 'ti-plus'}"></i>${open ? 'Cerrar' : 'Agregar otro'}</button>`;
+  // F53 — etiqueta explícita por sección (no se confunde con agregar un piso).
+  const addLabel = sc.zona === 'exterior' ? 'Agregar otro espacio' : sc.zona === 'amenidades' ? 'Agregar otra amenidad' : 'Agregar otro cuarto';
+  const addOther = `<button class="cs-addother" onclick="setupTogglePicker('${key}')"><i class="ti ${open ? 'ti-x' : 'ti-plus'}"></i>${open ? 'Cerrar' : addLabel}</button>`;
   return rows + addOther + (open ? setupPickerHtml(key) : '');
 }
 
@@ -1868,13 +1870,12 @@ function setupStepperRow(key, base, first) {
 }
 
 // F49 — Lista desplegada de instancias de un concepto (subcuartos inline). Cada
-// instancia: nombre numerado + chips Clóset/Baño/Vestidor/Balcón (addSubRapido) +
+// instancia: nombre numerado + chips Clóset/Baño/Balcón (addSubRapido) +
 // la lista de sus subcuartos (parentId) con botón quitar (quitarEspacio).
 function setupInstances(insts) {
   const chips = [
     ['Clóset', 'ti-hanger', ''],
     ['Baño', 'ti-bath', ''],
-    ['Vestidor', 'ti-shirt-sport', 'vestidor'],
     ['Balcón / Terraza', 'ti-sun', 'terraza'],
   ];
   const body = insts.map((it, ii) => {
@@ -1966,40 +1967,54 @@ function setupTogglePickerCat(key, catId) {
   }
 }
 
-// F52 — Catálogo del picker agrupado en CATEGORÍAS (universal: desde cualquier
-// sección se llega a cualquier cuarto). Cada categoría declara las zonas y bases
-// que la componen; los conceptos que existen en dos zonas (p. ej. Alberca en
-// exterior y en amenidades) aparecen en AMBAS categorías para hallarlos fácil. Se
-// filtra a lo que el tipo activo realmente tiene en su catálogo.
+// F52/F53 — Catálogo del picker agrupado en CATEGORÍAS. Cada categoría es de UNA
+// zona. setupPickerCats(sc) pone primero las categorías de la zona donde estás
+// parado (lo relevante) y manda todo lo demás a una sola categoría "Otras zonas"
+// al fondo, para no estorbar pero sin perder el llegar a cualquier cuarto.
 const SETUP_CATS = [
-  { id: 'soc', label: 'Áreas sociales', zonas: ['interior'], bases: ['Recibidor', 'Sala', 'Comedor', 'Antecomedor', 'Sala de TV', 'Bar', 'Terraza'] },
-  { id: 'hab', label: 'Habitaciones', zonas: ['interior'], bases: ['Recámara', 'Estudio'] },
-  { id: 'cyb', label: 'Cocina y baños', zonas: ['interior'], bases: ['Cocina', 'Baño', 'Medio baño'] },
-  { id: 'ser', label: 'Servicio', zonas: ['interior'], bases: ['Lavandería', 'Cuarto de servicio'] },
-  { id: 'ter', label: 'Terrazas y balcones', zonas: ['exterior'], bases: ['Terraza', 'Balcón', 'Roof garden', 'Deck', 'Pérgola', 'Palapa', 'Mirador'] },
-  { id: 'jar', label: 'Jardín, fachada y acceso', zonas: ['exterior'], bases: ['Fachada', 'Acceso principal', 'Caseta', 'Jardín', 'Áreas verdes', 'Patio'] },
-  { id: 'coch', label: 'Cochera y bodega', zonas: ['exterior'], bases: ['Cochera', 'Estacionamiento', 'Bodega'] },
-  { id: 'alb', label: 'Alberca, asador y cancha', zonas: ['exterior'], bases: ['Alberca', 'Fuente', 'Asadores', 'Fogatero', 'Cocina exterior', 'Cancha'] },
-  { id: 'ame', label: 'Amenidades del desarrollo', zonas: ['amenidades'], bases: ['Lobby', 'Casa club', 'Salón de eventos', 'Cowork', 'Cine', 'Sala de negocios', 'Gimnasio', 'Spa', 'Alberca', 'Cancha', 'Áreas verdes', 'Parque', 'Área infantil', 'Área canina', 'Ludoteca', 'Asadores', 'Palapa', 'Cocina exterior', 'Caseta'] },
+  { id: 'soc', label: 'Áreas sociales', zona: 'interior', bases: ['Recibidor', 'Sala', 'Comedor', 'Antecomedor', 'Sala de TV', 'Bar', 'Terraza'] },
+  { id: 'hab', label: 'Habitaciones', zona: 'interior', bases: ['Recámara', 'Estudio'] },
+  { id: 'cyb', label: 'Cocina y baños', zona: 'interior', bases: ['Cocina', 'Baño', 'Medio baño'] },
+  { id: 'ser', label: 'Servicio', zona: 'interior', bases: ['Lavandería', 'Cuarto de servicio'] },
+  { id: 'ter', label: 'Terrazas y balcones', zona: 'exterior', bases: ['Terraza', 'Balcón', 'Roof garden', 'Deck', 'Pérgola', 'Palapa', 'Mirador'] },
+  { id: 'jar', label: 'Jardín, fachada y acceso', zona: 'exterior', bases: ['Fachada', 'Acceso principal', 'Caseta', 'Jardín', 'Áreas verdes', 'Patio'] },
+  { id: 'coch', label: 'Cochera y bodega', zona: 'exterior', bases: ['Cochera', 'Estacionamiento', 'Bodega'] },
+  { id: 'alb', label: 'Alberca, asador y cancha', zona: 'exterior', bases: ['Alberca', 'Fuente', 'Asadores', 'Fogatero', 'Cocina exterior', 'Cancha'] },
+  { id: 'asoc', label: 'Amenidades sociales', zona: 'amenidades', bases: ['Lobby', 'Casa club', 'Salón de eventos', 'Cowork', 'Cine', 'Sala de negocios'] },
+  { id: 'adep', label: 'Amenidades deporte', zona: 'amenidades', bases: ['Gimnasio', 'Cancha', 'Spa'] },
+  { id: 'aire', label: 'Amenidades aire libre', zona: 'amenidades', bases: ['Alberca', 'Asadores', 'Palapa', 'Cocina exterior', 'Áreas verdes', 'Caseta'] },
+  { id: 'afam', label: 'Amenidades familia', zona: 'amenidades', bases: ['Parque', 'Área infantil', 'Área canina', 'Ludoteca'] },
 ];
 
-function setupPickerCats() {
+function setupPickerCats(sc) {
   const cat = logic.catalogByZone(setupTipo) || {};
   const byZoneBase = {};
   ['interior', 'exterior', 'amenidades'].forEach((z) => {
     byZoneBase[z] = {};
     (cat[z] || []).forEach((c) => { byZoneBase[z][c.base] = c; });
   });
-  return SETUP_CATS.map((g) => {
+  const buildItems = (g) => {
     const items = [];
-    g.zonas.forEach((z) => {
-      g.bases.forEach((b) => {
-        const c = byZoneBase[z] && byZoneBase[z][b];
-        if (c) items.push({ base: c.base, zona: z, icon: c.icon });
-      });
+    g.bases.forEach((b) => {
+      const c = byZoneBase[g.zona] && byZoneBase[g.zona][b];
+      if (c) items.push({ base: c.base, zona: g.zona, icon: c.icon });
     });
-    return { id: g.id, label: g.label, items };
-  }).filter((g) => g.items.length);
+    return items;
+  };
+  const zonaActual = sc && sc.zona ? sc.zona : 'interior';
+  // 1) Relevantes: categorías de la zona donde estás.
+  const relevantes = SETUP_CATS
+    .filter((g) => g.zona === zonaActual)
+    .map((g) => ({ id: g.id, label: g.label, items: buildItems(g) }))
+    .filter((g) => g.items.length);
+  // 2) Otras zonas: todo lo demás, aplanado y sin repetir base, en una sola categoría.
+  const otrosItems = [];
+  const vistos = {};
+  SETUP_CATS.filter((g) => g.zona !== zonaActual).forEach((g) => {
+    buildItems(g).forEach((it) => { if (!vistos[it.base]) { vistos[it.base] = 1; otrosItems.push(it); } });
+  });
+  if (otrosItems.length) relevantes.push({ id: 'otras', label: 'Otras zonas', items: otrosItems });
+  return relevantes;
 }
 
 // F52 — Agrega un cuarto desde el picker de categorías. Enruta SOLO: interior cae
@@ -2032,7 +2047,7 @@ function setupPickerAdd(key, base, zona) {
 // solo a su sección). Al fondo, una categoría "Otro (escribir)" colapsada conserva
 // la opción de crear a mano con autocompletado, sin obligar a teclear.
 function setupPickerHtml(key) {
-  const cats = setupPickerCats();
+  const cats = setupPickerCats(setupScope(key));
   const groups = cats.map((g) => {
     const open = !!setupPickerCat[key + '::' + g.id];
     const body = open
