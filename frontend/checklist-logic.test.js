@@ -3461,6 +3461,34 @@ test('F68: token ya existente en state.mediaFiles -> bandera duplicado', () => {
   assert.equal(r.resumen.duplicados, 1);
 });
 
+test('F68: numero no entero (string/null/ausente) se ignora y no corrompe el contador del carril', () => {
+  const state = _dictadoState();
+  const cocina = _cocinaId(state);
+  const json = JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      // numero como string: invalido, se ignora.
+      { orden: 1, evento: 'toma', camara: 'sony-main', numero: '82', cuartoId: cocina, shotType: 'general', movement: 'push_in', clase: 'take' },
+      // numero null: invalido, se ignora.
+      { orden: 2, evento: 'toma', camara: 'sony-main', numero: null, cuartoId: cocina, shotType: 'general', movement: 'push_in', clase: 'take' },
+      // numero ausente: invalido, se ignora.
+      { orden: 3, evento: 'toma', camara: 'sony-main', cuartoId: cocina, shotType: 'general', movement: 'push_in', clase: 'take' },
+      // toma valida: el contador esperado NO debe haberse corrompido por las anteriores.
+      { orden: 4, evento: 'toma', camara: 'sony-main', numero: 82, cuartoId: cocina, shotType: 'general', movement: 'push_in', clase: 'take' },
+    ],
+  });
+  const r = logic.parseDictado(json, state);
+  assert.equal(r.ok, true);
+  assert.equal(r.report.ignoradas, 3, 'los tres numeros invalidos se ignoran');
+  // Solo la toma valida queda en el preview, con el token correcto y sin salto.
+  const tomas = r.preview.filter((p) => p.evento === 'toma');
+  assert.equal(tomas.length, 1, 'no se crea ninguna toma con token invalido');
+  assert.equal(tomas[0].numeroDictado, 82);
+  assert.equal(tomas[0].tokenExpandido, 'PIB0082', 'token correcto, no concatenado');
+  assert.equal(tomas[0].banderas.salto, false, 'el contador esperado del carril no se corrompio');
+});
+
 test('F68: cámara no activa o fotos en cámara no-dron -> camaraInvalida sin tocar contadores', () => {
   const state = _dictadoState();
   const cocina = _cocinaId(state);

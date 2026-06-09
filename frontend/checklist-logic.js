@@ -1562,6 +1562,16 @@
         const { segment } = valido;
         ensureCarril(camId, segment);
 
+        // El numero es la llave de emparejamiento: si no es un entero >= 0 (LLM emitio null,
+        // string u omision), se ignora el evento con motivo claro. NO se crea una toma con un
+        // token invalido ni se corrompe el contador esperado del carril.
+        const numeroDictado = ev.numero;
+        if (!Number.isInteger(numeroDictado) || numeroDictado < 0) {
+          report.ignoradas++;
+          report.motivos.push('numero de toma invalido (orden ' + orden + '): ' + numeroDictado);
+          continue;
+        }
+
         const banderas = { salto: false, duplicado: false, sinIdentificar: false, vocabFuera: false, camaraInvalida: false };
         let nota = String(ev.nota || '');
 
@@ -1618,7 +1628,6 @@
         const favorita = clase === 'discard' ? false : Boolean(ev.favorita);
 
         // Secuencia: salto, token, duplicado.
-        const numeroDictado = ev.numero;
         if (numeroDictado !== esperado[camId]) {
           banderas.salto = true;
           resumen.saltos++;
