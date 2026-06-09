@@ -1149,6 +1149,7 @@ let dirty = false;
 let retryCount = 0;
 let toastTimer = null;
 let syncStatus = 'ok';
+let currentRev = 0; // F62 — revision vigente del servidor (candado de concurrencia)
 let guideMode = localStorage.getItem('checklist_guide_' + (TOKEN || 'demo')) === '1';
 let activeSugId = null;
 // F7 — etiqueta de la proxima toma (no se auto-avanza)
@@ -1335,7 +1336,7 @@ async function saveNow() {
   saving = true;
   setSync('syncing');
   try {
-    const data = await apiPost({ action: 'guardarChecklist', cuartos: state, columnas: state.servicios });
+    const data = await apiPost({ action: 'guardarChecklist', cuartos: state, columnas: state.servicios, baseRev: currentRev });
     saving = false;
     if (data.error) {
       dirty = true;
@@ -1344,6 +1345,21 @@ async function saveNow() {
       retryTimer = setTimeout(saveNow, Math.min(30000, 3000 * retryCount));
       return;
     }
+    // F62 — conflicto: otra escritura gano. Fusionar su estado con el nuestro (sin perder
+    // nada de ninguno) y reintentar con la rev vigente. La union ya incluye lo del servidor.
+    if (data.conflict) {
+      const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
+      state = logic.mergeChecklist(state, logic.normalizeChecklistData(payload));
+      currentRev = data.rev || currentRev;
+      ensureActiveMode();
+      mirrorState();
+      if (!inputEnfoco()) render();
+      dirty = true;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveNow, 0);
+      return;
+    }
+    currentRev = data.rev || currentRev;
     setSync('ok');
     mirrorState();
     if (dirty) {
@@ -1393,7 +1409,22 @@ async function cargar() {
     if (data.error) return mostrarError(data.error);
     meta = { folio: data.folio || '', nombreCliente: data.nombreCliente || '' };
     const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
-    state = logic.normalizeChecklistData(payload);
+    const servidor = logic.normalizeChecklistData(payload);
+    currentRev = data.rev || 0;
+    // F62 — si el espejo local trae trabajo que el servidor aun no tiene (p.ej. se guardo
+    // sin senal), FUSIONAR en vez de pisar; si difiere, re-sincronizar.
+    const espejoRaw = localStorage.getItem(stateKey());
+    if (espejoRaw) {
+      try {
+        const espejo = logic.normalizeChecklistData((JSON.parse(espejoRaw).state) || JSON.parse(espejoRaw));
+        const fusion = logic.mergeChecklist(espejo, servidor);
+        const cambio = JSON.stringify(fusion) !== JSON.stringify(servidor);
+        state = fusion;
+        if (cambio) { dirty = true; clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 0); }
+      } catch (_) { state = servidor; }
+    } else {
+      state = servidor;
+    }
     restaurarPrefsDispositivo();
     mirrorState(); // espejo fresco SIEMPRE al cargar, aunque el usuario no edite nada.
     setSync('ok');
@@ -1428,7 +1459,11 @@ async function poll() {
     if (dirty || saving) return;
     if (!data || data.error) return;
     const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
-    const next = logic.normalizeChecklistData(payload);
+    const servidor = logic.normalizeChecklistData(payload);
+    currentRev = data.rev || currentRev;
+    // F62 — fusionar (nunca reemplazar): un sondeo no puede tirar lo local. Si el servidor
+    // trae elementos nuevos se suman; si nosotros traemos algo que el no tiene, se conserva.
+    const next = logic.mergeChecklist(state, servidor);
     next.modoActual = state.modoActual;
     next.activeCameraByMode = state.activeCameraByMode;
     if (getRole()) { applyRoleServiceOn(next); }

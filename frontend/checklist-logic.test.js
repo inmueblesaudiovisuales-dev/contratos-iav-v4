@@ -3099,3 +3099,20 @@ test('toggleMediaGood sella updatedAt en el archivo', () => {
   const next = logic.toggleMediaGood(base, 'm1');
   assert.ok(next.mediaFiles[0].updatedAt, 'updatedAt presente tras editar');
 });
+
+// Candado del incidente 2026-06-06: un guardado de cobertura (sin tomas) NO debe
+// borrar las tomas que otro dispositivo marco. mergeChecklist es la red.
+test('incidente: un guardado de cobertura no borra las tomas de otro dispositivo', () => {
+  const tomas = Array.from({ length: 104 }, (_, i) => ({ id: 'm' + i, kind: 'take', fileToken: 'PIB' + i, updatedAt: '2026-06-06T19:12:00Z' }));
+  const A = _mergeState({ mediaFiles: tomas, espacios: [{ id: 'e1', nombre: 'Cocina', estados: {} }] });
+  const B = _mergeState({ // copia vieja del equipo: cobertura marcada, mediaFiles VACIO
+    mediaFiles: [],
+    espacios: [{ id: 'e1', nombre: 'Cocina', estados: { foto: { estado: 'hecho', autor: 'fernanda', updatedAt: '2026-06-06T19:20:00Z' } } }],
+  });
+  const m1 = logic.mergeChecklist(A, B); // B llega despues sobre A
+  assert.equal(m1.mediaFiles.length, 104, 'las 104 tomas sobreviven');
+  assert.equal(m1.espacios[0].estados.foto.estado, 'hecho', 'la cobertura tambien');
+  const m2 = logic.mergeChecklist(B, A); // y al reves
+  assert.equal(m2.mediaFiles.length, 104, 'sobreviven sin importar el orden');
+  assert.equal(m2.espacios[0].estados.foto.estado, 'hecho');
+});

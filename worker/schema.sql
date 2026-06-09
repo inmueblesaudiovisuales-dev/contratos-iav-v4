@@ -106,7 +106,8 @@ CREATE TABLE IF NOT EXISTS checklist (
   contrato_token TEXT PRIMARY KEY,
   cuartos_json TEXT DEFAULT '[]',
   fecha_creacion TEXT NOT NULL,
-  fecha_actualizacion TEXT NOT NULL
+  fecha_actualizacion TEXT NOT NULL,
+  rev INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_contratos_estatus ON contratos(estatus);
