@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/tabler-icons.css?v=f50">
+  <link rel="stylesheet" href="./assets/tabler-icons.css?v=f55">
   <link rel="icon" href="data:,">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2033,7 +2033,7 @@ function setupTogglePickerCat(key, catId) {
 // parado (lo relevante) y manda todo lo demás a una sola categoría "Otras zonas"
 // al fondo, para no estorbar pero sin perder el llegar a cualquier cuarto.
 const SETUP_CATS = [
-  { id: 'soc', label: 'Áreas sociales', zona: 'interior', bases: ['Recibidor', 'Sala', 'Comedor', 'Antecomedor', 'Sala de TV', 'Bar', 'Terraza'] },
+  { id: 'soc', label: 'Áreas sociales', zona: 'interior', bases: ['Recibidor', 'Sala', 'Comedor', 'Antecomedor', 'Sala de TV', 'Bar', 'Cuarto de juegos', 'Terraza'] },
   { id: 'hab', label: 'Habitaciones', zona: 'interior', bases: ['Recámara', 'Estudio'] },
   { id: 'cyb', label: 'Cocina y baños', zona: 'interior', bases: ['Cocina', 'Baño', 'Medio baño'] },
   { id: 'ser', label: 'Servicio', zona: 'interior', bases: ['Lavandería', 'Cuarto de servicio'] },
@@ -2041,7 +2041,7 @@ const SETUP_CATS = [
   { id: 'jar', label: 'Jardín, fachada y acceso', zona: 'exterior', bases: ['Fachada', 'Acceso principal', 'Caseta', 'Jardín', 'Áreas verdes', 'Patio'] },
   { id: 'coch', label: 'Cochera y bodega', zona: 'exterior', bases: ['Cochera', 'Estacionamiento', 'Bodega'] },
   { id: 'alb', label: 'Alberca, asador y cancha', zona: 'exterior', bases: ['Alberca', 'Fuente', 'Asadores', 'Fogatero', 'Cocina exterior', 'Cancha'] },
-  { id: 'asoc', label: 'Amenidades sociales', zona: 'amenidades', bases: ['Lobby', 'Casa club', 'Salón de eventos', 'Cowork', 'Cine', 'Sala de negocios'] },
+  { id: 'asoc', label: 'Amenidades sociales', zona: 'amenidades', bases: ['Lobby', 'Casa club', 'Salón de eventos', 'Cowork', 'Cine', 'Sala de negocios', 'Cuarto de juegos'] },
   { id: 'adep', label: 'Amenidades deporte', zona: 'amenidades', bases: ['Gimnasio', 'Cancha', 'Spa'] },
   { id: 'aire', label: 'Amenidades aire libre', zona: 'amenidades', bases: ['Alberca', 'Asadores', 'Palapa', 'Cocina exterior', 'Áreas verdes', 'Caseta'] },
   { id: 'afam', label: 'Amenidades familia', zona: 'amenidades', bases: ['Parque', 'Área infantil', 'Área canina', 'Ludoteca'] },
@@ -2218,6 +2218,7 @@ const SETUP_ICON_MAP = {
   'shield-half': 'ti-shield-half', paw: 'ti-paw', puzzle: 'ti-puzzle', 'mood-kid': 'ti-mood-kid',
   briefcase: 'ti-briefcase', confetti: 'ti-confetti', 'device-laptop': 'ti-device-laptop',
   massage: 'ti-massage', movie: 'ti-movie', 'device-tv': 'ti-device-tv',
+  'device-gamepad-2': 'ti-device-gamepad-2', // F55 — Cuarto de juegos
 };
 // F46 — Fallback de ícono real (ya no ti-square): puerta para conceptos sin mapa.
 function setupIconClass(name) { return SETUP_ICON_MAP[name] || 'ti-door'; }

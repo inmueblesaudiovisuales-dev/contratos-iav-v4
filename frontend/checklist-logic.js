@@ -1960,6 +1960,7 @@
     { base: 'Estudio', zona: 'interior', icon: 'books' },
     { base: 'Sala de TV', zona: 'interior', icon: 'device-tv' },
     { base: 'Bar', zona: 'interior', icon: 'glass' },
+    { base: 'Cuarto de juegos', zona: 'interior', icon: 'device-gamepad-2' },
     { base: 'Terraza', zona: 'interior', icon: 'sun' },
     { base: 'Lavandería', zona: 'interior', icon: 'wash-machine' },
     { base: 'Cuarto de servicio', zona: 'interior', icon: 'door' },
@@ -2005,6 +2006,7 @@
     { base: 'Cowork', zona: 'amenidades', icon: 'device-laptop' },
     { base: 'Spa', zona: 'amenidades', icon: 'massage' },
     { base: 'Cine', zona: 'amenidades', icon: 'movie' },
+    { base: 'Cuarto de juegos', zona: 'amenidades', icon: 'device-gamepad-2' },
   ];
 
   const BASE_CONCEPTS = {
@@ -2021,6 +2023,7 @@
       { base: 'Estudio', zona: 'interior', icon: 'books' },
       { base: 'Sala de TV', zona: 'interior', icon: 'device-tv' },
       { base: 'Bar', zona: 'interior', icon: 'glass' },
+      { base: 'Cuarto de juegos', zona: 'interior', icon: 'device-gamepad-2' },
       { base: 'Lavandería', zona: 'interior', icon: 'wash-machine' },
       { base: 'Cuarto de servicio', zona: 'interior', icon: 'door' },
       { base: 'Balcón', zona: 'exterior', icon: 'sun' },
@@ -2041,6 +2044,7 @@
       { base: 'Área infantil', zona: 'amenidades', icon: 'mood-kid' },
       { base: 'Spa', zona: 'amenidades', icon: 'massage' },
       { base: 'Cine', zona: 'amenidades', icon: 'movie' },
+      { base: 'Cuarto de juegos', zona: 'amenidades', icon: 'device-gamepad-2' },
     ],
     quinta: [
       { base: 'Recibidor', zona: 'interior', icon: 'door' },
@@ -2054,6 +2058,7 @@
       { base: 'Estudio', zona: 'interior', icon: 'books' },
       { base: 'Sala de TV', zona: 'interior', icon: 'device-tv' },
       { base: 'Bar', zona: 'interior', icon: 'glass' },
+      { base: 'Cuarto de juegos', zona: 'interior', icon: 'device-gamepad-2' },
       { base: 'Terraza', zona: 'interior', icon: 'sun' },
       { base: 'Lavandería', zona: 'interior', icon: 'wash-machine' },
       { base: 'Cuarto de servicio', zona: 'interior', icon: 'door' },
@@ -2091,6 +2096,7 @@
       { base: 'Salón de eventos', zona: 'amenidades', icon: 'confetti' },
       { base: 'Spa', zona: 'amenidades', icon: 'massage' },
       { base: 'Cine', zona: 'amenidades', icon: 'movie' },
+      { base: 'Cuarto de juegos', zona: 'amenidades', icon: 'device-gamepad-2' },
     ],
   };
 
