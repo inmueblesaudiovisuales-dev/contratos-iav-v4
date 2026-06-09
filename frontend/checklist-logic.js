@@ -1381,6 +1381,242 @@
     }
   }
 
+  // F68 — parser y validador tolerante del dictado (bitacora-dictado v1).
+  // Produce un preview SIN mutar el estado (solo lectura). Reusa el patron
+  // tolerante de parsePropuesta: limpia fences ```json, fallback a primer {
+  // ... ultimo }, JSON.parse en try/catch. Si algo falla, ok:false y NO aplica
+  // nada. NO clona ni muta state.
+  function parseDictado(texto, state) {
+    const errorResult = (error) => ({
+      ok: false,
+      error,
+      preview: [],
+      resumen: { tomas: 0, descartes: 0, fotosDron: 0, saltos: 0, duplicados: 0, sinIdentificar: 0, vocabFuera: 0, camaraInvalida: 0 },
+      report: { ignoradas: 0, motivos: [] },
+    });
+
+    if (!texto || typeof texto !== 'string') {
+      return errorResult('No se recibio texto del dictado.');
+    }
+
+    let jsonStr = null;
+    const backtickMatch = texto.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (backtickMatch) {
+      jsonStr = backtickMatch[1];
+    } else {
+      const firstBrace = texto.indexOf('{');
+      const lastBrace = texto.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        jsonStr = texto.slice(firstBrace, lastBrace + 1);
+      }
+    }
+    if (!jsonStr) {
+      return errorResult('No se encontro un objeto JSON en el texto del dictado.');
+    }
+
+    let parsed;
+    try { parsed = JSON.parse(jsonStr); } catch (_) {
+      return errorResult('El JSON del dictado no se pudo interpretar.');
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+      return errorResult('El JSON del dictado no es un objeto.');
+    }
+    if (parsed.formato !== 'bitacora-dictado') {
+      return errorResult('El formato no es "bitacora-dictado".');
+    }
+    if (parsed.version !== 1) {
+      return errorResult('Version de dictado no soportada: ' + parsed.version + '. Revisa la version (se espera 1).');
+    }
+    if (!Array.isArray(parsed.eventos)) {
+      return errorResult('El dictado no trae un arreglo "eventos".');
+    }
+
+    // Camaras validas = activas de video/dron (mismo criterio que F67).
+    const servicios = state.servicios || {};
+    const camaraValida = (camId) => {
+      const cam = (state.cameras || []).find((c) => c && c.id === camId);
+      if (!cam || (cam.mode !== 'video' && cam.mode !== 'drone')) return null;
+      if (!servicios[cam.mode]) return null;
+      const seq = getCameraSequence(state, camId);
+      if (!seq.segment) return null;
+      return { cam, segment: seq.segment };
+    };
+
+    // Resolucion de cuartos (solo lectura).
+    const espacios = state.espacios || [];
+    const byId = new Map(espacios.map((e) => [e.id, e]));
+    const byNombre = new Map(espacios.map((e) => [normNombre(e.nombre), e]));
+
+    const shotTypes = getShotTypes();
+
+    // Estado local del recorrido (NO toca state).
+    const esperado = {};       // camId -> proximo numero esperado
+    const tokensVistos = {};   // camId -> Set de tokens ya usados
+    const ensureCarril = (camId, segment) => {
+      if (!(camId in esperado)) {
+        esperado[camId] = segment.counterNext;
+        const set = new Set();
+        (state.mediaFiles || []).forEach((f) => {
+          if (f && f.cameraId === camId && f.fileToken) set.add(f.fileToken);
+        });
+        tokensVistos[camId] = set;
+      }
+    };
+
+    const resumen = { tomas: 0, descartes: 0, fotosDron: 0, saltos: 0, duplicados: 0, sinIdentificar: 0, vocabFuera: 0, camaraInvalida: 0 };
+    const report = { ignoradas: 0, motivos: [] };
+    const preview = [];
+
+    const eventos = parsed.eventos
+      .map((ev, i) => ({ ev, i }))
+      .sort((a, b) => {
+        const oa = Number(a.ev && a.ev.orden);
+        const ob = Number(b.ev && b.ev.orden);
+        if (Number.isFinite(oa) && Number.isFinite(ob) && oa !== ob) return oa - ob;
+        return a.i - b.i; // estable
+      })
+      .map((x) => x.ev);
+
+    for (const ev of eventos) {
+      if (!ev || typeof ev !== 'object') {
+        report.ignoradas++;
+        report.motivos.push('evento invalido');
+        continue;
+      }
+      const orden = ev.orden;
+      const camId = ev.camara;
+
+      if (ev.evento === 'fotos') {
+        const valido = camaraValida(camId);
+        const esDron = valido && valido.cam.mode === 'drone';
+        const cantidad = Math.max(0, Math.floor(Number(ev.cantidad) || 0));
+        if (!esDron) {
+          resumen.camaraInvalida++;
+          preview.push({
+            orden, evento: 'fotos', camara: camId, cantidad,
+            banderas: { salto: false, duplicado: false, sinIdentificar: false, vocabFuera: false, camaraInvalida: true },
+          });
+          continue;
+        }
+        ensureCarril(camId, valido.segment);
+        esperado[camId] += cantidad; // avanza el contador del carril, NO crea toma ni marca tokens
+        resumen.fotosDron += cantidad;
+        preview.push({
+          orden, evento: 'fotos', camara: camId, cantidad,
+          banderas: { salto: false, duplicado: false, sinIdentificar: false, vocabFuera: false, camaraInvalida: false },
+        });
+        continue;
+      }
+
+      if (ev.evento === 'toma') {
+        const valido = camaraValida(camId);
+        if (!valido) {
+          resumen.camaraInvalida++;
+          preview.push({
+            orden, evento: 'toma', camara: camId,
+            numeroDictado: ev.numero, tokenExpandido: null,
+            cuartoId: null, cuartoNombre: 'Sin identificar',
+            shotType: null, movement: null,
+            clase: ev.clase === 'discard' ? 'discard' : 'take',
+            motivoDescarte: null, buena: false, favorita: false, nota: String(ev.nota || ''),
+            banderas: { salto: false, duplicado: false, sinIdentificar: false, vocabFuera: false, camaraInvalida: true },
+          });
+          continue;
+        }
+        const { segment } = valido;
+        ensureCarril(camId, segment);
+
+        const banderas = { salto: false, duplicado: false, sinIdentificar: false, vocabFuera: false, camaraInvalida: false };
+        let nota = String(ev.nota || '');
+
+        // Cuarto: por id, respaldo por nombre; sin_identificar / no empata -> null.
+        let cuartoId = null;
+        let cuartoNombre = 'Sin identificar';
+        if (ev.cuartoId && ev.cuartoId !== 'sin_identificar') {
+          let target = byId.get(ev.cuartoId);
+          if (!target) target = byNombre.get(normNombre(ev.cuartoId));
+          if (target) {
+            cuartoId = target.id;
+            cuartoNombre = target.nombre;
+          }
+        }
+        if (cuartoId === null) {
+          banderas.sinIdentificar = true;
+          resumen.sinIdentificar++;
+        }
+
+        // shotType / movement contra vocabulario; invalido -> null + vocabFuera + nota.
+        let shotType = null;
+        if (ev.shotType != null) {
+          if (shotTypes[ev.shotType]) {
+            shotType = ev.shotType;
+          } else {
+            banderas.vocabFuera = true;
+            nota = nota ? (nota + ' | shotType: ' + ev.shotType) : ('shotType: ' + ev.shotType);
+          }
+        }
+        let movement = null;
+        if (ev.movement != null) {
+          if (DICTADO_MOVEMENTS.includes(ev.movement)) {
+            movement = ev.movement;
+          } else {
+            banderas.vocabFuera = true;
+            nota = nota ? (nota + ' | movement: ' + ev.movement) : ('movement: ' + ev.movement);
+          }
+        }
+        if (banderas.vocabFuera) resumen.vocabFuera++;
+
+        // Clase / descarte / buena / favorita.
+        const clase = ev.clase === 'discard' ? 'discard' : 'take';
+        let motivoDescarte = null;
+        if (clase === 'discard') {
+          const m = ev.motivoDescarte;
+          motivoDescarte = (m === 'failed' || m === 'unrelated' || m === 'empty') ? m : 'failed';
+        }
+        let buena;
+        if (clase === 'discard') {
+          buena = false;
+        } else {
+          buena = (ev.buena === undefined || ev.buena === null) ? true : Boolean(ev.buena);
+        }
+        const favorita = clase === 'discard' ? false : Boolean(ev.favorita);
+
+        // Secuencia: salto, token, duplicado.
+        const numeroDictado = ev.numero;
+        if (numeroDictado !== esperado[camId]) {
+          banderas.salto = true;
+          resumen.saltos++;
+        }
+        const tokenExpandido = formatFileToken(segment, numeroDictado);
+        if (tokensVistos[camId].has(tokenExpandido)) {
+          banderas.duplicado = true;
+          resumen.duplicados++;
+        }
+        tokensVistos[camId].add(tokenExpandido);
+        esperado[camId] = numeroDictado + 1;
+
+        if (clase === 'discard') resumen.descartes++;
+        resumen.tomas++;
+
+        preview.push({
+          orden, evento: 'toma', camara: camId,
+          numeroDictado, tokenExpandido,
+          cuartoId, cuartoNombre,
+          shotType, movement,
+          clase, motivoDescarte, buena, favorita, nota,
+          banderas,
+        });
+        continue;
+      }
+
+      report.ignoradas++;
+      report.motivos.push('evento desconocido: ' + (ev.evento === undefined ? '(sin tipo)' : ev.evento));
+    }
+
+    return { ok: true, error: null, preview, resumen, report };
+  }
+
   function guideCoverage(state, mode) {
     const targets = targetsForMode(state, mode);
     return targets.map((target) => {
@@ -3577,6 +3813,7 @@
     buildPropuestaPrompt,
     buildDictadoPrompt,
     parsePropuesta,
+    parseDictado,
     guideCoverage,
     capasCubiertas,
     BASE_CONCEPTS,

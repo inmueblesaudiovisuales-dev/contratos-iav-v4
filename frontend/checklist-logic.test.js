@@ -3236,3 +3236,223 @@ test('F67: buildDictadoPrompt declara formato y version en el ejemplo de respues
   assert.ok(prompt.includes('"formato": "bitacora-dictado"'), 'declara formato bitacora-dictado');
   assert.ok(prompt.includes('"version": 1'), 'declara version 1');
 });
+
+// ─── F68 — parser y validador tolerante del dictado (parseDictado) ────────────
+// Reusa el state de F67: cocina + recámara, sony-main en 82 y drone-dji en 1.
+function _cocinaId(state) {
+  return state.espacios.find((e) => e.nombre === 'Cocina').id;
+}
+
+// Dictado de ejemplo real convertido a JSON bitacora-dictado v1:
+// "toma 82 push in cocina plano general. toma 83 detalle cocina, quedó bien, favorita.
+//  toma 84 fallida, no está bien expuesta. toma 85 recámara reveal pared izquierda.
+//  cambio de cámara a drone. toma 1 drone fachada reveal. 10 fotos capturadas. toma 2 drone (numero 12)."
+function _dictadoEjemploJSON(state) {
+  const cocina = _cocinaId(state);
+  return JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      { orden: 1, evento: 'toma', camara: 'sony-main', numero: 82, cuartoId: cocina, shotType: 'general', movement: 'push_in', clase: 'take', motivoDescarte: null, buena: true, favorita: false, nota: '' },
+      { orden: 2, evento: 'toma', camara: 'sony-main', numero: 83, cuartoId: cocina, shotType: 'detalle', movement: 'static', clase: 'take', motivoDescarte: null, buena: true, favorita: true, nota: '' },
+      { orden: 3, evento: 'toma', camara: 'sony-main', numero: 84, cuartoId: cocina, shotType: 'general', movement: null, clase: 'discard', motivoDescarte: null, buena: true, favorita: false, nota: 'mal expuesta' },
+      { orden: 4, evento: 'toma', camara: 'sony-main', numero: 85, cuartoId: 'sin_identificar', shotType: 'reveal', movement: 'reveal', clase: 'take', motivoDescarte: null, buena: true, favorita: false, nota: 'pared izquierda' },
+      { orden: 5, evento: 'toma', camara: 'drone-dji', numero: 1, cuartoId: 'sin_identificar', shotType: 'reveal', movement: 'reveal', clase: 'take', motivoDescarte: null, buena: true, favorita: false, nota: 'fachada' },
+      { orden: 6, evento: 'fotos', camara: 'drone-dji', cantidad: 10 },
+      { orden: 7, evento: 'toma', camara: 'drone-dji', numero: 12, cuartoId: 'sin_identificar', shotType: 'general', movement: null, clase: 'take', motivoDescarte: null, buena: true, favorita: false, nota: '' },
+    ],
+  });
+}
+
+test('F68: parseDictado parsea el dictado de ejemplo real con tokens y orden correctos', () => {
+  const state = _dictadoState();
+  const cocina = _cocinaId(state);
+  const r = logic.parseDictado(_dictadoEjemploJSON(state), state);
+
+  assert.equal(r.ok, true, 'parsea ok');
+  assert.equal(r.error, null);
+  // 4 tomas Sony + 2 tomas dron + 1 evento de fotos = 7 items en el preview.
+  assert.equal(r.preview.length, 7, 'preview tiene 7 items');
+
+  const tomas = r.preview.filter((i) => i.evento === 'toma');
+  const fotos = r.preview.filter((i) => i.evento === 'fotos');
+  assert.equal(tomas.length, 6, '6 tomas');
+  assert.equal(fotos.length, 1, '1 evento de fotos');
+
+  // Tokens Sony PIB0082..PIB0085.
+  assert.equal(tomas[0].tokenExpandido, 'PIB0082');
+  assert.equal(tomas[1].tokenExpandido, 'PIB0083');
+  assert.equal(tomas[2].tokenExpandido, 'PIB0084');
+  assert.equal(tomas[3].tokenExpandido, 'PIB0085');
+  // Dron 0001 y 0012 (tras 10 fotos).
+  assert.equal(tomas[4].tokenExpandido, '0001');
+  assert.equal(tomas[5].tokenExpandido, '0012');
+
+  // Resumen.
+  assert.equal(r.resumen.tomas, 6);
+  assert.equal(r.resumen.descartes, 1);
+  assert.equal(r.resumen.fotosDron, 10);
+
+  // Primera toma cocina resuelta por id.
+  assert.equal(tomas[0].cuartoId, cocina);
+  assert.equal(tomas[0].shotType, 'general');
+  assert.equal(tomas[0].movement, 'push_in');
+  assert.equal(tomas[0].clase, 'take');
+  assert.equal(tomas[0].buena, true);
+  // Favorita marcada.
+  assert.equal(tomas[1].favorita, true);
+  // Descarte default failed.
+  assert.equal(tomas[2].clase, 'discard');
+  assert.equal(tomas[2].motivoDescarte, 'failed');
+  assert.equal(tomas[2].buena, false, 'descarte no es buena');
+});
+
+test('F68: el evento de 10 fotos del dron evita salto en numero:12 y lo marca en numero:2', () => {
+  const state = _dictadoState();
+  // Caso correcto: dron 1, 10 fotos, dron 12 → sin salto.
+  const rOk = logic.parseDictado(_dictadoEjemploJSON(state), state);
+  const dronOk = rOk.preview.filter((i) => i.evento === 'toma' && i.camara === 'drone-dji');
+  assert.equal(dronOk[0].banderas.salto, false, 'dron 1 sin salto');
+  assert.equal(dronOk[1].banderas.salto, false, 'dron 12 sin salto tras 10 fotos');
+
+  // Caso con salto: misma secuencia pero la segunda toma dron es numero:2 (esperado 12).
+  const malJSON = JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      { orden: 1, evento: 'toma', camara: 'drone-dji', numero: 1, cuartoId: 'sin_identificar', shotType: 'general', movement: null, clase: 'take' },
+      { orden: 2, evento: 'fotos', camara: 'drone-dji', cantidad: 10 },
+      { orden: 3, evento: 'toma', camara: 'drone-dji', numero: 2, cuartoId: 'sin_identificar', shotType: 'general', movement: null, clase: 'take' },
+    ],
+  });
+  const rMal = logic.parseDictado(malJSON, state);
+  const dronMal = rMal.preview.filter((i) => i.evento === 'toma');
+  assert.equal(dronMal[0].banderas.salto, false, 'dron 1 sin salto');
+  assert.equal(dronMal[1].banderas.salto, true, 'dron 2 marca salto porque esperado subió a 12');
+  assert.equal(rMal.resumen.saltos, 1);
+});
+
+test('F68: texto sucio con fences y explicación parsea igual; basura total -> ok:false', () => {
+  const state = _dictadoState();
+  const limpio = _dictadoEjemploJSON(state);
+  const sucio = 'Claro, aquí tienes el resultado:\n```json\n' + limpio + '\n```\nEspero que sirva.';
+  const r = logic.parseDictado(sucio, state);
+  assert.equal(r.ok, true, 'texto sucio parsea ok');
+  assert.equal(r.preview.length, 7);
+
+  const basura = logic.parseDictado('esto no es json para nada', state);
+  assert.equal(basura.ok, false, 'basura total no parsea');
+  assert.ok(basura.error, 'reporta error');
+});
+
+test('F68: version:2 -> ok:false con error de versión y sin preview', () => {
+  const state = _dictadoState();
+  const json = JSON.stringify({ formato: 'bitacora-dictado', version: 2, eventos: [] });
+  const r = logic.parseDictado(json, state);
+  assert.equal(r.ok, false);
+  assert.ok(/versi/i.test(r.error), 'el error menciona la versión');
+  assert.deepEqual(r.preview, [], 'sin preview');
+});
+
+test('F68: shotType inválido -> null + bandera vocabFuera + original en nota', () => {
+  const state = _dictadoState();
+  const cocina = _cocinaId(state);
+  const json = JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      { orden: 1, evento: 'toma', camara: 'sony-main', numero: 82, cuartoId: cocina, shotType: 'plano raro', movement: 'push_in', clase: 'take' },
+    ],
+  });
+  const r = logic.parseDictado(json, state);
+  assert.equal(r.ok, true);
+  const t = r.preview[0];
+  assert.equal(t.shotType, null, 'shotType inválido queda null');
+  assert.equal(t.banderas.vocabFuera, true);
+  assert.ok(t.nota.includes('plano raro'), 'conserva el original en nota');
+  assert.equal(r.resumen.vocabFuera, 1);
+});
+
+test('F68: cuarto inexistente o "sin_identificar" -> cuartoId null + bandera sinIdentificar', () => {
+  const state = _dictadoState();
+  const json = JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      { orden: 1, evento: 'toma', camara: 'sony-main', numero: 82, cuartoId: 'sin_identificar', shotType: 'general', movement: 'push_in', clase: 'take' },
+      { orden: 2, evento: 'toma', camara: 'sony-main', numero: 83, cuartoId: 'esp-no-existe', shotType: 'general', movement: 'push_in', clase: 'take' },
+    ],
+  });
+  const r = logic.parseDictado(json, state);
+  assert.equal(r.ok, true);
+  for (const t of r.preview) {
+    assert.equal(t.cuartoId, null, 'cuartoId null');
+    assert.equal(t.cuartoNombre, 'Sin identificar');
+    assert.equal(t.banderas.sinIdentificar, true);
+  }
+  assert.equal(r.resumen.sinIdentificar, 2);
+});
+
+test('F68: respaldo por nombre resuelve el cuarto cuando viene un nombre en lugar de id', () => {
+  const state = _dictadoState();
+  const cocina = _cocinaId(state);
+  const json = JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      { orden: 1, evento: 'toma', camara: 'sony-main', numero: 82, cuartoId: 'Cocina', shotType: 'general', movement: 'push_in', clase: 'take' },
+    ],
+  });
+  const r = logic.parseDictado(json, state);
+  assert.equal(r.preview[0].cuartoId, cocina, 'resuelve por nombre');
+  assert.equal(r.preview[0].banderas.sinIdentificar, false);
+});
+
+test('F68: token ya existente en state.mediaFiles -> bandera duplicado', () => {
+  const state = _dictadoState();
+  const cocina = _cocinaId(state);
+  // PIB0082 ya capturado en el estado.
+  state.mediaFiles.push({ id: 'm-prev', cameraId: 'sony-main', targetId: cocina, kind: 'take', fileToken: 'PIB0082' });
+  const json = JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      { orden: 1, evento: 'toma', camara: 'sony-main', numero: 82, cuartoId: cocina, shotType: 'general', movement: 'push_in', clase: 'take' },
+    ],
+  });
+  const r = logic.parseDictado(json, state);
+  assert.equal(r.preview[0].banderas.duplicado, true, 'detecta doble pegado contra lo ya capturado');
+  assert.equal(r.resumen.duplicados, 1);
+});
+
+test('F68: cámara no activa o fotos en cámara no-dron -> camaraInvalida sin tocar contadores', () => {
+  const state = _dictadoState();
+  const cocina = _cocinaId(state);
+  const json = JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      // Cámara inexistente/no activa.
+      { orden: 1, evento: 'toma', camara: 'camara-fantasma', numero: 82, cuartoId: cocina, shotType: 'general', movement: 'push_in', clase: 'take' },
+      // Fotos en cámara de video (no dron).
+      { orden: 2, evento: 'fotos', camara: 'sony-main', cantidad: 10 },
+      // Toma Sony válida después: el contador Sony NO debe haberse movido por lo anterior.
+      { orden: 3, evento: 'toma', camara: 'sony-main', numero: 82, cuartoId: cocina, shotType: 'general', movement: 'push_in', clase: 'take' },
+    ],
+  });
+  const r = logic.parseDictado(json, state);
+  assert.equal(r.ok, true);
+  assert.equal(r.preview[0].banderas.camaraInvalida, true, 'cámara fantasma inválida');
+  assert.equal(r.preview[1].banderas.camaraInvalida, true, 'fotos en no-dron inválido');
+  // La toma Sony válida con numero 82 no marca salto: el contador no fue tocado por los inválidos.
+  assert.equal(r.preview[2].banderas.camaraInvalida, false);
+  assert.equal(r.preview[2].banderas.salto, false, 'contador Sony intacto');
+  assert.equal(r.resumen.camaraInvalida, 2);
+});
+
+test('F68: parseDictado no muta el estado', () => {
+  const state = _dictadoState();
+  const antes = JSON.stringify(state);
+  logic.parseDictado(_dictadoEjemploJSON(state), state);
+  assert.equal(JSON.stringify(state), antes, 'el estado queda intacto');
+});
