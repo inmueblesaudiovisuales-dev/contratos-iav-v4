@@ -3456,3 +3456,153 @@ test('F68: parseDictado no muta el estado', () => {
   logic.parseDictado(_dictadoEjemploJSON(state), state);
   assert.equal(JSON.stringify(state), antes, 'el estado queda intacto');
 });
+
+// ─── F69 — aplicador del dictado (applyDictado) + overrides de registerMediaFile ───
+function _recamaraId(state) {
+  return state.espacios.find((e) => e.nombre === 'Recámara principal').id;
+}
+
+test('F69: invariante de no-regresión — registerMediaFile sin overrides es igual que hoy', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Sala');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  const salaId = state.espacios[0].id;
+  state = logic.registerMediaFile(state, { cameraId: 'sony-main', targetId: salaId, kind: 'take' });
+  const file = state.mediaFiles[0];
+  assert.equal(file.fileToken, 'PIB2819', 'token igual que hoy');
+  assert.equal(file.fileCounter, 2819, 'fileCounter igual que hoy');
+  assert.equal(file.good, false, 'good queda en false sin override');
+  assert.equal(file.favorite, false, 'favorite queda en false sin override');
+  assert.equal(file.shotNumber, 1, 'shotNumber lo calcula la captura');
+  assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB2820', 'el contador avanza igual');
+});
+
+test('F69: applyDictado del ejemplo crea 4 Sony (PIB0082..85) y 2 dron (0001,0012) con buena/favorita/descarte correctos', () => {
+  const state = _dictadoState();
+  const recamara = _recamaraId(state);
+  const r = logic.parseDictado(_dictadoEjemploJSON(state), state);
+  // orden 4 (toma 85) entra a recámara por asignación en revisar.
+  const out = logic.applyDictado(state, r.preview, { asignaciones: { 4: recamara }, reemplazar: false });
+  const next = out.state;
+
+  const sony = next.mediaFiles.filter((f) => f.cameraId === 'sony-main');
+  const dron = next.mediaFiles.filter((f) => f.cameraId === 'drone-dji');
+  assert.deepEqual(sony.map((f) => f.fileToken), ['PIB0082', 'PIB0083', 'PIB0084', 'PIB0085'], '4 Sony');
+  assert.deepEqual(dron.map((f) => f.fileToken), ['0001', '0012'], '2 dron');
+  assert.equal(out.report.creadas, 6, '6 mediaFiles creados');
+  assert.equal(out.report.fotosAplicadas, 10, '10 fotos del dron aplicadas');
+
+  const t84 = sony.find((f) => f.fileToken === 'PIB0084');
+  assert.equal(t84.kind, 'discard', '84 es descarte');
+  assert.equal(t84.discardReason, 'failed', '84 default failed');
+  assert.equal(t84.good, false, '84 no es buena');
+
+  const t83 = sony.find((f) => f.fileToken === 'PIB0083');
+  assert.equal(t83.favorite, true, '83 favorita');
+  assert.equal(t83.good, true, '83 favorita implica buena');
+
+  const t85 = sony.find((f) => f.fileToken === 'PIB0085');
+  assert.equal(t85.targetId, recamara, '85 apunta a recámara por asignación');
+});
+
+test('F69: las 10 fotos del dron no crean mediaFiles pero el contador avanza (toma dron siguiente 0012)', () => {
+  const state = _dictadoState();
+  const r = logic.parseDictado(_dictadoEjemploJSON(state), state);
+  const out = logic.applyDictado(state, r.preview, {});
+  const dron = out.state.mediaFiles.filter((f) => f.cameraId === 'drone-dji');
+  assert.equal(dron.length, 2, 'solo 2 mediaFiles dron (las fotos no crean toma)');
+  assert.equal(dron[1].fileToken, '0012', 'la segunda toma dron quedó en 0012 tras las 10 fotos');
+});
+
+test('F69: shotNumber se calcula por el camino de captura (dos takes del mismo cuarto -> 1 y 2)', () => {
+  const state = _dictadoState();
+  const cocina = _cocinaId(state);
+  const json = JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      { orden: 1, evento: 'toma', camara: 'sony-main', numero: 82, cuartoId: cocina, shotType: 'general', movement: null, clase: 'take' },
+      { orden: 2, evento: 'toma', camara: 'sony-main', numero: 83, cuartoId: cocina, shotType: 'detalle', movement: null, clase: 'take' },
+    ],
+  });
+  const r = logic.parseDictado(json, state);
+  const out = logic.applyDictado(state, r.preview, {});
+  const cocinaTakes = out.state.mediaFiles.filter((f) => f.targetId === cocina && f.kind === 'take');
+  assert.deepEqual(cocinaTakes.map((f) => f.shotNumber), [1, 2], 'shotNumber 1 y 2 por el camino de captura');
+});
+
+test('F69: sin identificar — asignaciones vacío deja targetId null y scene "Sin identificar"; con asignación apunta a cocina', () => {
+  const state = _dictadoState();
+  const cocina = _cocinaId(state);
+  const json = JSON.stringify({
+    formato: 'bitacora-dictado',
+    version: 1,
+    eventos: [
+      { orden: 1, evento: 'toma', camara: 'sony-main', numero: 82, cuartoId: 'sin_identificar', shotType: 'general', movement: null, clase: 'take' },
+    ],
+  });
+  const r = logic.parseDictado(json, state);
+
+  const sinAsignar = logic.applyDictado(state, r.preview, {});
+  const f1 = sinAsignar.state.mediaFiles.find((f) => f.cameraId === 'sony-main');
+  assert.equal(f1.targetId, null, 'sin asignación queda con cuarto pendiente');
+  assert.equal(f1.scene, 'Sin identificar', 'escena Sin identificar');
+
+  const conAsignar = logic.applyDictado(state, r.preview, { asignaciones: { 1: cocina } });
+  const f2 = conAsignar.state.mediaFiles.find((f) => f.cameraId === 'sony-main');
+  assert.equal(f2.targetId, cocina, 'con asignación apunta a cocina');
+});
+
+test('F69: doble pegado — reemplazar:false no duplica (omite repetidos); reemplazar:true deja el mismo total', () => {
+  const state = _dictadoState();
+  const recamara = _recamaraId(state);
+  const r1 = logic.parseDictado(_dictadoEjemploJSON(state), state);
+  const primera = logic.applyDictado(state, r1.preview, { asignaciones: { 4: recamara } });
+  const totalUna = primera.state.mediaFiles.length;
+
+  // Segundo pegado del MISMO dictado sobre el estado ya aplicado.
+  const r2 = logic.parseDictado(_dictadoEjemploJSON(primera.state), primera.state);
+
+  const sinReemplazar = logic.applyDictado(primera.state, r2.preview, { asignaciones: { 4: recamara }, reemplazar: false });
+  assert.equal(sinReemplazar.state.mediaFiles.length, totalUna, 'reemplazar:false no duplica');
+  assert.ok(sinReemplazar.report.omitidasDuplicado >= 6, 'cuenta las tomas omitidas por duplicado');
+  assert.equal(sinReemplazar.report.creadas, 0, 'no crea ninguna repetida');
+
+  const conReemplazar = logic.applyDictado(primera.state, r2.preview, { asignaciones: { 4: recamara }, reemplazar: true });
+  assert.equal(conReemplazar.state.mediaFiles.length, totalUna, 'reemplazar:true deja el mismo total');
+  assert.ok(conReemplazar.report.reemplazadas >= 6, 'cuenta los reemplazos');
+});
+
+test('F69: el estado resultante pasa por mergeChecklist conservando tomas importadas y cobertura de otro dispositivo', () => {
+  const state = _dictadoState();
+  const recamara = _recamaraId(state);
+  const cocina = _cocinaId(state);
+  const r = logic.parseDictado(_dictadoEjemploJSON(state), state);
+  const importado = logic.applyDictado(state, r.preview, { asignaciones: { 4: recamara } }).state;
+
+  // Otro dispositivo marca cobertura (estado de video) en cocina, sin tomas importadas.
+  const otro = JSON.parse(JSON.stringify(state));
+  const espCocina = otro.espacios.find((e) => e.id === cocina);
+  espCocina.estados.video = { estado: 'hecho' };
+  espCocina.updatedAt = new Date(Date.now() + 1000).toISOString();
+
+  const fundido = logic.mergeChecklist(otro, importado);
+  // Las tomas importadas sobreviven.
+  assert.ok(fundido.mediaFiles.some((f) => f.fileToken === 'PIB0082'), 'conserva tomas importadas');
+  assert.equal(fundido.mediaFiles.filter((f) => f.cameraId === 'sony-main').length, 4, 'las 4 Sony siguen');
+  // La cobertura del otro dispositivo sobrevive.
+  const cocinaFundida = fundido.espacios.find((e) => e.id === cocina);
+  assert.equal(cocinaFundida.estados.video.estado, 'hecho', 'conserva la cobertura del otro dispositivo');
+});
+
+test('F69: buildExport(applyDictado(...).state) sigue dando version:1 y exporta las tomas con su token', () => {
+  const state = _dictadoState();
+  const recamara = _recamaraId(state);
+  const r = logic.parseDictado(_dictadoEjemploJSON(state), state);
+  const next = logic.applyDictado(state, r.preview, { asignaciones: { 4: recamara } }).state;
+  const exportado = logic.buildExport(next);
+  assert.equal(exportado.version, 1, 'export sigue en version 1');
+  const json = JSON.stringify(exportado);
+  assert.ok(json.includes('PIB0082'), 'el export incluye el token de una toma importada');
+  assert.ok(json.includes('0012') || json.includes('"0012"'), 'el export incluye el token de la toma dron');
+});

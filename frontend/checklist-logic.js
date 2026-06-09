@@ -1617,6 +1617,80 @@
     return { ok: true, error: null, preview, resumen, report };
   }
 
+  // F69 — aplicador del dictado. Toma el `preview` de parseDictado y lo materializa en mediaFiles
+  // por el MISMO camino que la captura (registerMediaFile / bumpCameraCounter), sin tocar D1. El
+  // llamador (UI) pasa el `state` resultante por saveNow (rev/fusion F62).
+  //   opciones = { asignaciones: { <orden>: <cuartoId> }, reemplazar: <bool> }
+  //   - asignaciones: cuarto elegido en revisar para una toma sin identificar (por `orden`).
+  //   - reemplazar: ante doble pegado (token ya existente para esa camara), true quita el viejo y
+  //     mete el nuevo; false omite la toma repetida (no duplica).
+  // Devuelve { state, report: { creadas, omitidasDuplicado, reemplazadas, fotosAplicadas } }.
+  function applyDictado(state, preview, opciones) {
+    const opts = opciones || {};
+    const asignaciones = opts.asignaciones || {};
+    const reemplazar = opts.reemplazar === true;
+    let next = clone(state);
+    const report = { creadas: 0, omitidasDuplicado: 0, reemplazadas: 0, fotosAplicadas: 0 };
+    const items = Array.isArray(preview) ? preview : [];
+
+    for (const item of items) {
+      if (!item || typeof item !== 'object') continue;
+      if (item.banderas && item.banderas.camaraInvalida) continue;
+
+      if (item.evento === 'fotos') {
+        const cantidad = Math.max(0, Math.floor(Number(item.cantidad) || 0));
+        if (cantidad > 0) {
+          next = bumpCameraCounter(next, item.camara, cantidad);
+          report.fotosAplicadas += cantidad;
+        }
+        continue;
+      }
+
+      if (item.evento === 'toma') {
+        const targetId = Object.prototype.hasOwnProperty.call(asignaciones, item.orden)
+          ? asignaciones[item.orden]
+          : (item.cuartoId != null ? item.cuartoId : null);
+
+        // Doble pegado: el token ya existe para esa camara en el estado vivo.
+        const existente = (next.mediaFiles || []).find(
+          (f) => f && f.cameraId === item.camara && f.fileToken === item.tokenExpandido
+        );
+        if (existente) {
+          if (reemplazar) {
+            // Quitar el existente SIN renumerar el resto del carril: la toma nueva reusa el
+            // mismo numero (counter), asi que renumerar (como removeMediaFile) corromperia los
+            // tokens de las demas tomas durante un re-pegado completo. Se deja lapida por id.
+            const idx = next.mediaFiles.findIndex((f) => f.id === existente.id);
+            if (idx >= 0) next.mediaFiles.splice(idx, 1);
+            addTombstones(next, [existente.id]);
+            report.reemplazadas++;
+          } else {
+            report.omitidasDuplicado++;
+            continue;
+          }
+        }
+
+        next = registerMediaFile(next, {
+          cameraId: item.camara,
+          counter: item.numeroDictado,
+          targetId,
+          kind: item.clase,
+          discardReason: item.motivoDescarte,
+          shotType: item.shotType,
+          movement: item.movement,
+          note: item.nota,
+          good: item.buena === true,
+          favorite: item.favorita === true,
+          autor: opts.autor,
+        });
+        report.creadas++;
+        continue;
+      }
+    }
+
+    return { state: next, report };
+  }
+
   function guideCoverage(state, mode) {
     const targets = targetsForMode(state, mode);
     return targets.map((target) => {
@@ -3146,37 +3220,53 @@
     const sequence = getCameraSequence(next, options.cameraId);
     if (!camera || !sequence.segment) return state;
     const kind = options.kind || 'take';
-    if (options.discardReason !== 'unrelated' && targetIsNoAplica(next, camera.mode, options.targetId)) return state;
+    // Un cuarto pendiente (targetId null = "sin identificar") es legitimo: no se evalua "no aplica".
+    // La regla de rechazo por "no aplica" solo aplica a un target real elegido.
+    if (options.targetId && options.discardReason !== 'unrelated' && targetIsNoAplica(next, camera.mode, options.targetId)) return state;
+    // F69 — override aditivo del contador: si viene `counter`, el carril arranca en ese numero
+    // (el token y el fileCounter salen de `counter`) ANTES de insertar; luego sigue el counterNext++
+    // normal. Sin `counter`, comportamiento identico a hoy.
+    const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
+    if (Number.isInteger(options.counter)) {
+      activeSegment.counterNext = options.counter;
+    }
     const sceneData = options.discardReason === 'unrelated'
       ? { scene: 'Sin escena', scenePath: 'Sin escena' }
       : getSceneData(next, camera, options.targetId);
     const shotNumber = kind === 'take'
       ? next.mediaFiles.filter((file) => file.cameraId === camera.id && file.targetId === options.targetId && file.kind === 'take').length + 1
       : null;
+    // F69 — overrides aditivos de seleccion: si vienen `good`/`favorite`, se aplican al mediaFile
+    // (favorite:true implica good:true, igual que toggleMediaFavorite). Sin overrides, ambos quedan
+    // en false como hoy.
+    let good = false;
+    let favorite = false;
+    if (options.favorite === true) { favorite = true; good = true; }
+    else if (options.good === true) { good = true; }
     next.mediaFiles.push({
       id: makeId('media'),
       cameraId: camera.id,
-      segmentId: sequence.segment.id,
-      fileCounter: sequence.segment.counterNext,
-      fileToken: formatFileToken(sequence.segment, sequence.segment.counterNext),
+      segmentId: activeSegment.id,
+      fileCounter: activeSegment.counterNext,
+      fileToken: formatFileToken(activeSegment, activeSegment.counterNext),
       targetId: options.targetId || null,
       scene: sceneData.scene,
       scenePath: sceneData.scenePath,
       shotNumber,
       kind,
       discardReason: options.discardReason || null,
-      good: false,
-      favorite: false,
+      good,
+      favorite,
       note: options.note || '',
       author: options.autor || 'Anonimo',
       createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
+      updatedAt: options.now ? new Date(options.now).toISOString() : nowIso(),
       shotType: options.shotType || null,
       movement: options.movement || null,
       sentido: options.sentido != null ? options.sentido : null,
       pared: options.pared != null ? options.pared : null,
       suggestionId: options.suggestionId || null,
     });
-    const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
     activeSegment.counterNext++;
     if (kind === 'take' && options.targetId) deriveMediaTargetState(next, camera, options.targetId);
     return next;
@@ -3814,6 +3904,7 @@
     buildDictadoPrompt,
     parsePropuesta,
     parseDictado,
+    applyDictado,
     guideCoverage,
     capasCubiertas,
     BASE_CONCEPTS,
