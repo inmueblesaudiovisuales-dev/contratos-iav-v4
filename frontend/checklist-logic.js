@@ -1394,7 +1394,50 @@
     merged.pisos = pisos;
     // guide: campo por campo (incoming gana)
     merged.guide = Object.assign({}, base.guide || {}, incoming.guide || {});
+    // tombstones (F61): unir lápidas por id (deletedAt mayor) y APLICARLAS — quitar todo
+    // elemento cuyo updatedAt no sea posterior a su lápida. Asi un borrado no revive en la
+    // fusion, salvo que se haya reeditado despues (updatedAt > deletedAt).
+    const tomb = new Map();
+    (base.tombstones || []).concat(incoming.tombstones || []).forEach((t) => {
+      if (!t || t.id == null) return;
+      const prev = tomb.get(t.id);
+      if (!prev || (Date.parse(t.deletedAt) || 0) > (Date.parse(prev.deletedAt) || 0)) tomb.set(t.id, t);
+    });
+    merged.tombstones = Array.from(tomb.values());
+    const aliveAfter = (it) => {
+      const t = (it && it.id != null) ? tomb.get(it.id) : null;
+      if (!t) return true;
+      return (Date.parse(it.updatedAt || it.createdAt) || 0) > (Date.parse(t.deletedAt) || 0);
+    };
+    ['mediaFiles', 'cameras', 'sequenceSegments', 'droneItems', 'asesorPuntos', 'espacios'].forEach((k) => {
+      merged[k] = (merged[k] || []).filter(aliveAfter);
+    });
+    merged.pisos = (merged.pisos || []).filter((p) => !tomb.has('piso:' + p));
     return merged;
+  }
+
+  function pruneTombstones(list, nowMs) {
+    const cutoff = (nowMs != null ? nowMs : Date.now()) - 30 * 86400000;
+    return (list || []).filter((t) => t && (Date.parse(t.deletedAt) || 0) >= cutoff);
+  }
+
+  // Registra lapidas (borrado) por id. Muta state.tombstones en sitio para que la UI
+  // (que borra modificando state directamente) la pueda llamar tras quitar el elemento.
+  function addTombstones(state, ids) {
+    if (!state.tombstones) state.tombstones = [];
+    const at = nowIso();
+    (ids || []).forEach((id) => {
+      if (id == null) return;
+      const ex = state.tombstones.find((t) => t.id === id);
+      if (ex) ex.deletedAt = at; else state.tombstones.push({ id: id, deletedAt: at });
+    });
+    return state;
+  }
+
+  // Quita una lapida (p.ej. al deshacer un borrado o re-crear un piso del mismo nombre).
+  function clearTombstone(state, id) {
+    if (state.tombstones) state.tombstones = state.tombstones.filter((t) => t.id !== id);
+    return state;
   }
 
   function blankEstados() {
@@ -2009,6 +2052,7 @@
       activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
       sequenceSegments: [],
       mediaFiles: [],
+      tombstones: [],
       guide: { tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false },
     };
   }
@@ -2500,6 +2544,7 @@
         if (counters.length) segment.counterNext = Math.max(segment.counterNext || 0, Math.max(...counters) + 1);
       });
       if (normalized.mediaFiles.length) repairDerivedMediaState(normalized);
+      normalized.tombstones = pruneTombstones(Array.isArray(data && data.tombstones) ? data.tombstones : normalized.tombstones);
       normalized.version = 3;
       return normalized;
     }
@@ -2962,6 +3007,7 @@
       renumberTargetShots(next, camera.id, removed.targetId);
       deriveMediaTargetState(next, camera, removed.targetId);
     }
+    addTombstones(next, [mediaId]);
     return next;
   }
 
@@ -3356,6 +3402,8 @@
     SHOT_TYPES,
     MOVEMENTS,
     mergeChecklist,
+    addTombstones,
+    clearTombstone,
     CURATED_SHOT_TYPES,
     CURATED_MOVEMENTS,
     SENTIDO_OPTS,

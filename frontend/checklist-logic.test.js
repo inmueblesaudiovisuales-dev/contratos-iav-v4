@@ -3116,3 +3116,47 @@ test('incidente: un guardado de cobertura no borra las tomas de otro dispositivo
   assert.equal(m2.mediaFiles.length, 104, 'sobreviven sin importar el orden');
   assert.equal(m2.espacios[0].estados.foto.estado, 'hecho');
 });
+
+// ─── F61 — lápidas: un borrado no debe revivir en la fusión ───────────────────
+test('removeMediaFile registra una lápida y quita el archivo', () => {
+  const base = _mergeState({ mediaFiles: [{ id: 'm1', cameraId: 'x', segmentId: null, kind: 'omitted', fileCounter: 1 }] });
+  const next = logic.removeMediaFile(base, 'm1');
+  assert.equal(next.mediaFiles.filter((f) => f.id === 'm1').length, 0, 'el archivo se quita');
+  assert.ok((next.tombstones || []).some((t) => t.id === 'm1'), 'queda lápida de m1');
+});
+
+test('mergeChecklist no revive un id con lápida más nueva', () => {
+  const A = _mergeState({ mediaFiles: [], tombstones: [{ id: 'm5', deletedAt: '2026-06-06T20:00:00Z' }] });
+  const B = _mergeState({ mediaFiles: [{ id: 'm5', kind: 'take', updatedAt: '2026-06-06T19:00:00Z' }] });
+  assert.equal(logic.mergeChecklist(A, B).mediaFiles.filter((f) => f.id === 'm5').length, 0);
+  assert.equal(logic.mergeChecklist(B, A).mediaFiles.filter((f) => f.id === 'm5').length, 0);
+});
+
+test('mergeChecklist revive si la edición es posterior a la lápida', () => {
+  const A = _mergeState({ tombstones: [{ id: 'm5', deletedAt: '2026-06-06T19:00:00Z' }] });
+  const B = _mergeState({ mediaFiles: [{ id: 'm5', kind: 'take', updatedAt: '2026-06-06T20:00:00Z' }] });
+  assert.equal(logic.mergeChecklist(A, B).mediaFiles.filter((f) => f.id === 'm5').length, 1);
+});
+
+test('mergeChecklist une las lápidas de ambos lados', () => {
+  const A = _mergeState({ tombstones: [{ id: 'a', deletedAt: '2026-01-01T00:00:00Z' }] });
+  const B = _mergeState({ tombstones: [{ id: 'b', deletedAt: '2026-01-02T00:00:00Z' }] });
+  const ids = logic.mergeChecklist(A, B).tombstones.map((t) => t.id).sort();
+  assert.deepEqual(ids, ['a', 'b']);
+});
+
+test('normalizeChecklistData poda lápidas de más de 30 días', () => {
+  const viejo = new Date(Date.now() - 40 * 86400000).toISOString();
+  const nuevo = new Date(Date.now() - 2 * 86400000).toISOString();
+  const norm = logic.normalizeChecklistData({ version: 3, espacios: [], tombstones: [{ id: 'viejo', deletedAt: viejo }, { id: 'nuevo', deletedAt: nuevo }] });
+  const ids = (norm.tombstones || []).map((t) => t.id);
+  assert.ok(!ids.includes('viejo'), 'poda la vieja');
+  assert.ok(ids.includes('nuevo'), 'conserva la reciente');
+});
+
+test('addTombstones registra ids borrados y la fusión no los revive', () => {
+  const borrado = _mergeState({ espacios: [{ id: 'e2' }] });
+  logic.addTombstones(borrado, ['e1']); // e1 borrado localmente
+  const otro = _mergeState({ espacios: [{ id: 'e1' }, { id: 'e2' }] }); // copia vieja con e1
+  assert.equal(logic.mergeChecklist(otro, borrado).espacios.filter((e) => e.id === 'e1').length, 0);
+});

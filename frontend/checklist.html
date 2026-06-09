@@ -2017,6 +2017,7 @@ function setupStepPisos(delta) {
     return;
   }
   state.pisos = (state.pisos || []).filter((x) => x !== ultima);
+  logic.addTombstones(state, ['piso:' + ultima]); // F61
   scheduleSave(); render();
 }
 
@@ -2384,6 +2385,7 @@ function agregarPiso() {
 function confirmarPiso(p) {
   if (!state.pisos) state.pisos = [];
   if (!state.pisos.includes(p)) state.pisos.push(p);
+  logic.clearTombstone(state, 'piso:' + p); // F61: re-crear un piso limpia su lápida
   cerrarModal(); scheduleSave(); render();
 }
 
@@ -2395,6 +2397,7 @@ function confirmarPisoInput() {
 function quitarPiso(p) {
   if (state.espacios.some((e) => (e.piso || '') === p)) return showToast('Ese piso tiene cuartos');
   state.pisos = (state.pisos || []).filter((x) => x !== p);
+  logic.addTombstones(state, ['piso:' + p]); // F61
   scheduleSave(); render();
 }
 
@@ -2425,10 +2428,12 @@ function quitarEspacio(id) {
   if (!sp) return;
   const removidos = state.espacios.filter((e) => ids.has(e.id));
   state.espacios = state.espacios.filter((e) => !ids.has(e.id));
+  logic.addTombstones(state, [...ids]); // F61: lápida para que la fusión no lo reviva
   if (activeRoomId && ids.has(activeRoomId)) activeRoomId = null;
   scheduleSave(); render();
   showToast(`Quitaste "${sp.nombre}"`, () => {
     removidos.forEach((r) => { if (!state.espacios.some((e) => e.id === r.id)) state.espacios.push(r); });
+    [...ids].forEach((rid) => logic.clearTombstone(state, rid)); // deshacer: quitar la lápida
     scheduleSave(); render();
   }, 'Deshacer');
 }
@@ -2692,6 +2697,7 @@ function delLista(tipo, id) {
   if ((state.mediaFiles || []).some((f) => f.targetId === id)) return showToast('Tiene tomas registradas');
   if (tipo === 'drone') state.droneItems = state.droneItems.filter((e) => e.id !== id);
   else state.asesorPuntos = (state.asesorPuntos || []).filter((e) => e.id !== id);
+  logic.addTombstones(state, [id]); // F61
   scheduleSave();
   tipo === 'drone' ? abrirCambiarCuarto() : abrirCambiarPunto();
 }
@@ -5412,6 +5418,7 @@ function deleteTarget() {
   } else {
     state.espacios = state.espacios.filter((entry) => !ids.has(entry.id));
   }
+  logic.addTombstones(state, [...ids]); // F61: lápida para que la fusión no lo reviva
   cerrarModal(); render(); scheduleSave();
 }
 
