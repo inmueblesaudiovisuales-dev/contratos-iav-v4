@@ -25,7 +25,11 @@ cliente no toca Drive. El portal redirige a `entrega.html` solo cuando hay una g
   `customer-code` de Stream solos), `obtenerEntrega`, `guardarConfigEntrega`, `publicarEntrega`.
   Las fotos se sirven desde `imagedelivery.net` (variantes flexibles `w=...,format=auto`).
 - Admin: panel "Galería de entrega — El Estreno" con Preparar → revisar/editar → Publicar (gate
-  `borrador`/`publicado`).
+  `borrador`/`publicado`). Selección de foto de portada/hero.
+- Robustez: migración de fotos **por lotes** (`prepararEntrega` con `continuar`, no excede límites
+  del Worker); **gate por API** (`obtenerEntrega` no expone material sin publicar; el admin usa
+  `previewEntrega` autenticado); **respaldo manual** (subir fotos directo a Images con
+  `agregarFotoEntrega`, y video directo a Stream con `iniciarSubidaVideo`/`confirmarVideoEntrega`).
 - Infra (hecha): secret `CF_MEDIA_TOKEN` (Stream+Images:Edit), variantes flexibles activadas,
   migración aplicada. Pendiente de Bruno: subir el adapter y exportar el reel `_web` (<45 MB).
 - Spec: `docs/superpowers/specs/2026-06-09-entrega-estreno-design.md`. Plan:

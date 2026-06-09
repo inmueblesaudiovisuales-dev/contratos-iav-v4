@@ -285,6 +285,7 @@
   var RESENA_URL = 'https://www.google.com/maps/search/?api=1&query=Inmuebles+Audiovisuales';
   var token = new URLSearchParams(location.search).get('token') || '';
   var preview = new URLSearchParams(location.search).get('preview') === '1';
+  var previewKey = new URLSearchParams(location.search).get('k') || '';
   var D = null, compCargado = false, imagesHash = '';
 
   function fotoUrl(id, w){ if(!id || !imagesHash) return ''; return 'https://imagedelivery.net/' + imagesHash + '/' + id + '/w=' + w + ',quality=80,format=auto'; }
@@ -293,8 +294,13 @@
 
   async function cargar(){
     if(!token){ return mostrarEstado('Enlace inválido', 'Este enlace no es válido. Pídele a Inmuebles Audiovisuales tu liga de entrega.', false); }
-    try { D = await (await fetch('/api/obtenerEntrega?token=' + encodeURIComponent(token))).json(); }
-    catch(e){ D = null; }
+    try {
+      if(preview){
+        D = await (await fetch('/api/previewEntrega?token=' + encodeURIComponent(token), { headers: { 'X-Admin-Key': previewKey } })).json();
+      } else {
+        D = await (await fetch('/api/obtenerEntrega?token=' + encodeURIComponent(token))).json();
+      }
+    } catch(e){ D = null; }
     if(!D || !D.ok){ return mostrarEstado('No disponible', 'No pudimos cargar tu entrega. Intenta de nuevo más tarde.', true); }
     if(D.revocada){ return mostrarEstado('Acceso pausado', 'El acceso a este material está en pausa. Escríbenos y con gusto te ayudamos.', true); }
     if(!D.publicado && !preview){ return mostrarEstado('Estamos preparando tu material', 'Te avisaremos en cuanto tu producción esté lista. ¡Va a quedar increíble!', true); }

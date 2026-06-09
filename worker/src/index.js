@@ -25,6 +25,7 @@ const RUTAS_CONTRATOS = [
   'actualizarContratoUpsell','ocultarContrato','eliminarContrato','reservarContrato','guardarNotasInternas',
   'marcarSesionCompletada','guardarProduccion','guardarEntrega','revocarEntrega',
   'prepararEntrega','guardarConfigEntrega','publicarEntrega',
+  'agregarFotoEntrega','iniciarSubidaVideo','confirmarVideoEntrega','previewEntrega',
   'guardarCaracteristicas','reagendarPropiedad','exportarCSV','enviarRecordatorio',
   'guardarNotaPropiedad','actualizarCarpeta','actualizarPdfUrl','actualizarCalendarEvent',
   'actualizarExpress','guardarFormatoPropiedad'

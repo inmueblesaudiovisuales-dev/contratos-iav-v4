@@ -4355,7 +4355,22 @@ function renderPanel(data) {
           <div class="campo"><label>Liga del recorrido 360</label>
             <input type="url" id="gal-360" placeholder="https://...">
           </div>
-          <button class="btn-secundario btn-sm" style="width:100%" onclick="guardarConfigEntregaGaleria()"><i class="ti ti-device-floppy"></i> Guardar configuración</button>
+
+          <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)">
+            <p class="form-hint" style="margin-bottom:8px"><b>Respaldo manual</b> — por si la migración desde Drive falla:</p>
+            <div class="campo"><label>Subir fotos directo (a Images)</label>
+              <input type="file" id="gal-fotos-file" accept="image/*" multiple>
+              <button class="btn-secundario btn-sm" style="width:100%;margin-top:6px" onclick="subirFotosManual()"><i class="ti ti-photo-up"></i> Subir fotos</button>
+              <div class="form-msg" id="msg-gal-fotos"></div>
+            </div>
+            <div class="campo" style="margin-top:8px"><label>Subir video directo (a Stream)</label>
+              <input type="file" id="gal-video-file" accept="video/*">
+              <button class="btn-secundario btn-sm" style="width:100%;margin-top:6px" onclick="subirVideoManual()"><i class="ti ti-video-plus"></i> Subir video</button>
+              <div class="form-msg" id="msg-gal-video"></div>
+            </div>
+          </div>
+
+          <button class="btn-secundario btn-sm" style="width:100%;margin-top:12px" onclick="guardarConfigEntregaGaleria()"><i class="ti ti-device-floppy"></i> Guardar configuración</button>
           <div class="form-msg" id="msg-galeria-cfg"></div>
           <div style="margin-top:10px"><a href="#" id="gal-preview" target="_blank" rel="noopener" class="form-hint"><i class="ti ti-external-link"></i> Abrir vista previa</a></div>
           <button class="btn-primario gold" style="width:100%;margin-top:12px" onclick="publicarEntregaGaleria()"><i class="ti ti-send"></i> Publicar entrega</button>
@@ -4771,9 +4786,14 @@ async function prepararEntregaGaleria() {
   if (btn) { btn.disabled = true; btn.textContent = 'Migrando…'; }
   setMsg('msg-galeria', 'Migrando fotos y video, puede tardar un momento…', '');
   try {
-    const data = await apiPost({ action: 'prepararEntrega', token: t });
-    if (!data.ok) throw new Error(data.error || 'Error desconocido');
-    setMsg('msg-galeria', 'Listo: ' + data.fotos + ' foto(s) migradas' + (data.video ? ', video en Stream.' : ', sin video web detectado.'), 'ok');
+    let r = await apiPost({ action: 'prepararEntrega', token: t });
+    if (!r.ok) throw new Error(r.error || 'Error desconocido');
+    while (!r.done) {
+      setMsg('msg-galeria', 'Migrando fotos: ' + r.migradas + ' de ' + r.total + '…', '');
+      r = await apiPost({ action: 'prepararEntrega', token: t, continuar: true });
+      if (!r.ok) throw new Error(r.error || 'Error desconocido');
+    }
+    setMsg('msg-galeria', 'Listo: ' + r.migradas + ' foto(s)' + (r.video ? ' + video en Stream.' : ', sin video web detectado.'), 'ok');
     await cargarConfigEntregaGaleria();
   } catch (e) {
     setMsg('msg-galeria', 'Error: ' + e.message, 'error');
@@ -4785,7 +4805,7 @@ async function prepararEntregaGaleria() {
 async function cargarConfigEntregaGaleria() {
   const t = tokenActivo;
   if (!t) return;
-  let d; try { d = await (await fetch('/api/obtenerEntrega?token=' + encodeURIComponent(t))).json(); } catch (e) { return; }
+  let d; try { d = await (await fetch('/api/previewEntrega?token=' + encodeURIComponent(t), { headers: { 'X-Admin-Key': PASSWORD } })).json(); } catch (e) { return; }
   if (!d || !d.ok) return;
   const m = d.manifiesto || {};
   const fotos = Array.isArray(m.fotos) ? m.fotos : [];
@@ -4802,7 +4822,7 @@ async function cargarConfigEntregaGaleria() {
   setVal('gal-vid', d.videoId);
   setVal('gal-360', d.tour360Url);
   const prev = document.getElementById('gal-preview');
-  if (prev) prev.href = 'entrega.html?token=' + encodeURIComponent(t) + '&preview=1';
+  if (prev) prev.href = 'entrega.html?token=' + encodeURIComponent(t) + '&preview=1&k=' + encodeURIComponent(PASSWORD);
   document.getElementById('galeria-config').style.display = '';
 }
 
@@ -4835,6 +4855,53 @@ async function publicarEntregaGaleria() {
   } catch (e) {
     setMsg('msg-galeria-pub', 'Error: ' + e.message, 'error');
   }
+}
+
+// Subida manual de fotos directo a Cloudflare Images (respaldo si la migración desde Drive falla).
+async function subirFotosManual() {
+  const t = tokenActivo;
+  const input = document.getElementById('gal-fotos-file');
+  const archivos = input && input.files ? Array.from(input.files) : [];
+  if (!archivos.length) { setMsg('msg-gal-fotos', 'Elige al menos una foto.', 'error'); return; }
+  for (let i = 0; i < archivos.length; i++) {
+    const f = archivos[i];
+    setMsg('msg-gal-fotos', 'Subiendo ' + (i + 1) + ' de ' + archivos.length + '…', '');
+    try {
+      const base64 = await new Promise(function (res, rej) {
+        const rd = new FileReader();
+        rd.onload = function (e) { const r = e.target.result; res(r.substring(r.indexOf(',') + 1)); };
+        rd.onerror = rej; rd.readAsDataURL(f);
+      });
+      const data = await apiPost({ action: 'agregarFotoEntrega', token: t, nombre: f.name, mimeType: f.type || 'image/jpeg', base64 });
+      if (!data.ok) throw new Error(data.error || 'Error');
+    } catch (e) { setMsg('msg-gal-fotos', 'Error en ' + f.name + ': ' + e.message, 'error'); return; }
+  }
+  setMsg('msg-gal-fotos', archivos.length + ' foto(s) subida(s).', 'ok');
+  if (input) input.value = '';
+  await cargarConfigEntregaGaleria();
+}
+
+// Subida manual de video directo a Stream (browser → URL de subida directa de Stream).
+async function subirVideoManual() {
+  const t = tokenActivo;
+  const input = document.getElementById('gal-video-file');
+  const file = input && input.files && input.files[0];
+  if (!file) { setMsg('msg-gal-video', 'Elige un archivo de video.', 'error'); return; }
+  setMsg('msg-gal-video', 'Preparando subida…', '');
+  try {
+    const ini = await apiPost({ action: 'iniciarSubidaVideo', token: t });
+    if (!ini.ok || !ini.uploadURL) throw new Error(ini.error || 'No se pudo iniciar la subida');
+    setMsg('msg-gal-video', 'Subiendo video a Stream…', '');
+    const fd = new FormData();
+    fd.append('file', file);
+    const up = await fetch(ini.uploadURL, { method: 'POST', body: fd });
+    if (!up.ok) throw new Error('Falló la subida a Stream (' + up.status + ')');
+    const conf = await apiPost({ action: 'confirmarVideoEntrega', token: t, uid: ini.uid });
+    if (!conf.ok) throw new Error(conf.error || 'No se pudo confirmar el video');
+    setMsg('msg-gal-video', 'Video subido. Stream lo está procesando (puede tardar 1-2 min).', 'ok');
+    if (input) input.value = '';
+    await cargarConfigEntregaGaleria();
+  } catch (e) { setMsg('msg-gal-video', 'Error: ' + e.message, 'error'); }
 }
 
 // ── GUARDAR PRODUCCIÓN ────────────────────────────────────────────────────────

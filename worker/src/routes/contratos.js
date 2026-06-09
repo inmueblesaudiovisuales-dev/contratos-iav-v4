@@ -3,6 +3,21 @@ import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter, callAdapterSync } from '../google.js';
 import { generarFolio, asignarFolio } from '../folios.js';
 import { esFotoWeb, hashDeVariante } from '../entrega-media.js';
+import { payloadEntrega } from './portal.js';
+
+// Sube un Blob a Cloudflare Images. Devuelve { id, hash } o null.
+async function subirImagenCF(env, blob, nombre) {
+  const form = new FormData();
+  form.append('file', blob, nombre || 'foto.jpg');
+  const up = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/images/v1`,
+    { method: 'POST', headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}` }, body: form });
+  const uj = await up.json();
+  if (uj && uj.success && uj.result && uj.result.id) {
+    const hash = (uj.result.variants && uj.result.variants[0]) ? hashDeVariante(uj.result.variants[0]) : '';
+    return { id: uj.result.id, hash };
+  }
+  return null;
+}
 
 export async function handleContratos(request, env, ctx, action) {
   const db = env.DB;
@@ -416,88 +431,91 @@ export async function handleContratos(request, env, ctx, action) {
   }
 
   if (action === 'prepararEntrega') {
-    const { token } = await request.json();
+    // Migración por LOTES para no exceder límites del Worker (subrequests/tiempo).
+    // El admin llama una vez (continuar=false) y luego repite (continuar=true) hasta done=true.
+    const { token, continuar } = await request.json();
     if (!token) return err('Token requerido');
     const c = await queryOne(db, 'SELECT * FROM contratos WHERE token=?', [token]);
     if (!c) return err('Contrato no encontrado', 404);
 
-    const prop = await queryOne(db,
-      'SELECT carpeta_entregables_id, direccion FROM propiedades WHERE contrato_token=? ORDER BY num_propiedad LIMIT 1',
-      [token]);
-    if (!prop || !prop.carpeta_entregables_id) {
-      return err('No hay carpeta de Entregables registrada para este trabajo', 400);
+    let man = {}; try { man = JSON.parse(c.entrega_manifiesto_json || '{}'); } catch (e) { man = {}; }
+
+    // Primera llamada: el adapter lista la carpeta y se arma la cola de pendientes.
+    if (!continuar) {
+      const prop = await queryOne(db,
+        'SELECT carpeta_entregables_id, direccion FROM propiedades WHERE contrato_token=? ORDER BY num_propiedad LIMIT 1',
+        [token]);
+      if (!prop || !prop.carpeta_entregables_id) return err('No hay carpeta de Entregables registrada para este trabajo', 400);
+      let lista;
+      try {
+        lista = await callAdapterSync(env, 'prepararCarpetaEntrega', { carpetaEntregablesId: prop.carpeta_entregables_id });
+      } catch (e) {
+        await run(db, `UPDATE contratos SET entrega_media_estado='error' WHERE token=?`, [token]);
+        return err('No se pudo leer la carpeta de entrega: ' + e.message, 502);
+      }
+      man = {
+        fotos: [],
+        pendientes: (lista.fotos || []).filter(esFotoWeb).map(f => ({ id: f.id, nombre: f.nombre })),
+        videoWebId: (lista.videoWeb && lista.videoWeb.id) || '',
+        destacadoId: '',
+        imagesHash: man.imagesHash || '',
+        streamCustomer: man.streamCustomer || '',
+        propiedadNombre: c.nombre_cliente || '',
+        propiedadUbicacion: prop.direccion || ''
+      };
+      await run(db,
+        `UPDATE contratos SET entrega_manifiesto_json=?, entrega_media_estado='migrando',
+           entrega_textos_json=COALESCE(entrega_textos_json, ?),
+           entrega_config_estado=COALESCE(entrega_config_estado,'borrador') WHERE token=?`,
+        [JSON.stringify(man), JSON.stringify({ redes: '', anuncio: '' }), token]);
     }
 
-    await run(db, `UPDATE contratos SET entrega_media_estado='migrando' WHERE token=?`, [token]);
+    man.fotos = man.fotos || [];
+    man.pendientes = man.pendientes || [];
 
-    // 1) El adapter lista las subcarpetas Fotos/Videos y marca los archivos como públicos
-    let lista = { fotos: [], videoWeb: null };
-    try {
-      lista = await callAdapterSync(env, 'prepararCarpetaEntrega', { carpetaEntregablesId: prop.carpeta_entregables_id });
-    } catch (e) {
-      await run(db, `UPDATE contratos SET entrega_media_estado='error' WHERE token=?`, [token]);
-      return err('No se pudo leer la carpeta de entrega: ' + e.message, 502);
-    }
-
-    // 2) Migrar fotos a Cloudflare Images (el Worker jala de Drive; sin el límite de 50 MB de Apps Script)
-    const fotosManifiesto = [];
-    let imagesHash = '';
-    for (const f of (lista.fotos || [])) {
-      if (!esFotoWeb(f)) continue;
+    // Migrar un lote de fotos a Cloudflare Images (tope de subrequests por petición).
+    const BATCH = 8;
+    const lote = man.pendientes.slice(0, BATCH);
+    for (const f of lote) {
       try {
         const r = await fetch(`https://drive.google.com/uc?export=download&id=${f.id}`);
-        if (!r.ok) continue;
-        const form = new FormData();
-        form.append('file', await r.blob(), f.nombre || (f.id + '.jpg'));
-        const up = await fetch(
-          `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/images/v1`,
-          { method: 'POST', headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}` }, body: form });
-        const uj = await up.json();
-        if (uj && uj.success && uj.result && uj.result.id) {
-          fotosManifiesto.push({ id: uj.result.id, nombre: f.nombre });
-          if (!imagesHash && uj.result.variants && uj.result.variants[0]) imagesHash = hashDeVariante(uj.result.variants[0]);
+        if (r.ok) {
+          const sub = await subirImagenCF(env, await r.blob(), f.nombre);
+          if (sub) { man.fotos.push({ id: sub.id, nombre: f.nombre }); if (!man.imagesHash) man.imagesHash = sub.hash; }
         }
       } catch (e) { console.error('migrar foto falló', f.id, e.message); }
     }
+    man.pendientes = man.pendientes.slice(lote.length);
+    if (!man.destacadoId && man.fotos.length) man.destacadoId = man.fotos[0].id;
 
-    // 3) Subir el video _web a Stream (copy-from-URL: Stream lo jala de Drive)
+    const done = man.pendientes.length === 0;
+
+    // Al terminar las fotos, intentar subir el _web a Stream (copy-from-URL).
     let videoProveedor = c.entrega_video_proveedor || '';
     let videoId = c.entrega_video_id || '';
-    let streamCustomer = '';
-    if (lista.videoWeb && lista.videoWeb.id) {
+    if (done && man.videoWebId && videoProveedor !== 'stream') {
       try {
-        const resp = await fetch(
-          `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/copy`,
-          { method: 'POST',
-            headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: `https://drive.google.com/uc?export=download&id=${lista.videoWeb.id}`,
-                                   meta: { name: `entrega-${token}` } }) });
+        const resp = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/copy`,
+          { method: 'POST', headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: `https://drive.google.com/uc?export=download&id=${man.videoWebId}`, meta: { name: `entrega-${token}` } }) });
         const j = await resp.json();
         if (j && j.success && j.result && j.result.uid) {
           videoProveedor = 'stream'; videoId = j.result.uid;
-          // El subdominio (customer-xxxx) viene en las URLs del resultado; se captura solo.
           const mm = String(j.result.preview || j.result.thumbnail || '').match(/(customer-[^.]+)\./);
-          if (mm) streamCustomer = mm[1];
+          if (mm) man.streamCustomer = mm[1];
         }
       } catch (e) { console.error('subir video a Stream falló', e.message); }
     }
 
-    const manifiesto = {
-      fotos: fotosManifiesto,
-      destacadoId: fotosManifiesto.length ? fotosManifiesto[0].id : '',
-      imagesHash,
-      streamCustomer,
-      propiedadNombre: c.nombre_cliente || '',
-      propiedadUbicacion: prop.direccion || ''
-    };
+    const total = man.fotos.length + man.pendientes.length;
+    if (done) { delete man.pendientes; delete man.videoWebId; }
 
     await run(db,
       `UPDATE contratos SET entrega_manifiesto_json=?, entrega_video_proveedor=?, entrega_video_id=?,
-         entrega_textos_json=COALESCE(entrega_textos_json, ?), entrega_config_estado='borrador',
-         entrega_media_estado='listo' WHERE token=?`,
-      [JSON.stringify(manifiesto), videoProveedor, videoId, JSON.stringify({ redes: '', anuncio: '' }), token]);
+         entrega_media_estado=? WHERE token=?`,
+      [JSON.stringify(man), videoProveedor, videoId, done ? 'listo' : 'migrando', token]);
 
-    return ok({ ok: true, fotos: fotosManifiesto.length, video: videoProveedor === 'stream' ? videoId : '', manifiesto });
+    return ok({ ok: true, done, migradas: man.fotos.length, total, video: videoProveedor === 'stream' ? videoId : '' });
   }
 
   if (action === 'guardarConfigEntrega') {
@@ -521,6 +539,70 @@ export async function handleContratos(request, env, ctx, action) {
     if (!token) return err('Token requerido');
     await run(db, `UPDATE contratos SET entrega_config_estado='publicado' WHERE token=?`, [token]);
     return ok({ ok: true });
+  }
+
+  // Subida manual de una foto a Cloudflare Images (respaldo si la migración desde Drive falla).
+  if (action === 'agregarFotoEntrega') {
+    const { token, nombre, mimeType, base64 } = await request.json();
+    if (!token || !base64) return err('Datos incompletos');
+    const c = await queryOne(db, 'SELECT entrega_manifiesto_json FROM contratos WHERE token=?', [token]);
+    if (!c) return err('Contrato no encontrado', 404);
+    let man = {}; try { man = JSON.parse(c.entrega_manifiesto_json || '{}'); } catch (e) {}
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const sub = await subirImagenCF(env, new Blob([bytes], { type: mimeType || 'image/jpeg' }), nombre);
+    if (!sub) return err('La imagen fue rechazada por Cloudflare Images', 502);
+    man.fotos = man.fotos || [];
+    man.fotos.push({ id: sub.id, nombre: nombre || '' });
+    if (!man.imagesHash) man.imagesHash = sub.hash;
+    if (!man.destacadoId) man.destacadoId = sub.id;
+    await run(db,
+      `UPDATE contratos SET entrega_manifiesto_json=?, entrega_media_estado='listo',
+         entrega_config_estado=COALESCE(entrega_config_estado,'borrador') WHERE token=?`,
+      [JSON.stringify(man), token]);
+    return ok({ ok: true, foto: { id: sub.id, nombre: nombre || '' } });
+  }
+
+  // Subida manual de video: pide a Stream una URL de subida directa (browser → Stream).
+  if (action === 'iniciarSubidaVideo') {
+    const { token } = await request.json();
+    if (!token) return err('Token requerido');
+    const resp = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/direct_upload`,
+      { method: 'POST', headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxDurationSeconds: 3600, requireSignedURLs: false, meta: { name: `entrega-${token}` } }) });
+    const j = await resp.json();
+    if (!j || !j.success || !j.result) return err('No se pudo iniciar la subida a Stream', 502);
+    return ok({ ok: true, uploadURL: j.result.uploadURL, uid: j.result.uid });
+  }
+
+  // Confirma el video subido a Stream y captura su customer-code.
+  if (action === 'confirmarVideoEntrega') {
+    const { token, uid } = await request.json();
+    if (!token || !uid) return err('Datos incompletos');
+    const c = await queryOne(db, 'SELECT entrega_manifiesto_json FROM contratos WHERE token=?', [token]);
+    if (!c) return err('Contrato no encontrado', 404);
+    let man = {}; try { man = JSON.parse(c.entrega_manifiesto_json || '{}'); } catch (e) {}
+    try {
+      const g = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/${uid}`,
+        { headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}` } });
+      const gj = await g.json();
+      const mm = String((gj.result && gj.result.preview) || '').match(/(customer-[^.]+)\./);
+      if (mm) man.streamCustomer = mm[1];
+    } catch (e) { console.error('confirmarVideo getStream falló', e.message); }
+    await run(db,
+      `UPDATE contratos SET entrega_video_proveedor='stream', entrega_video_id=?, entrega_manifiesto_json=? WHERE token=?`,
+      [uid, JSON.stringify(man), token]);
+    return ok({ ok: true });
+  }
+
+  // Vista previa para el admin: devuelve el material aunque la entrega no esté publicada.
+  if (action === 'previewEntrega') {
+    const token = new URL(request.url).searchParams.get('token');
+    if (!token) return err('Token requerido');
+    const c = await queryOne(db, 'SELECT * FROM contratos WHERE token=?', [token]);
+    if (!c) return err('Contrato no encontrado', 404);
+    return ok(payloadEntrega(c, env));
   }
 
   if (action === 'revocarEntrega') {

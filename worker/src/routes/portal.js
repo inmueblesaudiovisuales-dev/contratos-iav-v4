@@ -9,6 +9,30 @@ function limpiarLinkMaps(url) {
   return url;
 }
 
+// Arma el payload completo de la entrega para el cliente (galería publicada) o la vista previa del admin.
+export function payloadEntrega(c, env) {
+  let manifiesto = {}; try { manifiesto = JSON.parse(c.entrega_manifiesto_json || '{}'); } catch (e) {}
+  let textos = {}; try { textos = JSON.parse(c.entrega_textos_json || '{}'); } catch (e) {}
+  if (manifiesto) { delete manifiesto.pendientes; delete manifiesto.videoWebId; }
+  return {
+    ok: true,
+    token: c.token,
+    estatus: c.estatus,
+    publicado: c.entrega_config_estado === 'publicado',
+    mediaEstado: c.entrega_media_estado || '',
+    revocada: !!(c.entrega_revocada && String(c.entrega_revocada).trim()),
+    nombreCliente: c.nombre_cliente,
+    driveLink: c.entrega_drive_link || '',
+    manifiesto, textos,
+    videoProveedor: c.entrega_video_proveedor || '',
+    videoId: c.entrega_video_id || '',
+    streamCustomer: (manifiesto && manifiesto.streamCustomer) || env.STREAM_CUSTOMER_CODE || '',
+    tour360Url: c.tiene_recorrido === 0 ? '' : (c.recorrido_url || ''),
+    waLink: 'https://wa.me/5218127174207',
+    igHandle: '@inmuebles.audiovisuales'
+  };
+}
+
 export async function handlePortal(request, env, ctx, action) {
   const db = env.DB;
   const url = new URL(request.url);
@@ -372,26 +396,16 @@ export async function handlePortal(request, env, ctx, action) {
     const c = await queryOne(db, 'SELECT * FROM contratos WHERE token = ?', [token]);
     if (!c) return err('Contrato no encontrado', 404);
 
-    let manifiesto = {}; try { manifiesto = JSON.parse(c.entrega_manifiesto_json || '{}'); } catch (e) {}
-    let textos = {}; try { textos = JSON.parse(c.entrega_textos_json || '{}'); } catch (e) {}
-
-    return ok({
-      ok: true,
-      token: c.token,
-      estatus: c.estatus,
-      publicado: c.entrega_config_estado === 'publicado',
-      mediaEstado: c.entrega_media_estado || '',
-      revocada: !!(c.entrega_revocada && String(c.entrega_revocada).trim()),
-      nombreCliente: c.nombre_cliente,
-      driveLink: c.entrega_drive_link || '',
-      manifiesto, textos,
-      videoProveedor: c.entrega_video_proveedor || '',
-      videoId: c.entrega_video_id || '',
-      streamCustomer: (manifiesto && manifiesto.streamCustomer) || env.STREAM_CUSTOMER_CODE || '',
-      tour360Url: c.tiene_recorrido === 0 ? '' : (c.recorrido_url || ''),
-      waLink: 'https://wa.me/5218127174207',
-      igHandle: '@inmuebles.audiovisuales'
-    });
+    // Gate: si la entrega no está publicada, no exponer el material por API (el admin usa previewEntrega).
+    if (c.entrega_config_estado !== 'publicado') {
+      return ok({
+        ok: true, token: c.token, estatus: c.estatus, publicado: false,
+        revocada: !!(c.entrega_revocada && String(c.entrega_revocada).trim()),
+        nombreCliente: c.nombre_cliente,
+        waLink: 'https://wa.me/5218127174207', igHandle: '@inmuebles.audiovisuales'
+      });
+    }
+    return ok(payloadEntrega(c, env));
   }
 
   return err('Acción no encontrada', 404);
