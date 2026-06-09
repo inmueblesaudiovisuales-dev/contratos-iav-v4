@@ -20,10 +20,31 @@
     { nombre: 'Introducción', tipo: 'normal' },
     { nombre: 'Despedida', tipo: 'normal' },
   ];
+  function pad2(n) {
+    return String(n).padStart(2, '0');
+  }
   function createAsesorPuntos() {
     return ASESOR_DEFAULTS.map((p, index) => ({
       id: 'asesor-default-' + index, nombre: p.nombre, tipo: p.tipo, estado: 'pendiente', ordenLista: index + 1,
+      codigo: 'P' + pad2(index + 1),
     }));
+  }
+  // F75 — codigo de punto estable. Devuelve el siguiente 'P'+pad2(maxNum+1) sobre los
+  // codigos existentes (no reusa numeros borrados ni renumera).
+  function nextAsesorCodigo(state) {
+    let max = 0;
+    (state && state.asesorPuntos || []).forEach((p) => {
+      const m = /^P(\d+)$/.exec(p && p.codigo || '');
+      if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
+    });
+    return 'P' + pad2(max + 1);
+  }
+  // F75 — llave de pareo (ASCII seguro por construccion). audioSugerido es identico.
+  function parAsesor(codigo, toma) {
+    return `${codigo}_T${toma}`;
+  }
+  function audioSugeridoAsesor(codigo, toma) {
+    return parAsesor(codigo, toma);
   }
   const DRONE_DEFAULTS = [
     'Fachada aerea',
@@ -2958,7 +2979,24 @@
           tipo: p.tipo === 'voz' ? 'voz' : 'normal',
           estado: p.estado || 'pendiente',
           ordenLista: p.ordenLista || index + 1,
+          codigo: (typeof p.codigo === 'string' && /^P\d+$/.test(p.codigo)) ? p.codigo : null,
         }));
+      // F75 — backfill estable de `codigo`: a cada punto sin codigo se le asigna el
+      // siguiente no usado (max existente + 1), en orden de ordenLista/aparicion. Los
+      // codigos ya existentes NO se cambian ni se reusan.
+      {
+        let maxCodigo = 0;
+        normalized.asesorPuntos.forEach((p) => {
+          const m = p.codigo ? /^P(\d+)$/.exec(p.codigo) : null;
+          if (m) { const n = parseInt(m[1], 10); if (n > maxCodigo) maxCodigo = n; }
+        });
+        normalized.asesorPuntos
+          .slice()
+          .sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0))
+          .forEach((p) => {
+            if (!p.codigo) { maxCodigo += 1; p.codigo = 'P' + pad2(maxCodigo); }
+          });
+      }
       normalized.bitacora = normalized.bitacora || [];
       const savedCameras = normalized.cameras || [];
       normalized.cameras = CAMERA_DEFAULTS.map((camera) => Object.assign({}, camera, savedCameras.find((item) => item.id === camera.id) || {}))
@@ -3319,26 +3357,27 @@
   function registerAsesorFile(state, options) {
     const punto = (state.asesorPuntos || []).find((p) => p.id === options.puntoId);
     if (!punto) return state;
-    const cams = punto.tipo === 'voz' ? ['osmo-asesor'] : ['sony-asesor', 'osmo-asesor'];
-    for (let i = 0; i < cams.length; i++) {
-      if (!getCameraSequence(state, cams[i]).segment) return state;
-    }
-    const next = clone(state);
-    const nextPunto = next.asesorPuntos.find((p) => p.id === options.puntoId);
+    const esVoz = punto.tipo === 'voz';
+    // F75 — el asesor ya no graba un par Sony+Osmo. El audio es externo (Tascam):
+    //  - Punto normal: UN mediaFile de video (sony-asesor) con audioExterno:true.
+    //  - Voz en off: UN mediaFile solo-audio (tascam-asesor) sin token de video.
     const kind = options.kind || 'take';
-    const pairId = makeId('pair');
-    cams.forEach((cid) => {
-      const camera = getCamera(next, cid);
-      const sequence = getCameraSequence(next, cid);
+    const codigo = punto.codigo || nextAsesorCodigo(state);
+    const createdAt = options.now ? new Date(options.now).toISOString() : new Date().toISOString();
+    const updatedAt = options.now ? new Date(options.now).toISOString() : new Date().toISOString();
+
+    if (esVoz) {
+      const next = clone(state);
+      const nextPunto = next.asesorPuntos.find((p) => p.id === options.puntoId);
       const shotNumber = kind === 'take'
-        ? next.mediaFiles.filter((file) => file.cameraId === cid && file.targetId === options.puntoId && file.kind === 'take').length + 1
+        ? next.mediaFiles.filter((file) => file.cameraId === 'tascam-asesor' && file.targetId === options.puntoId && file.kind === 'take').length + 1
         : null;
       next.mediaFiles.push({
         id: makeId('media'),
-        cameraId: cid,
-        segmentId: sequence.segment.id,
-        fileCounter: sequence.segment.counterNext,
-        fileToken: formatFileToken(sequence.segment, sequence.segment.counterNext),
+        cameraId: 'tascam-asesor',
+        segmentId: null,
+        fileCounter: null,
+        fileToken: null,
         targetId: options.puntoId,
         scene: punto.nombre,
         scenePath: punto.nombre,
@@ -3347,18 +3386,55 @@
         discardReason: options.discardReason || null,
         good: false,
         note: options.note || '',
-        pairId,
-        role: camera.role,
+        pairId: parAsesor(codigo, shotNumber),
+        soloAudio: true,
+        audioExterno: true,
         author: options.autor || 'Anonimo',
-        createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
-        updatedAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
+        createdAt,
+        updatedAt,
         shotType: null,
         movement: null,
         suggestionId: null,
       });
-      const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
-      activeSegment.counterNext++;
+      if (kind === 'take') nextPunto.estado = 'hecho';
+      return next;
+    }
+
+    // Punto normal: un solo video en sony-asesor, audio externo en la Tascam.
+    if (!getCameraSequence(state, 'sony-asesor').segment) return state;
+    const next = clone(state);
+    const nextPunto = next.asesorPuntos.find((p) => p.id === options.puntoId);
+    const camera = getCamera(next, 'sony-asesor');
+    const sequence = getCameraSequence(next, 'sony-asesor');
+    const shotNumber = kind === 'take'
+      ? next.mediaFiles.filter((file) => file.cameraId === 'sony-asesor' && file.targetId === options.puntoId && file.kind === 'take').length + 1
+      : null;
+    next.mediaFiles.push({
+      id: makeId('media'),
+      cameraId: 'sony-asesor',
+      segmentId: sequence.segment.id,
+      fileCounter: sequence.segment.counterNext,
+      fileToken: formatFileToken(sequence.segment, sequence.segment.counterNext),
+      targetId: options.puntoId,
+      scene: punto.nombre,
+      scenePath: punto.nombre,
+      shotNumber,
+      kind,
+      discardReason: options.discardReason || null,
+      good: false,
+      note: options.note || '',
+      pairId: parAsesor(codigo, shotNumber),
+      audioExterno: true,
+      role: camera.role,
+      author: options.autor || 'Anonimo',
+      createdAt,
+      updatedAt,
+      shotType: null,
+      movement: null,
+      suggestionId: null,
     });
+    const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
+    activeSegment.counterNext++;
     if (kind === 'take') nextPunto.estado = 'hecho';
     return next;
   }
@@ -3737,7 +3813,10 @@
     const archivos = (state.mediaFiles || []).map((f) => {
       const cam = camById(f.cameraId);
       const seg = segById(f.segmentId);
-      const servicio = cam.mode || 'video';
+      // F75 — el asesor solo-audio usa la Tascam (camara externa, sin entrada en
+      // state.cameras): su servicio es 'asesor' por construccion.
+      const esAsesor = f.cameraId === 'sony-asesor' || f.cameraId === 'tascam-asesor';
+      const servicio = esAsesor ? 'asesor' : (cam.mode || 'video');
       const espacio = (servicio === 'drone' || servicio === 'asesor') ? null : (state.espacios || []).find((e) => e.id === f.targetId);
 
       const tipoToma = f.shotType || null;
@@ -3762,14 +3841,35 @@
 
       const enrichedFile = { kind: f.kind, good: f.good, discardReason: f.discardReason, ordenEdicion, tipoTomaLabel, movimiento, movimientoLabel, sentido, pared };
 
+      // F75 — campos aditivos del asesor (no cambian version:1):
+      //  - par/audioSugerido = pairId; puntoId = targetId; audioExterno:true siempre.
+      //  - solo-audio (voz en off): soloAudio:true, archivo/consecutivo null,
+      //    camaraId 'tascam-asesor', camaraTipo null.
+      //  - video normal: camaraId 'sony-asesor', camaraTipo 'sony'.
+      const esAsesorRec = servicio === 'asesor';
+      const esSoloAudio = esAsesorRec && f.soloAudio === true;
+      const extraAsesor = esAsesorRec ? (() => {
+        const par = f.pairId || null;
+        const base = {
+          puntoId: f.targetId || null,
+          par,
+          audioExterno: true,
+          audioSugerido: par,
+        };
+        if (esSoloAudio) {
+          return Object.assign(base, { soloAudio: true });
+        }
+        return base;
+      })() : null;
+
       return {
-        archivo: f.fileToken,
-        consecutivo: f.fileCounter,
+        archivo: esSoloAudio ? null : f.fileToken,
+        consecutivo: esSoloAudio ? null : f.fileCounter,
         ancho: seg.counterWidth || null,
         ejemploNombre: seg.exampleFilename || null,
         camara: cam.label || f.cameraId,
-        camaraId: f.cameraId,
-        camaraTipo: cam.kind || null,
+        camaraId: esAsesorRec ? (esSoloAudio ? 'tascam-asesor' : 'sony-asesor') : f.cameraId,
+        camaraTipo: esAsesorRec ? (esSoloAudio ? null : 'sony') : (cam.kind || null),
         servicio: servicio,
         escena: f.scene || null,
         escenaRuta: f.scenePath || null,
@@ -3803,6 +3903,7 @@
           Comment: f.note || '',
           Description: describirArchivo(servicio, enrichedFile),
         },
+        ...(extraAsesor || {}),
       };
     });
 
@@ -3974,6 +4075,9 @@
     getMediaSceneGroups,
     registerMediaFile,
     registerAsesorFile,
+    nextAsesorCodigo,
+    parAsesor,
+    audioSugeridoAsesor,
     toggleMediaGood,
     toggleMediaFavorite,
     insertOmittedMediaFile,

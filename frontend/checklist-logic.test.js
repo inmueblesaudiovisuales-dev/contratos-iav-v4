@@ -660,31 +660,81 @@ test('default state has asesor cameras and default puntos', () => {
   assert.ok(Array.isArray(s.asesorPuntos) && s.asesorPuntos.length >= 2);
 });
 
-test('registerAsesorFile creates a linked Sony+Osmo pair for a normal point', () => {
+test('createAsesorPuntos assigns unique stable codes P01, P02, ...', () => {
+  const s = logic.createDefaultState();
+  const codigos = s.asesorPuntos.map((p) => p.codigo);
+  assert.equal(codigos[0], 'P01');
+  assert.equal(codigos[1], 'P02');
+  assert.equal(new Set(codigos).size, codigos.length, 'todos los codigos son unicos');
+});
+
+test('nextAsesorCodigo gives the next unused code after deleting one (no reuse, no renumber)', () => {
+  let s = logic.createDefaultState();
+  // tres puntos: P01, P02, P03
+  s.asesorPuntos = [
+    { id: 'a', nombre: 'A', tipo: 'normal', estado: 'pendiente', ordenLista: 1, codigo: 'P01' },
+    { id: 'b', nombre: 'B', tipo: 'normal', estado: 'pendiente', ordenLista: 2, codigo: 'P02' },
+    { id: 'c', nombre: 'C', tipo: 'normal', estado: 'pendiente', ordenLista: 3, codigo: 'P03' },
+  ];
+  assert.equal(logic.nextAsesorCodigo(s), 'P04');
+  // borro el del medio (P02): el siguiente sigue siendo max+1 = P04, no reusa P02
+  s.asesorPuntos = s.asesorPuntos.filter((p) => p.codigo !== 'P02');
+  assert.equal(logic.nextAsesorCodigo(s), 'P04');
+});
+
+test('parAsesor builds the pairing key codigo_Ttoma', () => {
+  assert.equal(logic.parAsesor('P03', 2), 'P03_T2');
+  assert.equal(logic.audioSugeridoAsesor('P03', 2), 'P03_T2');
+});
+
+test('normalizeChecklistData backfills missing codigo without changing existing ones', () => {
+  const data = {
+    version: 3,
+    asesorPuntos: [
+      { id: 'a', nombre: 'A', tipo: 'normal', estado: 'pendiente', ordenLista: 1, codigo: 'P05' },
+      { id: 'b', nombre: 'B', tipo: 'normal', estado: 'pendiente', ordenLista: 2 },
+      { id: 'c', nombre: 'C', tipo: 'normal', estado: 'pendiente', ordenLista: 3 },
+    ],
+  };
+  const norm = logic.normalizeChecklistData(data);
+  const byId = Object.fromEntries(norm.asesorPuntos.map((p) => [p.id, p.codigo]));
+  assert.equal(byId.a, 'P05', 'no cambia el codigo existente');
+  assert.equal(byId.b, 'P06', 'backfill: siguiente no usado');
+  assert.equal(byId.c, 'P07', 'backfill: siguiente no usado');
+  assert.equal(new Set(Object.values(byId)).size, 3, 'unicos');
+});
+
+test('registerAsesorFile on a normal point creates ONE sony-asesor file with par and audioExterno, zero osmo-asesor', () => {
   let s = logic.createDefaultState();
   s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
-  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260517111742_0245_D' });
   const punto = s.asesorPuntos[0];
   s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take', autor: 'Bruno' });
-  assert.equal(s.mediaFiles.length, 2);
-  assert.equal(s.mediaFiles[0].pairId, s.mediaFiles[1].pairId);
-  const sony = s.mediaFiles.find((f) => f.cameraId === 'sony-asesor');
-  const osmo = s.mediaFiles.find((f) => f.cameraId === 'osmo-asesor');
+  assert.equal(s.mediaFiles.length, 1);
+  const sony = s.mediaFiles[0];
+  assert.equal(sony.cameraId, 'sony-asesor');
   assert.equal(sony.fileToken, 'PIB2819');
-  assert.equal(osmo.fileToken, '0246');
+  assert.equal(sony.pairId, punto.codigo + '_T1');
+  assert.equal(sony.pairId, 'P01_T1');
+  assert.equal(sony.audioExterno, true);
   assert.equal(sony.scene, punto.nombre);
+  assert.equal(s.mediaFiles.filter((f) => f.cameraId === 'osmo-asesor').length, 0);
   assert.equal(s.asesorPuntos[0].estado, 'hecho');
 });
 
-test('registerAsesorFile on a voz point uses only the Osmo audio', () => {
+test('registerAsesorFile on a voz point creates ONE solo-audio file with no token', () => {
   let s = logic.createDefaultState();
-  s.asesorPuntos.push({ id: 'voz1', nombre: 'Voz en off', tipo: 'voz', estado: 'pendiente', ordenLista: 99 });
-  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
-  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260517111742_0245_D' });
+  s.asesorPuntos.push({ id: 'voz1', nombre: 'Voz en off', tipo: 'voz', estado: 'pendiente', ordenLista: 99, codigo: 'P09' });
   s = logic.registerAsesorFile(s, { puntoId: 'voz1', kind: 'take', autor: 'Fer' });
   assert.equal(s.mediaFiles.length, 1);
-  assert.equal(s.mediaFiles[0].cameraId, 'osmo-asesor');
-  assert.equal(s.mediaFiles[0].fileToken, '0246');
+  const audio = s.mediaFiles[0];
+  assert.equal(audio.cameraId, 'tascam-asesor');
+  assert.equal(audio.soloAudio, true);
+  assert.equal(audio.audioExterno, true);
+  assert.equal(audio.fileToken, null);
+  assert.equal(audio.segmentId, null);
+  assert.equal(audio.fileCounter, null);
+  assert.equal(audio.pairId, 'P09_T1');
+  assert.equal(s.asesorPuntos.find((p) => p.id === 'voz1').estado, 'hecho');
 });
 
 test('buildExport produces file records with premiere metadata mapping', () => {
@@ -715,27 +765,66 @@ test('buildExport produces file records with premiere metadata mapping', () => {
   assert.equal(a.premiere.Description, 'video · toma buena');
 });
 
-test('buildExport links asesor pairs with the same par id', () => {
+test('buildExport of a normal asesor record carries puntoId, par, audioExterno, audioSugerido, camaraId sony-asesor', () => {
   let s = logic.createDefaultState();
   s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB4810' });
-  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260520_0090_D' });
-  s = logic.registerAsesorFile(s, { puntoId: s.asesorPuntos[0].id, kind: 'take', autor: 'Fer' });
+  const punto = s.asesorPuntos[0];
+  s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take', autor: 'Fer' });
   const exp = logic.buildExport(s, {});
-  assert.equal(exp.archivos.length, 2);
-  assert.equal(exp.archivos[0].par, exp.archivos[1].par);
-  assert.equal(exp.archivos[0].servicio, 'asesor');
+  assert.equal(exp.archivos.length, 1);
+  const a = exp.archivos[0];
+  assert.equal(a.servicio, 'asesor');
+  assert.equal(a.camaraId, 'sony-asesor');
+  assert.equal(a.camaraTipo, 'sony');
+  assert.equal(a.puntoId, punto.id);
+  assert.equal(a.par, punto.codigo + '_T1');
+  assert.equal(a.audioExterno, true);
+  assert.equal(a.audioSugerido, a.par);
+  assert.equal(a.archivo, 'PIB4811');
 });
 
-test('asesor pair keeps independent consecutives across two takes', () => {
+test('buildExport of a voz en off record is soloAudio with null archivo and audioSugerido===par', () => {
+  let s = logic.createDefaultState();
+  s.asesorPuntos.push({ id: 'voz1', nombre: 'Voz en off', tipo: 'voz', estado: 'pendiente', ordenLista: 99, codigo: 'P09' });
+  s = logic.registerAsesorFile(s, { puntoId: 'voz1', kind: 'take', autor: 'Fer' });
+  const exp = logic.buildExport(s, {});
+  assert.equal(exp.archivos.length, 1);
+  const a = exp.archivos[0];
+  assert.equal(a.servicio, 'asesor');
+  assert.equal(a.soloAudio, true);
+  assert.equal(a.archivo, null);
+  assert.equal(a.consecutivo, null);
+  assert.equal(a.camaraId, 'tascam-asesor');
+  assert.equal(a.camaraTipo, null);
+  assert.equal(a.par, 'P09_T1');
+  assert.equal(a.audioSugerido, a.par);
+  assert.equal(a.audioExterno, true);
+});
+
+test('asesor normal point keeps advancing the sony-asesor consecutive across takes', () => {
   let s = logic.createDefaultState();
   s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
-  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260517111742_0245_D' });
   const punto = s.asesorPuntos[0];
   s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take' });
   s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take' });
   assert.equal(logic.getCameraSequence(s, 'sony-asesor').nextToken, 'PIB2821');
-  assert.equal(logic.getCameraSequence(s, 'osmo-asesor').nextToken, '0248');
   assert.equal(s.mediaFiles.filter((f) => f.cameraId === 'sony-asesor').length, 2);
+  assert.equal(s.mediaFiles[1].pairId, punto.codigo + '_T2');
+});
+
+test('buildExport stays version 1 with asesor and video records present', () => {
+  let s = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: s.espacios[0].id, kind: 'take' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB4810' });
+  s = logic.registerAsesorFile(s, { puntoId: s.asesorPuntos[0].id, kind: 'take' });
+  const exp = logic.buildExport(s, {});
+  assert.equal(exp.version, 1);
+  const video = exp.archivos.find((a) => a.servicio === 'video');
+  assert.equal(video.archivo, 'PIB2819');
+  assert.equal(video.servicio, 'video');
+  assert.equal(video.soloAudio, undefined, 'el registro de video no cambia de forma');
+  assert.equal(video.puntoId, undefined);
 });
 
 // ─── F1: biblioteca de datos ──────────────────────────────────────────────────
