@@ -1,0 +1,8 @@
+F64 — historial en D1 + respaldo R2 (verificado en preview, worker desplegado)
+
+Historial: 3 guardados via API -> 3 filas en checklist_historial con rev 1,2,3.
+  [{"rev":1,...},{"rev":2,...},{"rev":3,...}]
+R2: put/get/delete de objeto en iav-checklist-backups -> OK (bucket escribible).
+Integral (worker final con rev+lápidas+historial): prueba de concurrencia PASA
+  (104 tomas sobreviven) y checklist_historial registra 3 versiones (rev_max=3).
+Respaldo R2 del worker: corre por el cron horario en producción (el preview no tiene cron).

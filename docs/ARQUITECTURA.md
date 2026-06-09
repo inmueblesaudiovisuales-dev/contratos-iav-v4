@@ -204,6 +204,25 @@ Un Cron Trigger de Cloudflare (`"0 * * * *"`) ejecuta `syncToSheets()` cada hora
 
 Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
+El mismo cron respalda cada fila de `checklist` a R2 (`backupChecklistToR2`, bucket `iav-checklist-backups`,
+binding `CHECKLIST_BACKUP`): un objeto con marca de tiempo y un `latest.json` por contrato.
+
+---
+
+## Concurrencia del checklist (R113, rama checklist-cambios-2026-06-07)
+
+Varias personas editan el mismo checklist a la vez (Bruno marca video, el equipo marca cobertura). Para que un
+guardado no pise lo de otro:
+
+- **Candado `rev`.** La fila `checklist` lleva una revisión monotónica. `guardarChecklist` solo escribe si la `rev`
+  que trae el cliente sigue vigente (`UPDATE ... WHERE rev=?`, compare-and-swap atómico). Si cambió, responde
+  `conflict` con el estado vigente.
+- **Fusión sin pérdida en el cliente.** `IAVChecklistLogic.mergeChecklist(base, incoming)` une por id (gana
+  `updatedAt` mayor), funde cobertura por servicio, respeta lápidas (`state.tombstones`). El cliente fusiona en
+  conflicto y reintenta; el sondeo y la carga fusionan en vez de reemplazar.
+- **Recuperación.** Tabla `checklist_historial` guarda las últimas 50 versiones por contrato; más el respaldo a R2.
+  Además D1 Time Travel da 30 días de restauración a nivel base.
+
 ---
 
 ## Diferencias clave con v3.0

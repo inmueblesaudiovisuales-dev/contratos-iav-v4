@@ -8,6 +8,31 @@
 
 ---
 
+### R113 — Checklist: prevención de pérdida por concurrencia (F60–F65) (2026-06-09 05:46:22 CST)
+
+**Rama `checklist-cambios-2026-06-07`, NO integrado a main/producción.** Worker probado en el preview aislado.
+Origen: incidente del 2026-06-06 en que un guardado de cobertura del equipo pisó las 104 tomas de Bruno (ver
+`memory/project_checklist_perdida_concurrencia.md`). Causa: el guardado reemplazaba el documento entero con
+last-write-wins; varias personas en el mismo token se pisaban.
+
+**Archivos:** `frontend/checklist-logic.js` (+test), `frontend/checklist.html`, `worker/src/routes/checklist.js`,
+`worker/src/cron.js`, `worker/src/index.js`, `worker/schema.sql`, `worker/migrations/r65-checklist-rev.sql`,
+`worker/migrations/r66-checklist-historial.sql`, `worker/wrangler.toml`, `worker/wrangler.preview.toml`.
+
+- **F60 — Fusión sin pérdida.** `logic.mergeChecklist(base, incoming)` une dos estados por id (gana `updatedAt`
+  mayor), funde estados de cobertura por servicio, une pisos y guide. Sellos `updatedAt` en mutaciones de mediaFile.
+- **F61 — Lápidas.** Lista `state.tombstones` ({id, deletedAt}); los borrados (mediaFile, cuarto, piso, droneItem,
+  asesorPunto) registran lápida; la fusión no revive lo borrado salvo reedición posterior. Poda a 30 días.
+- **F62 — Candado `rev` (cierra el bug).** Columna `rev` por fila; `guardarChecklist` hace compare-and-swap
+  (`UPDATE ... WHERE rev=?`); si la rev cambió, devuelve `conflict` con el estado vigente. El cliente fusiona y
+  reintenta; el sondeo y la carga fusionan en vez de reemplazar. Verificado en el preview: 104 tomas sobreviven a
+  un guardado de cobertura con rev vieja (antes las borraba).
+- **F64 — Recuperación.** Tabla `checklist_historial` (últimas 50 versiones por contrato) en cada guardado;
+  respaldo horario de cada checklist a R2 (`iav-checklist-backups`, binding `CHECKLIST_BACKUP`) vía cron.
+- **F65 — Cierre.** 240 pruebas en verde (incl. candado del incidente); evidencia en
+  `docs/superpowers/verificacion/f62/`. PENDIENTE (no ejecutado): reinsertar los 104 mediaFiles recuperados
+  (`recuperacion-mediafiles-IAV-2606.06-A.json`) ya con el sistema vivo, fusionando con la cobertura actual.
+
 ### R112 — Checklist: el demo arranca en primer arranque + sin zoom por double-tap (2026-06-05 20:05:14 CST)
 
 **Archivos:** `frontend/checklist-demo.js`, `frontend/checklist.html`, `frontend/admin.html`. Solo frontend; sin cambios en worker, lógica ni adapter.
