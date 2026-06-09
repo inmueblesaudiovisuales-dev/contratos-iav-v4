@@ -387,7 +387,7 @@ export async function handlePortal(request, env, ctx, action) {
       manifiesto, textos,
       videoProveedor: c.entrega_video_proveedor || '',
       videoId: c.entrega_video_id || '',
-      streamCustomer: env.STREAM_CUSTOMER_CODE || '',
+      streamCustomer: (manifiesto && manifiesto.streamCustomer) || env.STREAM_CUSTOMER_CODE || '',
       tour360Url: c.tiene_recorrido === 0 ? '' : (c.recorrido_url || ''),
       waLink: 'https://wa.me/5218127174207',
       igHandle: '@inmuebles.audiovisuales'

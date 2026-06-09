@@ -463,6 +463,7 @@ export async function handleContratos(request, env, ctx, action) {
     // 3) Subir el video _web a Stream (copy-from-URL: Stream lo jala de Drive)
     let videoProveedor = c.entrega_video_proveedor || '';
     let videoId = c.entrega_video_id || '';
+    let streamCustomer = '';
     if (lista.videoWeb && lista.videoWeb.id) {
       try {
         const resp = await fetch(
@@ -472,7 +473,12 @@ export async function handleContratos(request, env, ctx, action) {
             body: JSON.stringify({ url: `https://drive.google.com/uc?export=download&id=${lista.videoWeb.id}`,
                                    meta: { name: `entrega-${token}` } }) });
         const j = await resp.json();
-        if (j && j.success && j.result && j.result.uid) { videoProveedor = 'stream'; videoId = j.result.uid; }
+        if (j && j.success && j.result && j.result.uid) {
+          videoProveedor = 'stream'; videoId = j.result.uid;
+          // El subdominio (customer-xxxx) viene en las URLs del resultado; se captura solo.
+          const mm = String(j.result.preview || j.result.thumbnail || '').match(/(customer-[^.]+)\./);
+          if (mm) streamCustomer = mm[1];
+        }
       } catch (e) { console.error('subir video a Stream falló', e.message); }
     }
 
@@ -480,6 +486,7 @@ export async function handleContratos(request, env, ctx, action) {
       fotos: fotosManifiesto,
       destacadoId: fotosManifiesto.length ? fotosManifiesto[0].id : '',
       imagesHash,
+      streamCustomer,
       propiedadNombre: c.nombre_cliente || '',
       propiedadUbicacion: prop.direccion || ''
     };
