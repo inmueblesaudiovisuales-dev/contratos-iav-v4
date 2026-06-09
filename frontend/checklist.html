@@ -688,6 +688,15 @@
     .cs-floor-h i { font-size: 18px; color: var(--ink-3); flex: none; }
     .cs-floor-h .cs-nm { font-weight: 800; }
     .cs-floor-h .cs-cnt { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--ink-3); flex: none; }
+    /* F54 — renombrar piso */
+    .cs-floor-name { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 0; color: var(--ink-1); cursor: pointer; }
+    .cs-floor-pen { font-size: 14px !important; color: var(--ink-3); }
+    .cs-floor-edit { gap: var(--sp-2); }
+    .cs-floor-input { flex: 1; min-width: 0; min-height: 38px; border: 1px solid var(--tint-line); border-radius: 8px; padding: 0 var(--sp-2); font: inherit; font-weight: 700; background: var(--card); color: var(--ink-1); }
+    .cs-floor-ok { flex: none; width: 38px; height: 38px; border: 0; border-radius: 8px; background: var(--gold); color: #241c08; display: inline-flex; align-items: center; justify-content: center; }
+    .cs-floor-ok i { color: #241c08 !important; }
+    .cs-floor-sugg { display: flex; flex-wrap: wrap; gap: 6px; padding: var(--sp-2) var(--sp-4); background: var(--tint); border-bottom: 1px solid var(--line); }
+    .cs-floor-chip { min-height: 34px; padding: 0 var(--sp-3); border: 1px solid var(--tint-line); border-radius: 999px; background: var(--card); color: var(--ink-1); font-size: 12px; font-weight: 600; }
     .cs-sec-h { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) var(--sp-1); font-size: var(--ts-cap); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
     .cs-sec-h i { font-size: 16px; color: var(--ink-3); flex: none; }
     /* Renglón de cuarto con stepper − cantidad +. */
@@ -1123,6 +1132,8 @@ let setupPickerQuery = {};
 // F52 — Acordeón de categorías del picker "Agregar otro": clave `${scopeKey}::${catId}`
 // → bool (categoría abierta). Todas arrancan CERRADAS para ocupar poco espacio.
 let setupPickerCat = {};
+// F54 — índice del piso que se está renombrando (o null). Solo estado de UI.
+let setupRenameFloor = null;
 // F48 — Pantalla consolidada de "Armar cuartos". setupVisible es estado SOLO de
 // UI (clave de scope → arreglo de bases visibles): 'f0','f1',… para pisos,
 // 'ext' para Exterior, 'ame' para Amenidades. Se inicializa perezosamente con
@@ -1754,7 +1765,7 @@ function renderSetup() {
 
   // Plantas mostradas: las de state.pisos (sin las de drone) o 'Planta baja' por
   // defecto si no hay ninguna (no se obliga a crear piso).
-  const pisos = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : ['Planta baja'];
+  const pisos = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : [logic.floorLabel(0)];
   const nPisos = pisos.length;
   const pisoStepper = `<div class="setup-block"><div class="cs-pisos"><span class="cs-pisos-lab">Pisos</span><span class="cs-step">
     <button class="cs-sb"${nPisos <= 1 ? ' disabled' : ''} onclick="setupStepPisos(-1)" aria-label="Menos pisos"><i class="ti ti-minus"></i></button>
@@ -1762,11 +1773,19 @@ function renderSetup() {
     <button class="cs-sb add" onclick="setupStepPisos(1)" aria-label="Más pisos"><i class="ti ti-plus"></i></button></span></div></div>`;
 
   const floorBlocks = pisos.map((p, i) => {
-    const rooms = state.espacios.filter((e) => !e.parentId && setupZona(e) === 'interior' && (e.piso || 'Planta baja') === p);
+    const rooms = state.espacios.filter((e) => !e.parentId && setupZona(e) === 'interior' && (e.piso || logic.floorLabel(0)) === p);
     const c = rooms.length;
     const cnt = `${c} ${c === 1 ? 'cuarto' : 'cuartos'}`;
+    // F54 — el nombre del piso se puede editar (tocar el nombre o el lápiz). Útil
+    // para sótano / niveles abajo. Las sugerencias rápidas + texto libre.
+    const head = setupRenameFloor === i
+      ? `<div class="cs-floor-h cs-floor-edit"><i class="ti ti-stairs"></i>
+          <input id="cs-floorname-${i}" class="cs-floor-input" type="text" value="${esc(p)}" autocomplete="off" onkeydown="if(event.key==='Enter')setupRenamePiso(${i},this.value);if(event.key==='Escape'){setupRenameFloor=null;render();}">
+          <button class="cs-floor-ok" onclick="setupRenamePiso(${i},document.getElementById('cs-floorname-${i}').value)" aria-label="Guardar nombre"><i class="ti ti-check"></i></button></div>
+         <div class="cs-floor-sugg">${['Sótano', 'Sótano 2', 'Entrepiso', 'Planta baja', 'Planta alta', 'Roof garden'].map((s) => `<button class="cs-floor-chip" onclick="setupRenamePiso(${i},'${esc(s)}')">${esc(s)}</button>`).join('')}</div>`
+      : `<div class="cs-floor-h"><i class="ti ti-stairs"></i><button class="cs-floor-name" onclick="setupStartRename(${i})" aria-label="Renombrar piso"><span class="cs-nm">${esc(p)}</span><i class="ti ti-pencil cs-floor-pen"></i></button><span class="cs-cnt">${cnt}</span></div>`;
     return `<div class="cs-block">
-      <div class="cs-floor-h"><i class="ti ti-stairs"></i><span class="cs-nm">${esc(logic.floorLabel(i))}</span><span class="cs-cnt">${cnt}</span></div>
+      ${head}
       ${setupSectionRows('f' + i)}
     </div>`;
   }).join('');
@@ -1794,7 +1813,11 @@ function setupScope(key) {
   if (key === 'ext') return { zona: 'exterior', piso: null, lista: 'ext' };
   if (key === 'ame') return { zona: 'amenidades', piso: null, lista: 'ame' };
   const i = parseInt(key.slice(1), 10) || 0;
-  return { zona: 'interior', piso: logic.floorLabel(i), floorIndex: i, lista: 'interior' };
+  // F54 — el piso es el NOMBRE real (puede estar renombrado: Sótano, etc.), no el
+  // label por índice. Si el piso aún no se materializa, cae al label por índice.
+  const floors = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : [logic.floorLabel(0)];
+  const piso = floors[i] || logic.floorLabel(i);
+  return { zona: 'interior', piso, floorIndex: i, lista: 'interior' };
 }
 
 // F48 — Bases visibles de un scope: inicializa setupVisible[key] perezosamente con
@@ -1925,10 +1948,17 @@ function setupStepMinus(key, base) {
   quitarEspacio(candidatos[candidatos.length - 1].id);
 }
 
-// F48 — Stepper de "Pisos": "+" agrega la siguiente planta (logic.nextFloorName);
+// F48/F54 — Stepper de "Pisos": "+" agrega la siguiente planta (logic.nextFloorName);
 // "−" quita la última planta SOLO si no tiene cuartos (si tiene, toast).
 function setupStepPisos(delta) {
   if (delta > 0) {
+    // F54 — la planta baja arranca implícita (no guardada). Materialízala antes de
+    // sumar, para que el PRIMER "+" agregue directo la planta alta (un toque = un
+    // piso visible), sin el toque en falso anterior.
+    if (!(state.pisos || []).some((p) => !logic.isDronePiso(p))) {
+      if (!state.pisos) state.pisos = [];
+      state.pisos.push(logic.floorLabel(0));
+    }
     confirmarPiso(logic.nextFloorName(state.pisos || []));
     return;
   }
@@ -1940,6 +1970,37 @@ function setupStepPisos(delta) {
     return;
   }
   state.pisos = (state.pisos || []).filter((x) => x !== ultima);
+  scheduleSave(); render();
+}
+
+// F54 — Entra a modo renombrar el piso i (enfoca el input).
+function setupStartRename(i) {
+  setupRenameFloor = i;
+  render();
+  const el = document.getElementById('cs-floorname-' + i);
+  if (el) { el.focus(); el.select(); }
+}
+
+// F54 — Renombra el piso visible i (no-drone). Materializa la planta baja si hacía
+// falta, evita nombres repetidos y re-etiqueta los espacios de ese piso para no
+// perderlos. Solo cambia el nombre; el orden y los defaults por posición no cambian.
+function setupRenamePiso(i, nombre) {
+  setupRenameFloor = null;
+  const nuevo = String(nombre || '').trim();
+  if (!nuevo) { render(); return; }
+  let floors = (state.pisos && state.pisos.length) ? state.pisos.slice() : [];
+  if (!floors.some((p) => !logic.isDronePiso(p))) floors = [logic.floorLabel(0)];
+  // mapear el índice visible (no-drone) al índice real dentro de state.pisos
+  const noDrone = [];
+  floors.forEach((p, idx) => { if (!logic.isDronePiso(p)) noDrone.push(idx); });
+  const realIdx = noDrone[i];
+  if (realIdx == null) { render(); return; }
+  const viejo = floors[realIdx];
+  if (nuevo === viejo) { render(); return; }
+  if (floors.some((p, idx) => idx !== realIdx && p === nuevo)) { showToast('Ya hay un piso con ese nombre'); render(); return; }
+  floors[realIdx] = nuevo;
+  state.pisos = floors;
+  state.espacios.forEach((e) => { if ((e.piso || logic.floorLabel(0)) === viejo) e.piso = nuevo; });
   scheduleSave(); render();
 }
 
