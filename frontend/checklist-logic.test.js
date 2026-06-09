@@ -3012,3 +3012,38 @@ test('nextFloorName devuelve el siguiente piso libre', () => {
   assert.equal(logic.nextFloorName([]), 'Planta baja');
   assert.equal(logic.nextFloorName(['Drone', 'Planta baja']), 'Planta alta');
 });
+
+// ─── F47 — Conceptos enriquecidos + defaults por piso ────────────────────────
+
+test('catalogByZone casa exterior incluye Alberca y Palapa', () => {
+  const ext = logic.catalogByZone('casa').exterior;
+  assert.ok(ext.some((c) => c.base === 'Alberca'), 'tiene Alberca');
+  assert.ok(ext.some((c) => c.base === 'Palapa'), 'tiene Palapa');
+});
+
+test('catalogByZone casa amenidades incluye Área canina, Ludoteca y Sala de negocios', () => {
+  const ame = logic.catalogByZone('casa').amenidades;
+  assert.ok(ame.some((c) => c.base === 'Área canina'), 'tiene Área canina');
+  assert.ok(ame.some((c) => c.base === 'Ludoteca'), 'tiene Ludoteca');
+  assert.ok(ame.some((c) => c.base === 'Sala de negocios'), 'tiene Sala de negocios');
+});
+
+test('catalogByZone casa interior incluye Sala de TV y Bar, con una sola Recámara', () => {
+  const int = logic.catalogByZone('casa').interior;
+  assert.ok(int.some((c) => c.base === 'Sala de TV'), 'tiene Sala de TV');
+  assert.ok(int.some((c) => c.base === 'Bar'), 'tiene Bar');
+  assert.equal(int.filter((c) => c.base === 'Recámara').length, 1);
+});
+
+test('defaultVisible interior planta baja incluye Cocina; planta alta no pero sí Recámara', () => {
+  const pb = logic.defaultVisible('interior', 0);
+  const alta = logic.defaultVisible('interior', 1);
+  assert.ok(pb.includes('Cocina'), 'PB incluye Cocina');
+  assert.ok(!alta.includes('Cocina'), 'alta no incluye Cocina');
+  assert.ok(alta.includes('Recámara'), 'alta incluye Recámara');
+});
+
+test('defaultVisible exterior y amenidades', () => {
+  assert.deepEqual(logic.defaultVisible('exterior', 0), ['Fachada']);
+  assert.deepEqual(logic.defaultVisible('amenidades', 0), []);
+});
