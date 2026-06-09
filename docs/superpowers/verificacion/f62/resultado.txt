@@ -1,0 +1,8 @@
+baseline rev = 1
+A guarda tomas -> {"ok":true,"rev":2}
+B guarda cobertura con baseRev viejo -> {"conflict":true,"rev":2,"tomasEnRespuesta":104}
+B reintenta tras fusion -> {"ok":true,"rev":3}
+--- FINAL ---
+mediaFiles = 104 (esperado 104)
+cobertura foto = hecho (esperado hecho)
+RESULTADO: PASA — el candado evito el borrado y todo sobrevivio
