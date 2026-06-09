@@ -249,6 +249,29 @@ estructura el dictado transcrito.
 Punteros: `buildDictadoPrompt`, `parseDictado` y `applyDictado` viven en `frontend/checklist-logic.js`; la
 interfaz de generar prompt e importar/revisar está en la pestaña Edición de `frontend/checklist.html`.
 
+## Propuesta IA con fotos (import) (R122, rama checklist-cambios-2026-06-07)
+
+Las tomas sugeridas por IA se proponen a partir de las **fotos reales de la casa**, no de una descripción
+escrita. Mismo patrón que el dictado: la app genera el prompt en vivo, valida y revisa; Gemini ve las fotos y
+propone las tomas.
+
+- **El prompt ahora es con fotos.** `buildPropuestaPrompt(state)` se generó en vivo desde `state.espacios`,
+  agrupando los espacios reales por piso y por zona (interior, exterior, amenidades), cada uno con su `id` y su
+  nombre. Esa lista es a la vez la guía de qué fotografiar y la tabla de ids para que Gemini mapee. El prompt
+  pide a Gemini identificar cada cuarto en las fotos, **asignarlo al `id` correcto** y proponer tomas concretas
+  de esa casa por cuarto (vocabulario cerrado de `shotType`/`movement`; `nombre` = acción, `enfoque` = sujeto o
+  encuadre; `priority` must|nice). La **descripción de texto de la propiedad se retiró del flujo**: el prompt ya
+  no lee ni pide `guide.descripcion` (el campo se conserva en el modelo por retro-compatibilidad de estados
+  viejos, pero no participa en este flujo).
+- **El formato de import no cambia.** Gemini regresa el JSON `porCuarto` de siempre; `parsePropuesta(texto,
+  state)` lo valida tal cual (mapeo por id de espacio, validación de vocabulario, reporte de lo ignorado) y la
+  propuesta queda en `state.guide.proposal`. El import SOLO toca `state.guide.proposal`; jamás mediaFiles ni
+  cobertura. El consumo durante la captura (`proposalShotsFor`/`suggestionsForTarget`) sigue igual.
+
+Punteros: `buildPropuestaPrompt` y `parsePropuesta` viven en `frontend/checklist-logic.js`; la interfaz de
+generar prompt, pegar el JSON y revisar la propuesta agrupada por cuarto está en `renderPropuestaIA()` de
+`frontend/checklist.html`.
+
 ---
 
 ## Diferencias clave con v3.0

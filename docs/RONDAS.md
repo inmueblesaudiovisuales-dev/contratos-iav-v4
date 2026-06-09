@@ -8,6 +8,39 @@
 
 ---
 
+### R122 — Checklist: propuesta IA con fotos (Meta B, F72–F74) (2026-06-09 10:49:37 CST)
+
+**Rama `checklist-cambios-2026-06-07`, NO integrado a main/producción.** Worker probado en el preview aislado.
+Meta B: que la propuesta de tomas sugeridas por IA se genere a partir de las fotos reales de la casa, no de una
+descripción escrita. La app sigue el mismo patrón de siempre: genera el prompt en vivo, valida y revisa; Gemini
+ve las fotos y propone las tomas.
+
+**Archivos:** `frontend/checklist-logic.js` (+`checklist-logic.test.js`), `frontend/checklist.html`,
+`docs/RONDAS.md`, `docs/ARQUITECTURA.md`.
+
+- **F72 — Prompt con fotos (`buildPropuestaPrompt`).** El prompt se reescribió a la versión con fotos: se genera
+  en vivo desde `state.espacios`, agrupando los espacios reales por piso y por zona (interior, exterior,
+  amenidades), cada uno con su `id` y su nombre. Esa lista cumple doble función: guía de qué fotografiar y tabla
+  de ids para que Gemini mapee. Incluye la instrucción para Bruno (fotografiar todos los espacios, orden libre, y
+  subir las fotos junto con el prompt) y la instrucción para Gemini (identificar cada cuarto en las fotos,
+  asignarlo al `id` correcto y proponer tomas concretas de ESTA casa por cuarto: `nombre` = la acción concreta,
+  `shotType`/`movement` SOLO del vocabulario cerrado, `enfoque` = el sujeto o encuadre, `priority` must|nice).
+  Ya **no** usa `guide.descripcion`: se retiró del flujo el campo de descripción de la propiedad (el campo
+  `guide.descripcion` se conserva en el modelo por retro-compatibilidad de estados viejos, pero el prompt ni lo
+  lee ni lo pide). Commit R119.
+- **F73 — Interfaz de la propuesta IA con fotos.** En `renderPropuestaIA()` (`checklist.html`) se quitó el campo
+  de descripción y su handler, y se actualizó el texto de ayuda para explicar el flujo con fotos (generar el
+  prompt, fotografiar todos los espacios, pegar el prompt y las fotos en Gemini, traer el JSON y pegarlo). La
+  propuesta se sigue mostrando agrupada por cuarto y el flujo pegar → parsear → confirmar/quitar (con el reporte
+  de lo ignorado) se conserva sin cambios de guardado. Commit R120.
+- **Fix R121 — `parseDictado` valida número entero.** Bug crítico detectado en revisión: un token quedaba
+  desalineado porque `parseDictado` no validaba que el número del contador fuera entero. Ahora valida número
+  entero, lo que evita el token desalineado. Commit R121.
+- **F74 — Cierre (esta ronda).** El formato de import `porCuarto` y `parsePropuesta` NO cambian; el import de la
+  Meta B SOLO toca `state.guide.proposal` (jamás mediaFiles ni cobertura), y el consumo durante la captura
+  (`proposalShotsFor`/`suggestionsForTarget`) sigue igual. El export sigue en `version:1`. Documentación en
+  `docs/RONDAS.md` y `docs/ARQUITECTURA.md`; suite `node --test frontend/checklist-logic.test.js` en verde.
+
 ### R118 — Checklist: importador de dictado de bitácora (Meta A, F67–F71) (2026-06-09 09:47:31 CST)
 
 **Rama `checklist-cambios-2026-06-07`, NO integrado a main/producción.** Worker probado en el preview aislado.
