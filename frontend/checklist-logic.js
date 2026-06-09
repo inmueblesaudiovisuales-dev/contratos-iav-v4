@@ -1324,6 +1324,79 @@
     return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
   }
 
+  function nowIso() {
+    return new Date().toISOString();
+  }
+
+  // ─── F60 — Fusión sin pérdida (prevención de concurrencia) ────────────────────
+  // mergeChecklist(base, incoming): une dos estados del checklist SIN tirar nada.
+  // Arrays con id se unen por id (gana el de updatedAt/deletedAt mayor; empate o
+  // ausencia -> incoming). Los estados de cobertura se funden por servicio. pisos se
+  // unen preservando orden. guide se funde campo por campo. Es la pieza que impide
+  // que un guardado de un dispositivo borre lo que otro creo.
+  function mergeStamp(o) {
+    return (o && (o.deletedAt || o.updatedAt || o.hora)) || '';
+  }
+
+  function mergeById(baseArr, incArr) {
+    const order = [];
+    const byId = new Map();
+    const loose = [];
+    const take = (it) => {
+      if (!it || it.id == null) { loose.push(it); return; }
+      if (!byId.has(it.id)) { byId.set(it.id, it); order.push(it.id); return; }
+      const prev = byId.get(it.id);
+      byId.set(it.id, mergeStamp(it) >= mergeStamp(prev) ? it : prev);
+    };
+    (baseArr || []).forEach(take);
+    (incArr || []).forEach(take);
+    return order.map((id) => byId.get(id)).concat(loose);
+  }
+
+  function mergeEstados(baseEst, incEst) {
+    const out = Object.assign({}, baseEst || {});
+    Object.keys(incEst || {}).forEach((svc) => {
+      const b = out[svc];
+      const i = incEst[svc];
+      out[svc] = (!b || mergeStamp(i) >= mergeStamp(b)) ? i : b;
+    });
+    return out;
+  }
+
+  function mergeChecklist(base, incoming) {
+    base = base || {};
+    incoming = incoming || {};
+    const merged = Object.assign({}, base, incoming); // incoming gana en escalares/UI
+    ['mediaFiles', 'cameras', 'sequenceSegments', 'droneItems', 'asesorPuntos'].forEach((k) => {
+      merged[k] = mergeById(base[k], incoming[k]);
+    });
+    // espacios: unir por id; para los presentes en ambos, fundir estados por servicio
+    const baseEsp = new Map((base.espacios || []).filter((e) => e && e.id != null).map((e) => [e.id, e]));
+    const incEsp = new Map((incoming.espacios || []).filter((e) => e && e.id != null).map((e) => [e.id, e]));
+    const espIds = [];
+    const seen = new Set();
+    (base.espacios || []).concat(incoming.espacios || []).forEach((e) => {
+      if (e && e.id != null && !seen.has(e.id)) { seen.add(e.id); espIds.push(e.id); }
+    });
+    merged.espacios = espIds.map((id) => {
+      const b = baseEsp.get(id);
+      const inc = incEsp.get(id);
+      if (b && inc) {
+        const winner = Object.assign({}, mergeStamp(inc) >= mergeStamp(b) ? inc : b);
+        winner.estados = mergeEstados(b.estados, inc.estados);
+        return winner;
+      }
+      return b || inc;
+    });
+    // pisos: union preservando el orden de base, agregando los nuevos de incoming
+    const pisos = (base.pisos || []).slice();
+    (incoming.pisos || []).forEach((p) => { if (!pisos.includes(p)) pisos.push(p); });
+    merged.pisos = pisos;
+    // guide: campo por campo (incoming gana)
+    merged.guide = Object.assign({}, base.guide || {}, incoming.guide || {});
+    return merged;
+  }
+
   function blankEstados() {
     return {
       foto: { estado: 'pendiente' },
@@ -2758,6 +2831,7 @@
         role: camera.role,
         author: options.autor || 'Anonimo',
         createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
+        updatedAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
         shotType: null,
         movement: null,
         suggestionId: null,
@@ -2772,7 +2846,7 @@
   function toggleMediaGood(state, mediaId) {
     const next = clone(state);
     const file = next.mediaFiles.find((item) => item.id === mediaId);
-    if (file && file.kind === 'take') file.good = !file.good;
+    if (file && file.kind === 'take') { file.good = !file.good; file.updatedAt = nowIso(); }
     return next;
   }
 
@@ -2782,6 +2856,7 @@
     if (file && file.kind === 'take') {
       file.favorite = !file.favorite;
       if (file.favorite) file.good = true;
+      file.updatedAt = nowIso();
     }
     return next;
   }
@@ -2816,6 +2891,7 @@
       note: '',
       author: 'Anonimo',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
     segment.counterNext++;
     return next;
@@ -2861,6 +2937,7 @@
       renumberTargetShots(next, camera.id, file.targetId);
       deriveMediaTargetState(next, camera, file.targetId);
     }
+    file.updatedAt = nowIso();
     return next;
   }
 
@@ -3278,6 +3355,7 @@
     SPACE_SUGGESTIONS,
     SHOT_TYPES,
     MOVEMENTS,
+    mergeChecklist,
     CURATED_SHOT_TYPES,
     CURATED_MOVEMENTS,
     SENTIDO_OPTS,

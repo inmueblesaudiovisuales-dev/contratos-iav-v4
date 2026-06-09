@@ -3053,3 +3053,49 @@ test('defaultVisible planta baja siempre incluye Recámara', () => {
   assert.ok(logic.defaultVisible('interior', 0).includes('Recámara'), 'PB incluye Recámara');
   assert.ok(logic.defaultVisible('interior', 1).includes('Recámara'), 'planta alta incluye Recámara');
 });
+
+// ─── F60 — mergeChecklist: unión sin pérdida (prevención de concurrencia) ──────
+function _mergeState(over) {
+  return Object.assign({
+    mediaFiles: [], espacios: [], pisos: [], cameras: [],
+    sequenceSegments: [], droneItems: [], asesorPuntos: [], guide: {},
+  }, over);
+}
+
+test('mergeChecklist une mediaFiles de ambos lados sin perder ninguno', () => {
+  const A = _mergeState({ mediaFiles: [{ id: 'm1', fileToken: 'PIB0001' }, { id: 'm2', fileToken: 'PIB0002' }] });
+  const B = _mergeState({ mediaFiles: [] }); // copia vieja, sin las tomas
+  assert.equal(logic.mergeChecklist(A, B).mediaFiles.length, 2);
+  assert.equal(logic.mergeChecklist(B, A).mediaFiles.length, 2);
+});
+
+test('mergeChecklist conserva estados de servicios distintos en el mismo cuarto', () => {
+  const A = _mergeState({ espacios: [{ id: 'e1', nombre: 'Cocina', estados: { foto: { estado: 'hecho', updatedAt: '2026-01-01T00:00:00Z' } } }] });
+  const B = _mergeState({ espacios: [{ id: 'e1', nombre: 'Cocina', estados: { video: { estado: 'hecho', updatedAt: '2026-01-02T00:00:00Z' } } }] });
+  const merged = logic.mergeChecklist(A, B);
+  assert.equal(merged.espacios.length, 1);
+  assert.equal(merged.espacios[0].estados.foto.estado, 'hecho');
+  assert.equal(merged.espacios[0].estados.video.estado, 'hecho');
+});
+
+test('mergeChecklist: para un mismo id, gana el updatedAt mayor', () => {
+  const A = _mergeState({ mediaFiles: [{ id: 'm1', note: 'viejo', updatedAt: '2026-01-01T00:00:00Z' }] });
+  const B = _mergeState({ mediaFiles: [{ id: 'm1', note: 'nuevo', updatedAt: '2026-01-02T00:00:00Z' }] });
+  assert.equal(logic.mergeChecklist(A, B).mediaFiles[0].note, 'nuevo');
+  assert.equal(logic.mergeChecklist(B, A).mediaFiles[0].note, 'nuevo');
+});
+
+test('mergeChecklist tolera estados sin updatedAt y no pierde nada', () => {
+  const A = _mergeState({ mediaFiles: [{ id: 'm1' }], espacios: [{ id: 'e1', estados: { foto: { estado: 'hecho' } } }] });
+  const B = _mergeState({ mediaFiles: [{ id: 'm2' }], espacios: [{ id: 'e1', estados: { video: { estado: 'hecho' } } }] });
+  const merged = logic.mergeChecklist(A, B);
+  assert.equal(merged.mediaFiles.length, 2);
+  assert.equal(merged.espacios[0].estados.foto.estado, 'hecho');
+  assert.equal(merged.espacios[0].estados.video.estado, 'hecho');
+});
+
+test('toggleMediaGood sella updatedAt en el archivo', () => {
+  const base = _mergeState({ mediaFiles: [{ id: 'm1', kind: 'take', good: false }] });
+  const next = logic.toggleMediaGood(base, 'm1');
+  assert.ok(next.mediaFiles[0].updatedAt, 'updatedAt presente tras editar');
+});
