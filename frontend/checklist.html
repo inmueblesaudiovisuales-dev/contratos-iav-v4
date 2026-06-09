@@ -767,6 +767,35 @@
     .qs-general-lab { display: block; font-size: var(--ts-cap); font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
     .qs-opts-general { margin-top: var(--sp-2); padding-top: 0; border-top: 0; }
 
+    /* ===== F48 — Pantalla consolidada (steppers por piso/sección) ===== */
+    /* Stepper de "Pisos" arriba: fila propia tipo tarjeta. */
+    .cs-pisos { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-height: 56px; padding: var(--sp-2) var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--el-1); }
+    .cs-pisos .cs-pisos-lab { font-size: var(--ts-base); font-weight: 700; }
+    /* Bloque por piso / sección: tarjeta con encabezado y renglones. */
+    .cs-block { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--el-1); overflow: hidden; margin-bottom: var(--sp-4); }
+    .cs-floor-h { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); background: var(--tint); border-bottom: 1px solid var(--line); }
+    .cs-floor-h i { font-size: 18px; color: var(--ink-3); flex: none; }
+    .cs-floor-h .cs-nm { font-weight: 800; }
+    .cs-floor-h .cs-cnt { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--ink-3); flex: none; }
+    .cs-sec-h { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) var(--sp-1); font-size: var(--ts-cap); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
+    .cs-sec-h i { font-size: 16px; color: var(--ink-3); flex: none; }
+    /* Renglón de cuarto con stepper − cantidad +. */
+    .cs-row { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); border-top: 1px solid var(--line); min-height: 52px; }
+    .cs-row.first { border-top: 0; }
+    .cs-row .cs-ic { width: 36px; height: 36px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); background: var(--tint); color: var(--gold); }
+    .cs-row .cs-ic i { font-size: 20px; }
+    .cs-row .cs-nm { flex: 1; min-width: 0; font-weight: 600; }
+    .cs-row .cs-nm small { display: block; color: var(--ink-3); font-weight: 600; font-size: 11px; }
+    .cs-step { display: flex; align-items: center; gap: var(--sp-3); flex: none; }
+    .cs-sb { width: 44px; height: 44px; flex: none; border-radius: 999px; border: 1px solid var(--tint-line); background: var(--tint); color: var(--ink-1); font-size: 22px; font-weight: 800; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+    .cs-sb:disabled { opacity: .3; }
+    .cs-sb.add { background: var(--gold); border-color: var(--gold); color: #241c08; }
+    .cs-sb i { font-size: 20px; }
+    .cs-qn { min-width: 22px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+    /* "Agregar otro" (placeholder F48; lógica real en F49). */
+    .cs-addother { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 44px; border: 0; border-top: 1px solid var(--line); background: var(--page); color: var(--ink-2); font-weight: 700; font-size: 13px; padding: 0 var(--sp-4); justify-content: flex-start; }
+    .cs-addother i { font-size: 16px; }
+
     /* F36 — Rótulo discreto de escala del target de drone (breadcrumb / micro-texto). */
     .cap-scale { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-bottom: 2px; }
     .cap-scale i { font-size: 14px; color: var(--ink-3); }
@@ -1143,6 +1172,12 @@ let qsValores = {
   floors: [{ rec: 0, ban: 0, med: 0, opts: {} }],
   fachada: false,
 };
+// F48 — Pantalla consolidada de "Armar cuartos". setupVisible es estado SOLO de
+// UI (clave de scope → arreglo de bases visibles): 'f0','f1',… para pisos,
+// 'ext' para Exterior, 'ame' para Amenidades. Se inicializa perezosamente con
+// logic.defaultVisible(zona, floorIndex) la primera vez que se ve cada scope. No
+// se persiste en el contrato (la verdad del estado son state.espacios/state.pisos).
+let setupVisible = {};
 let searchTerm = '';
 let saveTimer = null;
 let retryTimer = null;
@@ -1871,6 +1906,11 @@ function generarEsqueleto() {
   render();
 }
 
+// F48 — Pantalla consolidada de "Armar cuartos". Una sola superficie por
+// secciones: Tipo → Pisos (stepper) → un bloque por piso (interior) → Exterior →
+// Amenidades → toggle de drone (intacto) → footer "Listo, a capturar". Los
+// steppers operan en vivo sobre state.espacios; nada nuevo se persiste fuera de
+// state.espacios/state.pisos (setupVisible es solo UI).
 function renderSetup() {
   const tipoSeg = `<div class="setup-block">
       <label class="setup-lbl">Tipo de propiedad</label>
@@ -1879,21 +1919,146 @@ function renderSetup() {
   // F20 — Terreno: un solo sujeto, no se arman cuartos. Vive en su propia vista.
   if (setupTipo === 'terreno') return renderSetupTerreno(tipoSeg);
 
-  // F43 — Pisos opcionales: ya no se exige crear un piso antes de agregar. El
-  // orden final es Tipo → Arranque rápido → Esquema vivo → Drone → footer fijo.
-  // El esquema (F41) usa 'Planta baja' por defecto y trae "Agregar planta".
+  // Plantas mostradas: las de state.pisos (sin las de drone) o 'Planta baja' por
+  // defecto si no hay ninguna (no se obliga a crear piso).
+  const pisos = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : ['Planta baja'];
+  const nPisos = pisos.length;
+  const pisoStepper = `<div class="setup-block"><div class="cs-pisos"><span class="cs-pisos-lab">Pisos</span><span class="cs-step">
+    <button class="cs-sb"${nPisos <= 1 ? ' disabled' : ''} onclick="setupStepPisos(-1)" aria-label="Menos pisos"><i class="ti ti-minus"></i></button>
+    <span class="cs-qn">${nPisos}</span>
+    <button class="cs-sb add" onclick="setupStepPisos(1)" aria-label="Más pisos"><i class="ti ti-plus"></i></button></span></div></div>`;
+
+  const floorBlocks = pisos.map((p, i) => {
+    const rooms = state.espacios.filter((e) => !e.parentId && setupZona(e) === 'interior' && (e.piso || 'Planta baja') === p);
+    const c = rooms.length;
+    const cnt = `${c} ${c === 1 ? 'cuarto' : 'cuartos'}`;
+    return `<div class="cs-block">
+      <div class="cs-floor-h"><i class="ti ti-stairs"></i><span class="cs-nm">${esc(logic.floorLabel(i))}</span><span class="cs-cnt">${cnt}</span></div>
+      ${setupSectionRows('f' + i)}
+    </div>`;
+  }).join('');
+
+  const exterior = `<div class="cs-block"><div class="cs-sec-h"><i class="ti ti-plant-2"></i>Exterior</div>${setupSectionRows('ext')}</div>`;
+  const amenidades = `<div class="cs-block"><div class="cs-sec-h"><i class="ti ti-pool"></i>Amenidades</div>${setupSectionRows('ame')}</div>`;
+
+  const tieneEspacios = state.espacios.some((e) => !e.parentId);
   return `<section class="setup">
-    <div class="setup-hd"><h2>Armar cuartos</h2><p>Arma la casa como la caminas. Usa el arranque rápido o toca "Agregar cuarto".</p></div>
+    <div class="setup-hd"><h2>Armar cuartos</h2><p>Arma toda la casa aquí: sube los números por piso, luego ajustas en captura.</p></div>
     ${tipoSeg}
-    <div class="setup-block">${renderArranqueRapido()}</div>
-    <div class="setup-block">${renderSetupList()}</div>
+    ${pisoStepper}
+    <div class="setup-block">${floorBlocks}${exterior}${amenidades}</div>
     ${renderDroneToggle()}
     <div class="setup-foot">
-      <button class="setup-addbig" onclick="abrirHojaAgregar()"><i class="ti ti-plus"></i>Agregar cuarto</button>
-      ${state.espacios.length ? `<button class="primary" onclick="cerrarSetup()">Listo, a capturar</button>` : ''}
+      <button class="primary" style="flex:1" onclick="cerrarSetup()"${tieneEspacios ? '' : ' disabled'}>Listo, a capturar</button>
     </div>
   </section>`;
 }
+
+// F48 — Resuelve una clave de scope ('f0','f1',… | 'ext' | 'ame') a su
+// { zona, piso, lista } efectivo: interior → zona 'interior' + piso por índice
+// (logic.floorLabel); 'ext' → 'exterior' piso null; 'ame' → 'amenidades' piso null.
+function setupScope(key) {
+  if (key === 'ext') return { zona: 'exterior', piso: null, lista: 'ext' };
+  if (key === 'ame') return { zona: 'amenidades', piso: null, lista: 'ame' };
+  const i = parseInt(key.slice(1), 10) || 0;
+  return { zona: 'interior', piso: logic.floorLabel(i), floorIndex: i, lista: 'interior' };
+}
+
+// F48 — Bases visibles de un scope: inicializa setupVisible[key] perezosamente con
+// logic.defaultVisible la primera vez que se ve el scope; además, cualquier
+// concepto con instancias en state.espacios se muestra aunque no esté en visible.
+function setupVisibleFor(key, sc) {
+  if (!setupVisible[key]) {
+    setupVisible[key] = logic.defaultVisible(sc.zona, sc.floorIndex || 0).slice();
+  }
+  const vis = setupVisible[key].slice();
+  setupScopeEspacios(sc).forEach((e) => {
+    const base = logic.baseConcept(e.nombre, setupTipo);
+    if (base && vis.indexOf(base) < 0) vis.push(base);
+  });
+  return vis;
+}
+
+// F48 — Espacios raíz del ámbito de un scope (interior: misma planta; ext/ame:
+// global), excluyendo subcuartos (parentId).
+function setupScopeEspacios(sc) {
+  return state.espacios.filter((e) => {
+    if (e.parentId) return false;
+    if (setupZona(e) !== sc.zona) return false;
+    if (sc.zona === 'interior') return (e.piso || 'Planta baja') === sc.piso;
+    return true;
+  });
+}
+
+// F48 — Renglones de una sección: un stepper por cada base visible. (En F48 el
+// botón "Agregar otro" es un placeholder; su picker/texto libre llega en F49.)
+function setupSectionRows(key) {
+  const sc = setupScope(key);
+  const vis = setupVisibleFor(key, sc);
+  const rows = vis.map((base, i) => setupStepperRow(key, base, i === 0)).join('');
+  const addOther = `<button class="cs-addother" onclick="abrirPicker('${key}')"><i class="ti ti-plus"></i>Agregar otro</button>`;
+  return rows + addOther;
+}
+
+// F48 — Un renglón de stepper: ícono + nombre + (− cantidad +). El conteo cuenta
+// instancias del concepto base en el ámbito (excluye subcuartos).
+function setupStepperRow(key, base, first) {
+  const sc = setupScope(key);
+  const list = logic.BASE_CONCEPTS[setupTipo] || [];
+  const concept = list.find((c) => c.base === base) || { base };
+  const n = setupScopeEspacios(sc).filter((e) => logic.baseConcept(e.nombre, setupTipo) === base).length;
+  const icon = setupIconClass(concept.icon);
+  return `<div class="cs-row${first ? ' first' : ''}">
+    <span class="cs-ic"><i class="ti ${icon}"></i></span>
+    <span class="cs-nm">${esc(base)}${n > 1 ? ` <small>${n} aquí</small>` : ''}</span>
+    <span class="cs-step">
+      <button class="cs-sb"${n <= 0 ? ' disabled' : ''} onclick="setupStepMinus('${key}','${esc(base)}')" aria-label="Quitar ${esc(base)}"><i class="ti ti-minus"></i></button>
+      <span class="cs-qn">${n}</span>
+      <button class="cs-sb add" onclick="setupStepPlus('${key}','${esc(base)}')" aria-label="Agregar ${esc(base)}"><i class="ti ti-plus"></i></button>
+    </span></div>`;
+}
+
+// F48 — Stepper "+": crea una instancia numerada del concepto en el ámbito.
+function setupStepPlus(key, base) {
+  const sc = setupScope(key);
+  const concept = (logic.BASE_CONCEPTS[setupTipo] || []).find((c) => c.base === base) || { base };
+  const nombres = setupScopeEspacios(sc).map((e) => e.nombre);
+  const nombre = logic.nextRoomName(nombres, concept);
+  nuevoEspacio(nombre, sc.piso, sc.zona, null, logic.detectCategoria(nombre));
+  scheduleSave(); render();
+}
+
+// F48 — Stepper "−": quita la ÚLTIMA instancia del concepto en el ámbito (cascada).
+function setupStepMinus(key, base) {
+  const sc = setupScope(key);
+  const candidatos = setupScopeEspacios(sc)
+    .filter((e) => logic.baseConcept(e.nombre, setupTipo) === base)
+    .sort((a, b) => (a.orden || 0) - (b.orden || 0));
+  if (!candidatos.length) return;
+  quitarEspacio(candidatos[candidatos.length - 1].id);
+}
+
+// F48 — Stepper de "Pisos": "+" agrega la siguiente planta (logic.nextFloorName);
+// "−" quita la última planta SOLO si no tiene cuartos (si tiene, toast).
+function setupStepPisos(delta) {
+  if (delta > 0) {
+    confirmarPiso(logic.nextFloorName(state.pisos || []));
+    return;
+  }
+  const pisos = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : [];
+  if (!pisos.length) return;
+  const ultima = pisos[pisos.length - 1];
+  if (state.espacios.some((e) => (e.piso || '') === ultima)) {
+    showToast('Esa planta tiene cuartos');
+    return;
+  }
+  state.pisos = (state.pisos || []).filter((x) => x !== ultima);
+  scheduleSave(); render();
+}
+
+// F48 — Placeholder de "Agregar otro" (su picker de conceptos restantes y el
+// texto libre con autocompletado llegan en F49). De momento no hace nada.
+function abrirPicker(scopeKey) { /* TODO F49: picker abierto + "Otro cuarto…" */ }
 
 // F42 — Hoja inferior para agregar (bottom sheet). Reemplaza a renderSetupSuggest
 // y renderSetupSearchDrop: pestañas por zona + selector de planta (Interior) +
