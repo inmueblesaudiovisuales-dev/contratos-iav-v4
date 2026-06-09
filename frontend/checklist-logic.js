@@ -1132,47 +1132,82 @@
     return base.concat(proposalShotsFor(state, target.id));
   }
 
+  // F72 — Prompt de propuesta IA con FOTOS. La app no es la inteligente: arma en
+  // vivo la lista de espacios REALES (por piso y zona, con id y nombre) que sirve a
+  // la vez de guia de que fotografiar y de tabla de ids para que Gemini mapee. NO
+  // lee ni menciona guide.descripcion. Conserva el estilo de concatenacion de
+  // string. El formato de respuesta es el mismo `porCuarto` que parsePropuesta ya
+  // consume; este prompt no cambia el parser.
   function buildPropuestaPrompt(state) {
-    const guide = state.guide || {};
-    const descripcion = guide.descripcion || '';
     // El drone comparte los espacios; no hay targets de drone aparte.
-    const allTargets = (state.espacios || []).map((esp) => ({
-      id: esp.id,
-      nombre: esp.nombre,
-      categoria: esp.categoria || detectCategoria(esp.nombre),
-    }));
+    const espacios = state.espacios || [];
+
+    // Etiquetas de zona (texto visible con acentos; las claves quedan sin acentos).
+    const ZONE_LABELS = { interior: 'Interior', exterior: 'Exterior', amenidades: 'Amenidades' };
+    const zoneLabelOf = (esp) => {
+      const z = normNombre(esp && esp.zona) || 'interior';
+      return ZONE_LABELS[z] || 'Interior';
+    };
+
+    // Agrupar por piso respetando el orden de aparicion de state.espacios; los
+    // espacios sin piso van bajo "Sin piso". Dentro de cada piso, por zona.
+    const pisoOrder = [];
+    const porPiso = {};
+    espacios.forEach((esp) => {
+      const piso = (esp.piso && String(esp.piso).trim()) || 'Sin piso';
+      if (!porPiso[piso]) { porPiso[piso] = []; pisoOrder.push(piso); }
+      porPiso[piso].push(esp);
+    });
+
+    const ZONE_GROUP_ORDER = ['Interior', 'Exterior', 'Amenidades'];
+    const espaciosStr = pisoOrder.map((piso) => {
+      const grupos = {};
+      const zonaOrder = [];
+      porPiso[piso].forEach((esp) => {
+        const zl = zoneLabelOf(esp);
+        if (!grupos[zl]) { grupos[zl] = []; zonaOrder.push(zl); }
+        grupos[zl].push(esp);
+      });
+      zonaOrder.sort((a, b) => {
+        const ia = ZONE_GROUP_ORDER.indexOf(a);
+        const ib = ZONE_GROUP_ORDER.indexOf(b);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+      const bloques = zonaOrder.map((zl) => {
+        const lineas = grupos[zl].map((esp) => '    - id "' + esp.id + '" — ' + esp.nombre).join('\n');
+        return '  ' + zl + ':\n' + lineas;
+      }).join('\n');
+      return 'Piso ' + piso + ':\n' + bloques;
+    }).join('\n\n');
 
     const shotTypes = getShotTypes();
     const movements = getMovements();
-
     const shotTypeVocab = Object.entries(shotTypes).map(([id, v]) => '  "' + id + '": "' + v.label + '"').join('\n');
     const movementVocab = Object.entries(movements).map(([id, v]) => '  "' + id + '": "' + v.label + '"').join('\n');
-    const cuartosStr = allTargets.map((c) => '  { "id": "' + c.id + '", "nombre": "' + c.nombre + '", "categoria": "' + c.categoria + '" }').join(',\n');
 
-    return 'Eres un camarografo de bienes raices recibiendo instrucciones de rodaje.\n' +
-      'Descripcion de la propiedad: ' + (descripcion || '(sin descripcion)') + '\n\n' +
-      'Cuartos a filmar:\n[\n' + cuartosStr + '\n]\n\n' +
+    return 'Eres un camarografo de bienes raices recibiendo instrucciones de rodaje.\n\n' +
+      'PARA BRUNO (antes de mandar): toma fotos de TODOS los espacios listados abajo, en el orden que quieras, y subelas junto con este prompt.\n\n' +
+      'Espacios de la propiedad (guia de que fotografiar y tabla de ids para mapear):\n' +
+      espaciosStr + '\n\n' +
+      'PARA GEMINI: recibiras fotos de esta propiedad. Identifica cada espacio en las fotos y asigna cada toma al "id" correcto de la lista de arriba. Propon tomas concretas y especificas de ESTA casa por espacio (por ejemplo: "push in en la cocina", "detalle del candelabro en la sala"). El campo "nombre" es la accion concreta; el campo "enfoque" es el sujeto o encuadre.\n\n' +
       'Vocabulario cerrado de tipos de toma (shotType) — usa SOLO estos ids:\n' + shotTypeVocab + '\n\n' +
       'Vocabulario cerrado de movimientos (movement) — usa SOLO estos ids:\n' + movementVocab + '\n\n' +
-      'Tarea: proponer tomas adicionales especificas para ESTA propiedad, por cuarto.\n\n' +
       'REGLAS DURAS — incumplir cualquiera invalida la respuesta:\n' +
-      '1. Basate ESTRICTAMENTE en la descripcion. PROHIBIDO inventar muebles, features, vistas o condiciones que no se mencionan en ella.\n' +
-      '2. El campo "enfoque" describe SOLO encuadre y composicion. NADA de hora del dia, golden hour, clima, iluminacion natural ni logistica de rodaje.\n' +
-      '3. Propone tomas SOLO para cuartos de la lista. PROHIBIDO inventar cuartos que no aparecen.\n' +
-      '4. Propone SOLO tomas genuinamente especificas de esta propiedad. NO repitas wides genericos que cualquier propiedad tendria.\n' +
-      '5. Si un cuarto no tiene nada destacable segun la descripcion, NO propongas nada para el (omitelo del JSON).\n' +
-      '6. Si la descripcion esta vacia o es generica (sin detalles especificos), responde exactamente: {"porCuarto":{}}\n' +
-      '7. Usa SOLO los ids exactos del vocabulario cerrado para shotType y movement.\n' +
-      '8. Responde UNICAMENTE con el JSON, sin markdown ni texto adicional.\n\n' +
+      '1. Basate en lo que VES en las fotos. PROHIBIDO inventar muebles, features, vistas o condiciones que no aparezcan en ellas.\n' +
+      '2. El campo "enfoque" es SOLO el sujeto o encuadre. NADA de hora del dia, golden hour, clima, iluminacion natural ni logistica de rodaje.\n' +
+      '3. Propon tomas SOLO para espacios de la lista. PROHIBIDO inventar espacios que no aparecen.\n' +
+      '4. Usa SOLO los ids exactos del vocabulario cerrado para shotType y movement.\n' +
+      '5. Si un espacio no tiene nada destacable en las fotos, NO propongas nada para el (omitelo del JSON).\n' +
+      '6. Responde UNICAMENTE con el JSON, sin markdown ni texto adicional.\n' +
+      '7. Maximo 6 tomas por espacio.\n\n' +
       'Formato de respuesta:\n' +
-      '{\n  "porCuarto": {\n    "<id de cuarto>": [\n' +
+      '{\n  "porCuarto": {\n    "<id de espacio>": [\n' +
       '      { "nombre": "...", "shotType": "<id valido>", "movement": "<id valido>", "enfoque": "...", "priority": "must|nice" }\n' +
       '    ]\n  }\n}\n\n' +
-      'Ejemplo — cuarto con chimenea de piedra mencionada en la descripcion:\n' +
+      'Ejemplo — espacio con un candelabro visible en la foto de la sala:\n' +
       '{\n  "porCuarto": {\n    "ejemplo-id-123": [\n' +
-      '      { "nombre": "Detalle de chimenea de piedra", "shotType": "detalle", "movement": "push_in", "enfoque": "Encuadra la piedra texturizada de la chimenea en primer plano", "priority": "must" }\n' +
-      '    ]\n  }\n}\n\n' +
-      'Maximo 6 tomas por cuarto.';
+      '      { "nombre": "Detalle del candelabro de la sala", "shotType": "detalle", "movement": "push_in", "enfoque": "Encuadra el candelabro en primer plano", "priority": "must" }\n' +
+      '    ]\n  }\n}';
   }
 
   // ─── F67 — Prompt de dictado de bitacora (video + dron) ──────────────────────

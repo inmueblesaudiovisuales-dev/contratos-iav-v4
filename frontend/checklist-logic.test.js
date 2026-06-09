@@ -1387,53 +1387,89 @@ function makeStateWithProposal() {
   return state;
 }
 
-test('F14: buildPropuestaPrompt genera string con cuartos, descripcion y vocabulario', () => {
-  const state = makeStateWithProposal();
-  const prompt = logic.buildPropuestaPrompt(state);
+// ─── F72: prompt de propuesta IA con fotos ───────────────────────────────────
+// State con dos pisos y cuartos de distintas zonas, ids conocidos.
+function makeStateConPisos() {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Cocina\nFachada\nRecamara');
+  // Planta baja: Cocina (interior), Fachada (exterior). Planta alta: Recamara (interior).
+  state.espacios[0].piso = 'Planta baja';
+  state.espacios[0].zona = 'interior';
+  state.espacios[1].piso = 'Planta baja';
+  state.espacios[1].zona = 'exterior';
+  state.espacios[2].piso = 'Planta alta';
+  state.espacios[2].zona = 'interior';
+  state.guide = { tipoPropiedad: 'casa', descripcion: 'TEXTO_DESCRIPCION_DISTINTIVO_XYZ', proposal: null };
+  return state;
+}
 
+test('F72: buildPropuestaPrompt contiene los id reales de todos los espacios', () => {
+  const state = makeStateConPisos();
+  const prompt = logic.buildPropuestaPrompt(state);
   assert.equal(typeof prompt, 'string', 'debe ser string');
-  assert.ok(prompt.length > 100, 'debe tener contenido sustancial');
-  assert.ok(prompt.includes('Casa amplia con doble altura'), 'debe incluir descripcion');
-  assert.ok(prompt.includes('Sala'), 'debe incluir nombre del cuarto Sala');
-  assert.ok(prompt.includes('Cocina'), 'debe incluir nombre del cuarto Cocina');
-  assert.ok(prompt.includes('porCuarto'), 'debe incluir esquema de respuesta JSON');
-  const firstType = Object.keys(logic.getShotTypes())[0];
-  assert.ok(prompt.includes(firstType), 'debe incluir al menos un id de shotType');
-  const firstMov = Object.keys(logic.getMovements())[0];
-  assert.ok(prompt.includes(firstMov), 'debe incluir al menos un id de movement');
+  state.espacios.forEach((esp) => {
+    assert.ok(prompt.includes(esp.id), 'debe incluir el id real del espacio ' + esp.nombre);
+    assert.ok(prompt.includes(esp.nombre), 'debe incluir el nombre del espacio ' + esp.nombre);
+  });
 });
 
-// G1 (R85) — prompt reforzado con reglas duras
-test('G1: buildPropuestaPrompt incluye regla de basarse estrictamente en descripcion', () => {
-  const state = makeStateWithProposal();
+test('F72: buildPropuestaPrompt agrupa por piso (aparecen las etiquetas de los pisos)', () => {
+  const state = makeStateConPisos();
   const prompt = logic.buildPropuestaPrompt(state);
-  assert.ok(prompt.includes('ESTRICTAMENTE'), 'debe incluir clausula ESTRICTAMENTE');
-  assert.ok(prompt.includes('PROHIBIDO inventar'), 'debe prohibir inventar features');
+  assert.ok(prompt.includes('Planta baja'), 'debe incluir la etiqueta del piso Planta baja');
+  assert.ok(prompt.includes('Planta alta'), 'debe incluir la etiqueta del piso Planta alta');
 });
 
-test('G1: buildPropuestaPrompt incluye regla de solo encuadre/composicion en enfoque', () => {
-  const state = makeStateWithProposal();
+test('F72: buildPropuestaPrompt NO contiene la palabra descripcion ni usa guide.descripcion', () => {
+  const state = makeStateConPisos();
   const prompt = logic.buildPropuestaPrompt(state);
-  assert.ok(prompt.includes('encuadre y composicion'), 'debe mencionar encuadre y composicion');
-  assert.ok(prompt.includes('NADA de hora del dia'), 'debe prohibir hora del dia');
+  assert.ok(!prompt.includes('descripcion'), 'el prompt no debe mencionar la palabra descripcion');
+  assert.ok(!prompt.includes('TEXTO_DESCRIPCION_DISTINTIVO_XYZ'), 'no debe incluir guide.descripcion');
 });
 
-test('G1: buildPropuestaPrompt incluye regla de solo cuartos de la lista', () => {
-  const state = makeStateWithProposal();
+test('F72: buildPropuestaPrompt contiene los ids de getShotTypes() y getMovements()', () => {
+  const state = makeStateConPisos();
   const prompt = logic.buildPropuestaPrompt(state);
-  assert.ok(prompt.includes('SOLO para cuartos de la lista'), 'debe restringir a cuartos de la lista');
+  Object.keys(logic.getShotTypes()).forEach((id) => {
+    assert.ok(prompt.includes('"' + id + '"'), 'debe incluir el id de shotType ' + id);
+  });
+  Object.keys(logic.getMovements()).forEach((id) => {
+    assert.ok(prompt.includes('"' + id + '"'), 'debe incluir el id de movement ' + id);
+  });
 });
 
-test('G1: buildPropuestaPrompt incluye clausula de descripcion vacia devuelve objeto vacio', () => {
-  const state = makeStateWithProposal();
+test('F72: buildPropuestaPrompt incluye instruccion de fotografiar y de responder solo el JSON con porCuarto', () => {
+  const state = makeStateConPisos();
   const prompt = logic.buildPropuestaPrompt(state);
-  assert.ok(prompt.includes('{"porCuarto":{}}'), 'debe mencionar el JSON vacio para descripcion generica');
+  assert.ok(/foto/i.test(prompt), 'debe instruir tomar fotos');
+  assert.ok(prompt.includes('porCuarto'), 'debe incluir el esquema porCuarto');
+  assert.ok(/UNICAMENTE.*JSON/s.test(prompt) || prompt.includes('sin markdown'), 'debe pedir responder solo el JSON');
 });
 
-test('G1: buildPropuestaPrompt indica responder UNICAMENTE con JSON sin markdown', () => {
-  const state = makeStateWithProposal();
+test('F72: ida y vuelta — respuesta con id real pasa por parsePropuesta con agregadas >= 1', () => {
+  const state = makeStateConPisos();
+  const cocinaId = state.espacios[0].id;
+  const texto = '{"porCuarto":{"' + cocinaId + '":[{"nombre":"Push in en la cocina","shotType":"medio","movement":"push_in","enfoque":"Avanza hacia la isla central","priority":"must"}]}}';
+  const result = logic.parsePropuesta(texto, state);
+  assert.ok(result.report.agregadas >= 1, 'debe agregar al menos una toma');
+  assert.ok(result.proposal.porCuarto[cocinaId], 'debe mapear al id real de la cocina');
+  assert.equal(result.proposal.porCuarto[cocinaId][0].nombre, 'Push in en la cocina');
+});
+
+test('F72: buildPropuestaPrompt agrupa por zona dentro de cada piso', () => {
+  const state = makeStateConPisos();
   const prompt = logic.buildPropuestaPrompt(state);
-  assert.ok(prompt.includes('sin markdown'), 'debe prohibir markdown en la respuesta');
+  assert.ok(prompt.includes('Interior'), 'debe incluir la etiqueta de zona Interior');
+  assert.ok(prompt.includes('Exterior'), 'debe incluir la etiqueta de zona Exterior');
+});
+
+test('F72: buildPropuestaPrompt usa la etiqueta neutra Sin piso para espacios sin piso', () => {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Sala');
+  delete state.espacios[0].piso;
+  state.espacios[0].zona = 'interior';
+  const prompt = logic.buildPropuestaPrompt(state);
+  assert.ok(prompt.includes('Sin piso'), 'debe agrupar bajo Sin piso cuando no hay piso');
 });
 
 test('F14: parsePropuesta extrae JSON envuelto en ```json`', () => {
