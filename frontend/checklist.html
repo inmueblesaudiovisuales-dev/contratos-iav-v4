@@ -1657,6 +1657,18 @@ function landingRoomRow(room) {
 function entrarCuarto(id) {
   activeRoomId = id;
   localStorage.setItem(roomKey(), id);
+  // F56 — un cuarto se captura en su lane de cuarto, nunca en 'drone'/'asesor'. Si
+  // venías de la Sesión de drone, modoActual quedaba en 'drone' y la lane 'drone'
+  // persistía en localStorage; entonces activeTarget() (cuyo currentTargets en modo
+  // drone son los targets virtuales, no los espacios) caía a list[0] = la sesión de
+  // drone, mostrándola en vez del cuarto. Regresa a una lane válida para cuartos y
+  // persístela, para que el cuarto sea el target activo.
+  if (state.modoActual === 'drone' || state.modoActual === 'asesor') {
+    const lane = loopModesForRole().find((m) => m !== 'drone' && m !== 'asesor') || 'video';
+    state.modoActual = lane;
+    localStorage.setItem(laneKey(), lane);
+    scheduleSave();
+  }
   capturaScreen = 'cuarto';
   activeView = 'captura';
   render();
