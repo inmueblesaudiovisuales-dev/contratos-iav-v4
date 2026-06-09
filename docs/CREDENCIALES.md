@@ -21,3 +21,18 @@
 
 > Los datos bancarios que ve el cliente (CLABE/cuenta/tarjeta) **no** están aquí: viven en la
 > tabla `config` de D1 (claves `pago_cuenta` / `pago_tarjeta`), editables desde Ajustes en el admin.
+
+## Entrega (media: R2 + Stream) — R113
+
+La galería de entrega (`entrega.html`) sirve las fotos desde R2 y el video desde Cloudflare Stream.
+
+| Ítem | Valor / dónde |
+|------|------|
+| Bucket R2 (fotos) | `contratos-iav-media` (binding `MEDIA`) — crear: `wrangler r2 bucket create contratos-iav-media` |
+| `CF_ACCOUNT_ID` | `0d0d6aaf107ae092f9fb5da06ddb338c` (en `[vars]` de wrangler.toml) |
+| `STREAM_CUSTOMER_CODE` | subdominio de Stream para embeds (`customer-xxxx`) — llenar en `[vars]` tras crear Stream |
+| `STREAM_TOKEN` | **secret** — `wrangler secret put STREAM_TOKEN` (API token con permiso `Stream:Edit`) |
+| Image Transformations | habilitar en zona `inmueblesaudiovisuales.com` > Images > Transformations |
+
+> Setup pendiente de Bruno (una sola vez): crear bucket R2, crear cuenta/token de Stream, poner
+> `STREAM_CUSTOMER_CODE`, `wrangler secret put STREAM_TOKEN`, y activar Transformations.
