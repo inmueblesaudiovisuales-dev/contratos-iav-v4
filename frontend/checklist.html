@@ -2745,7 +2745,7 @@ function abrirSecuenciaAsesor(cameraId) {
       <input class="field" id="last-filename-asesor" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
       <button class="primary block" style="width:100%" onclick="iniciarSecuenciaAsesor('${cameraId}')">Iniciar</button>
     </div>`);
-  setTimeout(() => { const i = document.getElementById('last-filename-asesor'); if (i) { i.focus(); const v = i.value; i.setSelectionRange(v.length, v.length); } }, 50);
+  setTimeout(() => { const i = document.getElementById('last-filename-asesor'); if (i) { i.focus(); const v = i.value; const m = v.match(/\d+$/); if (m) i.setSelectionRange(v.length - m[0].length, v.length); else i.setSelectionRange(v.length, v.length); } }, 50);
 }
 
 function iniciarSecuenciaAsesor(cameraId) {
@@ -4668,7 +4668,7 @@ function abrirSecuencia() {
       <input class="field" id="last-filename" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
       <button class="primary" onclick="iniciarSecuencia()">Iniciar nuevo tramo</button>
     </div>`);
-  setTimeout(() => { const i = document.getElementById('last-filename'); if (i) { i.focus(); const v = i.value; i.setSelectionRange(v.length, v.length); } }, 50);
+  setTimeout(() => { const i = document.getElementById('last-filename'); if (i) { i.focus(); const v = i.value; const m = v.match(/\d+$/); if (m) i.setSelectionRange(v.length - m[0].length, v.length); else i.setSelectionRange(v.length, v.length); } }, 50);
 }
 
 function iniciarSecuencia() {
@@ -4687,14 +4687,17 @@ function iniciarSecuencia() {
   }
 }
 
-// F66 — sugerencia del nombre de archivo. Para Sony pre-rellena el patron de fecha de hoy
-// + prefijo ("YYYYMMDD_PIB") para que solo se complete el numero. Para DJI/Osmo: sin sugerencia
-// (string vacio) hasta dejar los archivos consistentes.
+// F66 — sugerencia del nombre de archivo. Para Sony pre-rellena el nombre COMPLETO del primer
+// archivo del rodaje: fecha de hoy + prefijo + numero con relleno ("YYYYMMDD_PIB0001"). Arranca
+// en 1 porque la numeracion se reinicia en cada rodaje; el numero queda seleccionado por si un
+// rodaje no arranco en 1. Para DJI/Osmo: sin sugerencia (string vacio) hasta dejar los archivos
+// consistentes. SONY_DIGITOS = ancho del contador de la Sony (PIB####).
+const SONY_DIGITOS = 4;
 function sugerenciaNombre(camera) {
   if (!camera || camera.kind !== 'sony') return '';
   const d = new Date();
   const ymd = '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-  return ymd + '_PIB';
+  return ymd + '_PIB' + String(1).padStart(SONY_DIGITOS, '0');
 }
 
 function aplicarSecuencia(cameraId, filename) {
