@@ -260,3 +260,81 @@ Feedback sobre el preview de F40–F44. Decisiones tomadas con Bruno:
   `setupRoomIcon`/`setupIconClass` → ícono real (p. ej. `ti-door` interior, `ti-building` amenidades) en vez de
   `ti-square`. Cubrir en `SETUP_ICON_MAP` los íconos nuevos de amenidades (asadores/palapa/cocina exterior/jardines).
 - **Gate UI** → PASA. **Commit:** `F46 — UI: arranque rapido por piso, basura en hoja, mover de piso, naming/limpieza`.
+
+---
+
+## REPLANTEO CONSOLIDADO (feedback Bruno, 2026-06-09 — F47 motor, F48/F49 UI)
+
+Tras ver F40–F46 en el preview, Bruno pidió REPLANTEAR: una sola pantalla que arma TODA la casa
+(cuartos, subcuartos, amenidades), sin lista aparte ni popup. **Mockup aprobado nuevo:**
+`worker/mock-armar-cuartos/index.html` (consolidado, por piso, con steppers). Reemplaza el esquema vivo +
+la hoja + el arranque rápido por UNA superficie.
+
+Decisiones:
+- **Una pantalla, por secciones:** Pisos (stepper) → un bloque por piso (Planta baja, Planta alta, Planta 3…) →
+  Exterior → Amenidades. Sin lista al fondo, sin popup.
+- **Cada cuarto = stepper (− cantidad +).** El número ES la lista: el `+` crea una instancia numerada
+  (`logic.nextRoomName`), el `−` borra la última instancia de ese concepto en el ámbito (`quitarEspacio`).
+- **Defaults por piso** (curados): Planta baja muestra Sala/Comedor/Cocina/Medio baño/Recámara/Baño; plantas
+  altas muestran Recámara/Baño/Sala/Estudio (sin Cocina). Exterior arranca con Fachada. Amenidades arranca vacío.
+- **"Agregar otro"** por sección: despliega los demás conceptos de esa zona como chips y **se queda abierto**
+  hasta que el usuario lo cierra. Incluye **"Otro cuarto…" de texto libre con autocompletado** contra
+  `logic.searchSpaces` (con sinónimos) + opción crear nuevo. (El autocompletado NO aplica a los steppers.)
+- **Subcuartos inline:** cada cuarto con cantidad ≥1 se puede desplegar (chevron) para ver sus instancias y
+  agregarles Clóset/Baño/Vestidor/Balcón (`addSubRapido`/`parentId`). Plegado por defecto.
+- **Terreno** sin cambios (vista propia). **Drone** (toggle + sesión F38/F39) sin cambios; el toggle de drone
+  se conserva antes del footer. **Modelo de datos / version:1 / normalizeChecklistData** intactos.
+
+### F47 — Motor: enriquecer conceptos + defaults por piso (con tests)
+**Archivos:** `frontend/checklist-logic.js`, `frontend/checklist-logic.test.js`.
+
+- **Enriquecer `BASE_CONCEPTS`** (casa/depto/quinta) para cubrir TODO el mockup consolidado, con `icon`
+  (nombre sin prefijo `ti-`):
+  - interior: + Sala de TV (`device-tv`), Bar (`glass`), (ya: Recibidor/Sala/Comedor/Antecomedor/Cocina/
+    Recámara/Baño/Medio baño/Estudio/Lavandería/Cuarto de servicio).
+  - exterior: + Alberca (`pool`), Palapa (`umbrella`), Asadores (`flame`), Cocina exterior (`tools-kitchen-2`),
+    Fuente (`droplet`), Pérgola (`umbrella`), Deck (`sun`), Fogatero (`flame`), Estacionamiento (`car`),
+    Áreas verdes (`trees`), Cancha (`ball-football`), Acceso principal (`door-enter`), Mirador (`binoculars`),
+    Bodega (`box`) (ya: Fachada/Jardín/Cochera/Patio/Terraza/Roof garden).
+  - amenidades: + Parque (`trees`), Área canina (`paw`), Ludoteca (`puzzle`), Área infantil (`mood-kid`),
+    Sala de negocios (`briefcase`), Salón de eventos (`confetti`), Cowork (`device-laptop`), Spa (`massage`),
+    Cine (`movie`) (ya: Alberca/Casa club/Gimnasio/Cancha/Áreas verdes/Caseta/Asadores/Palapa/Cocina exterior).
+  - `repeatable:true` donde aplique (Recámara, Baño, Medio baño, Cochera, Estacionamiento). `firstName` solo
+    Recámara → 'Recámara principal'.
+- **`defaultVisible(zona, floorIndex)`** → arreglo de `base` visibles por defecto: interior floor 0 vs ≥1 como
+  arriba; exterior `['Fachada']`; amenidades `[]`. Exportar en `logic`.
+- `catalogByZone(tipo)` debe devolver los conceptos enriquecidos por zona en orden de recorrido.
+- **Tests:** `catalogByZone('casa').exterior` incluye 'Alberca' y 'Palapa'; `.amenidades` incluye 'Área canina',
+  'Ludoteca', 'Sala de negocios'; `defaultVisible('interior',0)` incluye 'Cocina' y NO en `('interior',1)`;
+  `defaultVisible('exterior')` = ['Fachada']. Mantener 222+ verde.
+- **Gate motor** (ambos archivos). **Commit:** `F47 — motor: conceptos enriquecidos + defaults por piso (tests)`.
+
+### F48 — UI: pantalla consolidada (steppers por piso/sección + pisos)
+**Archivos:** `frontend/checklist.html`.
+
+- **Reescribir `renderSetup`** a la pantalla consolidada (reemplaza `renderSetupList`, `renderHojaAgregar`,
+  `renderArranqueRapido` y sus helpers): Tipo → Pisos (stepper) → un bloque por piso (interior) → Exterior →
+  Amenidades → toggle de drone (`renderDroneToggle`, intacto) → footer "Listo, a capturar". Terreno sigue
+  desviándose a `renderSetupTerreno`.
+- **Steppers en vivo sobre `state.espacios`:** `+` → `nuevoEspacio(logic.nextRoomName(ambito, concept), piso,
+  zona, null, categoria)`; `−` → `quitarEspacio` de la última instancia del concepto en el ámbito (misma planta
+  para interior; global para exterior/amenidades). Conteo por `logic.baseConcept`.
+- **Pisos stepper:** `+` agrega `logic.nextFloorName(state.pisos)`; `−` quita la última planta SOLO si no tiene
+  cuartos (si tiene, toast). Default 'Planta baja' si no hay pisos.
+- **Visible por sección:** estado UI `setupVisible = { [scopeKey]: [bases...] }` inicializado con
+  `logic.defaultVisible(zona, floorIndex)`; un concepto con instancias siempre se muestra aunque no esté en
+  visible. (Solo UI, no se persiste.)
+- **Gate UI.** **Commit:** `F48 — UI: pantalla consolidada de Armar cuartos (steppers por piso/seccion)`.
+
+### F49 — UI: subcuartos inline + "Agregar otro" (picker abierto + texto libre con autocompletado) + limpieza
+**Archivos:** `frontend/checklist.html`.
+
+- **Subcuartos:** cada renglón con cantidad ≥1 tiene chevron que despliega sus instancias; cada instancia con
+  chips Clóset/Baño/Vestidor/Balcón (`addSubRapido`) y su lista con quitar. Plegado por defecto.
+- **"Agregar otro" por sección:** botón que abre un picker con los conceptos restantes de la zona (chips) y
+  **se queda abierto** hasta cerrarlo; al final, **input "Otro cuarto…" con autocompletado** vía
+  `logic.searchSpaces` (sugerencias + crear nuevo). Al elegir una sugerencia conocida hereda zona/categoría.
+- **Limpieza:** eliminar funciones/CSS muertos del modelo anterior (hoja, esquema vivo, arranque rápido viejo)
+  sin dejar llamadas colgantes (grep). Íconos: cubrir en `SETUP_ICON_MAP` todos los `icon` nuevos de F47 con
+  clases Tabler válidas; ningún concepto cae al fallback (chequeo). Secciones vacías discretas.
+- **Gate UI** + chequeo de íconos. **Commit:** `F49 — UI: subcuartos inline + Agregar otro (picker + texto libre autocompletado) + limpieza`.
