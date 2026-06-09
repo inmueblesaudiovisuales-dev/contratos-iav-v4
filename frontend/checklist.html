@@ -3910,7 +3910,6 @@ function abrirPropuestaIA() {
 
 function renderPropuestaIA() {
   const guide = state.guide || {};
-  const desc = guide.descripcion || '';
   const proposal = guide.proposal;
   const totalIA = proposal
     ? Object.values(proposal.porCuarto || {}).reduce((n, arr) => n + arr.length, 0)
@@ -3956,10 +3955,7 @@ function renderPropuestaIA() {
 
   abrirModal(`<div class="sheet-head"><h2>Propuesta IA</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     ${statusHtml}
-    <div class="field-group">
-      <label class="field-label">Destacados de la propiedad</label>
-      <textarea id="propuestaDescTA" class="field ta" rows="3" placeholder="Vista al lago, terraza amplia, cocina gourmet..." onchange="actualizarDescripcionGuia(this.value)">${esc(desc)}</textarea>
-    </div>
+    <p class="sheet-note">Genera el prompt, toma fotos de todos los espacios del checklist y pega el prompt junto con las fotos en Gemini. Después pega aquí el JSON que te regrese.</p>
     <div class="action-stack">
       <button class="btn" onclick="copiarPromptIA()"><i class="ti ti-copy"></i>Copiar prompt</button>
     </div>
@@ -3974,15 +3970,7 @@ function renderPropuestaIA() {
     ${previewHtml}`);
 }
 
-function actualizarDescripcionGuia(val) {
-  if (!state.guide) state.guide = {};
-  state.guide.descripcion = val;
-  scheduleSave();
-}
-
 function copiarPromptIA() {
-  const ta = document.getElementById('propuestaDescTA');
-  if (ta) actualizarDescripcionGuia(ta.value);
   const prompt = logic.buildPropuestaPrompt(state);
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(prompt)
