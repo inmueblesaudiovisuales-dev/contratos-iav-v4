@@ -8,7 +8,11 @@
   const CAMERA_DEFAULTS = [
     { id: 'sony-main', label: 'Sony principal', mode: 'video', kind: 'sony' },
     { id: 'osmo-pocket-3', label: 'Osmo Pocket 3', mode: 'video', kind: 'dji', optional: true },
-    { id: 'drone-dji', label: 'Drone DJI', mode: 'drone', kind: 'dji' },
+    // F18 (B) — dos drones por defecto, cada uno con su patron/consecutivo propio.
+    // Se conserva el id legacy 'drone-dji' (ahora DJI Air 3) para compatibilidad con
+    // estado viejo, contadores y la camara drone activa por defecto.
+    { id: 'drone-dji', label: 'DJI Air 3', mode: 'drone', kind: 'dji' },
+    { id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', mode: 'drone', kind: 'dji' },
     { id: 'sony-asesor', label: 'Sony FX30', mode: 'asesor', kind: 'sony', role: 'video' },
     { id: 'osmo-asesor', label: 'Osmo + DJI Mic', mode: 'asesor', kind: 'dji', role: 'audio' },
   ];
@@ -185,14 +189,20 @@
   });
 
   const MOVEMENTS = Object.freeze({
-    static:      { label: 'Fija/estatica',                hint: 'Camara inmovil en tripie o gimbal bloqueado.' },
+    // Los 7 movimientos reales user-facing (F15). NO borrar los demas: estado viejo
+    // y sugerencias pueden referenciar ids historicos (static, dolly, umbral, etc.).
+    push_pull:   { label: 'Push/Pull',                    hint: 'Movimiento de profundidad: acercarse o alejarse del foco.' },
+    push_in:     { label: 'Push in',                      hint: 'Avanzar lento hacia un foco.' },
+    pull_out:    { label: 'Pull out',                     hint: 'Retroceder lento revelando contexto.' },
     pan:         { label: 'Paneo',                        hint: 'Giro horizontal sobre eje fijo.' },
-    tilt:        { label: 'Cabeceo/tilt',                 hint: 'Giro vertical (piso a techo).' },
+    tilt:        { label: 'Tilt',                         hint: 'Giro vertical (piso a techo).' },
+    travel:      { label: 'Travel',                       hint: 'Desplazamiento fisico lateral de la camara.' },
+    orbit:       { label: 'Órbita',                       hint: 'Movimiento circular alrededor de un punto.' },
+    reveal:      { label: 'Reveal',                       hint: 'El espacio se descubre progresivamente.' },
+    // Entradas historicas (no user-facing en el panel, conservadas por compatibilidad)
+    static:      { label: 'Fija/estatica',                hint: 'Camara inmovil en tripie o gimbal bloqueado.' },
     dolly:       { label: 'Travelling/dolly',             hint: 'Desplazamiento fisico de la camara.' },
-    push_in:     { label: 'Acercamiento',                 hint: 'Avanzar lento hacia un foco.' },
-    pull_out:    { label: 'Alejamiento',                  hint: 'Retroceder lento revelando contexto.' },
     gimbal_walk: { label: 'Caminata con gimbal',          hint: 'Ninja walk: rodillas flexionadas, paso suave.' },
-    orbit:       { label: 'Orbital',                      hint: 'Movimiento circular alrededor de un punto.' },
     umbral:      { label: 'Revelacion tras umbral',       hint: 'Cruzar una puerta para descubrir el cuarto.' },
     parallax:    { label: 'Parallax',                     hint: 'Objeto en primer plano cruza mas rapido que el fondo.' },
     tilt_up:     { label: 'Revelacion vertical',          hint: 'Empezar bajo y subir para descubrir altura.' },
@@ -201,6 +211,27 @@
     pedestal:    { label: 'Pies a cabeza',                hint: 'Tilt desde el piso subiendo para presentar.' },
     whip:        { label: 'Whip pan/transicion',          hint: 'Paneo rapido desenfocado entre cuartos.' },
   });
+
+  // ─── Listas curadas user-facing para el panel "Etiquetar toma" (F15) ──────────
+  // Plano: solo Abierto (general) y Detalle (detalle). El vocabulario es chico.
+  // Movimiento: los 7 reales en el orden del mockup recomendacion.html.
+  const CURATED_SHOT_TYPES = Object.freeze(['general', 'detalle']);
+  const CURATED_MOVEMENTS = Object.freeze(['push_pull', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
+
+  // ─── F67 — Movimientos ofrecidos en el dictado ────────────────────────────────
+  // Los 8 ids acordados para el importador de dictado. Todos existen en getMovements();
+  // las etiquetas salen del motor, el set se fija aqui (no se ofrecen ids historicos).
+  const DICTADO_MOVEMENTS = Object.freeze(['push_pull', 'push_in', 'pull_out', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
+
+  // ─── Sub-controles contextuales (F28): Sentido (Push/Pull) y Pared (Reveal) ───
+  // Opcionales y aditivos. Ids del sistema sin acentos; labels visibles con acentos.
+  const SENTIDO_OPTS = Object.freeze(['in', 'out']);
+  const SENTIDO_LABELS = Object.freeze({ in: 'Push in', out: 'Pull out' });
+  function sentidoLabel(id) { return SENTIDO_LABELS[id] || null; }
+
+  const PARED_OPTS = Object.freeze(['izq', 'der']);
+  const PARED_LABELS = Object.freeze({ izq: 'Izquierda', der: 'Derecha' });
+  function paredLabel(id) { return PARED_LABELS[id] || null; }
 
   const GUIDE_LIBRARY = Object.freeze({
     entrada: { label: 'Entrada/recibidor', shots: Object.freeze([
@@ -347,6 +378,214 @@
     ]) },
   });
 
+  // ─── F17 — Vocabulario aereo propio (tomas de drone) ──────────────────────────
+  // Tipos de toma aereos, independientes de SHOT_TYPES (que es para video/foto).
+  // Aditivo: no reemplaza SHOT_TYPES ni MOVEMENTS; los ids no chocan con ellos.
+  const DRONE_SHOT_TYPES = Object.freeze({
+    establecimiento: { label: 'Establecimiento',  hint: 'Encuadra la propiedad completa desde altura media.' },
+    orbita:          { label: 'Órbita',           hint: 'Vuelo circular alrededor del sujeto.' },
+    cenital:         { label: 'Cenital',          hint: 'Top-down mostrando dimensión y distribución.' },
+    reveal_aereo:    { label: 'Reveal aéreo',     hint: 'El sujeto se descubre subiendo o avanzando.' },
+    fly_through:     { label: 'Fly-through',      hint: 'Vuelo continuo a baja altura cruzando el espacio.' },
+    empuje_acceso:   { label: 'Empuje al acceso', hint: 'Desciende y avanza hacia el acceso principal.' },
+    entorno:         { label: 'Entorno',          hint: 'Paneo de contexto: colonia, vialidades, plusvalía.' },
+  });
+
+  // ─── F17 — Biblioteca de sujetos aereos ───────────────────────────────────────
+  // Cada sujeto trae sus tomas aereas sugeridas (shotType apunta a DRONE_SHOT_TYPES).
+  // keywords sirven para emparejar el nombre de un espacio del piso Drone con su sujeto.
+  const AERIAL_SUBJECTS = Object.freeze({
+    fachada_aerea: { label: 'Fachada aérea', keywords: ['fachada'], shots: Object.freeze([
+      { id: 'aereo.fachada.establecimiento', nombre: 'Establecimiento de fachada', shotType: 'establecimiento', movement: 'static',  enfoque: 'Propiedad completa desde altura media.',          priority: 'must' },
+      { id: 'aereo.fachada.empuje',          nombre: 'Empuje hacia la fachada',    shotType: 'empuje_acceso',   movement: 'push_in', enfoque: 'Desciende y avanza hacia el frente.',              priority: 'nice' },
+    ]) },
+    orbita_casa: { label: 'Órbita de la casa', keywords: ['orbita', 'órbita', 'casa'], shots: Object.freeze([
+      { id: 'aereo.orbita.completa', nombre: 'Órbita 360 grados', shotType: 'orbita', movement: 'orbit', enfoque: 'Órbita completa alrededor de la propiedad.', priority: 'must' },
+      { id: 'aereo.orbita.cenital',  nombre: 'Cenital del lote',  shotType: 'cenital',movement: 'static',enfoque: 'Top-down mostrando distribución del terreno.', priority: 'nice' },
+    ]) },
+    entorno_colonia: { label: 'Entorno / colonia', keywords: ['entorno', 'colonia', 'ubicacion', 'ubicación', 'vecindario'], shots: Object.freeze([
+      { id: 'aereo.entorno.paneo',   nombre: 'Paneo de contexto', shotType: 'entorno', movement: 'pan', enfoque: 'Colonia, vialidades y plusvalía del sector.', priority: 'must' },
+    ]) },
+    vista_que_vende: { label: 'Vista que vende', keywords: ['vista'], shots: Object.freeze([
+      { id: 'aereo.vista.reveal', nombre: 'Reveal de la vista', shotType: 'reveal_aereo', movement: 'tilt', enfoque: 'Descubre la vista panorámica como argumento de venta.', priority: 'must' },
+    ]) },
+    jardin_aereo: { label: 'Jardín aéreo', keywords: ['jardin', 'jardín'], shots: Object.freeze([
+      { id: 'aereo.jardin.cenital',     nombre: 'Cenital del jardín',     shotType: 'cenital',     movement: 'static', enfoque: 'Top-down mostrando extensión de las áreas verdes.', priority: 'must' },
+      { id: 'aereo.jardin.flythrough',  nombre: 'Fly-through del jardín',  shotType: 'fly_through', movement: 'travel', enfoque: 'Vuela a baja altura entre la vegetación.',          priority: 'nice' },
+    ]) },
+    alberca_aerea: { label: 'Alberca aérea', keywords: ['alberca', 'piscina'], shots: Object.freeze([
+      { id: 'aereo.alberca.cenital', nombre: 'Cenital de la alberca', shotType: 'cenital', movement: 'static', enfoque: 'Top-down sobre el vaso y el área social.', priority: 'must' },
+      { id: 'aereo.alberca.reveal',  nombre: 'Reveal del agua',       shotType: 'reveal_aereo', movement: 'pull_out', enfoque: 'Aleja ascendiendo descubriendo la alberca.', priority: 'nice' },
+    ]) },
+    roof_terraza: { label: 'Roof / terraza', keywords: ['roof', 'terraza', 'azotea'], shots: Object.freeze([
+      { id: 'aereo.roof.reveal',  nombre: 'Reveal de la terraza', shotType: 'reveal_aereo', movement: 'tilt',  enfoque: 'Descubre el roof y su vista.',           priority: 'must' },
+      { id: 'aereo.roof.orbita',  nombre: 'Órbita del roof',      shotType: 'orbita',       movement: 'orbit', enfoque: 'Órbita cerrada al nivel de la terraza.', priority: 'nice' },
+    ]) },
+    golden_hour: { label: 'Golden hour', keywords: ['golden', 'atardecer'], shots: Object.freeze([
+      { id: 'aereo.golden.establecimiento', nombre: 'Establecimiento al atardecer', shotType: 'establecimiento', movement: 'static', enfoque: 'Luz cálida del atardecer sobre la propiedad.', priority: 'must' },
+      { id: 'aereo.golden.orbita',          nombre: 'Órbita con sol bajo',          shotType: 'orbita',         movement: 'orbit',  enfoque: 'Órbita aprovechando los reflejos de la hora dorada.', priority: 'nice' },
+    ]) },
+    terreno_completo: { label: 'Terreno completo', keywords: ['terreno'], shots: Object.freeze([
+      { id: 'aereo.terreno.cenital',         nombre: 'Cenital de límites',          shotType: 'cenital',        movement: 'static', enfoque: 'Top-down mostrando forma y dimensión del lote.', priority: 'must' },
+      { id: 'aereo.terreno.establecimiento', nombre: 'Establecimiento desde altura', shotType: 'establecimiento', movement: 'static', enfoque: 'Muestra el terreno en su contexto.',             priority: 'must' },
+    ]) },
+    perimetro_colindancias: { label: 'Perímetro / colindancias', keywords: ['perimetro', 'perímetro', 'colindancia', 'colindancias'], shots: Object.freeze([
+      { id: 'aereo.perimetro.vuelo', nombre: 'Vuelo de perímetro', shotType: 'fly_through', movement: 'travel', enfoque: 'Recorre el perímetro mostrando colindancias.', priority: 'must' },
+    ]) },
+    acceso_calle: { label: 'Acceso / calle', keywords: ['acceso', 'calle', 'entrada'], shots: Object.freeze([
+      { id: 'aereo.acceso.empuje', nombre: 'Empuje al acceso', shotType: 'empuje_acceso', movement: 'push_in', enfoque: 'Desciende hacia el acceso principal desde la calle.', priority: 'must' },
+    ]) },
+    cercania_vialidades: { label: 'Cercanía a vialidades', keywords: ['vialidad', 'vialidades', 'avenida', 'carretera'], shots: Object.freeze([
+      { id: 'aereo.vialidades.entorno', nombre: 'Entorno de vialidades', shotType: 'entorno', movement: 'pan', enfoque: 'Muestra cercanía a avenidas y conectividad.', priority: 'must' },
+    ]) },
+  });
+
+  // ─── F17 (A) — Sesgo de sujetos aereos por tipo de propiedad ──────────────────
+  // Ids de AERIAL_SUBJECTS en orden de prioridad por tipo. casa es el fallback.
+  const AERIAL_SUBJECTS_BY_PROPERTY = Object.freeze({
+    casa:         Object.freeze(['fachada_aerea', 'orbita_casa', 'jardin_aereo', 'entorno_colonia', 'vista_que_vende', 'golden_hour']),
+    departamento: Object.freeze(['fachada_aerea', 'roof_terraza', 'entorno_colonia', 'vista_que_vende', 'golden_hour']),
+    quinta:       Object.freeze(['terreno_completo', 'alberca_aerea', 'jardin_aereo', 'orbita_casa', 'entorno_colonia']),
+    terreno:      Object.freeze(['terreno_completo', 'perimetro_colindancias', 'cercania_vialidades', 'acceso_calle', 'entorno_colonia']),
+  });
+
+  // ─── F34 — Escalas de drone ───────────────────────────────────────────────────
+  // El drone deja de ser un piso con pseudo-cuartos y pasa a ser una lane por
+  // escalas. ids sin acentos; labels con acentos. amenidades trae appliesWhen para
+  // que F35 decida (privada/coto/depto). Aditivo: no reemplaza nada.
+  const DRONE_SCALES = Object.freeze([
+    Object.freeze({ id: 'propiedad',  label: 'Propiedad' }),
+    Object.freeze({ id: 'amenidades', label: 'Amenidades', appliesWhen: Object.freeze(['privada', 'coto', 'departamento']) }),
+    Object.freeze({ id: 'inmediato',  label: 'Inmediato / colonia' }),
+    Object.freeze({ id: 'ubicacion',  label: 'Ubicación / contexto' }),
+  ]);
+
+  // ─── F34 — Pool de tomas aereas (EXTIENDE AERIAL_SUBJECTS, no lo reemplaza) ────
+  // Catalogo plano de tomas aereas sugeridas. Cada toma:
+  //   { id, label, shotType, movement, scale, must, tipos, situacional? }
+  //   - id: sin acentos; label: con acentos (texto visible).
+  //   - shotType: id de DRONE_SHOT_TYPES.
+  //   - scale: id de DRONE_SCALES.
+  //   - tipos: ['casa'|'quinta'|'departamento'|'terreno'|'all'].
+  //   - feature (opcional): asocia la toma al vocabulario aereo de un feature
+  //     derivado (alberca, jardin, roof…) para suggestionsForTarget de F35.
+  // SIN golden hour (se elimina del vocabulario sugerido nuevo; el sujeto viejo
+  // golden_hour permanece en AERIAL_SUBJECTS solo por compatibilidad de ids).
+  // Los ids aereos viejos (aereo.*) NO se tocan: siguen en AERIAL_SUBJECTS y
+  // findSuggestion debe resolverlos. Aqui usamos ids nuevos pool.aereo.* para no
+  // chocar con ellos.
+  const AERIAL_POOL = Object.freeze([
+    // ── Canonica: Salida a contexto (must en TODOS los tipos) ──────────────────
+    // La porta un target FIJO property-wide (scale 'propiedad'); es la toma de
+    // cierre / reveal en reversa. Absorbe los "Reveal de la casa/lote/quinta".
+    Object.freeze({ id: 'pool.aereo.salida_contexto', label: 'Salida a contexto', shotType: 'reveal_aereo', movement: 'pull_out', scale: 'propiedad', must: true, tipos: Object.freeze(['all']) }),
+
+    // ── Propiedad — property-wide (casa/quinta/departamento) ───────────────────
+    Object.freeze({ id: 'pool.aereo.fachada_aerea',      label: 'Fachada aérea',           shotType: 'establecimiento', movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.orbita_casa',        label: 'Órbita de la casa',       shotType: 'orbita',          movement: 'orbit',   scale: 'propiedad', must: true,  tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.cenital_giratorio',  label: 'Cenital giratorio',       shotType: 'cenital',         movement: 'orbit',   scale: 'propiedad', must: true,  tipos: Object.freeze(['casa', 'quinta']) }),
+    Object.freeze({ id: 'pool.aereo.contrapicado_fachada', label: 'Contrapicado de fachada', shotType: 'reveal_aereo', movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.orbita_ascendente',  label: 'Órbita ascendente',       shotType: 'orbita',          movement: 'orbit',   scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.fly_through',        label: 'Fly-through',              shotType: 'fly_through',     movement: 'travel',  scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.reveal_primer_plano', label: 'Reveal con primer plano', shotType: 'reveal_aereo',  movement: 'parallax',scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.reveal_barda',      label: 'Reveal sobre barda',       shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']), situacional: true }),
+    Object.freeze({ id: 'pool.aereo.roof_azotea',       label: 'Roof / azotea',            shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']), feature: 'roof' }),
+    Object.freeze({ id: 'pool.aereo.vista_que_vende',   label: 'Vista que vende',          shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.patio_jardin_alberca', label: 'Patio / jardín / alberca aéreo', shotType: 'cenital', movement: 'static', scale: 'propiedad', must: false, derivable: true, tipos: Object.freeze(['casa']) }),
+
+    // Quinta — property-wide
+    Object.freeze({ id: 'pool.aereo.orbita_propiedad',  label: 'Órbita de la propiedad',   shotType: 'orbita',          movement: 'orbit',   scale: 'propiedad', must: true,  tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.alberca_palapa',    label: 'Alberca / palapa aérea',   shotType: 'cenital',         movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['quinta']), feature: 'alberca' }),
+    Object.freeze({ id: 'pool.aereo.casa_principal',    label: 'Casa principal / fachada aérea', shotType: 'establecimiento', movement: 'static', scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.jardines',          label: 'Jardines / áreas verdes',  shotType: 'cenital',         movement: 'static',  scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']), feature: 'jardin' }),
+    Object.freeze({ id: 'pool.aereo.cancha_cabanas',    label: 'Cancha / cabañas / área de evento', shotType: 'establecimiento', movement: 'static', scale: 'propiedad', must: false, derivable: true, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.vista_terraza',     label: 'Vista desde terraza',      shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.reveal_vista',      label: 'Reveal de la vista',       shotType: 'reveal_aereo',    movement: 'tilt',    scale: 'propiedad', must: false, tipos: Object.freeze(['quinta', 'departamento']) }),
+
+    // Departamento — edificio (Propiedad)
+    Object.freeze({ id: 'pool.aereo.exterior_edificio', label: 'Exterior del edificio',    shotType: 'establecimiento', movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['departamento']) }),
+    Object.freeze({ id: 'pool.aereo.vista_altura',      label: 'La vista desde esa altura', shotType: 'reveal_aereo',   movement: 'tilt',    scale: 'propiedad', must: true,  tipos: Object.freeze(['departamento']) }),
+    Object.freeze({ id: 'pool.aereo.balcon_terraza',    label: 'El balcón / terraza desde fuera', shotType: 'reveal_aereo', movement: 'static', scale: 'propiedad', must: false, tipos: Object.freeze(['departamento']) }),
+
+    // ── Amenidades ─────────────────────────────────────────────────────────────
+    // Casa (si privada/coto)
+    Object.freeze({ id: 'pool.aereo.casa_club',         label: 'Casa club',                shotType: 'establecimiento', movement: 'static',  scale: 'amenidades', must: false, derivable: true, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.alberca_comun',     label: 'Alberca común',            shotType: 'cenital',         movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['casa']), feature: 'alberca' }),
+    Object.freeze({ id: 'pool.aereo.areas_verdes',      label: 'Áreas verdes',             shotType: 'cenital',         movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['casa']), feature: 'jardin' }),
+    // Departamento (amenidades del edificio)
+    Object.freeze({ id: 'pool.aereo.roof_garden',       label: 'Roof garden / terraza común', shotType: 'reveal_aereo', movement: 'tilt',  scale: 'amenidades', must: true,  tipos: Object.freeze(['departamento']), feature: 'roof' }),
+    Object.freeze({ id: 'pool.aereo.alberca_comunes',   label: 'Alberca / áreas comunes',  shotType: 'cenital',         movement: 'static',  scale: 'amenidades', must: false, tipos: Object.freeze(['departamento']), feature: 'alberca' }),
+    Object.freeze({ id: 'pool.aereo.lobby_acceso',      label: 'Lobby / acceso',           shotType: 'empuje_acceso',   movement: 'push_in', scale: 'amenidades', must: false, derivable: true, tipos: Object.freeze(['departamento']) }),
+
+    // ── Inmediato / colonia (targets fijos) ────────────────────────────────────
+    Object.freeze({ id: 'pool.aereo.calle_acceso',      label: 'Calle y acceso',           shotType: 'empuje_acceso',   movement: 'push_in', scale: 'inmediato', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.cuadra_vecindario', label: 'La cuadra / vecindario',   shotType: 'entorno',         movement: 'pan',     scale: 'inmediato', must: false, tipos: Object.freeze(['casa']) }),
+    Object.freeze({ id: 'pool.aereo.acceso_caseta',     label: 'Acceso / caseta / entrada', shotType: 'empuje_acceso',  movement: 'push_in', scale: 'inmediato', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.entorno_natural',   label: 'Entorno natural',          shotType: 'entorno',         movement: 'pan',     scale: 'inmediato', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.zona_colonia',      label: 'La zona / colonia',        shotType: 'entorno',         movement: 'pan',     scale: 'inmediato', must: true,  tipos: Object.freeze(['departamento']) }),
+    Object.freeze({ id: 'pool.aereo.la_calle',          label: 'La calle',                 shotType: 'entorno',         movement: 'pan',     scale: 'inmediato', must: false, tipos: Object.freeze(['departamento']) }),
+
+    // ── Ubicación / contexto (targets fijos) ───────────────────────────────────
+    Object.freeze({ id: 'pool.aereo.ubicacion_ciudad',  label: 'Ubicación en la ciudad',   shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['casa', 'departamento']) }),
+    Object.freeze({ id: 'pool.aereo.cercania_vialidades', label: 'Cercanía a vialidades',  shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['casa', 'departamento']) }),
+    Object.freeze({ id: 'pool.aereo.hito',              label: 'Hito',                     shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['casa', 'departamento']) }),
+    Object.freeze({ id: 'pool.aereo.como_se_llega',     label: 'Cómo se llega',            shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['quinta']) }),
+    Object.freeze({ id: 'pool.aereo.ubicacion_regional', label: 'Ubicación regional',      shotType: 'entorno',         movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['quinta']) }),
+
+    // ── Terreno — lista única (14; sin sesgo por subtipo) ──────────────────────
+    // Must (7): cenital de limites, establecimiento, referencia de escala,
+    // acceso/frente, vista que vende, donde iria la casa, salida a contexto.
+    Object.freeze({ id: 'pool.aereo.terreno.cenital_limites',  label: 'Cenital de límites',                shotType: 'cenital',        movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.establecimiento',  label: 'Establecimiento desde altura',      shotType: 'establecimiento',movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.referencia_escala', label: 'Referencia de escala',             shotType: 'establecimiento',movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.acceso_frente',    label: 'Acceso / frente a calle',           shotType: 'empuje_acceso',  movement: 'push_in', scale: 'inmediato', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.vista_que_vende',  label: 'Vista que vende',                   shotType: 'reveal_aereo',   movement: 'tilt',    scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.donde_iria_casa',  label: 'Dónde iría la casa',                shotType: 'cenital',        movement: 'static',  scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.salida_contexto',  label: 'Salida a contexto',                 shotType: 'reveal_aereo',   movement: 'pull_out',scale: 'propiedad', must: true,  tipos: Object.freeze(['terreno']) }),
+    // Opcionales (7).
+    Object.freeze({ id: 'pool.aereo.terreno.orbita',          label: 'Órbita del terreno',                shotType: 'orbita',         movement: 'orbit',   scale: 'propiedad', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.topografia',      label: 'Topografía / barrido lateral',      shotType: 'fly_through',    movement: 'travel',  scale: 'propiedad', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.fly_through',     label: 'Fly-through del lote',               shotType: 'fly_through',    movement: 'travel',  scale: 'propiedad', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.cercania_vialidades', label: 'Cercanía a vialidades',         shotType: 'entorno',        movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.hito',           label: 'Referencia a un hito',               shotType: 'entorno',        movement: 'pan',     scale: 'ubicacion', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.entorno_vecino', label: 'Entorno / desarrollo vecino',        shotType: 'entorno',        movement: 'pan',     scale: 'inmediato', must: false, tipos: Object.freeze(['terreno']) }),
+    Object.freeze({ id: 'pool.aereo.terreno.perimetro',      label: 'Perímetro / colindancias',           shotType: 'fly_through',    movement: 'travel',  scale: 'propiedad', must: false, tipos: Object.freeze(['terreno']) }),
+  // Cada toma expone `nombre` (= `label`): el resto del motor, la UI (capa de
+  // sugeridas) y el export resuelven el texto visible por `nombre`. Sin esto, las
+  // sugeridas del pool mostraban el id crudo (p.ej. "pool.aereo.terreno.cenital_limites").
+  ].map((shot) => Object.freeze(Object.assign({ nombre: shot.label }, shot))));
+
+  // ─── F34 — Catalogo de movimientos "standout" reutilizables por feature ───────
+  // Vocabulario aereo compartido que un feature derivado (alberca, jardin, roof…)
+  // puede ofrecer. Cada entrada apunta a una toma del AERIAL_POOL por id; el
+  // vocabulario base es comun, sesgado por feature donde aplica.
+  const AERIAL_STANDOUT_MOVES = Object.freeze([
+    Object.freeze({ id: 'pool.aereo.cenital_giratorio',   feature: 'all' }),
+    Object.freeze({ id: 'pool.aereo.orbita_ascendente',   feature: 'all' }),
+    Object.freeze({ id: 'pool.aereo.fly_through',         feature: 'all' }),
+    Object.freeze({ id: 'pool.aereo.contrapicado_fachada', feature: 'fachada' }),
+    Object.freeze({ id: 'pool.aereo.reveal_primer_plano', feature: 'all' }),
+    Object.freeze({ id: 'pool.aereo.vista_terraza',      feature: 'terraza' }),
+    Object.freeze({ id: 'pool.aereo.reveal_vista',       feature: 'vista' }),
+    Object.freeze({ id: 'pool.aereo.reveal_barda',       feature: 'barda', situacional: true }),
+  ]);
+
+  // Vocabulario aereo por feature derivado (alberca, jardin, roof, terraza…).
+  // Tomas base comunes + sesgo por feature. Se usa en suggestionsForTarget para
+  // un target derivado de un espacio real (p. ej. "Alberca aérea").
+  const AERIAL_FEATURE_VOCAB = Object.freeze({
+    alberca: Object.freeze(['pool.aereo.patio_jardin_alberca', 'pool.aereo.alberca_palapa', 'pool.aereo.cenital_giratorio', 'pool.aereo.orbita_ascendente', 'pool.aereo.reveal_primer_plano']),
+    jardin:  Object.freeze(['pool.aereo.jardines', 'pool.aereo.cenital_giratorio', 'pool.aereo.fly_through', 'pool.aereo.reveal_primer_plano']),
+    roof:    Object.freeze(['pool.aereo.roof_garden', 'pool.aereo.roof_azotea', 'pool.aereo.vista_terraza', 'pool.aereo.reveal_vista', 'pool.aereo.orbita_ascendente']),
+    terraza: Object.freeze(['pool.aereo.vista_terraza', 'pool.aereo.reveal_vista', 'pool.aereo.cenital_giratorio']),
+    cancha:  Object.freeze(['pool.aereo.cancha_cabanas', 'pool.aereo.cenital_giratorio', 'pool.aereo.fly_through']),
+  });
+
+  // Indice id -> toma del pool, para resolver rapido (findSuggestion, vocab).
+  const AERIAL_POOL_INDEX = Object.freeze(
+    AERIAL_POOL.reduce((acc, shot) => { acc[shot.id] = shot; return acc; }, Object.create(null))
+  );
+
   const AMENITY_GUIDE = Object.freeze({
     alberca: { label: 'Alberca/piscina', shots: Object.freeze([
       { id: 'amenity.alberca.reveal',  nombre: 'Reveal del agua',             shotType: 'reveal',    movement: 'pull_out', enfoque: 'Reflejo y color del agua; empieza en el detalle y abre a la alberca completa.',priority: 'must' },
@@ -452,18 +691,19 @@
     { id: 'medio_bano',  label: 'Medio bano',             keywords: ['medio bano', 'visitas'] },
     { id: 'bano',        label: 'Bano completo',          keywords: ['bano', 'wc', 'toilet', 'sanitario'] },
     { id: 'lavado',      label: 'Cuarto de lavado',       keywords: ['lavado', 'lavanderia'] },
-    { id: 'bodega',      label: 'Bodega/servicio',        keywords: ['bodega', 'servicio', 'almacen'] },
+    { id: 'bodega',      label: 'Bodega/servicio',        keywords: ['bodega', 'servicio', 'almacen', 'cuarto de servicio'] },
+    { id: 'servicio',    label: 'Cuarto de servicio',     keywords: ['servicio', 'sirvienta', 'empleada', 'muchacha'] },
     { id: 'vestidor',    label: 'Vestidor/closet',        keywords: ['vestidor', 'closet', 'walk-in'] },
     { id: 'cocina',      label: 'Cocina',                 keywords: ['cocina', 'kitchen', 'cocineta'] },
     { id: 'comedor',     label: 'Comedor',                keywords: ['comedor', 'antecomedor'] },
-    { id: 'sala',        label: 'Sala/estancia',          keywords: ['sala', 'living', 'estar'] },
-    { id: 'family',      label: 'Family room/sala de TV', keywords: ['family', 'tv', 'entretenimiento'] },
-    { id: 'estudio',     label: 'Estudio/home office',    keywords: ['estudio', 'oficina', 'office', 'despacho'] },
-    { id: 'recamara',    label: 'Recamara',               keywords: ['recamara', 'habitacion', 'dormitorio', 'alcoba', 'suite'] },
+    { id: 'sala',        label: 'Sala/estancia',          keywords: ['sala', 'living', 'estar', 'estancia', 'salon'] },
+    { id: 'family',      label: 'Family room/sala de TV', keywords: ['family', 'tv', 'entretenimiento', 'sala de tv', 'tele', 'juegos'] },
+    { id: 'estudio',     label: 'Estudio/home office',    keywords: ['estudio', 'oficina', 'office', 'despacho', 'biblioteca'] },
+    { id: 'recamara',    label: 'Recamara',               keywords: ['recamara', 'habitacion', 'dormitorio', 'alcoba', 'suite', 'cuarto'] },
     { id: 'garaje',      label: 'Garaje/cochera',         keywords: ['garaje', 'cochera', 'garage'] },
     { id: 'pasillo',     label: 'Pasillo/escaleras',      keywords: ['pasillo', 'escalera', 'hall', 'vestibulo'] },
-    { id: 'entrada',     label: 'Entrada/recibidor',      keywords: ['entrada', 'recibidor', 'foyer', 'acceso'] },
-    { id: 'terraza',     label: 'Terraza/balcon',         keywords: ['terraza', 'balcon', 'patio', 'roof'] },
+    { id: 'entrada',     label: 'Entrada/recibidor',      keywords: ['entrada', 'recibidor', 'foyer', 'acceso', 'vestibulo', 'hall', 'lobby'] },
+    { id: 'terraza',     label: 'Terraza/balcon',         keywords: ['terraza', 'balcon', 'patio', 'roof', 'azotea', 'roofgarden'] },
     { id: 'exterior',    label: 'Exterior/jardin',        keywords: ['fachada', 'jardin', 'exterior', 'frente'] },
   ]);
 
@@ -489,6 +729,7 @@
   let _effectiveDroneGuide     = null;
   let _effectiveAmenityGuide   = null;
   let _effectiveRoomCategories = null;
+  let _effectiveCameras        = null;
 
   function getShotTypes()      { return _effectiveShotTypes      || SHOT_TYPES; }
   function getMovements()      { return _effectiveMovements      || MOVEMENTS; }
@@ -496,6 +737,27 @@
   function getDroneGuide()     { return _effectiveDroneGuide     || DRONE_GUIDE; }
   function getAmenityGuide()   { return _effectiveAmenityGuide   || AMENITY_GUIDE; }
   function getRoomCategories() { return _effectiveRoomCategories || ROOM_CATEGORIES; }
+  // F17 — el vocabulario aereo no es configurable por ahora; devuelve la constante.
+  function getDroneShotTypes() { return DRONE_SHOT_TYPES; }
+
+  function getCameras(state) {
+    const result = CAMERA_DEFAULTS.map((camera) => Object.assign({}, camera));
+    if (Array.isArray(_effectiveCameras)) {
+      for (const cam of _effectiveCameras) {
+        if (!cam || typeof cam !== 'object' || !cam.id) continue;
+        const idx = result.findIndex((item) => item.id === cam.id);
+        if (idx >= 0) result[idx] = Object.assign({}, result[idx], cam);
+        else result.push(Object.assign({}, cam));
+      }
+    }
+    const stateCameras = state && Array.isArray(state.cameras) ? state.cameras : [];
+    for (const cam of stateCameras) {
+      if (!cam || typeof cam !== 'object' || !cam.id) continue;
+      if (result.some((item) => item.id === cam.id)) continue;
+      result.push(Object.assign({}, cam));
+    }
+    return result;
+  }
 
   function _mergeShots(defaultShots, overrideShots) {
     if (!Array.isArray(overrideShots)) return defaultShots.slice();
@@ -599,6 +861,15 @@
         _effectiveRoomCategories = null;
       }
     } catch (_) { _effectiveRoomCategories = null; }
+    try {
+      if (Array.isArray(config.cameras)) {
+        _effectiveCameras = config.cameras
+          .filter((cam) => cam && typeof cam === 'object' && cam.id)
+          .map((cam) => Object.assign({}, cam));
+      } else {
+        _effectiveCameras = null;
+      }
+    } catch (_) { _effectiveCameras = null; }
   }
 
   function resetGuideConfig() {
@@ -608,6 +879,7 @@
     _effectiveDroneGuide     = null;
     _effectiveAmenityGuide   = null;
     _effectiveRoomCategories = null;
+    _effectiveCameras        = null;
   }
 
   // F2 — keywords para deteccion de amenidades por nombre de espacio
@@ -668,7 +940,7 @@
 
   function suggestionsForSpace(categoria, nombre) {
     const lib = getGuideLibrary();
-    const ALIAS = { exterior: 'terraza' };
+    const ALIAS = { exterior: 'terraza', servicio: 'bodega' };
     const resolved = lib[categoria] ? categoria : (ALIAS[categoria] || 'generico');
     const entry = lib[resolved] || lib.generico;
     const base = Array.from(entry.shots);
@@ -685,6 +957,86 @@
     return Array.from((droneLib[tipoPropiedad] || droneLib.casa).shots);
   }
 
+  // ─── F17 — Sujetos aereos: emparejado por nombre y sugerencias aereas ─────────
+  // Devuelve el id del sujeto aereo cuyo keyword aparezca en el nombre del espacio.
+  function aerialSubjectFromName(nombre) {
+    const n = normNombre(nombre || '');
+    if (!n) return null;
+    const words = new Set(n.split(' ').filter(Boolean));
+    for (const [id, subject] of Object.entries(AERIAL_SUBJECTS)) {
+      for (const kw of subject.keywords) {
+        const kwNorm = normNombre(kw);
+        if (kwNorm.includes(' ') ? n.includes(kwNorm) : words.has(kwNorm)) return id;
+      }
+    }
+    return null;
+  }
+
+  // Sugerencias aereas (tomas) de un sujeto dado: por id o por nombre del espacio.
+  function aerialSuggestionsForSubject(subjectOrName) {
+    if (!subjectOrName) return [];
+    const direct = AERIAL_SUBJECTS[subjectOrName];
+    if (direct) return Array.from(direct.shots);
+    const matchedId = aerialSubjectFromName(subjectOrName);
+    if (matchedId) return Array.from(AERIAL_SUBJECTS[matchedId].shots);
+    return [];
+  }
+
+  // F17 (A) — sesgo por tipo de propiedad: devuelve la lista ordenada de sujetos
+  // aereos sugeridos { id, label, shots }. Si no se pasa tipo, usa el del guide.
+  function suggestedAerialSubjects(state, tipoPropiedad) {
+    const tipo = tipoPropiedad != null
+      ? tipoPropiedad
+      : (state && state.guide ? state.guide.tipoPropiedad : null);
+    const ids = AERIAL_SUBJECTS_BY_PROPERTY[tipo] || AERIAL_SUBJECTS_BY_PROPERTY.casa;
+    return ids
+      .filter((id) => AERIAL_SUBJECTS[id])
+      .map((id) => ({ id, label: AERIAL_SUBJECTS[id].label, shots: Array.from(AERIAL_SUBJECTS[id].shots) }));
+  }
+
+  // ─── F34 — Helpers del pool aereo (escalas / features) ────────────────────────
+  // must primero, conservando el orden relativo dentro de cada grupo.
+  function sortMustFirst(shots) {
+    const list = Array.isArray(shots) ? shots.slice() : [];
+    return list.sort((a, b) => (b.must === true ? 1 : 0) - (a.must === true ? 1 : 0));
+  }
+
+  // ¿Aplica esta toma al tipo de propiedad dado? ('all' aplica a todos.)
+  function aerialShotAppliesToTipo(shot, tipo) {
+    const tipos = shot && Array.isArray(shot.tipos) ? shot.tipos : [];
+    if (tipos.includes('all')) return true;
+    return tipo != null && tipos.includes(tipo);
+  }
+
+  // Tomas del pool de una escala dada, filtradas por tipo, must primero.
+  // La canonica "Salida a contexto" (tipos:'all') siempre entra en 'propiedad'.
+  function aerialPoolForScale(scale, tipo) {
+    const matches = AERIAL_POOL.filter((s) => s.scale === scale && aerialShotAppliesToTipo(s, tipo));
+    return sortMustFirst(matches);
+  }
+
+  // Vocabulario aereo de un feature derivado (alberca, jardin, roof…),
+  // resuelto a tomas del pool, must primero. featureKey puede ser un id de
+  // AERIAL_FEATURE_VOCAB o un nombre de espacio (se normaliza por keyword).
+  function aerialFeatureKeyFromName(nombre) {
+    const n = normNombre(nombre || '');
+    if (!n) return null;
+    if (n.includes('alberca') || n.includes('piscina')) return 'alberca';
+    if (n.includes('jardin') || n.includes('verde'))   return 'jardin';
+    if (n.includes('roof') || n.includes('azotea'))    return 'roof';
+    if (n.includes('terraza'))                          return 'terraza';
+    if (n.includes('cancha'))                           return 'cancha';
+    return null;
+  }
+
+  function aerialVocabForFeature(featureKey) {
+    const key = AERIAL_FEATURE_VOCAB[featureKey] ? featureKey : aerialFeatureKeyFromName(featureKey);
+    const ids = key ? AERIAL_FEATURE_VOCAB[key] : null;
+    if (!ids) return [];
+    const shots = ids.map((id) => AERIAL_POOL_INDEX[id]).filter(Boolean);
+    return sortMustFirst(shots);
+  }
+
   function findSuggestion(id, state) {
     const lib = getGuideLibrary();
     for (const cat of Object.values(lib)) {
@@ -699,6 +1051,14 @@
       const shot = entry.shots.find((s) => s.id === id);
       if (shot) return shot;
     }
+    // F34 — tambien escanea los sujetos aereos viejos (AERIAL_SUBJECTS) y el pool
+    // aereo nuevo (AERIAL_POOL). Aditivo: los ids aereos viejos (aereo.*) deben
+    // seguir siendo resolubles porque las tomas viejas los traen en suggestionId.
+    for (const subject of Object.values(AERIAL_SUBJECTS)) {
+      const shot = subject.shots.find((s) => s.id === id);
+      if (shot) return shot;
+    }
+    if (AERIAL_POOL_INDEX[id]) return AERIAL_POOL_INDEX[id];
     if (state) {
       const proposal = state.guide && state.guide.proposal;
       if (proposal && proposal.porCuarto) {
@@ -730,7 +1090,41 @@
   function suggestionsForTarget(state, mode, target) {
     let base;
     if (mode === 'drone') {
-      base = suggestionsForDrone(state.guide ? state.guide.tipoPropiedad : null);
+      const tipo = state && state.guide ? state.guide.tipoPropiedad : null;
+      // F38 — target de SESION de drone: una sola lista ordenada (fijas + una por
+      // espacio). Se detecta por el id de sesion. (El sujeto terreno cae en el
+      // bloque esTerrenoSubject de abajo y droneSessionSuggestions tambien lo reusa,
+      // asi que ambos caminos coinciden para terreno.)
+      if (target && target.id === DRONE_SESSION_ID) {
+        return droneSessionSuggestions(state).concat(proposalShotsFor(state, target.id));
+      }
+      // F34 — target de drone nuevo (virtual): si trae feature derivado, usa el
+      // vocabulario aereo de ese feature; si trae scale, usa el pool de esa escala
+      // filtrado por tipo. must primero en ambos.
+      const feature = target ? (target.feature || target.featureKey || null) : null;
+      const scale = target ? target.scale : null;
+      // F35 — sujeto terreno: expone la lista unica de 14 del pool aereo nuevo
+      // (must primero), no solo las 2 viejas. Se detecta por el marcador del sujeto
+      // o por tipoPropiedad terreno con el id del sujeto unico.
+      const esTerrenoSubject = target && (target.isTerrenoSubject === true
+        || (tipo === 'terreno' && target.id === TERRENO_SUBJECT_ID));
+      if (esTerrenoSubject) {
+        // Lista unica de 14 del terreno: tomas con tipo 'terreno' explicito (incluye
+        // su propia 'Salida a contexto'; no se suma la canonica 'all' para no duplicar).
+        base = sortMustFirst(AERIAL_POOL.filter((s) => Array.isArray(s.tipos) && s.tipos.includes('terreno')));
+      } else if (feature) {
+        base = aerialVocabForFeature(feature);
+      } else if (scale) {
+        base = aerialPoolForScale(scale, tipo);
+      } else {
+        // F17 (retro-compat) — si el sujeto (target) empareja con un sujeto aereo
+        // viejo por nombre, usa su vocabulario aereo; si no (estado viejo, espacios
+        // sin sujeto aereo), conserva el comportamiento previo por tipo de propiedad.
+        const aereas = target ? aerialSuggestionsForSubject(target.nombre) : [];
+        base = aereas.length
+          ? aereas
+          : suggestionsForDrone(tipo);
+      }
     } else {
       const cat = target.categoria || detectCategoria(target.nombre);
       base = suggestionsForSpace(cat, target.nombre);
@@ -738,52 +1132,179 @@
     return base.concat(proposalShotsFor(state, target.id));
   }
 
+  // F72 — Prompt de propuesta IA con FOTOS. La app no es la inteligente: arma en
+  // vivo la lista de espacios REALES (por piso y zona, con id y nombre) que sirve a
+  // la vez de guia de que fotografiar y de tabla de ids para que Gemini mapee. NO
+  // lee ni menciona guide.descripcion. Conserva el estilo de concatenacion de
+  // string. El formato de respuesta es el mismo `porCuarto` que parsePropuesta ya
+  // consume; este prompt no cambia el parser.
   function buildPropuestaPrompt(state) {
-    const guide = state.guide || {};
-    const descripcion = guide.descripcion || '';
-    const cuartos = (state.espacios || []).map((esp) => ({
-      id: esp.id,
-      nombre: esp.nombre,
-      categoria: esp.categoria || detectCategoria(esp.nombre),
-    }));
-    const droneTargets = (state.droneItems || []).map((item) => ({
-      id: item.id,
-      nombre: item.nombre,
-      categoria: 'drone',
-    }));
-    const allTargets = cuartos.concat(droneTargets);
+    // El drone comparte los espacios; no hay targets de drone aparte.
+    const espacios = state.espacios || [];
+
+    // Etiquetas de zona (texto visible con acentos; las claves quedan sin acentos).
+    const ZONE_LABELS = { interior: 'Interior', exterior: 'Exterior', amenidades: 'Amenidades' };
+    const zoneLabelOf = (esp) => {
+      const z = normNombre(esp && esp.zona) || 'interior';
+      return ZONE_LABELS[z] || 'Interior';
+    };
+
+    // Agrupar por piso respetando el orden de aparicion de state.espacios; los
+    // espacios sin piso van bajo "Sin piso". Dentro de cada piso, por zona.
+    const pisoOrder = [];
+    const porPiso = {};
+    espacios.forEach((esp) => {
+      const piso = (esp.piso && String(esp.piso).trim()) || 'Sin piso';
+      if (!porPiso[piso]) { porPiso[piso] = []; pisoOrder.push(piso); }
+      porPiso[piso].push(esp);
+    });
+
+    const ZONE_GROUP_ORDER = ['Interior', 'Exterior', 'Amenidades'];
+    const espaciosStr = pisoOrder.map((piso) => {
+      const grupos = {};
+      const zonaOrder = [];
+      porPiso[piso].forEach((esp) => {
+        const zl = zoneLabelOf(esp);
+        if (!grupos[zl]) { grupos[zl] = []; zonaOrder.push(zl); }
+        grupos[zl].push(esp);
+      });
+      zonaOrder.sort((a, b) => {
+        const ia = ZONE_GROUP_ORDER.indexOf(a);
+        const ib = ZONE_GROUP_ORDER.indexOf(b);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+      const bloques = zonaOrder.map((zl) => {
+        const lineas = grupos[zl].map((esp) => '    - id "' + esp.id + '" — ' + esp.nombre).join('\n');
+        return '  ' + zl + ':\n' + lineas;
+      }).join('\n');
+      return 'Piso ' + piso + ':\n' + bloques;
+    }).join('\n\n');
 
     const shotTypes = getShotTypes();
     const movements = getMovements();
-
     const shotTypeVocab = Object.entries(shotTypes).map(([id, v]) => '  "' + id + '": "' + v.label + '"').join('\n');
     const movementVocab = Object.entries(movements).map(([id, v]) => '  "' + id + '": "' + v.label + '"').join('\n');
-    const cuartosStr = allTargets.map((c) => '  { "id": "' + c.id + '", "nombre": "' + c.nombre + '", "categoria": "' + c.categoria + '" }').join(',\n');
 
-    return 'Eres un camarografo de bienes raices recibiendo instrucciones de rodaje.\n' +
-      'Descripcion de la propiedad: ' + (descripcion || '(sin descripcion)') + '\n\n' +
-      'Cuartos a filmar:\n[\n' + cuartosStr + '\n]\n\n' +
+    return 'Eres un camarografo de bienes raices recibiendo instrucciones de rodaje.\n\n' +
+      'PARA BRUNO (antes de mandar): toma fotos de TODOS los espacios listados abajo, en el orden que quieras, y subelas junto con este prompt.\n\n' +
+      'Espacios de la propiedad (guia de que fotografiar y tabla de ids para mapear):\n' +
+      espaciosStr + '\n\n' +
+      'PARA GEMINI: recibiras fotos de esta propiedad. Identifica cada espacio en las fotos y asigna cada toma al "id" correcto de la lista de arriba. Propon tomas concretas y especificas de ESTA casa por espacio (por ejemplo: "push in en la cocina", "detalle del candelabro en la sala"). El campo "nombre" es la accion concreta; el campo "enfoque" es el sujeto o encuadre.\n\n' +
       'Vocabulario cerrado de tipos de toma (shotType) — usa SOLO estos ids:\n' + shotTypeVocab + '\n\n' +
       'Vocabulario cerrado de movimientos (movement) — usa SOLO estos ids:\n' + movementVocab + '\n\n' +
-      'Tarea: proponer tomas adicionales especificas para ESTA propiedad, por cuarto.\n\n' +
       'REGLAS DURAS — incumplir cualquiera invalida la respuesta:\n' +
-      '1. Basate ESTRICTAMENTE en la descripcion. PROHIBIDO inventar muebles, features, vistas o condiciones que no se mencionan en ella.\n' +
-      '2. El campo "enfoque" describe SOLO encuadre y composicion. NADA de hora del dia, golden hour, clima, iluminacion natural ni logistica de rodaje.\n' +
-      '3. Propone tomas SOLO para cuartos de la lista. PROHIBIDO inventar cuartos que no aparecen.\n' +
-      '4. Propone SOLO tomas genuinamente especificas de esta propiedad. NO repitas wides genericos que cualquier propiedad tendria.\n' +
-      '5. Si un cuarto no tiene nada destacable segun la descripcion, NO propongas nada para el (omitelo del JSON).\n' +
-      '6. Si la descripcion esta vacia o es generica (sin detalles especificos), responde exactamente: {"porCuarto":{}}\n' +
-      '7. Usa SOLO los ids exactos del vocabulario cerrado para shotType y movement.\n' +
-      '8. Responde UNICAMENTE con el JSON, sin markdown ni texto adicional.\n\n' +
+      '1. Basate en lo que VES en las fotos. PROHIBIDO inventar muebles, features, vistas o condiciones que no aparezcan en ellas.\n' +
+      '2. El campo "enfoque" es SOLO el sujeto o encuadre. NADA de hora del dia, golden hour, clima, iluminacion natural ni logistica de rodaje.\n' +
+      '3. Propon tomas SOLO para espacios de la lista. PROHIBIDO inventar espacios que no aparecen.\n' +
+      '4. Usa SOLO los ids exactos del vocabulario cerrado para shotType y movement.\n' +
+      '5. Si un espacio no tiene nada destacable en las fotos, NO propongas nada para el (omitelo del JSON).\n' +
+      '6. Responde UNICAMENTE con el JSON, sin markdown ni texto adicional.\n' +
+      '7. Maximo 6 tomas por espacio.\n\n' +
       'Formato de respuesta:\n' +
-      '{\n  "porCuarto": {\n    "<id de cuarto>": [\n' +
+      '{\n  "porCuarto": {\n    "<id de espacio>": [\n' +
       '      { "nombre": "...", "shotType": "<id valido>", "movement": "<id valido>", "enfoque": "...", "priority": "must|nice" }\n' +
       '    ]\n  }\n}\n\n' +
-      'Ejemplo — cuarto con chimenea de piedra mencionada en la descripcion:\n' +
+      'Ejemplo — espacio con un candelabro visible en la foto de la sala:\n' +
       '{\n  "porCuarto": {\n    "ejemplo-id-123": [\n' +
-      '      { "nombre": "Detalle de chimenea de piedra", "shotType": "detalle", "movement": "push_in", "enfoque": "Encuadra la piedra texturizada de la chimenea en primer plano", "priority": "must" }\n' +
-      '    ]\n  }\n}\n\n' +
-      'Maximo 6 tomas por cuarto.';
+      '      { "nombre": "Detalle del candelabro de la sala", "shotType": "detalle", "movement": "push_in", "enfoque": "Encuadra el candelabro en primer plano", "priority": "must" }\n' +
+      '    ]\n  }\n}';
+  }
+
+  // ─── F67 — Prompt de dictado de bitacora (video + dron) ──────────────────────
+  // Lo genera la app en vivo desde el estado: camaras activas con su contador y
+  // formato, cuartos con id/nombre/piso, vocabulario cerrado de tomas y los 8
+  // movimientos de DICTADO_MOVEMENTS. Modela el estilo de buildPropuestaPrompt
+  // (concatenacion de string). Solo lee el estado; no lo muta.
+  function buildDictadoPrompt(state) {
+    const servicios = state.servicios || {};
+    const shotTypes = getShotTypes();
+    const movements = getMovements();
+
+    // Camaras activas de video y dron, con segmento via getCameraSequence.
+    const camaras = (state.cameras || []).filter((cam) => {
+      if (!cam || (cam.mode !== 'video' && cam.mode !== 'drone')) return false;
+      if (!servicios[cam.mode]) return false;
+      return Boolean(getCameraSequence(state, cam.id).segment);
+    });
+
+    const camarasStr = camaras.map((cam) => {
+      const seq = getCameraSequence(state, cam.id);
+      const counterNext = seq.segment.counterNext;
+      const ejemploToken = formatFileToken(seq.segment, counterNext);
+      const nota = cam.id === 'sony-main' ? '   // camara por defecto si no se menciona otra' : '';
+      return '  { "id": "' + cam.id + '", "label": "' + cam.label + '", "mode": "' + cam.mode +
+        '", "contadorActual": ' + counterNext + ', "ejemploToken": "' + ejemploToken + '" }' + nota;
+    }).join(',\n');
+
+    const tieneSony = camaras.some((cam) => cam.id === 'sony-main');
+    const camaraEjemplo = tieneSony ? 'sony-main' : (camaras[0] ? camaras[0].id : '<id de camara activa>');
+    const dronEjemplo = (camaras.find((cam) => cam.mode === 'drone') || {}).id || '<id de camara dron activa>';
+
+    const cuartos = (state.espacios || []).map((esp) => ({
+      id: esp.id,
+      nombre: esp.nombre,
+      piso: esp.piso || '',
+    }));
+    const cuartosStr = cuartos.map((c) => '  { "id": "' + c.id + '", "nombre": "' + c.nombre + '", "piso": "' + c.piso + '" }').join(',\n');
+
+    const shotTypeVocab = Object.entries(shotTypes).map(([id, v]) => '  "' + id + '": "' + v.label + '"').join('\n');
+    const movementVocab = DICTADO_MOVEMENTS.map((id) => {
+      const label = (movements[id] && movements[id].label) || id;
+      return '  "' + id + '": "' + label + '"';
+    }).join('\n');
+
+    return 'Eres un asistente que estructura el dictado de un rodaje de bienes raices (video y dron).\n' +
+      'La app es la dueña del numero de archivo y de los cuartos; tu solo transcribes y organizas lo dictado.\n\n' +
+      'Camaras activas (usa SOLO estos ids; ' + (tieneSony ? 'sony-main es la camara por defecto si no se menciona otra' : 'sin camara por defecto disponible') + '):\n[\n' + camarasStr + '\n]\n\n' +
+      'Frases de cambio de camara: "cambio de camara a dron", "cambio a Osmo", "de regreso a la Sony". ' +
+      'Cuando se menciona un cambio, las tomas siguientes usan esa camara hasta el proximo cambio.\n\n' +
+      'Cuartos (la llave es el "id"; lo ambiguo o inexistente va a "sin_identificar"):\n[\n' + cuartosStr + '\n]\n\n' +
+      'Vocabulario cerrado de tipos de toma (shotType) — usa SOLO estos ids:\n' + shotTypeVocab + '\n\n' +
+      'Vocabulario cerrado de movimientos (movement) — usa SOLO estos ids:\n' + movementVocab + '\n\n' +
+      'Correcciones de transcripcion frecuentes (mishears) — normaliza al id correcto:\n' +
+      '  "pushing"/"push" -> push_in\n' +
+      '  "rivil"/"revil" -> reveal\n' +
+      '  "paneo" -> pan\n' +
+      '  "orbita" -> orbit\n' +
+      '  "plano general" -> general\n\n' +
+      'Reglas de lectura:\n' +
+      '1. Cada toma empieza en "toma N" donde N es el numero FINAL de archivo de la camara activa.\n' +
+      '2. "fallida"/"no sirve"/"mal expuesta" = descarte (clase "discard", motivoDescarte por defecto "failed").\n' +
+      '3. "quedo bien" = buena; "favorita" = favorita. Por defecto buena true salvo descarte.\n' +
+      '4. "N fotos" en el dron es un evento de fotos (avanza el numero del dron), NO una toma ni cobertura.\n' +
+      '5. Si me corrijo, honra la ULTIMA correccion.\n' +
+      '6. Cuarto ambiguo o no listado -> "sin_identificar".\n' +
+      '7. Vocabulario fuera de catalogo (shotType/movement) va a "nota"; el campo queda en null.\n\n' +
+      'REGLAS DURAS — incumplir cualquiera invalida la respuesta:\n' +
+      '1. Responde UNICAMENTE el JSON con el formato "bitacora-dictado" version 1, sin markdown ni texto adicional.\n' +
+      '2. Usa SOLO ids de cuarto de la lista o "sin_identificar".\n' +
+      '3. Usa SOLO ids del vocabulario cerrado para shotType y movement.\n' +
+      '4. No inventes tomas: estructura unicamente lo dictado.\n\n' +
+      'Formato de respuesta (un solo arreglo "eventos" ordenado por "orden"):\n' +
+      '{\n' +
+      '  "formato": "bitacora-dictado",\n' +
+      '  "version": 1,\n' +
+      '  "eventos": [\n' +
+      '    {\n' +
+      '      "orden": 1,\n' +
+      '      "evento": "toma",\n' +
+      '      "camara": "' + camaraEjemplo + '",\n' +
+      '      "numero": 82,\n' +
+      '      "cuartoId": "<id de cuarto o sin_identificar>",\n' +
+      '      "shotType": "<id valido o null>",\n' +
+      '      "movement": "<id valido o null>",\n' +
+      '      "clase": "take",\n' +
+      '      "motivoDescarte": null,\n' +
+      '      "buena": true,\n' +
+      '      "favorita": false,\n' +
+      '      "nota": ""\n' +
+      '    },\n' +
+      '    { "orden": 6, "evento": "fotos", "camara": "' + dronEjemplo + '", "cantidad": 10 }\n' +
+      '  ]\n' +
+      '}\n\n' +
+      'Ejemplo de dictado a ordenar: "toma 82 push in cocina plano general. toma 83 detalle cocina, quedo bien, ' +
+      'favorita. toma 84 fallida, no esta bien expuesta. toma 85 recamara reveal pared izquierda. cambio de camara ' +
+      'a drone. toma 1 drone fachada reveal. 10 fotos capturadas. toma 2 drone."';
   }
 
   function parsePropuesta(texto, state) {
@@ -816,7 +1337,7 @@
         return emptyResult;
       }
 
-      const allTargets = [...(state.espacios || []), ...(state.droneItems || [])];
+      const allTargets = [...(state.espacios || [])];
       const byId = new Map(allTargets.map((t) => [t.id, t]));
       const byNombre = new Map(allTargets.map((t) => [normNombre(t.nombre), t]));
 
@@ -895,8 +1416,327 @@
     }
   }
 
+  // F68 — parser y validador tolerante del dictado (bitacora-dictado v1).
+  // Produce un preview SIN mutar el estado (solo lectura). Reusa el patron
+  // tolerante de parsePropuesta: limpia fences ```json, fallback a primer {
+  // ... ultimo }, JSON.parse en try/catch. Si algo falla, ok:false y NO aplica
+  // nada. NO clona ni muta state.
+  function parseDictado(texto, state) {
+    const errorResult = (error) => ({
+      ok: false,
+      error,
+      preview: [],
+      resumen: { tomas: 0, descartes: 0, fotosDron: 0, saltos: 0, duplicados: 0, sinIdentificar: 0, vocabFuera: 0, camaraInvalida: 0 },
+      report: { ignoradas: 0, motivos: [] },
+    });
+
+    if (!texto || typeof texto !== 'string') {
+      return errorResult('No se recibio texto del dictado.');
+    }
+
+    let jsonStr = null;
+    const backtickMatch = texto.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (backtickMatch) {
+      jsonStr = backtickMatch[1];
+    } else {
+      const firstBrace = texto.indexOf('{');
+      const lastBrace = texto.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        jsonStr = texto.slice(firstBrace, lastBrace + 1);
+      }
+    }
+    if (!jsonStr) {
+      return errorResult('No se encontro un objeto JSON en el texto del dictado.');
+    }
+
+    let parsed;
+    try { parsed = JSON.parse(jsonStr); } catch (_) {
+      return errorResult('El JSON del dictado no se pudo interpretar.');
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+      return errorResult('El JSON del dictado no es un objeto.');
+    }
+    if (parsed.formato !== 'bitacora-dictado') {
+      return errorResult('El formato no es "bitacora-dictado".');
+    }
+    if (parsed.version !== 1) {
+      return errorResult('Version de dictado no soportada: ' + parsed.version + '. Revisa la version (se espera 1).');
+    }
+    if (!Array.isArray(parsed.eventos)) {
+      return errorResult('El dictado no trae un arreglo "eventos".');
+    }
+
+    // Camaras validas = activas de video/dron (mismo criterio que F67).
+    const servicios = state.servicios || {};
+    const camaraValida = (camId) => {
+      const cam = (state.cameras || []).find((c) => c && c.id === camId);
+      if (!cam || (cam.mode !== 'video' && cam.mode !== 'drone')) return null;
+      if (!servicios[cam.mode]) return null;
+      const seq = getCameraSequence(state, camId);
+      if (!seq.segment) return null;
+      return { cam, segment: seq.segment };
+    };
+
+    // Resolucion de cuartos (solo lectura).
+    const espacios = state.espacios || [];
+    const byId = new Map(espacios.map((e) => [e.id, e]));
+    const byNombre = new Map(espacios.map((e) => [normNombre(e.nombre), e]));
+
+    const shotTypes = getShotTypes();
+
+    // Estado local del recorrido (NO toca state).
+    const esperado = {};       // camId -> proximo numero esperado
+    const tokensVistos = {};   // camId -> Set de tokens ya usados
+    const ensureCarril = (camId, segment) => {
+      if (!(camId in esperado)) {
+        esperado[camId] = segment.counterNext;
+        const set = new Set();
+        (state.mediaFiles || []).forEach((f) => {
+          if (f && f.cameraId === camId && f.fileToken) set.add(f.fileToken);
+        });
+        tokensVistos[camId] = set;
+      }
+    };
+
+    const resumen = { tomas: 0, descartes: 0, fotosDron: 0, saltos: 0, duplicados: 0, sinIdentificar: 0, vocabFuera: 0, camaraInvalida: 0 };
+    const report = { ignoradas: 0, motivos: [] };
+    const preview = [];
+
+    const eventos = parsed.eventos
+      .map((ev, i) => ({ ev, i }))
+      .sort((a, b) => {
+        const oa = Number(a.ev && a.ev.orden);
+        const ob = Number(b.ev && b.ev.orden);
+        if (Number.isFinite(oa) && Number.isFinite(ob) && oa !== ob) return oa - ob;
+        return a.i - b.i; // estable
+      })
+      .map((x) => x.ev);
+
+    for (const ev of eventos) {
+      if (!ev || typeof ev !== 'object') {
+        report.ignoradas++;
+        report.motivos.push('evento invalido');
+        continue;
+      }
+      const orden = ev.orden;
+      const camId = ev.camara;
+
+      if (ev.evento === 'fotos') {
+        const valido = camaraValida(camId);
+        const esDron = valido && valido.cam.mode === 'drone';
+        const cantidad = Math.max(0, Math.floor(Number(ev.cantidad) || 0));
+        if (!esDron) {
+          resumen.camaraInvalida++;
+          preview.push({
+            orden, evento: 'fotos', camara: camId, cantidad,
+            banderas: { salto: false, duplicado: false, sinIdentificar: false, vocabFuera: false, camaraInvalida: true },
+          });
+          continue;
+        }
+        ensureCarril(camId, valido.segment);
+        esperado[camId] += cantidad; // avanza el contador del carril, NO crea toma ni marca tokens
+        resumen.fotosDron += cantidad;
+        preview.push({
+          orden, evento: 'fotos', camara: camId, cantidad,
+          banderas: { salto: false, duplicado: false, sinIdentificar: false, vocabFuera: false, camaraInvalida: false },
+        });
+        continue;
+      }
+
+      if (ev.evento === 'toma') {
+        const valido = camaraValida(camId);
+        if (!valido) {
+          resumen.camaraInvalida++;
+          preview.push({
+            orden, evento: 'toma', camara: camId,
+            numeroDictado: ev.numero, tokenExpandido: null,
+            cuartoId: null, cuartoNombre: 'Sin identificar',
+            shotType: null, movement: null,
+            clase: ev.clase === 'discard' ? 'discard' : 'take',
+            motivoDescarte: null, buena: false, favorita: false, nota: String(ev.nota || ''),
+            banderas: { salto: false, duplicado: false, sinIdentificar: false, vocabFuera: false, camaraInvalida: true },
+          });
+          continue;
+        }
+        const { segment } = valido;
+        ensureCarril(camId, segment);
+
+        // El numero es la llave de emparejamiento: si no es un entero >= 0 (LLM emitio null,
+        // string u omision), se ignora el evento con motivo claro. NO se crea una toma con un
+        // token invalido ni se corrompe el contador esperado del carril.
+        const numeroDictado = ev.numero;
+        if (!Number.isInteger(numeroDictado) || numeroDictado < 0) {
+          report.ignoradas++;
+          report.motivos.push('numero de toma invalido (orden ' + orden + '): ' + numeroDictado);
+          continue;
+        }
+
+        const banderas = { salto: false, duplicado: false, sinIdentificar: false, vocabFuera: false, camaraInvalida: false };
+        let nota = String(ev.nota || '');
+
+        // Cuarto: por id, respaldo por nombre; sin_identificar / no empata -> null.
+        let cuartoId = null;
+        let cuartoNombre = 'Sin identificar';
+        if (ev.cuartoId && ev.cuartoId !== 'sin_identificar') {
+          let target = byId.get(ev.cuartoId);
+          if (!target) target = byNombre.get(normNombre(ev.cuartoId));
+          if (target) {
+            cuartoId = target.id;
+            cuartoNombre = target.nombre;
+          }
+        }
+        if (cuartoId === null) {
+          banderas.sinIdentificar = true;
+          resumen.sinIdentificar++;
+        }
+
+        // shotType / movement contra vocabulario; invalido -> null + vocabFuera + nota.
+        let shotType = null;
+        if (ev.shotType != null) {
+          if (shotTypes[ev.shotType]) {
+            shotType = ev.shotType;
+          } else {
+            banderas.vocabFuera = true;
+            nota = nota ? (nota + ' | shotType: ' + ev.shotType) : ('shotType: ' + ev.shotType);
+          }
+        }
+        let movement = null;
+        if (ev.movement != null) {
+          if (DICTADO_MOVEMENTS.includes(ev.movement)) {
+            movement = ev.movement;
+          } else {
+            banderas.vocabFuera = true;
+            nota = nota ? (nota + ' | movement: ' + ev.movement) : ('movement: ' + ev.movement);
+          }
+        }
+        if (banderas.vocabFuera) resumen.vocabFuera++;
+
+        // Clase / descarte / buena / favorita.
+        const clase = ev.clase === 'discard' ? 'discard' : 'take';
+        let motivoDescarte = null;
+        if (clase === 'discard') {
+          const m = ev.motivoDescarte;
+          motivoDescarte = (m === 'failed' || m === 'unrelated' || m === 'empty') ? m : 'failed';
+        }
+        let buena;
+        if (clase === 'discard') {
+          buena = false;
+        } else {
+          buena = (ev.buena === undefined || ev.buena === null) ? true : Boolean(ev.buena);
+        }
+        const favorita = clase === 'discard' ? false : Boolean(ev.favorita);
+
+        // Secuencia: salto, token, duplicado.
+        if (numeroDictado !== esperado[camId]) {
+          banderas.salto = true;
+          resumen.saltos++;
+        }
+        const tokenExpandido = formatFileToken(segment, numeroDictado);
+        if (tokensVistos[camId].has(tokenExpandido)) {
+          banderas.duplicado = true;
+          resumen.duplicados++;
+        }
+        tokensVistos[camId].add(tokenExpandido);
+        esperado[camId] = numeroDictado + 1;
+
+        if (clase === 'discard') resumen.descartes++;
+        resumen.tomas++;
+
+        preview.push({
+          orden, evento: 'toma', camara: camId,
+          numeroDictado, tokenExpandido,
+          cuartoId, cuartoNombre,
+          shotType, movement,
+          clase, motivoDescarte, buena, favorita, nota,
+          banderas,
+        });
+        continue;
+      }
+
+      report.ignoradas++;
+      report.motivos.push('evento desconocido: ' + (ev.evento === undefined ? '(sin tipo)' : ev.evento));
+    }
+
+    return { ok: true, error: null, preview, resumen, report };
+  }
+
+  // F69 — aplicador del dictado. Toma el `preview` de parseDictado y lo materializa en mediaFiles
+  // por el MISMO camino que la captura (registerMediaFile / bumpCameraCounter), sin tocar D1. El
+  // llamador (UI) pasa el `state` resultante por saveNow (rev/fusion F62).
+  //   opciones = { asignaciones: { <orden>: <cuartoId> }, reemplazar: <bool> }
+  //   - asignaciones: cuarto elegido en revisar para una toma sin identificar (por `orden`).
+  //   - reemplazar: ante doble pegado (token ya existente para esa camara), true quita el viejo y
+  //     mete el nuevo; false omite la toma repetida (no duplica).
+  // Devuelve { state, report: { creadas, omitidasDuplicado, reemplazadas, fotosAplicadas } }.
+  function applyDictado(state, preview, opciones) {
+    const opts = opciones || {};
+    const asignaciones = opts.asignaciones || {};
+    const reemplazar = opts.reemplazar === true;
+    let next = clone(state);
+    const report = { creadas: 0, omitidasDuplicado: 0, reemplazadas: 0, fotosAplicadas: 0 };
+    const items = Array.isArray(preview) ? preview : [];
+
+    for (const item of items) {
+      if (!item || typeof item !== 'object') continue;
+      if (item.banderas && item.banderas.camaraInvalida) continue;
+
+      if (item.evento === 'fotos') {
+        const cantidad = Math.max(0, Math.floor(Number(item.cantidad) || 0));
+        if (cantidad > 0) {
+          next = bumpCameraCounter(next, item.camara, cantidad);
+          report.fotosAplicadas += cantidad;
+        }
+        continue;
+      }
+
+      if (item.evento === 'toma') {
+        const targetId = Object.prototype.hasOwnProperty.call(asignaciones, item.orden)
+          ? asignaciones[item.orden]
+          : (item.cuartoId != null ? item.cuartoId : null);
+
+        // Doble pegado: el token ya existe para esa camara en el estado vivo.
+        const existente = (next.mediaFiles || []).find(
+          (f) => f && f.cameraId === item.camara && f.fileToken === item.tokenExpandido
+        );
+        if (existente) {
+          if (reemplazar) {
+            // Quitar el existente SIN renumerar el resto del carril: la toma nueva reusa el
+            // mismo numero (counter), asi que renumerar (como removeMediaFile) corromperia los
+            // tokens de las demas tomas durante un re-pegado completo. Se deja lapida por id.
+            const idx = next.mediaFiles.findIndex((f) => f.id === existente.id);
+            if (idx >= 0) next.mediaFiles.splice(idx, 1);
+            addTombstones(next, [existente.id]);
+            report.reemplazadas++;
+          } else {
+            report.omitidasDuplicado++;
+            continue;
+          }
+        }
+
+        next = registerMediaFile(next, {
+          cameraId: item.camara,
+          counter: item.numeroDictado,
+          targetId,
+          kind: item.clase,
+          discardReason: item.motivoDescarte,
+          shotType: item.shotType,
+          movement: item.movement,
+          note: item.nota,
+          good: item.buena === true,
+          favorite: item.favorita === true,
+          autor: opts.autor,
+        });
+        report.creadas++;
+        continue;
+      }
+    }
+
+    return { state: next, report };
+  }
+
   function guideCoverage(state, mode) {
-    const targets = mode === 'drone' ? (state.droneItems || []) : (state.espacios || []);
+    const targets = targetsForMode(state, mode);
     return targets.map((target) => {
       const suggestions = suggestionsForTarget(state, mode, target);
       const guideSkip = target.guideSkip || {};
@@ -940,11 +1780,128 @@
     return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
   }
 
+  function nowIso() {
+    return new Date().toISOString();
+  }
+
+  // ─── F60 — Fusión sin pérdida (prevención de concurrencia) ────────────────────
+  // mergeChecklist(base, incoming): une dos estados del checklist SIN tirar nada.
+  // Arrays con id se unen por id (gana el de updatedAt/deletedAt mayor; empate o
+  // ausencia -> incoming). Los estados de cobertura se funden por servicio. pisos se
+  // unen preservando orden. guide se funde campo por campo. Es la pieza que impide
+  // que un guardado de un dispositivo borre lo que otro creo.
+  function mergeStamp(o) {
+    return (o && (o.deletedAt || o.updatedAt || o.hora)) || '';
+  }
+
+  function mergeById(baseArr, incArr) {
+    const order = [];
+    const byId = new Map();
+    const loose = [];
+    const take = (it) => {
+      if (!it || it.id == null) { loose.push(it); return; }
+      if (!byId.has(it.id)) { byId.set(it.id, it); order.push(it.id); return; }
+      const prev = byId.get(it.id);
+      byId.set(it.id, mergeStamp(it) >= mergeStamp(prev) ? it : prev);
+    };
+    (baseArr || []).forEach(take);
+    (incArr || []).forEach(take);
+    return order.map((id) => byId.get(id)).concat(loose);
+  }
+
+  function mergeEstados(baseEst, incEst) {
+    const out = Object.assign({}, baseEst || {});
+    Object.keys(incEst || {}).forEach((svc) => {
+      const b = out[svc];
+      const i = incEst[svc];
+      out[svc] = (!b || mergeStamp(i) >= mergeStamp(b)) ? i : b;
+    });
+    return out;
+  }
+
+  function mergeChecklist(base, incoming) {
+    base = base || {};
+    incoming = incoming || {};
+    const merged = Object.assign({}, base, incoming); // incoming gana en escalares/UI
+    ['mediaFiles', 'cameras', 'sequenceSegments', 'droneItems', 'asesorPuntos'].forEach((k) => {
+      merged[k] = mergeById(base[k], incoming[k]);
+    });
+    // espacios: unir por id; para los presentes en ambos, fundir estados por servicio
+    const baseEsp = new Map((base.espacios || []).filter((e) => e && e.id != null).map((e) => [e.id, e]));
+    const incEsp = new Map((incoming.espacios || []).filter((e) => e && e.id != null).map((e) => [e.id, e]));
+    const espIds = [];
+    const seen = new Set();
+    (base.espacios || []).concat(incoming.espacios || []).forEach((e) => {
+      if (e && e.id != null && !seen.has(e.id)) { seen.add(e.id); espIds.push(e.id); }
+    });
+    merged.espacios = espIds.map((id) => {
+      const b = baseEsp.get(id);
+      const inc = incEsp.get(id);
+      if (b && inc) {
+        const winner = Object.assign({}, mergeStamp(inc) >= mergeStamp(b) ? inc : b);
+        winner.estados = mergeEstados(b.estados, inc.estados);
+        return winner;
+      }
+      return b || inc;
+    });
+    // pisos: union preservando el orden de base, agregando los nuevos de incoming
+    const pisos = (base.pisos || []).slice();
+    (incoming.pisos || []).forEach((p) => { if (!pisos.includes(p)) pisos.push(p); });
+    merged.pisos = pisos;
+    // guide: campo por campo (incoming gana)
+    merged.guide = Object.assign({}, base.guide || {}, incoming.guide || {});
+    // tombstones (F61): unir lápidas por id (deletedAt mayor) y APLICARLAS — quitar todo
+    // elemento cuyo updatedAt no sea posterior a su lápida. Asi un borrado no revive en la
+    // fusion, salvo que se haya reeditado despues (updatedAt > deletedAt).
+    const tomb = new Map();
+    (base.tombstones || []).concat(incoming.tombstones || []).forEach((t) => {
+      if (!t || t.id == null) return;
+      const prev = tomb.get(t.id);
+      if (!prev || (Date.parse(t.deletedAt) || 0) > (Date.parse(prev.deletedAt) || 0)) tomb.set(t.id, t);
+    });
+    merged.tombstones = Array.from(tomb.values());
+    const aliveAfter = (it) => {
+      const t = (it && it.id != null) ? tomb.get(it.id) : null;
+      if (!t) return true;
+      return (Date.parse(it.updatedAt || it.createdAt) || 0) > (Date.parse(t.deletedAt) || 0);
+    };
+    ['mediaFiles', 'cameras', 'sequenceSegments', 'droneItems', 'asesorPuntos', 'espacios'].forEach((k) => {
+      merged[k] = (merged[k] || []).filter(aliveAfter);
+    });
+    merged.pisos = (merged.pisos || []).filter((p) => !tomb.has('piso:' + p));
+    return merged;
+  }
+
+  function pruneTombstones(list, nowMs) {
+    const cutoff = (nowMs != null ? nowMs : Date.now()) - 30 * 86400000;
+    return (list || []).filter((t) => t && (Date.parse(t.deletedAt) || 0) >= cutoff);
+  }
+
+  // Registra lapidas (borrado) por id. Muta state.tombstones en sitio para que la UI
+  // (que borra modificando state directamente) la pueda llamar tras quitar el elemento.
+  function addTombstones(state, ids) {
+    if (!state.tombstones) state.tombstones = [];
+    const at = nowIso();
+    (ids || []).forEach((id) => {
+      if (id == null) return;
+      const ex = state.tombstones.find((t) => t.id === id);
+      if (ex) ex.deletedAt = at; else state.tombstones.push({ id: id, deletedAt: at });
+    });
+    return state;
+  }
+
+  // Quita una lapida (p.ej. al deshacer un borrado o re-crear un piso del mismo nombre).
+  function clearTombstone(state, id) {
+    if (state.tombstones) state.tombstones = state.tombstones.filter((t) => t.id !== id);
+    return state;
+  }
+
   function blankEstados() {
     return {
       foto: { estado: 'pendiente' },
       t360: { estado: 'pendiente' },
       video: { estado: 'pendiente' },
+      drone: { estado: 'pendiente' },
     };
   }
 
@@ -952,7 +1909,565 @@
     return value || 'interior';
   }
 
-  const PISOS_DEFAULT = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades'];
+  const PISOS_DEFAULT = ['Exterior', 'Piso 1', 'Piso 2', 'Amenidades', 'Drone'];
+
+  // ─── F18 — Piso Drone + zonas exteriores + camara por zona ────────────────────
+  // El piso Drone es un piso especial cuyos espacios son sujetos aereos (F17). Se
+  // marca de forma robusta por el nombre del piso del espacio (campo `piso`).
+  const DRONE_PISO = 'Drone';
+  const DRONE_PISOS = new Set(['Drone', 'drone']);
+
+  // Zonas donde el drone es una camara valida ADEMAS de Sony/Osmo. Se leen del
+  // campo `zona` del espacio (normalizado por normNombre): exterior, roof y
+  // amenidades. 'roof' no es un valor canonico de `zona` hoy, pero se incluye por
+  // robustez ante datos que lo usen como zona.
+  const EXTERIOR_ZONAS = new Set(['exterior', 'roof', 'amenidades']);
+
+  // El terreno se representa como un sujeto unico (no lista de cuartos).
+  const TERRENO_SUBJECT_ID = 'terreno-unico';
+
+  // F38 — Sesion unica de drone. El drone deja de ser "varios targets navegables
+  // por escala" (F34/F35) y pasa a ser UNA sola sesion = UN solo target cuyas
+  // SUGERENCIAS son la lista completa ordenada (fijas + una por espacio). Para
+  // terreno se sigue usando el sujeto terreno (no se duplica).
+  const DRONE_SESSION_ID = 'drone-session';
+
+  function isDronePiso(piso) {
+    if (!piso) return false;
+    return DRONE_PISOS.has(piso) || normNombre(piso) === normNombre(DRONE_PISO);
+  }
+
+  // Devuelve true si el espacio vive en el piso Drone (sus tomas son aereas).
+  function espacioEsDrone(espacio) {
+    if (!espacio || typeof espacio !== 'object') return false;
+    if (espacio.kind === 'drone') return true;
+    return isDronePiso(espacio.piso);
+  }
+
+  // Zona normalizada del espacio para resolver la camara. Se lee el campo `piso`
+  // (para el piso Drone) y el campo `zona` (interior/exterior/amenidades), que es
+  // el campo real, siempre presente y normalizado por normalizeChecklistData.
+  function zonaOfEspacio(espacio) {
+    if (espacioEsDrone(espacio)) return 'drone';
+    return normNombre(espacio && espacio.zona) || 'interior';
+  }
+
+  // F18/F35 — camaras disponibles para un target segun su naturaleza:
+  //   target de drone (kind:'drone' / piso Drone) -> solo camaras drone (los dos).
+  //   cualquier espacio de cuarto (interior/exterior/roof/amenidad) -> solo Sony/Osmo.
+  // F35 quita el HIBRIDO de F18: el drone ya NO se ofrece como camara en espacios
+  // exteriores/roof/amenidades de cuarto. El drone vive en su propia lane: sus
+  // camaras se dan a los targets kind:'drone' de droneScaleTargets (features aereos
+  // derivados + fijos + terreno). La UI usa esto en el switch de camara del loop.
+  function camerasForEspacio(state, espacio) {
+    const cameras = getCameras(state).filter((cam) => cam && cam.mode !== 'asesor');
+    const drones = cameras.filter((cam) => cam.mode === 'drone');
+    const terrestres = cameras.filter((cam) => cam.mode !== 'drone');
+    const zona = zonaOfEspacio(espacio);
+    if (zona === 'drone') return drones;
+    return terrestres;
+  }
+
+  // F18 — Terreno como sujeto unico. Con guide.tipoPropiedad === 'terreno' el modelo
+  // representa un solo espacio "El terreno" en vez de lista de cuartos; sus
+  // sugerencias son las aereas del terreno (biblioteca aerea de F17).
+  function terrenoSingleSubject(state) {
+    const guide = state && state.guide ? state.guide : {};
+    const existing = (state && Array.isArray(state.espacios) ? state.espacios : [])
+      .find((esp) => esp && esp.id === TERRENO_SUBJECT_ID);
+    const subject = existing || {
+      id: TERRENO_SUBJECT_ID,
+      nombre: 'El terreno',
+      parentId: null,
+      orden: 1,
+      clave: true,
+      zona: 'exterior',
+      piso: 'Exterior',
+      // F35 — el sujeto terreno es un target de drone (kind:'drone'); porta la lista
+      // unica de 14 del pool aereo nuevo via suggestionsForTarget. isTerrenoSubject
+      // es el marcador que el resolver usa para devolver las 14 (no solo las viejas).
+      kind: 'drone',
+      isTerrenoSubject: true,
+      categoria: undefined,
+      estados: blankEstados(),
+    };
+    return {
+      isTerreno: guide.tipoPropiedad === 'terreno',
+      subject,
+      suggestions: aerialSuggestionsForSubject('terreno_completo'),
+    };
+  }
+
+  // ─── F35 — Targets de drone derivados de espacios reales + targets fijos ──────
+  // Los targets de drone son VIRTUALES: se calculan al vuelo (droneScaleTargets) y
+  // NO se persisten en state.espacios (a diferencia de Terreno, que materializa UN
+  // sujeto). Si se materializaran reaparecerian como pseudo-cuartos en "Armar
+  // cuartos" y en los targets de video (que comparten state.espacios).
+
+  // ¿Es un espacio un target de drone preexistente (kind:'drone' / piso Drone)?
+  function _espacioDroneCompat(esp) {
+    return espacioEsDrone(esp);
+  }
+
+  // ¿Aplica la escala "amenidades"? Solo privada/coto/depto (por guide.tipoPropiedad)
+  // o cuando existan espacios reales de zona amenidades.
+  function droneAmenidadesAplica(state) {
+    const guide = state && state.guide ? state.guide : {};
+    const tipo = guide.tipoPropiedad;
+    if (tipo === 'departamento') return true;
+    if (guide.subtipoPropiedad === 'privada' || guide.subtipoPropiedad === 'coto') return true;
+    const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+    return espacios.some((esp) => esp && normNombre(esp.zona) === 'amenidades' && !_espacioDroneCompat(esp));
+  }
+
+  // F35 — Targets aereos DERIVADOS de los espacios exteriores/amenidad reales.
+  // Por cada espacio de zona exterior o amenidades (que NO sea ya un target de drone
+  // viejo ni el terreno-unico) genera su version aerea con su feature derivado del
+  // nombre, para que suggestionsForTarget le devuelva el vocabulario aereo de ese
+  // feature. NO genera para interiores. Si no hay alberca, no hay "Alberca aerea".
+  function droneFeatureTargets(state) {
+    const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+    const out = [];
+    espacios.forEach((esp) => {
+      if (!esp || typeof esp !== 'object') return;
+      if (esp.id === TERRENO_SUBJECT_ID) return;
+      if (_espacioDroneCompat(esp)) return;
+      const zona = normNombre(esp.zona);
+      const esAmenidad = zona === 'amenidades';
+      if (zona !== 'exterior' && !esAmenidad) return;
+      out.push({
+        id: 'drone-feat-' + esp.id,
+        nombre: (esp.nombre || 'Espacio') + ' aérea',
+        scale: esAmenidad ? 'amenidades' : 'propiedad',
+        kind: 'drone',
+        featOf: esp.id,
+        feature: aerialFeatureKeyFromName(esp.nombre) || undefined,
+        estados: blankEstados(),
+      });
+    });
+    return out;
+  }
+
+  // F35 — Targets FIJOS property-wide de la escala Propiedad (no dependen de
+  // espacios): Salida a contexto (must canonica de cierre), Fachada/Orbita,
+  // Cenital giratorio. Cada uno con su scale para que suggestionsForTarget resuelva.
+  function _droneFixedPropertyTargets() {
+    return [
+      { id: 'drone-fixed-salida-contexto', nombre: 'Salida a contexto', scale: 'propiedad', kind: 'drone', estados: blankEstados() },
+      { id: 'drone-fixed-fachada-orbita',  nombre: 'Fachada / Órbita',   scale: 'propiedad', kind: 'drone', estados: blankEstados() },
+      { id: 'drone-fixed-cenital-giratorio', nombre: 'Cenital giratorio', scale: 'propiedad', kind: 'drone', estados: blankEstados() },
+    ];
+  }
+
+  // F35 — Targets FIJOS de Inmediato / Ubicacion (del pool / DRONE_SCALES).
+  function _droneFixedContextTargets() {
+    return [
+      { id: 'drone-fixed-inmediato', nombre: 'Inmediato / colonia',  scale: 'inmediato', kind: 'drone', estados: blankEstados() },
+      { id: 'drone-fixed-ubicacion', nombre: 'Ubicación / contexto', scale: 'ubicacion', kind: 'drone', estados: blankEstados() },
+    ];
+  }
+
+  // F35 — Targets de la lane de drone. VIRTUAL (se calcula al vuelo, NO se persiste).
+  // Compone, de-dup por id:
+  //   (a) droneFeatureTargets (derivados de espacios reales);
+  //   (b) fijos property-wide de Propiedad (Salida a contexto, Fachada/Orbita, Cenital);
+  //   (c) fijos de Inmediato/Ubicacion;
+  //   (d) CAMINO DE COMPAT: los espacios kind:'drone' preexistentes (drone-piso
+  //       viejo + terreno-unico) y cualquier espacio con una toma de drone ya pegada,
+  //       para que sus mediaFiles NO se huerfanen al cargar (ver normalizeChecklistData).
+  // La escala Amenidades (en derivados/fijos) solo se incluye si aplica.
+  function droneScaleTargets(state) {
+    const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+    const mediaFiles = state && Array.isArray(state.mediaFiles) ? state.mediaFiles : [];
+    const cameras = state && Array.isArray(state.cameras) ? state.cameras : [];
+    const amenidades = droneAmenidadesAplica(state);
+
+    const result = [];
+    const seen = new Set();
+    const push = (t) => {
+      if (!t || !t.id || seen.has(t.id)) return;
+      if (t.scale === 'amenidades' && !amenidades) return;
+      seen.add(t.id);
+      result.push(t);
+    };
+
+    // (a) derivados de espacios reales.
+    droneFeatureTargets(state).forEach(push);
+    // (b) + (c) fijos.
+    _droneFixedPropertyTargets().forEach(push);
+    _droneFixedContextTargets().forEach(push);
+
+    // (d) camino de compat: espacios kind:'drone' preexistentes + cualquier espacio
+    // con una toma de drone pegada (incluye drone-piso viejo y el terreno-unico).
+    const droneCameraIds = new Set(cameras.filter((c) => c && c.mode === 'drone').map((c) => c.id));
+    const espaciosConTomaDrone = new Set(
+      mediaFiles
+        .filter((f) => f && f.kind === 'take' && f.targetId && droneCameraIds.has(f.cameraId))
+        .map((f) => f.targetId)
+    );
+    espacios.forEach((esp) => {
+      if (!esp || typeof esp !== 'object' || !esp.id) return;
+      if (seen.has(esp.id)) return;
+      if (_espacioDroneCompat(esp) || espaciosConTomaDrone.has(esp.id)) {
+        seen.add(esp.id);
+        result.push(esp);
+      }
+    });
+
+    return result;
+  }
+
+  // ─── F38 — Sesion unica de drone: target unico + lista ordenada de sugerencias ─
+  // El drone es UNA sola sesion (una lista ordenada de tomas que se vuela de
+  // corrido). El sujeto/target de sesion es unico. Para terreno NO se crea uno
+  // nuevo: ES el sujeto de terrenoSingleSubject (no se duplica).
+
+  // Target de sesion de drone. Casa/quinta/depto: un sujeto kind:'drone' estable.
+  // Terreno: el sujeto unico de terrenoSingleSubject (mismo target, no duplicado).
+  function droneSessionSubject(state) {
+    const guide = state && state.guide ? state.guide : {};
+    if (guide.tipoPropiedad === 'terreno') {
+      return terrenoSingleSubject(state).subject;
+    }
+    return {
+      id: DRONE_SESSION_ID,
+      nombre: 'Sesión de drone',
+      parentId: null,
+      kind: 'drone',
+      estados: blankEstados(),
+    };
+  }
+
+  // F38 — Lista ORDENADA de tomas sugeridas de la sesion de drone:
+  //   (1) Fijas por tipo: tomas del pool property-wide/inmediato/ubicacion (las que
+  //       NO tienen `feature`) aplicables al tipo, ordenadas por escala (orden de
+  //       DRONE_SCALES), must primero dentro de cada escala. Incluye "Salida a
+  //       contexto" (canonica, tipos:'all').
+  //   (2) Derivadas: UNA toma por espacio real de zona exterior o amenidades (no
+  //       interiores, no el sujeto de sesion, no espacios kind:'drone' viejos). Si
+  //       el espacio empareja un feature conocido toma la PRIMERA toma de su
+  //       vocabulario como base (shotType/movement) con nombre "<espacio> aérea/o";
+  //       si no, generica "<nombre> aérea/o".
+  //   Orden final: agrupada por escala (propiedad -> amenidades -> inmediato ->
+  //   ubicacion); dentro de cada escala, must primero, luego derivadas. De-dup por id.
+  // Para terreno: reusa las 14 tomas (suggestionsForTarget del sujeto terreno).
+  function droneSessionSuggestions(state) {
+    const guide = state && state.guide ? state.guide : {};
+    const tipo = guide.tipoPropiedad;
+    if (tipo === 'terreno') {
+      // Reusa la lista unica de 14 del sujeto terreno (no se duplica la logica).
+      return suggestionsForTarget(state, 'drone', terrenoSingleSubject(state).subject);
+    }
+
+    const amenidades = droneAmenidadesAplica(state);
+    const scaleOrder = DRONE_SCALES.map((s) => s.id);
+
+    // (1) Fijas: SOLO tomas que siempre se hacen (property-wide / contexto). Se
+    // excluyen las de feature, las `situacional` (p.ej. Reveal sobre barda, solo si
+    // hay barda/porton) y las `derivable` (Casa club, Patio/jardin/alberca, Cancha/
+    // cabanas, Lobby): esas salen UNA por espacio via derivacion (paso 2), no fijas.
+    const fixedByScale = Object.create(null);
+    scaleOrder.forEach((scale) => {
+      if (scale === 'amenidades' && !amenidades) { fixedByScale[scale] = []; return; }
+      fixedByScale[scale] = aerialPoolForScale(scale, tipo).filter((s) => !s.feature && !s.situacional && !s.derivable);
+    });
+
+    // (2) Derivadas: una por espacio exterior/amenidad real.
+    const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+    const derivedByScale = Object.create(null);
+    scaleOrder.forEach((scale) => { derivedByScale[scale] = []; });
+    espacios.forEach((esp) => {
+      if (!esp || typeof esp !== 'object' || !esp.id) return;
+      if (esp.id === TERRENO_SUBJECT_ID || esp.id === DRONE_SESSION_ID) return;
+      if (_espacioDroneCompat(esp)) return; // no interiores se filtra abajo; no espacios drone viejos
+      const zona = normNombre(esp.zona);
+      const esAmenidad = zona === 'amenidades';
+      if (zona !== 'exterior' && !esAmenidad) return; // interiores no aportan
+      const scale = esAmenidad ? 'amenidades' : 'propiedad';
+      if (scale === 'amenidades' && !amenidades) return;
+      const featureKey = aerialFeatureKeyFromName(esp.nombre);
+      const vocab = featureKey ? aerialVocabForFeature(featureKey) : [];
+      const base = vocab.length ? vocab[0] : null;
+      const nombreEsp = esp.nombre || 'Espacio';
+      derivedByScale[scale].push({
+        id: 'drone-feat-' + esp.id,
+        nombre: nombreEsp + ' aérea',
+        shotType: base ? base.shotType : 'establecimiento',
+        movement: base ? base.movement : 'static',
+        scale,
+        must: false,
+        featOf: esp.id,
+      });
+    });
+
+    // Orden final: por escala, must primero (fijas) y luego derivadas. De-dup por id.
+    const out = [];
+    const seen = new Set();
+    const pushAll = (arr) => arr.forEach((s) => {
+      if (!s || !s.id || seen.has(s.id)) return;
+      seen.add(s.id);
+      out.push(s);
+    });
+    scaleOrder.forEach((scale) => {
+      pushAll(fixedByScale[scale] || []);
+      pushAll(derivedByScale[scale] || []);
+    });
+    return out;
+  }
+
+  // ─── F19 — Biblioteca de cuartos indexada por piso + tipo de propiedad ────────
+  // Amplia la biblioteca de espacios (TEMPLATE_DEFS/SPACE_SUGGESTIONS) e indexa los
+  // chips tipicos por PISO (nombre del piso, como en PISOS_DEFAULT) y por TIPO de
+  // propiedad. Cada chip es { nombre, zona, categoria, clave } donde:
+  //   - nombre: etiqueta visible (con acentos/ñ).
+  //   - zona:   interior | exterior | amenidades (la zona canonica del espacio).
+  //   - categoria: id de ROOM_CATEGORIES para resolver las tomas sugeridas.
+  //   - clave:  espacio clave (must) que se sugiere por defecto.
+  // Incluye Pasillo y Entrada/Recibidor como espacios de primera clase (sus tomas
+  // viven en GUIDE_LIBRARY.pasillo / GUIDE_LIBRARY.entrada y sus keywords en
+  // ROOM_CATEGORIES). El piso 'Exterior' y 'Amenidades' son compartidos por tipo.
+  // Aditivo: no altera TEMPLATE_DEFS ni sus consumidores.
+  function _chip(nombre, zona, categoria, clave) {
+    return Object.freeze({ nombre, zona, categoria, clave: !!clave });
+  }
+
+  const SPACE_LIBRARY_BY_FLOOR = Object.freeze({
+    casa: Object.freeze({
+      'Exterior': Object.freeze([
+        _chip('Fachada', 'exterior', 'exterior', true),
+        _chip('Jardín', 'exterior', 'exterior', true),
+        _chip('Cochera', 'exterior', 'garaje', false),
+        _chip('Alberca', 'exterior', 'exterior', false),
+        _chip('Patio', 'exterior', 'exterior', false),
+        _chip('Terraza', 'exterior', 'terraza', false),
+      ]),
+      'Piso 1': Object.freeze([
+        _chip('Recibidor', 'interior', 'entrada', true),
+        _chip('Sala', 'interior', 'sala', true),
+        _chip('Comedor', 'interior', 'comedor', true),
+        _chip('Cocina', 'interior', 'cocina', true),
+        _chip('Pasillo', 'interior', 'pasillo', false),
+        _chip('Baño de visitas', 'interior', 'medio_bano', false),
+        _chip('Estudio', 'interior', 'estudio', false),
+        _chip('Lavandería', 'interior', 'lavado', false),
+        _chip('Antecomedor', 'interior', 'comedor', false),
+        _chip('Cuarto de servicio', 'interior', 'servicio', false),
+        _chip('Baño de servicio', 'interior', 'bano', false),
+      ]),
+      'Piso 2': Object.freeze([
+        _chip('Pasillo', 'interior', 'pasillo', false),
+        _chip('Recámara principal', 'interior', 'recamara', true),
+        _chip('Baño principal', 'interior', 'bano', false),
+        _chip('Clóset', 'interior', 'vestidor', false),
+        _chip('Recámara 2', 'interior', 'recamara', false),
+        _chip('Recámara 3', 'interior', 'recamara', false),
+        _chip('Baño', 'interior', 'bano', false),
+        _chip('Family room', 'interior', 'family', false),
+        _chip('Sala de TV', 'interior', 'family', false),
+        _chip('Vestidor', 'interior', 'vestidor', false),
+      ]),
+      'Amenidades': Object.freeze([
+        _chip('Caseta / acceso', 'amenidades', 'entrada', true),
+        _chip('Casa club', 'amenidades', 'salon_eventos', true),
+        _chip('Alberca', 'amenidades', 'alberca', true),
+        _chip('Gimnasio', 'amenidades', 'gimnasio', false),
+        _chip('Áreas verdes', 'amenidades', 'jardin', false),
+        _chip('Juegos infantiles', 'amenidades', 'area_infantil', false),
+        _chip('Cancha', 'amenidades', 'cancha', false),
+        _chip('Asadores', 'amenidades', 'asadores', false),
+        _chip('Salón de eventos', 'amenidades', 'salon_eventos', false),
+        _chip('Roof garden', 'amenidades', 'terraza', false),
+        _chip('Bodega', 'amenidades', 'bodega', false),
+      ]),
+    }),
+    departamento: Object.freeze({
+      'Exterior': Object.freeze([
+        _chip('Balcón / Terraza', 'exterior', 'terraza', true),
+        _chip('Vista exterior', 'exterior', 'exterior', false),
+      ]),
+      'Piso 1': Object.freeze([
+        _chip('Acceso', 'interior', 'entrada', true),
+        _chip('Sala', 'interior', 'sala', true),
+        _chip('Comedor', 'interior', 'comedor', true),
+        _chip('Cocina', 'interior', 'cocina', true),
+        _chip('Pasillo', 'interior', 'pasillo', false),
+        _chip('Baño de visitas', 'interior', 'medio_bano', false),
+        _chip('Recámara principal', 'interior', 'recamara', true),
+        _chip('Baño principal', 'interior', 'bano', false),
+        _chip('Clóset', 'interior', 'vestidor', false),
+        _chip('Recámara secundaria', 'interior', 'recamara', false),
+        _chip('Lavandería', 'interior', 'lavado', false),
+        _chip('Antecomedor', 'interior', 'comedor', false),
+        _chip('Vestidor', 'interior', 'vestidor', false),
+      ]),
+      'Amenidades': Object.freeze([
+        _chip('Lobby', 'amenidades', 'entrada', true),
+        _chip('Alberca', 'amenidades', 'alberca', true),
+        _chip('Gimnasio', 'amenidades', 'gimnasio', true),
+        _chip('Terraza común', 'amenidades', 'terraza', true),
+        _chip('Salón de eventos', 'amenidades', 'salon_eventos', false),
+        _chip('Asadores', 'amenidades', 'asadores', false),
+        _chip('Elevadores', 'amenidades', 'elevadores', false),
+      ]),
+    }),
+    quinta: Object.freeze({
+      'Exterior': Object.freeze([
+        _chip('Fachada', 'exterior', 'exterior', true),
+        _chip('Acceso / Caseta', 'exterior', 'entrada', false),
+        _chip('Estacionamiento', 'exterior', 'garaje', false),
+        _chip('Jardines', 'exterior', 'exterior', true),
+      ]),
+      'Piso 1': Object.freeze([
+        _chip('Recibidor', 'interior', 'entrada', false),
+        _chip('Sala', 'interior', 'sala', true),
+        _chip('Comedor', 'interior', 'comedor', true),
+        _chip('Cocina', 'interior', 'cocina', true),
+        _chip('Pasillo', 'interior', 'pasillo', false),
+        _chip('Recámara principal', 'interior', 'recamara', true),
+        _chip('Baño principal', 'interior', 'bano', false),
+        _chip('Recámara 2', 'interior', 'recamara', false),
+        _chip('Baño de visitas', 'interior', 'medio_bano', false),
+        _chip('Antecomedor', 'interior', 'comedor', false),
+        _chip('Cuarto de servicio', 'interior', 'servicio', false),
+        _chip('Baño de servicio', 'interior', 'bano', false),
+      ]),
+      'Amenidades': Object.freeze([
+        _chip('Alberca', 'amenidades', 'alberca', true),
+        _chip('Palapa', 'amenidades', 'palapa', true),
+        _chip('Asadores', 'amenidades', 'asadores', false),
+        _chip('Cocina exterior', 'amenidades', 'cocina', false),
+        _chip('Jardines', 'amenidades', 'jardin', true),
+        _chip('Cancha', 'amenidades', 'cancha', false),
+        _chip('Cabañas', 'amenidades', 'generico', false),
+        _chip('Baño de alberca', 'amenidades', 'bano', false),
+      ]),
+    }),
+    terreno: Object.freeze({
+      'Exterior': Object.freeze([
+        _chip('Frente del terreno', 'exterior', 'exterior', true),
+        _chip('Vista desde calle', 'exterior', 'exterior', true),
+        _chip('Acceso', 'exterior', 'entrada', true),
+        _chip('Perímetro / colindancias', 'exterior', 'exterior', false),
+        _chip('Vista panorámica', 'exterior', 'exterior', true),
+        _chip('Servicios / entorno', 'exterior', 'exterior', false),
+      ]),
+    }),
+  });
+
+  // F19 — devuelve los chips tipicos de un piso + tipo de propiedad. Si no se pasa
+  // tipoPropiedad usa el del guide. Si el piso/tipo no existe en la biblioteca,
+  // devuelve []. Devuelve copias (no las instancias congeladas) para que la UI las
+  // pueda usar como base mutable. Forma del retorno: array de
+  //   { nombre, zona, categoria, clave }.
+  function suggestedSpacesFor(state, piso, tipoPropiedad) {
+    const tipo = tipoPropiedad != null
+      ? tipoPropiedad
+      : (state && state.guide ? state.guide.tipoPropiedad : null);
+    const byFloor = SPACE_LIBRARY_BY_FLOOR[tipo];
+    if (!byFloor || !piso) return [];
+    // Empareja el nombre del piso de forma robusta (case/acentos-insensible).
+    let chips = byFloor[piso];
+    if (!chips) {
+      const pisoNorm = normNombre(piso);
+      const match = Object.keys(byFloor).find((k) => normNombre(k) === pisoNorm);
+      chips = match ? byFloor[match] : null;
+    }
+    if (!chips) return [];
+    return chips.map((c) => ({ nombre: c.nombre, zona: c.zona, categoria: c.categoria, clave: c.clave }));
+  }
+
+  // F32 — Espacios solo-buscables: NO entran a suggestedSpacesFor (no ensucian los
+  // chips por piso/tipo) pero SI se indexan para que searchSpaces los encuentre.
+  // Forma: { nombre, zona, categoria }. Se concatenan a SPACE_LIBRARY_INDEX con
+  // tipo:'extra', piso:null, clave:false.
+  const EXTRA_SPACES = Object.freeze([
+    Object.freeze({ nombre: 'Cava', zona: 'interior', categoria: 'bodega' }),
+    Object.freeze({ nombre: 'Bar / Cantina', zona: 'interior', categoria: 'sala' }),
+    Object.freeze({ nombre: 'Cuarto de juegos', zona: 'interior', categoria: 'family' }),
+  ]);
+
+  // F19 — Indice plano de toda la biblioteca de espacios para el buscador. Cada
+  // entrada es { id, nombre, zona, categoria, tipo, piso, clave }. Se deduplica por
+  // nombre normalizado para no repetir el mismo espacio que aparece en varios pisos
+  // o tipos (p. ej. Sala, Pasillo, Baño). El id es el nombre normalizado.
+  // F32 — al final se concatenan los EXTRA_SPACES (solo-buscables).
+  const SPACE_LIBRARY_INDEX = (() => {
+    const out = [];
+    const seen = new Set();
+    for (const [tipo, byFloor] of Object.entries(SPACE_LIBRARY_BY_FLOOR)) {
+      for (const [piso, chips] of Object.entries(byFloor)) {
+        for (const c of chips) {
+          const key = normNombre(c.nombre);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push(Object.freeze({
+            id: key,
+            nombre: c.nombre,
+            zona: c.zona,
+            categoria: c.categoria,
+            tipo,
+            piso,
+            clave: c.clave,
+          }));
+        }
+      }
+    }
+    for (const e of EXTRA_SPACES) {
+      const key = normNombre(e.nombre);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(Object.freeze({
+        id: key,
+        nombre: e.nombre,
+        zona: e.zona,
+        categoria: e.categoria,
+        tipo: 'extra',
+        piso: null,
+        clave: false,
+      }));
+    }
+    return Object.freeze(out);
+  })();
+
+  // F19 — Buscador sobre TODA la biblioteca de espacios (normalizado: sin acentos,
+  // case-insensitive). La UI de F20 consume este formato.
+  //
+  // Retorno: array de entradas. Cada coincidencia de biblioteca tiene la forma:
+  //   { kind: 'match', id, nombre, zona, categoria, tipo, piso, clave }
+  // Si el texto de busqueda no es vacio, SIEMPRE se anexa al final una entrada
+  // especial para crear un espacio nuevo con ese texto literal:
+  //   { kind: 'create', id: 'create-nuevo', nombre: <texto original>, zona: 'interior' }
+  // Con query vacio devuelve toda la biblioteca (sin la opcion crear nuevo).
+  function searchSpaces(query) {
+    const raw = String(query == null ? '' : query).trim();
+    const q = normNombre(raw);
+    const cats = getRoomCategories();
+    function entryMatches(entry) {
+      if (normNombre(entry.nombre).includes(q)) return true;
+      const cat = cats.find((c) => c.id === entry.categoria);
+      if (!cat) return false;
+      return cat.keywords.some((kw) => {
+        const kwNorm = normNombre(kw);
+        return kwNorm.includes(q) || q.includes(kwNorm);
+      });
+    }
+    const matches = (q
+      ? SPACE_LIBRARY_INDEX.filter(entryMatches)
+      : SPACE_LIBRARY_INDEX
+    ).map((entry) => ({
+      kind: 'match',
+      id: entry.id,
+      nombre: entry.nombre,
+      zona: entry.zona,
+      categoria: entry.categoria,
+      tipo: entry.tipo,
+      piso: entry.piso,
+      clave: entry.clave,
+    }));
+    if (!raw) return matches;
+    matches.push({ kind: 'create', id: 'create-nuevo', nombre: raw, zona: 'interior' });
+    return matches;
+  }
 
   function pisoFromZona(zona) {
     if (zona === 'amenidades') return 'Amenidades';
@@ -982,10 +2497,10 @@
     return {
       version: 3,
       servicios: clone(SERVICES_DEFAULT),
-      pisos: PISOS_DEFAULT.slice(),
+      pisos: [],
       modoActual: 'video',
       espacios: [],
-      droneItems: createDroneItems(),
+      droneItems: [],
       asesorPuntos: createAsesorPuntos(),
       recorrido: {},
       bitacora: [],
@@ -993,8 +2508,351 @@
       activeCameraByMode: { video: 'sony-main', drone: 'drone-dji' },
       sequenceSegments: [],
       mediaFiles: [],
-      guide: { tipoPropiedad: null, descripcion: '', proposal: null },
+      tombstones: [],
+      guide: { tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false },
     };
+  }
+
+  // ─── F40 — Catalogo por zona, numeracion y planner del esqueleto ─────────────
+  // Conceptos base curados para la hoja "Armar cuartos": un mosaico por concepto
+  // (la numeracion la hace nextRoomName). Derivan de SPACE_SUGGESTIONS deduplicados
+  // por concepto base + se completan con la biblioteca del mockup (LIB). `icon` es
+  // un nombre de icono Tabler (sin el prefijo `ti ti-`).
+  // F47 — Conceptos enriquecidos para cubrir todo el mockup consolidado
+  // (worker/mock-armar-cuartos: listas INT/EXT/AME). Cada zona en orden de
+  // recorrido natural. `icon` es nombre Tabler sin prefijo `ti-`.
+  const CASA_INTERIOR = [
+    { base: 'Recibidor', zona: 'interior', icon: 'door' },
+    { base: 'Sala', zona: 'interior', icon: 'sofa' },
+    { base: 'Comedor', zona: 'interior', icon: 'cup' },
+    { base: 'Antecomedor', zona: 'interior', icon: 'cup' },
+    { base: 'Cocina', zona: 'interior', icon: 'tools-kitchen-2' },
+    { base: 'Recámara', zona: 'interior', icon: 'bed', firstName: 'Recámara principal', repeatable: true },
+    { base: 'Baño', zona: 'interior', icon: 'bath', repeatable: true },
+    { base: 'Medio baño', zona: 'interior', icon: 'droplet', repeatable: true },
+    { base: 'Estudio', zona: 'interior', icon: 'books' },
+    { base: 'Sala de TV', zona: 'interior', icon: 'device-tv' },
+    { base: 'Bar', zona: 'interior', icon: 'glass' },
+    { base: 'Cuarto de juegos', zona: 'interior', icon: 'device-gamepad-2' },
+    { base: 'Terraza', zona: 'interior', icon: 'sun' },
+    { base: 'Lavandería', zona: 'interior', icon: 'wash-machine' },
+    { base: 'Cuarto de servicio', zona: 'interior', icon: 'door' },
+  ];
+  const CASA_EXTERIOR = [
+    { base: 'Fachada', zona: 'exterior', icon: 'home' },
+    { base: 'Acceso principal', zona: 'exterior', icon: 'door-enter' },
+    { base: 'Jardín', zona: 'exterior', icon: 'plant-2' },
+    { base: 'Áreas verdes', zona: 'exterior', icon: 'trees' },
+    { base: 'Cochera', zona: 'exterior', icon: 'car', repeatable: true },
+    { base: 'Estacionamiento', zona: 'exterior', icon: 'car', repeatable: true },
+    { base: 'Patio', zona: 'exterior', icon: 'fence' },
+    { base: 'Terraza', zona: 'exterior', icon: 'sun' },
+    { base: 'Roof garden', zona: 'exterior', icon: 'building' },
+    { base: 'Deck', zona: 'exterior', icon: 'sun' },
+    { base: 'Pérgola', zona: 'exterior', icon: 'umbrella' },
+    { base: 'Palapa', zona: 'exterior', icon: 'umbrella' },
+    { base: 'Alberca', zona: 'exterior', icon: 'pool' },
+    { base: 'Fuente', zona: 'exterior', icon: 'droplet' },
+    { base: 'Asadores', zona: 'exterior', icon: 'flame' },
+    { base: 'Fogatero', zona: 'exterior', icon: 'flame' },
+    { base: 'Cocina exterior', zona: 'exterior', icon: 'tools-kitchen-2' },
+    { base: 'Cancha', zona: 'exterior', icon: 'ball-football' },
+    { base: 'Mirador', zona: 'exterior', icon: 'binoculars' },
+    { base: 'Bodega', zona: 'exterior', icon: 'box' },
+  ];
+  const CASA_AMENIDADES = [
+    { base: 'Alberca', zona: 'amenidades', icon: 'pool' },
+    { base: 'Casa club', zona: 'amenidades', icon: 'building-community' },
+    { base: 'Gimnasio', zona: 'amenidades', icon: 'barbell' },
+    { base: 'Cancha', zona: 'amenidades', icon: 'ball-football' },
+    { base: 'Áreas verdes', zona: 'amenidades', icon: 'trees' },
+    { base: 'Parque', zona: 'amenidades', icon: 'trees' },
+    { base: 'Caseta', zona: 'amenidades', icon: 'shield-half' },
+    { base: 'Asadores', zona: 'amenidades', icon: 'flame' },
+    { base: 'Palapa', zona: 'amenidades', icon: 'umbrella' },
+    { base: 'Cocina exterior', zona: 'amenidades', icon: 'tools-kitchen-2' },
+    { base: 'Área canina', zona: 'amenidades', icon: 'paw' },
+    { base: 'Ludoteca', zona: 'amenidades', icon: 'puzzle' },
+    { base: 'Área infantil', zona: 'amenidades', icon: 'mood-kid' },
+    { base: 'Sala de negocios', zona: 'amenidades', icon: 'briefcase' },
+    { base: 'Salón de eventos', zona: 'amenidades', icon: 'confetti' },
+    { base: 'Cowork', zona: 'amenidades', icon: 'device-laptop' },
+    { base: 'Spa', zona: 'amenidades', icon: 'massage' },
+    { base: 'Cine', zona: 'amenidades', icon: 'movie' },
+    { base: 'Cuarto de juegos', zona: 'amenidades', icon: 'device-gamepad-2' },
+  ];
+
+  const BASE_CONCEPTS = {
+    casa: CASA_INTERIOR.concat(CASA_EXTERIOR, CASA_AMENIDADES),
+    departamento: [
+      { base: 'Recibidor', zona: 'interior', icon: 'door' },
+      { base: 'Sala', zona: 'interior', icon: 'sofa' },
+      { base: 'Comedor', zona: 'interior', icon: 'cup' },
+      { base: 'Antecomedor', zona: 'interior', icon: 'cup' },
+      { base: 'Cocina', zona: 'interior', icon: 'tools-kitchen-2' },
+      { base: 'Recámara', zona: 'interior', icon: 'bed', firstName: 'Recámara principal', repeatable: true },
+      { base: 'Baño', zona: 'interior', icon: 'bath', repeatable: true },
+      { base: 'Medio baño', zona: 'interior', icon: 'droplet', repeatable: true },
+      { base: 'Estudio', zona: 'interior', icon: 'books' },
+      { base: 'Sala de TV', zona: 'interior', icon: 'device-tv' },
+      { base: 'Bar', zona: 'interior', icon: 'glass' },
+      { base: 'Cuarto de juegos', zona: 'interior', icon: 'device-gamepad-2' },
+      { base: 'Lavandería', zona: 'interior', icon: 'wash-machine' },
+      { base: 'Cuarto de servicio', zona: 'interior', icon: 'door' },
+      { base: 'Balcón', zona: 'exterior', icon: 'sun' },
+      { base: 'Terraza', zona: 'exterior', icon: 'sun' },
+      { base: 'Roof garden', zona: 'exterior', icon: 'building' },
+      { base: 'Lobby', zona: 'amenidades', icon: 'building' },
+      { base: 'Alberca', zona: 'amenidades', icon: 'pool' },
+      { base: 'Gimnasio', zona: 'amenidades', icon: 'barbell' },
+      { base: 'Casa club', zona: 'amenidades', icon: 'building-community' },
+      { base: 'Cancha', zona: 'amenidades', icon: 'ball-football' },
+      { base: 'Áreas verdes', zona: 'amenidades', icon: 'trees' },
+      { base: 'Caseta', zona: 'amenidades', icon: 'shield-half' },
+      { base: 'Asadores', zona: 'amenidades', icon: 'flame' },
+      { base: 'Palapa', zona: 'amenidades', icon: 'umbrella' },
+      { base: 'Cocina exterior', zona: 'amenidades', icon: 'tools-kitchen-2' },
+      { base: 'Salón de eventos', zona: 'amenidades', icon: 'confetti' },
+      { base: 'Cowork', zona: 'amenidades', icon: 'device-laptop' },
+      { base: 'Área infantil', zona: 'amenidades', icon: 'mood-kid' },
+      { base: 'Spa', zona: 'amenidades', icon: 'massage' },
+      { base: 'Cine', zona: 'amenidades', icon: 'movie' },
+      { base: 'Cuarto de juegos', zona: 'amenidades', icon: 'device-gamepad-2' },
+    ],
+    quinta: [
+      { base: 'Recibidor', zona: 'interior', icon: 'door' },
+      { base: 'Sala', zona: 'interior', icon: 'sofa' },
+      { base: 'Comedor', zona: 'interior', icon: 'cup' },
+      { base: 'Antecomedor', zona: 'interior', icon: 'cup' },
+      { base: 'Cocina', zona: 'interior', icon: 'tools-kitchen-2' },
+      { base: 'Recámara', zona: 'interior', icon: 'bed', firstName: 'Recámara principal', repeatable: true },
+      { base: 'Baño', zona: 'interior', icon: 'bath', repeatable: true },
+      { base: 'Medio baño', zona: 'interior', icon: 'droplet', repeatable: true },
+      { base: 'Estudio', zona: 'interior', icon: 'books' },
+      { base: 'Sala de TV', zona: 'interior', icon: 'device-tv' },
+      { base: 'Bar', zona: 'interior', icon: 'glass' },
+      { base: 'Cuarto de juegos', zona: 'interior', icon: 'device-gamepad-2' },
+      { base: 'Terraza', zona: 'interior', icon: 'sun' },
+      { base: 'Lavandería', zona: 'interior', icon: 'wash-machine' },
+      { base: 'Cuarto de servicio', zona: 'interior', icon: 'door' },
+      { base: 'Fachada', zona: 'exterior', icon: 'home' },
+      { base: 'Acceso principal', zona: 'exterior', icon: 'door-enter' },
+      { base: 'Caseta', zona: 'exterior', icon: 'shield-half' },
+      { base: 'Jardín', zona: 'exterior', icon: 'plant-2' },
+      { base: 'Áreas verdes', zona: 'exterior', icon: 'trees' },
+      { base: 'Cochera', zona: 'exterior', icon: 'car', repeatable: true },
+      { base: 'Estacionamiento', zona: 'exterior', icon: 'car', repeatable: true },
+      { base: 'Patio', zona: 'exterior', icon: 'fence' },
+      { base: 'Terraza', zona: 'exterior', icon: 'sun' },
+      { base: 'Palapa', zona: 'exterior', icon: 'umbrella' },
+      { base: 'Pérgola', zona: 'exterior', icon: 'umbrella' },
+      { base: 'Deck', zona: 'exterior', icon: 'sun' },
+      { base: 'Alberca', zona: 'exterior', icon: 'pool' },
+      { base: 'Fuente', zona: 'exterior', icon: 'droplet' },
+      { base: 'Asadores', zona: 'exterior', icon: 'flame' },
+      { base: 'Fogatero', zona: 'exterior', icon: 'flame' },
+      { base: 'Cocina exterior', zona: 'exterior', icon: 'tools-kitchen-2' },
+      { base: 'Cancha', zona: 'exterior', icon: 'ball-football' },
+      { base: 'Mirador', zona: 'exterior', icon: 'binoculars' },
+      { base: 'Bodega', zona: 'exterior', icon: 'box' },
+      { base: 'Alberca', zona: 'amenidades', icon: 'pool' },
+      { base: 'Casa club', zona: 'amenidades', icon: 'building-community' },
+      { base: 'Gimnasio', zona: 'amenidades', icon: 'barbell' },
+      { base: 'Cancha', zona: 'amenidades', icon: 'ball-football' },
+      { base: 'Áreas verdes', zona: 'amenidades', icon: 'trees' },
+      { base: 'Parque', zona: 'amenidades', icon: 'trees' },
+      { base: 'Caseta', zona: 'amenidades', icon: 'shield-half' },
+      { base: 'Asadores', zona: 'amenidades', icon: 'flame' },
+      { base: 'Palapa', zona: 'amenidades', icon: 'umbrella' },
+      { base: 'Cocina exterior', zona: 'amenidades', icon: 'tools-kitchen-2' },
+      { base: 'Área canina', zona: 'amenidades', icon: 'paw' },
+      { base: 'Salón de eventos', zona: 'amenidades', icon: 'confetti' },
+      { base: 'Spa', zona: 'amenidades', icon: 'massage' },
+      { base: 'Cine', zona: 'amenidades', icon: 'movie' },
+      { base: 'Cuarto de juegos', zona: 'amenidades', icon: 'device-gamepad-2' },
+    ],
+  };
+
+  // F47 — defaultVisible(zona, floorIndex) -> bases visibles por defecto al armar.
+  // Replica DEF_PB/DEF_ALTA del mockup consolidado. Solo UI; no se persiste.
+  // La Recámara se sugiere SIEMPRE en planta baja (haya o no plantas altas): aunque
+  // agregues un segundo piso, la habitación de planta baja se queda (decisión de
+  // Bruno). Las plantas altas también la sugieren.
+  function defaultVisible(zona, floorIndex) {
+    const i = Math.max(0, parseInt(floorIndex, 10) || 0);
+    if (zona === 'interior') {
+      return i === 0
+        ? ['Sala', 'Comedor', 'Cocina', 'Medio baño', 'Recámara', 'Baño']
+        : ['Recámara', 'Baño', 'Sala', 'Estudio'];
+    }
+    if (zona === 'exterior') return ['Fachada'];
+    return [];
+  }
+
+  // Indice base normalizado -> base canonico, por tipo (cache perezoso).
+  function baseIndexFor(tipo) {
+    const list = BASE_CONCEPTS[tipo] || [];
+    const idx = {};
+    list.forEach((c) => { idx[normNombre(c.base)] = c.base; });
+    return idx;
+  }
+
+  // catalogByZone(tipo) -> { interior:[...], exterior:[...], amenidades:[...] }
+  // agrupa los BASE_CONCEPTS del tipo por zona, en orden de recorrido.
+  // Para tipos sin catalogo (p. ej. terreno) devuelve {}.
+  function catalogByZone(tipo) {
+    const list = BASE_CONCEPTS[tipo];
+    if (!list) return {};
+    const out = { interior: [], exterior: [], amenidades: [] };
+    list.forEach((c) => {
+      if (out[c.zona]) out[c.zona].push(c);
+    });
+    return out;
+  }
+
+  // baseConcept(nombre [, tipo]) -> concepto base canonico de un nombre instanciado.
+  // "Recámara 2"/"Recámara principal" -> "Recámara". Compara sin acentos/minusculas.
+  // Si no coincide con ningun BASE_CONCEPTS, devuelve el nombre tal cual.
+  function baseConcept(nombre, tipo) {
+    const raw = String(nombre || '').trim();
+    if (!raw) return raw;
+    // Quitar sufijo numerico (" 2", " 3", …) y el calificador "principal".
+    let stripped = raw.replace(/\s+\d+\s*$/, '');
+    const norm = normNombre(stripped);
+    const tipos = tipo ? [tipo] : Object.keys(BASE_CONCEPTS);
+    for (let i = 0; i < tipos.length; i++) {
+      const idx = baseIndexFor(tipos[i]);
+      if (idx[norm]) return idx[norm];
+      // "recamara principal" -> firstName: mapear contra cada concepto con firstName.
+      const list = BASE_CONCEPTS[tipos[i]] || [];
+      for (let j = 0; j < list.length; j++) {
+        const c = list[j];
+        if (c.firstName && normNombre(c.firstName) === normNombre(raw)) return c.base;
+      }
+    }
+    return raw;
+  }
+
+  // nextRoomName(existingNames, concept) -> siguiente nombre para el concepto.
+  // Sin instancias: concept.firstName (si existe) o concept.base.
+  // Con instancias: base + ' ' + n, con n el menor entero >=2 libre (cuenta por baseConcept).
+  function nextRoomName(existingNames, concept) {
+    const base = concept && concept.base ? concept.base : '';
+    const names = Array.isArray(existingNames) ? existingNames : [];
+    const normBase = normNombre(base);
+    const usados = names.filter((n) => normNombre(baseConcept(n)) === normBase);
+    if (usados.length === 0) return concept && concept.firstName ? concept.firstName : base;
+    // Numeros ya tomados (firstName/base cuentan como "1").
+    const tomados = new Set([1]);
+    usados.forEach((n) => {
+      const m = String(n).match(/\s+(\d+)\s*$/);
+      if (m) tomados.add(parseInt(m[1], 10));
+      else tomados.add(1);
+    });
+    let n = 2;
+    while (tomados.has(n)) n += 1;
+    return base + ' ' + n;
+  }
+
+  // floorLabel(index) -> nombre canonico de planta por indice de piso.
+  // 0 -> 'Planta baja', 1 -> 'Planta alta', >=2 -> 'Planta '+(index+1).
+  function floorLabel(index) {
+    const i = Math.max(0, parseInt(index, 10) || 0);
+    if (i === 0) return 'Planta baja';
+    if (i === 1) return 'Planta alta';
+    return 'Planta ' + (i + 1);
+  }
+  // Alias historico interno.
+  const floorName = floorLabel;
+
+  // nextFloorName(pisos) -> el siguiente floorLabel que NO este ya en `pisos`,
+  // recorriendo indices 0,1,2,…; ignora los pisos drone (isDronePiso) al comparar.
+  function nextFloorName(pisos) {
+    const usados = new Set();
+    (Array.isArray(pisos) ? pisos : []).forEach((p) => {
+      if (p == null || isDronePiso(p)) return;
+      usados.add(normNombre(String(p)));
+    });
+    for (let i = 0; ; i++) {
+      const label = floorLabel(i);
+      if (!usados.has(normNombre(label))) return label;
+    }
+  }
+
+  // planSkeleton(tipo, spec) -> arreglo ordenado de { nombre, zona, piso, parentId:null }
+  // que el UI materializa con nuevoEspacio.
+  // spec = { floors: [ { rec, ban, med, opts:{Sala,Comedor,Cocina} }, … ], fachada: bool }.
+  //   floors[i] corresponde al piso floorLabel(i) (0 = 'Planta baja', 1 = 'Planta alta', …).
+  // Numeracion GLOBAL de recamaras/baños/medios a traves de los pisos (PB primero):
+  //   la 1a recamara = firstName ('Recámara principal'), luego 'Recámara 2', 3… aunque
+  //   esten en pisos distintos. Igual baños/medios baños. Tipicos (Sala/Comedor/Cocina)
+  //   por piso segun opts. fachada:true -> 'Fachada' (exterior, piso null) UNA vez.
+  // Idempotente por nombre dentro del propio plan.
+  function planSkeleton(tipo, spec) {
+    const s = spec || {};
+    const floors = Array.isArray(s.floors) ? s.floors : [];
+    const concepts = BASE_CONCEPTS[tipo] || [];
+    const conceptByBase = (b) => concepts.find((c) => normNombre(c.base) === normNombre(b));
+
+    const plan = [];
+    const seen = new Set();
+    const push = (nombre, zona, piso) => {
+      const key = normNombre(nombre);
+      if (seen.has(key)) return;
+      seen.add(key);
+      plan.push({ nombre: nombre, zona: zona, piso: piso, parentId: null });
+    };
+
+    const recConcept = conceptByBase('Recámara') || { base: 'Recámara', firstName: 'Recámara principal' };
+    const banConcept = conceptByBase('Baño') || { base: 'Baño' };
+    const medConcept = conceptByBase('Medio baño') || { base: 'Medio baño' };
+    // Acumuladores globales de nombres para numeracion continua entre pisos.
+    const recNames = [];
+    const banNames = [];
+    const medNames = [];
+
+    floors.forEach((floor, i) => {
+      const f = floor || {};
+      const piso = floorLabel(i);
+      const rec = Math.max(0, parseInt(f.rec, 10) || 0);
+      const ban = Math.max(0, parseInt(f.ban, 10) || 0);
+      const med = Math.max(0, parseInt(f.med, 10) || 0);
+      const toggles = f.opts || {};
+
+      // Tipicos de interior de este piso.
+      ['Sala', 'Comedor', 'Cocina'].forEach((b) => {
+        if (toggles[b]) {
+          const c = conceptByBase(b);
+          push(b, c ? c.zona : 'interior', piso);
+        }
+      });
+      // Recamaras de este piso (numeracion global).
+      for (let r = 0; r < rec; r++) {
+        const nombre = nextRoomName(recNames, recConcept);
+        recNames.push(nombre);
+        push(nombre, 'interior', piso);
+      }
+      // Baños de este piso (numeracion global).
+      for (let b = 0; b < ban; b++) {
+        const nombre = nextRoomName(banNames, banConcept);
+        banNames.push(nombre);
+        push(nombre, 'interior', piso);
+      }
+      // Medios baños de este piso (numeracion global).
+      for (let m = 0; m < med; m++) {
+        const nombre = nextRoomName(medNames, medConcept);
+        medNames.push(nombre);
+        push(nombre, 'interior', piso);
+      }
+    });
+
+    // Fachada al exterior, una sola vez.
+    if (s.fachada) {
+      const c = conceptByBase('Fachada');
+      push('Fachada', c ? c.zona : 'exterior', null);
+    }
+
+    return plan;
   }
 
   function legacyValueToState(value) {
@@ -1002,11 +2860,76 @@
     return { estado: 'hecho', autor: typeof value === 'string' ? value : '', hora: '' };
   }
 
+  // Convierte droneItems (modelo viejo) en espacios (modelo nuevo). Mutador.
+  // Solo migra droneItems que tengan al menos un mediaFile apuntandolos; los demas se descartan.
+  function migrateDroneItemsToEspacios(state) {
+    const droneItems = Array.isArray(state.droneItems) ? state.droneItems : [];
+    if (!droneItems.length) {
+      state.droneItems = [];
+      return;
+    }
+    const mediaFiles = Array.isArray(state.mediaFiles) ? state.mediaFiles : [];
+    const espaciosIds = new Set((state.espacios || []).map((esp) => esp.id));
+    // droneItems usados por al menos un mediaFile (y que no sean ya un espacio).
+    const usedIds = new Set();
+    mediaFiles.forEach((file) => {
+      if (file && file.targetId && !espaciosIds.has(file.targetId)) usedIds.add(file.targetId);
+    });
+    const idMap = {};
+    droneItems.forEach((item, index) => {
+      if (!item || !item.id || !usedIds.has(item.id)) return;
+      const nuevoId = makeId('esp');
+      idMap[item.id] = nuevoId;
+      const estados = blankEstados();
+      if (item.estado === 'hecho') estados.drone = { estado: 'hecho' };
+      else if (item.noAplica) estados.drone = { estado: 'no_aplica' };
+      state.espacios.push({
+        id: nuevoId,
+        nombre: item.nombre || 'Toma drone',
+        parentId: null,
+        orden: state.espacios.length + 1,
+        clave: false,
+        zona: 'exterior',
+        piso: 'Exterior',
+        estados,
+        categoria: undefined,
+        guideSkip: undefined,
+      });
+    });
+    // Reasignar el targetId de los mediaFiles al espacio nuevo, preservando todo lo demas.
+    mediaFiles.forEach((file) => {
+      if (file && file.targetId && idMap[file.targetId]) file.targetId = idMap[file.targetId];
+    });
+    state.droneItems = [];
+  }
+
   function normalizeChecklistData(data) {
     if (data && (data.version === 2 || data.version === 3)) {
       const normalized = Object.assign(createDefaultState(), clone(data));
       normalized.servicios = Object.assign(clone(SERVICES_DEFAULT), normalized.servicios || {});
-      normalized.guide = Object.assign({ tipoPropiedad: null, descripcion: '', proposal: null }, normalized.guide || {});
+      normalized.guide = Object.assign({ tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false }, normalized.guide || {});
+      // F35 — migracion del default incluirDrone: el campo es nuevo. Si el estado
+      // entrante NO lo trae pero tiene rastro de drone (algun espacio kind:'drone' o
+      // algun mediaFile de camara drone), se normaliza a true; si no, queda false.
+      // Si ya viene el campo, se respeta. (El motor no conoce el rol; la UI lo
+      // enciende — pero un estado viejo con tomas de drone debe verse en la lane.)
+      const _guideEntrante = (data && typeof data.guide === 'object' && data.guide) ? data.guide : {};
+      if (!Object.prototype.hasOwnProperty.call(_guideEntrante, 'incluirDrone')) {
+        const _espaciosEntrantes = Array.isArray(data && data.espacios) ? data.espacios : [];
+        const _droneItemsEntrantes = Array.isArray(data && data.droneItems) ? data.droneItems : [];
+        const _camsEntrantes = Array.isArray(data && data.cameras) ? data.cameras : [];
+        const _droneCamIds = new Set(
+          _camsEntrantes.filter((c) => c && c.mode === 'drone').map((c) => c.id)
+          // los drones por defecto tambien cuentan como camara drone aunque no esten en data.cameras
+          .concat(['drone-dji', 'drone-mini-4-pro'])
+        );
+        const _filesEntrantes = Array.isArray(data && data.mediaFiles) ? data.mediaFiles : [];
+        const _hayRastroDrone =
+          _espaciosEntrantes.some((esp) => esp && (esp.kind === 'drone' || isDronePiso(esp.piso)))
+          || _droneItemsEntrantes.length > 0
+          || _filesEntrantes.some((f) => f && f.cameraId && _droneCamIds.has(f.cameraId));
+        normalized.guide.incluirDrone = !!_hayRastroDrone;
+      }
       normalized.espacios = (normalized.espacios || []).map((space, index) => ({
         id: space.id || makeId('esp'),
         nombre: space.nombre || 'Espacio sin nombre',
@@ -1019,16 +2942,15 @@
         categoria: space.categoria || undefined,
         guideSkip: space.guideSkip || undefined,
       }));
-      normalized.pisos = Array.isArray(data.pisos) && data.pisos.length ? data.pisos.slice() : derivePisos(normalized.espacios);
-      normalized.droneItems = (normalized.droneItems && normalized.droneItems.length ? normalized.droneItems : createDroneItems())
-        .map((item, index) => ({
-          id: item.id || makeId('drone'),
-          nombre: item.nombre || 'Toma drone',
-          estado: item.estado || 'pendiente',
-          ordenLista: item.ordenLista || index + 1,
-          ultimoOrden: item.ultimoOrden || null,
-          noAplica: !!item.noAplica,
-        }));
+      // Migracion droneItems -> espacios: el drone ya no es entidad propia, comparte espacios.
+      // Por cada droneItem USADO por al menos un mediaFile creamos un espacio nuevo en piso
+      // 'Exterior' (zona 'exterior') y reasignamos el targetId de esos mediaFiles, preservando
+      // todo lo demas del mediaFile. Los droneItems no usados se descartan. No se pierden archivos.
+      migrateDroneItemsToEspacios(normalized);
+      // Migracion de pisos: si el estado entrante trae `pisos` como array (incluido `[]` vacio a
+      // proposito por el flujo nuevo de "arrancar sin pisos"), se respeta tal cual. Solo cuando
+      // `pisos` viene ausente/undefined/null (estado legacy) se deriva de los espacios.
+      normalized.pisos = Array.isArray(data && data.pisos) ? data.pisos.slice() : derivePisos(normalized.espacios);
       normalized.asesorPuntos = (normalized.asesorPuntos && normalized.asesorPuntos.length ? normalized.asesorPuntos : createAsesorPuntos())
         .map((p, index) => ({
           id: p.id || makeId('asesor'),
@@ -1059,10 +2981,18 @@
           file.kind = 'omitted';
           file.discardReason = null;
           file.good = false;
+          file.favorite = false;
           file.shotNumber = null;
         }
+        if (typeof file.favorite !== 'boolean') file.favorite = false;
         file.shotType = file.shotType || null;
         file.movement = file.movement || null;
+        file.sentido = file.sentido != null ? file.sentido : null;
+        file.pared = file.pared != null ? file.pared : null;
+        // F28: fusion Push/Pull. Tomas viejas con push_in/pull_out migran a push_pull
+        // conservando el sentido. El resto de movimientos se respeta.
+        if (file.movement === 'push_in') { file.movement = 'push_pull'; if (file.sentido == null) file.sentido = 'in'; }
+        else if (file.movement === 'pull_out') { file.movement = 'push_pull'; if (file.sentido == null) file.sentido = 'out'; }
         file.suggestionId = file.suggestionId || null;
       });
       normalized.sequenceSegments.forEach((segment) => {
@@ -1070,6 +3000,7 @@
         if (counters.length) segment.counterNext = Math.max(segment.counterNext || 0, Math.max(...counters) + 1);
       });
       if (normalized.mediaFiles.length) repairDerivedMediaState(normalized);
+      normalized.tombstones = pruneTombstones(Array.isArray(data && data.tombstones) ? data.tombstones : normalized.tombstones);
       normalized.version = 3;
       return normalized;
     }
@@ -1095,6 +3026,7 @@
         foto: legacyValueToState(room.foto || room.completado),
         t360: legacyValueToState(room.t360 || room.completado),
         video: legacyValueToState(room.video || room.completado),
+        drone: { estado: 'pendiente' },
       },
     }));
     base.pisos = derivePisos(base.espacios);
@@ -1144,11 +3076,14 @@
     if (!camera) return next;
     const parsed = parseFilenameSequence(options.lastFilename, camera.kind);
     if (!parsed) return next;
+    // F66 — archivoActual: el nombre capturado ES el archivo actual, la primera toma arranca
+    // EN ese numero. Sin la opcion se interpreta como el ultimo ya grabado (+1, previo).
+    const offset = options.archivoActual ? 0 : 1;
     const segment = Object.assign({
       id: makeId('segment'),
       cameraId: camera.id,
-      counterStart: parsed.counter + 1,
-      counterNext: parsed.counter + 1,
+      counterStart: parsed.counter + offset,
+      counterNext: parsed.counter + offset,
       createdAt: new Date().toISOString(),
     }, parsed);
     next.sequenceSegments.push(segment);
@@ -1157,9 +3092,53 @@
     return next;
   }
 
+  function bumpCameraCounter(state, cameraId, n) {
+    const steps = Math.floor(Number(n) || 1);
+    if (steps < 1) return state;
+    const next = clone(state);
+    const camera = getCamera(next, cameraId);
+    const segment = (next.sequenceSegments || []).find((item) => item.id === (camera && camera.activeSegmentId));
+    if (!camera || !segment) return state;
+    segment.counterNext += steps;
+    return next;
+  }
+
   function targetsForMode(state, mode) {
-    if (mode === 'drone') return state.droneItems || [];
     if (mode === 'asesor') return state.asesorPuntos || [];
+    // F38 — el drone es UNA sola sesion: devuelve UN unico target de sesion
+    // (droneSessionSubject; o el sujeto terreno si es terreno) cuyas sugerencias son
+    // la lista ordenada completa. ADEMAS, SOLO POR COMPAT, se anexan los espacios
+    // kind:'drone' preexistentes del estado para que el bucle de validacion de
+    // normalizeChecklistData no huerfane (omitted) las tomas viejas. El target de
+    // sesion va primero; de-dup por id. Estos espacios viejos NO son navegables en la
+    // UI nueva (F39): solo mantienen alcanzables sus mediaFiles.
+    if (mode === 'drone') {
+      const sesion = droneSessionSubject(state);
+      const result = [sesion];
+      const seen = new Set([sesion.id]);
+      const espacios = state && Array.isArray(state.espacios) ? state.espacios : [];
+      // Camino de compat: incluye los espacios kind:'drone' preexistentes (drone-piso
+      // viejo) Y cualquier espacio con una toma de drone ya pegada (p.ej. migracion
+      // droneItems->espacios, que materializa espacios zona 'exterior' con el take
+      // reasignado). Asi sus mediaFiles no se huerfanan (omitted) al cargar.
+      const cameras = state && Array.isArray(state.cameras) ? state.cameras : [];
+      const mediaFiles = state && Array.isArray(state.mediaFiles) ? state.mediaFiles : [];
+      const droneCameraIds = new Set(cameras.filter((c) => c && c.mode === 'drone').map((c) => c.id));
+      const espaciosConTomaDrone = new Set(
+        mediaFiles
+          .filter((f) => f && f.kind === 'take' && f.targetId && droneCameraIds.has(f.cameraId))
+          .map((f) => f.targetId)
+      );
+      espacios.forEach((esp) => {
+        if (!esp || typeof esp !== 'object' || !esp.id) return;
+        if (seen.has(esp.id)) return;
+        if (_espacioDroneCompat(esp) || espaciosConTomaDrone.has(esp.id)) {
+          seen.add(esp.id);
+          result.push(esp);
+        }
+      });
+      return result;
+    }
     return state.espacios || [];
   }
 
@@ -1167,7 +3146,7 @@
     const list = targetsForMode(state, mode);
     const target = list.find((item) => item.id === targetId);
     if (!target) return 'Sin identificar';
-    if (mode === 'drone' || mode === 'asesor') return target.nombre;
+    if (mode === 'asesor') return target.nombre;
     const names = [];
     const visited = new Set();
     let current = target;
@@ -1219,30 +3198,37 @@
   }
 
   function targetIsNoAplica(state, mode, targetId) {
+    // F35 — los targets de drone son virtuales (no viven en state.espacios). Se
+    // resuelven via targetsForMode; un target virtual nunca esta 'no_aplica'. Para
+    // los targets de drone que SI son espacios (camino de compat) se respeta su
+    // estado drone como antes.
     if (mode === 'drone') {
-      const item = state.droneItems.find((entry) => entry.id === targetId);
-      return !item || item.noAplica;
+      const target = targetsForMode(state, mode).find((entry) => entry.id === targetId);
+      if (!target) return true;
+      const espacio = state.espacios.find((entry) => entry.id === targetId);
+      if (!espacio) return false;
+      return ((espacio.estados && espacio.estados.drone) || {}).estado === 'no_aplica';
     }
     const space = state.espacios.find((entry) => entry.id === targetId);
-    return !space || (space.estados.video || {}).estado === 'no_aplica';
+    if (!space) return true;
+    const servicio = mode === 'drone' ? 'drone' : 'video';
+    return (space.estados[servicio] || {}).estado === 'no_aplica';
   }
 
   function deriveMediaTargetState(state, camera, targetId) {
     const cameraIds = new Set(state.cameras.filter((item) => item.mode === camera.mode).map((item) => item.id));
     const files = state.mediaFiles.filter((file) => cameraIds.has(file.cameraId) && file.targetId === targetId && file.kind === 'take');
-    if (camera.mode === 'drone') {
-      const item = state.droneItems.find((entry) => entry.id === targetId);
-      if (item) item.estado = files.length ? 'hecho' : 'pendiente';
-      return;
-    }
     if (camera.mode === 'asesor') {
       const punto = (state.asesorPuntos || []).find((entry) => entry.id === targetId);
       if (punto) punto.estado = files.length ? 'hecho' : 'pendiente';
       return;
     }
+    const servicio = camera.mode === 'drone' ? 'drone' : 'video';
     const space = state.espacios.find((entry) => entry.id === targetId);
-    if (space && files.length) space.estados.video = { estado: 'hecho' };
-    else if (space && (space.estados.video || {}).estado !== 'no_aplica') space.estados.video = { estado: 'pendiente' };
+    if (!space) return;
+    if (!space.estados) space.estados = blankEstados();
+    if (files.length) space.estados[servicio] = { estado: 'hecho' };
+    else if ((space.estados[servicio] || {}).estado !== 'no_aplica') space.estados[servicio] = { estado: 'pendiente' };
   }
 
   function renumberTargetShots(state, cameraId, targetId) {
@@ -1256,13 +3242,11 @@
   }
 
   function repairDerivedMediaState(state) {
+    const videoCamera = state.cameras.find((item) => item.mode === 'video');
+    const droneCamera = state.cameras.find((item) => item.mode === 'drone');
     state.espacios.forEach((space) => {
-      const camera = state.cameras.find((item) => item.mode === 'video');
-      if (camera) deriveMediaTargetState(state, camera, space.id);
-    });
-    state.droneItems.forEach((item) => {
-      const camera = state.cameras.find((entry) => entry.mode === 'drone');
-      if (camera) deriveMediaTargetState(state, camera, item.id);
+      if (videoCamera) deriveMediaTargetState(state, videoCamera, space.id);
+      if (droneCamera) deriveMediaTargetState(state, droneCamera, space.id);
     });
     (state.asesorPuntos || []).forEach((punto) => {
       const camera = state.cameras.find((entry) => entry.mode === 'asesor');
@@ -1280,34 +3264,53 @@
     const sequence = getCameraSequence(next, options.cameraId);
     if (!camera || !sequence.segment) return state;
     const kind = options.kind || 'take';
-    if (options.discardReason !== 'unrelated' && targetIsNoAplica(next, camera.mode, options.targetId)) return state;
+    // Un cuarto pendiente (targetId null = "sin identificar") es legitimo: no se evalua "no aplica".
+    // La regla de rechazo por "no aplica" solo aplica a un target real elegido.
+    if (options.targetId && options.discardReason !== 'unrelated' && targetIsNoAplica(next, camera.mode, options.targetId)) return state;
+    // F69 — override aditivo del contador: si viene `counter`, el carril arranca en ese numero
+    // (el token y el fileCounter salen de `counter`) ANTES de insertar; luego sigue el counterNext++
+    // normal. Sin `counter`, comportamiento identico a hoy.
+    const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
+    if (Number.isInteger(options.counter)) {
+      activeSegment.counterNext = options.counter;
+    }
     const sceneData = options.discardReason === 'unrelated'
       ? { scene: 'Sin escena', scenePath: 'Sin escena' }
       : getSceneData(next, camera, options.targetId);
     const shotNumber = kind === 'take'
       ? next.mediaFiles.filter((file) => file.cameraId === camera.id && file.targetId === options.targetId && file.kind === 'take').length + 1
       : null;
+    // F69 — overrides aditivos de seleccion: si vienen `good`/`favorite`, se aplican al mediaFile
+    // (favorite:true implica good:true, igual que toggleMediaFavorite). Sin overrides, ambos quedan
+    // en false como hoy.
+    let good = false;
+    let favorite = false;
+    if (options.favorite === true) { favorite = true; good = true; }
+    else if (options.good === true) { good = true; }
     next.mediaFiles.push({
       id: makeId('media'),
       cameraId: camera.id,
-      segmentId: sequence.segment.id,
-      fileCounter: sequence.segment.counterNext,
-      fileToken: formatFileToken(sequence.segment, sequence.segment.counterNext),
+      segmentId: activeSegment.id,
+      fileCounter: activeSegment.counterNext,
+      fileToken: formatFileToken(activeSegment, activeSegment.counterNext),
       targetId: options.targetId || null,
       scene: sceneData.scene,
       scenePath: sceneData.scenePath,
       shotNumber,
       kind,
       discardReason: options.discardReason || null,
-      good: false,
+      good,
+      favorite,
       note: options.note || '',
       author: options.autor || 'Anonimo',
       createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
+      updatedAt: options.now ? new Date(options.now).toISOString() : nowIso(),
       shotType: options.shotType || null,
       movement: options.movement || null,
+      sentido: options.sentido != null ? options.sentido : null,
+      pared: options.pared != null ? options.pared : null,
       suggestionId: options.suggestionId || null,
     });
-    const activeSegment = next.sequenceSegments.find((item) => item.id === sequence.segment.id);
     activeSegment.counterNext++;
     if (kind === 'take' && options.targetId) deriveMediaTargetState(next, camera, options.targetId);
     return next;
@@ -1348,6 +3351,7 @@
         role: camera.role,
         author: options.autor || 'Anonimo',
         createdAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
+        updatedAt: options.now ? new Date(options.now).toISOString() : new Date().toISOString(),
         shotType: null,
         movement: null,
         suggestionId: null,
@@ -1362,7 +3366,18 @@
   function toggleMediaGood(state, mediaId) {
     const next = clone(state);
     const file = next.mediaFiles.find((item) => item.id === mediaId);
-    if (file && file.kind === 'take') file.good = !file.good;
+    if (file && file.kind === 'take') { file.good = !file.good; file.updatedAt = nowIso(); }
+    return next;
+  }
+
+  function toggleMediaFavorite(state, mediaId) {
+    const next = clone(state);
+    const file = next.mediaFiles.find((item) => item.id === mediaId);
+    if (file && file.kind === 'take') {
+      file.favorite = !file.favorite;
+      if (file.favorite) file.good = true;
+      file.updatedAt = nowIso();
+    }
     return next;
   }
 
@@ -1396,6 +3411,7 @@
       note: '',
       author: 'Anonimo',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
     segment.counterNext++;
     return next;
@@ -1418,6 +3434,8 @@
     if (changes.note !== undefined) file.note = changes.note;
     if (changes.shotType !== undefined) file.shotType = changes.shotType;
     if (changes.movement !== undefined) file.movement = changes.movement;
+    if (changes.sentido !== undefined) file.sentido = changes.sentido;
+    if (changes.pared !== undefined) file.pared = changes.pared;
     if (changes.suggestionId !== undefined) file.suggestionId = changes.suggestionId;
     if (file.kind === 'discard' && file.discardReason === 'unrelated') {
       file.targetId = null;
@@ -1439,6 +3457,7 @@
       renumberTargetShots(next, camera.id, file.targetId);
       deriveMediaTargetState(next, camera, file.targetId);
     }
+    file.updatedAt = nowIso();
     return next;
   }
 
@@ -1463,6 +3482,7 @@
       renumberTargetShots(next, camera.id, removed.targetId);
       deriveMediaTargetState(next, camera, removed.targetId);
     }
+    addTombstones(next, [mediaId]);
     return next;
   }
 
@@ -1547,14 +3567,8 @@
       space.orden = next.espacios.length + 1;
       next.espacios.push(space);
     });
-    if (template.drone) {
-      next.droneItems = template.drone.map((nombre, index) => ({
-        id: makeId('drone'),
-        nombre,
-        estado: 'pendiente',
-        ordenLista: index + 1,
-      }));
-    }
+    // El drone ya no es una entidad propia: comparte los espacios. El template.drone
+    // (nombres de tomas aereas) se conserva como referencia/sugerencias via DRONE_GUIDE.
     return next;
   }
 
@@ -1577,7 +3591,7 @@
   }
 
   function findTargetName(state, tipo, targetId) {
-    const list = tipo === 'drone' ? state.droneItems : state.espacios;
+    const list = tipo === 'asesor' ? (state.asesorPuntos || []) : state.espacios;
     const item = list.find((entry) => entry.id === targetId);
     return item ? item.nombre : '';
   }
@@ -1587,17 +3601,11 @@
     const tipo = options.tipo;
     const targetId = options.targetId;
     const intencion = options.intencion || 'principal';
-    if (tipo !== 'drone') {
-      const existingSpace = next.espacios.find((entry) => entry.id === targetId);
-      const existingState = existingSpace && existingSpace.estados[tipo];
-      if (!existingSpace || (existingState && existingState.estado === 'no_aplica')) return state;
-      if (existingState && existingState.estado === 'hecho' && (tipo === 'foto' || tipo === 't360')) return state;
-      if (existingState && existingState.estado === 'hecho' && tipo === 'video' && intencion === 'principal') return state;
-    } else {
-      const existingDrone = next.droneItems.find((entry) => entry.id === targetId);
-      if (!existingDrone || existingDrone.noAplica) return state;
-      if (existingDrone && existingDrone.estado === 'hecho' && intencion === 'principal') return state;
-    }
+    const existingSpace = next.espacios.find((entry) => entry.id === targetId);
+    const existingState = existingSpace && existingSpace.estados[tipo];
+    if (!existingSpace || (existingState && existingState.estado === 'no_aplica')) return state;
+    if (existingState && existingState.estado === 'hecho' && (tipo === 'foto' || tipo === 't360')) return state;
+    if (existingState && existingState.estado === 'hecho' && (tipo === 'video' || tipo === 'drone') && intencion === 'principal') return state;
     const order = tipo === 'video' || tipo === 'drone' ? getNextOrder(next, tipo) : null;
     const hora = formatTime(options.now);
     const log = {
@@ -1613,20 +3621,10 @@
       intencion,
     };
 
-    if (tipo === 'drone') {
-      const item = next.droneItems.find((entry) => entry.id === targetId);
-      if (item) {
-        item.estado = 'hecho';
-        item.autor = log.autor;
-        item.hora = hora;
-        item.ultimoOrden = order;
-      }
-    } else {
-      const space = next.espacios.find((entry) => entry.id === targetId);
-      if (space) {
-        space.estados[tipo] = { estado: 'hecho', autor: log.autor, hora };
-        if (order) space.estados[tipo].ultimoOrden = order;
-      }
+    const space = next.espacios.find((entry) => entry.id === targetId);
+    if (space) {
+      space.estados[tipo] = { estado: 'hecho', autor: log.autor, hora };
+      if (order) space.estados[tipo].ultimoOrden = order;
     }
 
     next.bitacora.push(log);
@@ -1637,24 +3635,6 @@
     const next = clone(state);
     const log = next.bitacora.pop();
     if (!log) return next;
-    if (log.tipo === 'drone') {
-      const item = next.droneItems.find((entry) => entry.id === log.targetId);
-      const previous = next.bitacora.filter((entry) => entry.tipo === 'drone' && entry.targetId === log.targetId).pop();
-      if (item) {
-        if (previous) {
-          item.estado = 'hecho';
-          item.ultimoOrden = previous.orden || null;
-          item.autor = previous.autor || '';
-          item.hora = previous.hora || '';
-        } else {
-          item.estado = 'pendiente';
-          delete item.ultimoOrden;
-          delete item.autor;
-          delete item.hora;
-        }
-      }
-      return next;
-    }
     const space = next.espacios.find((entry) => entry.id === log.targetId);
     if (space && space.estados[log.tipo]) {
       const previous = next.bitacora.filter((entry) => entry.tipo === log.tipo && entry.targetId === log.targetId).pop();
@@ -1701,10 +3681,11 @@
       summary.totalDone += required - pending.length;
     });
     if (state.servicios.drone) {
-      const pending = state.droneItems
-        .filter((item) => item.estado !== 'hecho' && !item.noAplica)
-        .map((item) => item.nombre);
-      const required = state.droneItems.filter((item) => !item.noAplica).length;
+      const pending = state.espacios
+        .filter((space) => (space.estados.drone || {}).estado !== 'hecho' && (space.estados.drone || {}).estado !== 'no_aplica')
+        .map((space) => space.nombre);
+      const required = state.espacios
+        .filter((space) => (space.estados.drone || {}).estado !== 'no_aplica').length;
       summary.byService.drone = { label: SERVICE_LABELS.drone, pending, required, done: required - pending.length };
       summary.totalPending += pending.length;
       summary.totalRequired += required;
@@ -1732,7 +3713,13 @@
     }
     const prefijo = file.ordenEdicion != null ? '[E' + file.ordenEdicion + '] ' : '';
     const tipo = file.tipoTomaLabel || null;
-    const mov = file.movimientoLabel || null;
+    // F28: tokens consistentes y buscables. Push/Pull con sentido -> "Push/Pull (in)";
+    // Reveal con pared -> "Reveal · pared izq". Sin sub-dato, el label del movimiento como hoy.
+    let mov = file.movimientoLabel || null;
+    if (mov) {
+      if (file.movimiento === 'push_pull' && file.sentido) mov = mov + ' (' + file.sentido + ')';
+      else if (file.movimiento === 'reveal' && file.pared) mov = mov + ' · pared ' + file.pared;
+    }
     const sufijo = (tipo || mov) ? ' · ' + [tipo, mov].filter(Boolean).join(' / ') : '';
     return prefijo + base + sufijo;
   }
@@ -1754,15 +3741,26 @@
       const espacio = (servicio === 'drone' || servicio === 'asesor') ? null : (state.espacios || []).find((e) => e.id === f.targetId);
 
       const tipoToma = f.shotType || null;
-      const tipoTomaLabel = tipoToma && shotTypes[tipoToma] ? shotTypes[tipoToma].label : null;
+      // F17 (C) — resuelve el label contra SHOT_TYPES (video) o, si es un tipo
+      // aereo de drone, contra DRONE_SHOT_TYPES. Aditivo: no cambia version:1.
+      const droneShotTypes = getDroneShotTypes();
+      const tipoTomaLabel = tipoToma
+        ? (shotTypes[tipoToma] ? shotTypes[tipoToma].label
+          : (droneShotTypes[tipoToma] ? droneShotTypes[tipoToma].label : null))
+        : null;
       const movimiento = f.movement || null;
       const movimientoLabel = movimiento && movements[movimiento] ? movements[movimiento].label : null;
+      // F28: sub-datos discretos. sentido solo aplica a push_pull; pared solo a reveal.
+      const sentido = (movimiento === 'push_pull' && f.sentido) ? f.sentido : null;
+      const pared = (movimiento === 'reveal' && f.pared) ? f.pared : null;
+      const sentidoLabelVal = sentidoLabel(sentido);
+      const paredLabelVal = paredLabel(pared);
       const sugerencia = f.suggestionId || null;
       const sug = sugerencia ? findSuggestion(sugerencia) : null;
       const prioridad = sug ? sug.priority : null;
       const ordenEdicion = tipoToma != null ? (EDIT_ORDER[tipoToma] !== undefined ? EDIT_ORDER[tipoToma] : null) : null;
 
-      const enrichedFile = { kind: f.kind, good: f.good, discardReason: f.discardReason, ordenEdicion, tipoTomaLabel, movimientoLabel };
+      const enrichedFile = { kind: f.kind, good: f.good, discardReason: f.discardReason, ordenEdicion, tipoTomaLabel, movimiento, movimientoLabel, sentido, pared };
 
       return {
         archivo: f.fileToken,
@@ -1780,6 +3778,7 @@
         tipo: f.kind,
         motivoDescarte: f.discardReason || null,
         buena: !!f.good,
+        favorita: !!f.favorite,
         nota: f.note || '',
         par: f.pairId || null,
         autor: f.author || '',
@@ -1788,6 +3787,10 @@
         tipoTomaLabel,
         movimiento,
         movimientoLabel,
+        sentido,
+        sentidoLabel: sentidoLabelVal,
+        pared,
+        paredLabel: paredLabelVal,
         sugerencia,
         prioridad,
         ordenEdicion,
@@ -1796,6 +3799,7 @@
           Shot: f.shotNumber ? String(f.shotNumber) : '',
           'Camera Roll': cam.label || '',
           Good: !!f.good,
+          Favorite: !!f.favorite,
           Comment: f.note || '',
           Description: describirArchivo(servicio, enrichedFile),
         },
@@ -1872,6 +3876,23 @@
     SPACE_SUGGESTIONS,
     SHOT_TYPES,
     MOVEMENTS,
+    mergeChecklist,
+    addTombstones,
+    clearTombstone,
+    CURATED_SHOT_TYPES,
+    CURATED_MOVEMENTS,
+    SENTIDO_OPTS,
+    sentidoLabel,
+    PARED_OPTS,
+    paredLabel,
+    DRONE_SHOT_TYPES,
+    AERIAL_SUBJECTS,
+    AERIAL_SUBJECTS_BY_PROPERTY,
+    DRONE_SCALES,
+    AERIAL_POOL,
+    AERIAL_POOL_INDEX,
+    AERIAL_STANDOUT_MOVES,
+    AERIAL_FEATURE_VOCAB,
     GUIDE_LIBRARY,
     DRONE_GUIDE,
     AMENITY_GUIDE,
@@ -1884,6 +3905,8 @@
     getDroneGuide,
     getAmenityGuide,
     getRoomCategories,
+    getDroneShotTypes,
+    getCameras,
     applyGuideConfig,
     resetGuideConfig,
     normNombre,
@@ -1891,14 +3914,51 @@
     amenityFromName,
     suggestionsForSpace,
     suggestionsForDrone,
+    aerialSubjectFromName,
+    aerialSuggestionsForSubject,
+    suggestedAerialSubjects,
+    aerialPoolForScale,
+    aerialVocabForFeature,
+    aerialFeatureKeyFromName,
+    DRONE_PISO,
+    DRONE_PISOS,
+    EXTERIOR_ZONAS,
+    TERRENO_SUBJECT_ID,
+    isDronePiso,
+    espacioEsDrone,
+    zonaOfEspacio,
+    camerasForEspacio,
+    terrenoSingleSubject,
+    droneAmenidadesAplica,
+    droneFeatureTargets,
+    droneScaleTargets,
+    DRONE_SESSION_ID,
+    droneSessionSubject,
+    droneSessionSuggestions,
+    targetsForMode,
+    SPACE_LIBRARY_BY_FLOOR,
+    SPACE_LIBRARY_INDEX,
+    suggestedSpacesFor,
+    searchSpaces,
     findSuggestion,
     suggestionProgress,
     proposalShotsFor,
     suggestionsForTarget,
     buildPropuestaPrompt,
+    buildDictadoPrompt,
     parsePropuesta,
+    parseDictado,
+    applyDictado,
     guideCoverage,
     capasCubiertas,
+    BASE_CONCEPTS,
+    catalogByZone,
+    defaultVisible,
+    baseConcept,
+    nextRoomName,
+    planSkeleton,
+    floorLabel,
+    nextFloorName,
     createDefaultState,
     normalizeChecklistData,
     parseSpacesText,
@@ -1908,12 +3968,14 @@
     parseFilenameSequence,
     getCameraSequence,
     initializeCameraSequence,
+    bumpCameraCounter,
     getScenePath,
     getDescendantIds,
     getMediaSceneGroups,
     registerMediaFile,
     registerAsesorFile,
     toggleMediaGood,
+    toggleMediaFavorite,
     insertOmittedMediaFile,
     updateMediaFile,
     removeMediaFile,

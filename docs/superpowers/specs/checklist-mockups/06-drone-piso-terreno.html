@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drone como piso + terreno + loop aéreo</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--paper-0:#F7F4EC;--paper-1:#FFFDF8;--paper-2:#EFEADF;--line:#E2DBCB;--onyx:#1C1C1E;--muted:#6F6A5E;--gold:#B08D2E;--gold-leaf:#C9A84C;--ok:#2F7D55;--danger:#B23A2B;--sky:#3a6ea5}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#E7E1D3;font-family:'Inter',sans-serif;color:var(--onyx);padding:18px 12px 48px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .top{max-width:520px;text-align:center}
+  .top h1{font-family:'Fraunces',serif;font-weight:600;font-size:21px;margin:4px 0 6px}
+  .top p{color:var(--muted);font-size:13.5px;line-height:1.5}
+  .cap{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin:6px 0 2px;text-align:center}
+  .capd{font-size:12px;color:var(--muted);text-align:center;margin-bottom:10px;max-width:360px;line-height:1.4}
+  .phone{width:100%;max-width:390px;background:var(--paper-0);border-radius:30px;padding:8px;box-shadow:0 18px 40px -18px rgba(40,34,20,.45);border:1px solid #d8d1c0}
+  .screen{background:var(--paper-0);border-radius:24px;overflow:hidden;display:flex;flex-direction:column}
+  .hd{padding:12px 14px;background:var(--paper-1);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd .ti{font-family:'Fraunces',serif;font-size:16px;font-weight:600}
+  .hd .rn{font-family:'Fraunces',serif;font-size:16px;font-weight:600}
+  .hd .fl{font-family:'Spline Sans Mono',monospace;font-size:10px;color:var(--sky)}
+  .body{padding:13px}
+  .mini{font-size:9.5px;font-weight:600;color:var(--gold);letter-spacing:.04em;text-transform:uppercase;margin:0 0 8px}
+  .mini.sky{color:var(--sky)}
+  .blk{margin-bottom:15px}
+  .seg{display:flex;background:var(--paper-2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px}
+  .seg div{flex:1;text-align:center;padding:7px 0;font-size:12px;border-radius:6px;color:var(--muted)}
+  .seg div.on{background:var(--paper-1);color:var(--onyx);font-weight:600}
+  .floors{display:flex;gap:7px;flex-wrap:wrap}
+  .fl{font-size:12.5px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--paper-1);color:#46412f;display:flex;align-items:center;gap:5px}
+  .fl.on{border-color:var(--gold);box-shadow:0 0 0 1.5px var(--gold-leaf);font-weight:600;background:#fbf3df}
+  .fl.drone{border-color:#bcd0e6;color:var(--sky);background:#eef3f9}
+  .fl.drone.on{border-color:var(--sky);box-shadow:0 0 0 1.5px #9cc0e6;background:#e3edf7}
+  .fl.add{border-style:dashed;color:var(--muted)}
+  .search{display:flex;align-items:center;gap:9px;border:1.5px solid var(--gold-leaf);border-radius:11px;padding:10px 12px;background:var(--paper-1);font-size:13px;color:var(--muted)}
+  .search svg{width:17px;height:17px;color:var(--gold)}
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{font-size:12.5px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--paper-1);color:#46412f;display:flex;align-items:center;gap:5px}
+  .chip .pl{color:var(--gold);font-weight:600}
+  .chip.sky{border-color:#bcd0e6;background:#f3f7fb}.chip.sky .pl{color:var(--sky)}
+  .chip.done{color:var(--ok);background:#eef7f1;border-color:#bfe0cd}
+  .chip.sel{border-color:var(--sky);box-shadow:0 0 0 1.5px #9cc0e6;font-weight:600;background:#e3edf7}
+  .arow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper-1);margin-bottom:7px}
+  .arow .an{font-family:'Fraunces',serif;font-size:15px;flex:1}
+  .arow .x{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--paper-0);display:flex;align-items:center;justify-content:center;color:var(--danger);font-size:12px}
+  .single{border:1px solid #bcd0e6;background:#f3f7fb;border-radius:12px;padding:14px;text-align:center}
+  .single .sn{font-family:'Fraunces',serif;font-size:19px;font-weight:600}
+  .single .sd{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .cam{padding:10px 14px;border-bottom:1px solid var(--line)}
+  .seg2{display:flex;background:var(--paper-2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px}
+  .seg2 div{flex:1;text-align:center;padding:6px 0;font-size:12px;border-radius:6px;color:var(--muted)}
+  .seg2 div.on{background:#e3edf7;color:var(--sky);font-weight:600;border:1px solid #bcd0e6}
+  .tokl{font-size:10px;color:var(--muted);margin-top:7px}.tok{font-family:'Spline Sans Mono',monospace;font-size:21px;font-weight:600}
+  .foto{float:right;border:1px solid var(--line);background:var(--paper-1);border-radius:9px;padding:6px 10px;font-size:12px;color:#46412f;margin-top:-30px}
+  .sug{padding:11px 14px;background:#F1F5FA;border-bottom:1px solid var(--line)}
+  .sug-h{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:600;color:var(--sky)}
+  .thumb{display:flex;gap:8px;padding:11px 14px 14px;background:var(--paper-1);border-top:1px solid var(--line)}
+  .big{flex:1;height:52px;border-radius:12px;font-size:14px;font-weight:600;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .big small{font-weight:400;font-size:9.5px;font-family:'Spline Sans Mono',monospace}
+  .big.toma{background:#cfe0f0;color:#1d3a5c}.big.no{background:var(--paper-2);color:var(--danger);border:1px solid #e6c4bd}
+  .why{max-width:390px;background:var(--paper-1);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:12.5px;color:#46412f;line-height:1.5}.why b{color:var(--sky)}
+  .div{width:100%;max-width:390px;border-top:1px dashed var(--line);margin:6px 0}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>Drone como piso + terreno + loop aéreo</h1>
+    <p>El drone deja de ser un modo aparte: es un piso con sujetos aéreos y sugerencias especializadas. En exteriores sigues pudiendo cambiar a cámara drone. Terreno = un solo sujeto.</p>
+  </div>
+
+  <!-- A: PISO DRONE EN MODO CUARTOS -->
+  <div class="cap">A · Piso Drone en Modo Cuartos</div>
+  <div class="capd">Enfocas el piso Drone (azul) y los chips se vuelven sujetos aéreos. Sin clóset/baño aquí.</div>
+  <div class="phone"><div class="screen">
+    <div class="body" style="padding-bottom:4px">
+      <div class="blk">
+        <div class="mini">Pisos</div>
+        <div class="floors">
+          <div class="fl">Exterior</div>
+          <div class="fl">Piso 1</div>
+          <div class="fl">Roof</div>
+          <div class="fl drone on">✈ Drone</div>
+          <div class="fl add">+ piso</div>
+        </div>
+      </div>
+      <div class="blk"><div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg> Busca un sujeto aéreo…</div></div>
+      <div class="blk">
+        <div class="mini sky">Sugeridos para Drone</div>
+        <div class="chips">
+          <span class="chip sky"><span class="pl">+</span> Fachada aérea</span>
+          <span class="chip sky"><span class="pl">+</span> Órbita de la casa</span>
+          <span class="chip sky"><span class="pl">+</span> Entorno / colonia</span>
+          <span class="chip sky"><span class="pl">+</span> Vista que vende</span>
+          <span class="chip sky"><span class="pl">+</span> Jardín aéreo</span>
+          <span class="chip sky"><span class="pl">+</span> Alberca aérea</span>
+          <span class="chip sky"><span class="pl">+</span> Golden hour</span>
+        </div>
+      </div>
+      <div class="blk">
+        <div class="mini">En Drone · 2</div>
+        <div class="arow"><span class="an">Fachada aérea</span><span class="x">✕</span></div>
+        <div class="arow"><span class="an">Órbita de la casa</span><span class="x">✕</span></div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="div"></div>
+
+  <!-- B: TERRENO -->
+  <div class="cap">B · Terreno = un solo sujeto</div>
+  <div class="capd">Tipo Terreno: no armas cuartos. Es una cosa; los puntos son tomas sugeridas.</div>
+  <div class="phone"><div class="screen">
+    <div class="body">
+      <div class="blk"><div class="seg"><div>Casa</div><div>Depto</div><div class="on">Terreno</div><div>Quinta</div></div></div>
+      <div class="blk">
+        <div class="single"><div class="sn">El terreno</div><div class="sd">Un solo sujeto · cámara drone + piso</div></div>
+      </div>
+      <div class="blk">
+        <div class="mini sky">Tomas sugeridas del terreno</div>
+        <div class="chips">
+          <span class="chip sky done">✓ Terreno completo</span>
+          <span class="chip sky">Perímetro / colindancias</span>
+          <span class="chip sky">Acceso / calle</span>
+          <span class="chip sky">Vista que vende</span>
+          <span class="chip sky">Cercanía a vialidades</span>
+          <span class="chip sky">Entorno y colonia</span>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="div"></div>
+
+  <!-- C: LOOP DRONE -->
+  <div class="cap">C · Loop de drone (vocabulario aéreo)</div>
+  <div class="capd">En el piso Drone la cámara es el dron; sugerencias y planos son aéreos, no Abierto/Detalle.</div>
+  <div class="phone"><div class="screen">
+    <div class="hd"><span style="color:var(--muted);font-size:12px">‹ Cuartos</span><div style="text-align:right"><div class="rn">Fachada aérea</div><div class="fl">✈ Drone</div></div></div>
+    <div class="cam">
+      <div class="seg2"><div>Sony</div><div class="on">Drone DJI</div></div>
+      <div class="tokl">siguiente video</div><div class="tok">DJI_0246</div>
+      <button class="foto">+ foto</button>
+    </div>
+    <div class="sug">
+      <div class="sug-h"><span>✈ Sugeridas aéreas para Fachada</span><span style="font-family:'Spline Sans Mono',monospace;color:var(--muted)">Órbita ⌃</span></div>
+      <div class="mini sky" style="margin-top:9px">Qué grabar aquí</div>
+      <div class="chips">
+        <span class="chip sky done">✓ Establecimiento</span>
+        <span class="chip sky sel">Órbita</span>
+        <span class="chip sky">Cenital</span>
+        <span class="chip sky">Reveal aéreo</span>
+        <span class="chip sky">Fly-through</span>
+        <span class="chip sky">Empuje al acceso</span>
+        <span class="chip" style="border-style:dashed;color:var(--muted)">＋ Libre</span>
+      </div>
+    </div>
+    <div style="padding:11px 14px;color:var(--muted);font-size:12px">Tomas aquí · aún nada.</div>
+    <div class="thumb"><button class="big toma">Toma<small>Órbita</small></button><button class="big no">No sirve</button></div>
+  </div></div>
+
+  <div class="why">
+    <b>Lo clave.</b> El drone es un <b>piso</b>, no un modo: enfocas "Drone" y todo es aéreo (sujetos y sugerencias especializadas). En <b>exteriores</b> (alberca, fachada de Sony) sigues pudiendo cambiar a cámara drone y queda ligado. <b>Terreno</b> es un solo sujeto con tomas sugeridas. La cámara drone solo aparece donde tiene sentido (Drone, Exterior, Roof, Amenidades), nunca en una recámara.
+  </div>
+</body>
+</html>

@@ -1,5 +1,18 @@
-import { queryOne, run, now } from '../db.js';
+import { queryOne, run, now, batch } from '../db.js';
 import { ok, err } from '../auth.js';
+
+// F64 — archiva el estado nuevo en checklist_historial y conserva las ultimas 50 versiones
+// por contrato. Recuperacion dentro del sistema sin Time Travel. No rompe el guardado si falla.
+async function archivar(db, token, cuartos, rev, autor) {
+  try {
+    await batch(db, [
+      { sql: 'INSERT INTO checklist_historial (contrato_token, cuartos_json, rev, autor, fecha) VALUES (?, ?, ?, ?, ?)', params: [token, cuartos, rev, autor || null, now()] },
+      { sql: 'DELETE FROM checklist_historial WHERE contrato_token = ? AND id NOT IN (SELECT id FROM checklist_historial WHERE contrato_token = ? ORDER BY id DESC LIMIT 50)', params: [token, token] },
+    ]);
+  } catch (e) {
+    console.error('archivar checklist_historial fallo:', e.message);
+  }
+}
 
 const COLUMNAS_DEFAULT = { foto: true, video: true, t360: true };
 
@@ -51,29 +64,53 @@ export async function handleChecklist(request, env, ctx, action) {
     const base = { token, folio: contrato.folio || '', nombreCliente: contrato.nombre_cliente || '' };
     if (!row) {
       const parsed = JSON.parse(TEMPLATE_CUARTOS);
-      return ok({ ...base, ...parsed, esTemplate: true });
+      return ok({ ...base, ...parsed, esTemplate: true, rev: 0 });
     }
     const parsed = migrarFormato(JSON.parse(row.cuartos_json));
-    return ok({ ...base, ...parsed, esTemplate: false });
+    return ok({ ...base, ...parsed, esTemplate: false, rev: row.rev || 0 });
   }
 
   if (action === 'guardarChecklist') {
+    // F62 — candado de concurrencia (compare-and-swap por rev). El guardado solo se
+    // aplica si la rev que trae el cliente sigue vigente; si no, se devuelve el estado
+    // actual con bandera `conflict` para que el cliente FUSIONE y reintente. Asi un
+    // dispositivo nunca pisa lo que otro escribio (incidente 2026-06-06).
     const body = await request.json();
     const data = { cuartos: body.cuartos || [], columnas: body.columnas || COLUMNAS_DEFAULT };
     const cuartos = JSON.stringify(data);
-    const existe = await queryOne(db, 'SELECT contrato_token FROM checklist WHERE contrato_token = ?', [token]);
-    if (existe) {
-      await run(db,
-        'UPDATE checklist SET cuartos_json = ?, fecha_actualizacion = ? WHERE contrato_token = ?',
-        [cuartos, now(), token]
-      );
-    } else {
-      await run(db,
-        'INSERT INTO checklist (contrato_token, cuartos_json, fecha_creacion, fecha_actualizacion) VALUES (?, ?, ?, ?)',
-        [token, cuartos, now(), now()]
-      );
+    const baseRev = Number.isInteger(body.baseRev) ? body.baseRev : null;
+
+    const existe = await queryOne(db, 'SELECT rev FROM checklist WHERE contrato_token = ?', [token]);
+
+    if (!existe) {
+      // Primera escritura: insertar en rev=1. Si hay carrera y ya existe, cae a conflicto.
+      try {
+        await run(db,
+          'INSERT INTO checklist (contrato_token, cuartos_json, rev, fecha_creacion, fecha_actualizacion) VALUES (?, ?, 1, ?, ?)',
+          [token, cuartos, now(), now()]
+        );
+        await archivar(db, token, cuartos, 1, body.autor);
+        return ok({ ok: true, rev: 1 });
+      } catch (_) {
+        const fila = await queryOne(db, 'SELECT cuartos_json, rev FROM checklist WHERE contrato_token = ?', [token]);
+        const parsed = migrarFormato(JSON.parse(fila.cuartos_json));
+        return ok({ conflict: true, ...parsed, rev: fila.rev || 0 });
+      }
     }
-    return ok({ ok: true });
+
+    // Compare-and-swap atomico: solo cambia si rev sigue siendo baseRev.
+    const res = baseRev === null ? { meta: { changes: 0 } } : await run(db,
+      'UPDATE checklist SET cuartos_json = ?, rev = rev + 1, fecha_actualizacion = ? WHERE contrato_token = ? AND rev = ?',
+      [cuartos, now(), token, baseRev]
+    );
+    if (res && res.meta && res.meta.changes === 1) {
+      await archivar(db, token, cuartos, baseRev + 1, body.autor);
+      return ok({ ok: true, rev: baseRev + 1 });
+    }
+    // Conflicto (otra escritura gano, o el cliente no mando baseRev): devolver el estado vigente.
+    const fila = await queryOne(db, 'SELECT cuartos_json, rev FROM checklist WHERE contrato_token = ?', [token]);
+    const parsed = migrarFormato(JSON.parse(fila.cuartos_json));
+    return ok({ conflict: true, ...parsed, rev: fila.rev || 0 });
   }
 
   return err('Acción no encontrada', 404);

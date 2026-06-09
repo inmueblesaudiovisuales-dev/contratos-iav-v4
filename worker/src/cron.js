@@ -41,3 +41,26 @@ export async function syncToSheets(env) {
     console.error('syncToSheets error:', e.message);
   }
 }
+
+// F64 — respaldo periodico de cada checklist a R2 (fuera de D1). Escribe un objeto con
+// marca de tiempo y sobreescribe latest.json por contrato. No rompe el cron si falla.
+export async function backupChecklistToR2(env) {
+  if (!env.CHECKLIST_BACKUP) return;
+  try {
+    const rows = await query(env.DB, 'SELECT contrato_token, cuartos_json, rev, fecha_actualizacion FROM checklist');
+    const fecha = new Date().toISOString();
+    for (const row of (rows.results || [])) {
+      const body = JSON.stringify({
+        token: row.contrato_token,
+        rev: row.rev,
+        fecha_actualizacion: row.fecha_actualizacion,
+        cuartos_json: row.cuartos_json,
+      });
+      const base = 'checklist/' + row.contrato_token;
+      await env.CHECKLIST_BACKUP.put(base + '/' + fecha + '.json', body);
+      await env.CHECKLIST_BACKUP.put(base + '/latest.json', body);
+    }
+  } catch (e) {
+    console.error('backupChecklistToR2 error:', e.message);
+  }
+}

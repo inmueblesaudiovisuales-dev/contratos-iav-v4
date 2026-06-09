@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Mockup — Armar cuartos (todo en uno)</title>
+<style>
+  :root{
+    --bg:#f4f1ea; --surface:#fbf9f4; --card:#ffffff; --line:#e3ddd0;
+    --ink-1:#23201a; --ink-2:#6b6457; --ink-3:#9a9384;
+    --tint:#efeadd; --tint-line:#d8cfb8; --gold:#b89243;
+    --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --radius:12px;
+    --ts-cap:12px; --ts-body:14px; --ts-base:16px; --ts-lg:18px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink-1);font-size:var(--ts-base);line-height:1.4}
+  svg.i{width:1em;height:1em;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;display:inline-block;vertical-align:-0.13em}
+  .wrap{max-width:430px;margin:0 auto;min-height:100vh}
+  .top{position:sticky;top:0;background:var(--bg);padding:var(--sp-4) var(--sp-4) var(--sp-2);border-bottom:1px solid var(--line);z-index:5}
+  .top h1{font-size:var(--ts-lg);margin:0;font-weight:700}
+  .top p{margin:2px 0 0;color:var(--ink-2);font-size:var(--ts-cap)}
+  .body{padding:var(--sp-4);padding-bottom:150px}
+
+  .block{margin-bottom:var(--sp-5)}
+  .lbl{font-size:var(--ts-cap);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);margin-bottom:var(--sp-2)}
+  .seg{display:flex;flex-wrap:wrap;gap:6px}
+  .seg-btn{min-height:44px;padding:0 16px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-2);font-weight:600;font-size:var(--ts-body)}
+  .seg-btn.active{background:var(--tint);border-color:var(--tint-line);color:var(--ink-1)}
+
+  .pisos-row{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px var(--sp-4);min-height:56px}
+  .pisos-row .lab{font-weight:700}
+
+  .floor{margin-bottom:var(--sp-4);border:1px solid var(--line);border-radius:var(--radius);background:var(--card);overflow:hidden}
+  .floor-h{display:flex;align-items:center;gap:8px;padding:12px var(--sp-4);background:var(--tint);border-bottom:1px solid var(--line)}
+  .floor-h svg{color:var(--ink-3);font-size:18px}
+  .floor-h .nm{font-weight:800}
+  .floor-h .cnt{margin-left:auto;font-size:11px;font-weight:700;color:var(--ink-3)}
+  .sec-h{display:flex;align-items:center;gap:8px;padding:12px var(--sp-4) 4px;font-size:var(--ts-cap);font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+  .sec-h svg{color:var(--ink-3);font-size:16px}
+
+  .rline{display:flex;align-items:center;gap:10px;padding:8px var(--sp-4);border-top:1px solid var(--line)}
+  .rline.first{border-top:0}
+  .rline .rc{width:34px;height:34px;border-radius:9px;background:var(--tint);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:18px;flex:0 0 auto}
+  .rline .rn{flex:1;font-weight:600}
+  .rline .rn small{display:block;color:var(--ink-3);font-weight:600;font-size:11px}
+  .step{display:flex;align-items:center;gap:10px}
+  .sb{width:40px;height:40px;border-radius:999px;border:1px solid var(--tint-line);background:var(--tint);font-size:22px;font-weight:800;color:var(--ink-1);line-height:1;display:flex;align-items:center;justify-content:center}
+  .sb:disabled{opacity:.3}
+  .sb.add{background:var(--gold);border-color:var(--gold);color:#241c08}
+  .qn{min-width:20px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums}
+  .chev{width:34px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:18px;background:none;border:0}
+  .chev.hidden{visibility:hidden}
+
+  .insts{padding:2px var(--sp-4) 8px 58px;border-top:1px dashed var(--line);background:#fffdf8}
+  .inst{padding:8px 0;border-top:1px dashed var(--line)}
+  .inst.first{border-top:0}
+  .inst-h{display:flex;align-items:center;gap:8px}
+  .inst-h .inm{flex:1;font-size:var(--ts-body);font-weight:700}
+  .subchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;padding-left:42px}
+  .subchip{min-height:34px;padding:0 10px;border:1px dashed var(--tint-line);border-radius:999px;background:transparent;color:var(--ink-2);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:5px}
+  .sublist{margin-top:6px;padding-left:42px;display:flex;flex-direction:column;gap:4px}
+  .subrow{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-1)}
+  .subrow svg{color:var(--ink-3);font-size:14px}
+  .subrow .sx{margin-left:auto;width:28px;height:28px;border-radius:7px;border:1px solid #eaccc6;background:#fff;color:#b5463a;font-size:14px;display:flex;align-items:center;justify-content:center}
+
+  .addother{display:flex;align-items:center;gap:6px;width:100%;min-height:44px;border:0;border-top:1px solid var(--line);background:var(--surface);color:var(--ink-2);font-weight:700;font-size:13px;padding:0 var(--sp-4);justify-content:flex-start}
+  .picker{padding:8px var(--sp-4) 12px;border-top:1px solid var(--line);background:var(--surface);display:flex;flex-wrap:wrap;gap:6px}
+  .pchip{min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink-1);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .picker-other{display:flex;gap:6px;width:100%;margin-top:4px}
+  .picker-other input{flex:1;min-height:42px;border:1px solid var(--line);border-radius:8px;padding:0 12px;font:inherit;background:#fff;color:var(--ink-1)}
+  .picker-other button{min-height:42px;padding:0 14px;border:0;border-radius:8px;background:var(--ink-1);color:#fff;font-weight:700;font-size:13px}
+
+  .foot{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(to top,var(--bg) 72%,transparent);padding:var(--sp-3) var(--sp-4) var(--sp-5);z-index:6}
+  .foot .inner{max-width:430px;margin:0 auto}
+  .count-line{text-align:center;color:var(--ink-2);font-size:var(--ts-cap);margin-bottom:8px;font-weight:600}
+  .primary{display:block;width:100%;min-height:54px;border:0;border-radius:var(--radius);background:var(--gold);color:#241c08;font-weight:800;font-size:var(--ts-base)}
+  .primary:disabled{background:var(--tint);color:var(--ink-3)}
+  .note{max-width:430px;margin:0 auto;padding:10px var(--sp-4) 0;color:var(--ink-3);font-size:11px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>Armar cuartos</h1><p>Mockup — todo en una pantalla, por piso. Solo maqueta.</p></div>
+  <div class="body" id="body">Cargando…</div>
+</div>
+<div class="foot"><div class="inner"><div class="count-line" id="countLine"></div><button class="primary" id="listo" disabled>Listo, a capturar</button></div></div>
+<div class="note">Mockup de diseño · sin datos reales · iav</div>
+
+<script>
+var IC={
+  plus:'<path d="M12 5v14M5 12h14"/>', minus:'<path d="M5 12h14"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  cd:'<path d="M6 9l6 6 6-6"/>', cr:'<path d="M9 6l6 6-6 6"/>',
+  stairs:'<path d="M4 18h4v-4h4v-4h4v-4h4"/>',
+  bed:'<path d="M3 18v-6h13a3 3 0 013 3v3M3 18h18M3 12V7M7 12V9h5v3"/>',
+  bath:'<path d="M4 12h16v3a4 4 0 01-4 4H8a4 4 0 01-4-4z M6 12V6a2 2 0 012-2M6 6h3"/>',
+  droplet:'<path d="M12 3c4 5 6 7 6 10a6 6 0 01-12 0c0-3 2-5 6-10z"/>',
+  sofa:'<path d="M5 12V9a2 2 0 012-2h10a2 2 0 012 2v3M4 12a2 2 0 012 2v3h12v-3a2 2 0 012-2M7 17v2M17 17v2"/>',
+  cup:'<path d="M6 8h10v4a5 5 0 01-10 0zM16 9h2a2 2 0 010 4h-2M5 20h12"/>',
+  books:'<path d="M5 4h4v16H5zM9 4h4v16H9zM13 6l4-1 3 14-4 1z"/>',
+  tv:'<path d="M3 6h18v11H3zM9 21h6"/>',
+  door:'<path d="M6 21V4a1 1 0 011-1h8a1 1 0 011 1v17M4 21h16M13 12h.5"/>',
+  home:'<path d="M4 11l8-7 8 7M6 10v9h12v-9"/>',
+  plant:'<path d="M12 21v-8M12 13c-3 0-5-2-5-5 3 0 5 2 5 5M12 13c3 0 5-2 5-5-3 0-5 2-5 5"/>',
+  car:'<path d="M5 14l1.5-5h11L19 14M4 14h16v4H4zM7 18v2M17 18v2"/>',
+  fence:'<path d="M5 21V9l2-2 2 2v12M15 21V9l2-2 2 2v12M3 12h18M3 16h18"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>',
+  wash:'<path d="M5 3h14v18H5zM8 6h.5M11 6h.5"/><circle cx="12" cy="13" r="4"/>',
+  pool:'<path d="M3 18c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1M7 15V6a2 2 0 014 0M13 15V6a2 2 0 014 0M7 10h6"/>',
+  building:'<path d="M5 21V5a2 2 0 012-2h6a2 2 0 012 2v16M9 7h2M9 11h2M9 15h2M15 21V11h3a1 1 0 011 1v9"/>',
+  barbell:'<path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/>',
+  ball:'<circle cx="12" cy="12" r="8"/><path d="M12 7l3.5 2.5-1.3 4.2h-4.4L8.5 9.5z"/>',
+  trees:'<path d="M9 21v-5M9 16c-2.5 0-4-1.5-4-4 2.5 0 4 1.5 4 4M9 16c2.5 0 4-1.5 4-4-2.5 0-4 1.5-4 4M17 21v-4M17 17a3 3 0 000-6 3 3 0 000 6"/>',
+  shield:'<path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/>',
+  flame:'<path d="M12 3c1.2 3 4 4.2 4 8a4 4 0 01-8 0c0-1.2.6-2.2 1.2-2.8C9 11 10.5 7 12 3z"/>',
+  umbrella:'<path d="M12 3a8 8 0 018 8H4a8 8 0 018-8zM12 11v7a2 2 0 002 2"/>',
+  hanger:'<path d="M10.5 5a1.5 1.5 0 112.5 1.2L12 8v1l8 5H4l8-5"/>',
+  shirt:'<path d="M8 4l4 2 4-2 4 3-3 3v9H7v-9L4 7z"/>',
+  paw:'<path d="M6 11a1.5 1.5 0 100-3 1.5 1.5 0 000 3M10 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3M14 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3M18 11a1.5 1.5 0 100-3 1.5 1.5 0 000 3M12 12c-2.5 0-4 1.8-4 3.5A2.5 2.5 0 0010.5 18c.7 0 1-.3 1.5-.3s.8.3 1.5.3A2.5 2.5 0 0016 15.5c0-1.7-1.5-3.5-4-3.5z"/>',
+  blocks:'<path d="M4 13h7v7H4zM13 13h7v7h-7zM8 4h8v7H8z"/>',
+  smile:'<circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8.5 14.5a4 4 0 007 0"/>',
+  briefcase:'<path d="M3 8h18v11H3zM8 8V6a2 2 0 012-2h4a2 2 0 012 2v2"/>',
+  laptop:'<path d="M5 6h14v10H5zM3 18h18"/>',
+  movie:'<path d="M4 5h16v14H4zM4 9h16M8 5v4M12 5v4M16 5v4"/>',
+  room:'<path d="M5 5h14v14H5z"/>'
+};
+function icon(n){return '<svg class="i" viewBox="0 0 24 24">'+(IC[n]||IC.room)+'</svg>';}
+function uid(){return Math.random().toString(36).slice(2,7);}
+function esc(s){ return (s||'').replace(/'/g,"\\'"); }
+
+var INT = [
+  {b:'Recibidor',i:'door'},{b:'Sala',i:'sofa'},{b:'Comedor',i:'cup'},{b:'Antecomedor',i:'cup'},
+  {b:'Cocina',i:'cup'},{b:'Recámara',i:'bed',first:'Recámara principal'},{b:'Baño',i:'bath'},
+  {b:'Medio baño',i:'droplet'},{b:'Estudio',i:'books'},{b:'Sala de TV',i:'tv'},{b:'Bar',i:'cup'},
+  {b:'Terraza',i:'sun'},{b:'Lavandería',i:'wash'},{b:'Cuarto de servicio',i:'door'}
+];
+var EXT = [{b:'Fachada',i:'home'},{b:'Jardín',i:'plant'},{b:'Cochera',i:'car'},{b:'Patio',i:'fence'},{b:'Terraza',i:'sun'},{b:'Roof garden',i:'building'},{b:'Alberca',i:'pool'},{b:'Palapa',i:'umbrella'},{b:'Asadores',i:'flame'},{b:'Cocina exterior',i:'cup'},{b:'Fuente',i:'droplet'},{b:'Pérgola',i:'umbrella'},{b:'Deck',i:'sun'},{b:'Fogatero',i:'flame'},{b:'Estacionamiento',i:'car'},{b:'Áreas verdes',i:'trees'},{b:'Cancha',i:'ball'},{b:'Acceso principal',i:'door'},{b:'Mirador',i:'sun'},{b:'Bodega',i:'building'}];
+var AME = [{b:'Alberca',i:'pool'},{b:'Casa club',i:'building'},{b:'Gimnasio',i:'barbell'},{b:'Cancha',i:'ball'},{b:'Áreas verdes',i:'trees'},{b:'Caseta',i:'shield'},{b:'Asadores',i:'flame'},{b:'Palapa',i:'umbrella'},{b:'Cocina exterior',i:'cup'},{b:'Parque',i:'trees'},{b:'Área canina',i:'paw'},{b:'Ludoteca',i:'blocks'},{b:'Área infantil',i:'smile'},{b:'Sala de negocios',i:'briefcase'},{b:'Salón de eventos',i:'cup'},{b:'Cowork',i:'laptop'},{b:'Spa',i:'droplet'},{b:'Cine',i:'movie'}];
+var SUBS=[{b:'Clóset',i:'hanger'},{b:'Baño',i:'bath'},{b:'Vestidor',i:'shirt'},{b:'Balcón',i:'sun'}];
+
+var DEF_PB = ['Sala','Comedor','Cocina','Medio baño','Recámara','Baño'];
+var DEF_ALTA = ['Recámara','Baño','Sala','Estudio'];
+
+function concept(list,b){ return list.find(function(c){return c.b===b;}) || {b:b,i:'room'}; }
+function floorTitle(i){ return i===0?'Planta baja':(i===1?'Planta alta':'Planta '+(i+1)); }
+function mkFloor(i){ return { visible: (i===0?DEF_PB:DEF_ALTA).slice(), items: [] }; }
+
+var floors=[ mkFloor(0) ];
+var ext={ visible:['Fachada'], items:[] };
+var ame={ visible:[], items:[] };
+var expanded={};
+var picking={};
+
+// Resolver scope + lista desde una clave: 'f0','f1',... | 'ext' | 'ame'
+function resolve(key){
+  if(key==='ext') return {scope:ext, list:EXT};
+  if(key==='ame') return {scope:ame, list:AME};
+  return {scope:floors[+key.slice(1)], list:INT};
+}
+function cnt(scope,b){ return scope.items.filter(function(x){return x.base===b;}).length; }
+function instName(scope,list,b){ var c=concept(list,b); var n=cnt(scope,b); return n===0?(c.first||b):(b+' '+(n+1)); }
+function addOne(key,b){ var r=resolve(key); r.scope.items.push({id:uid(),base:b,name:instName(r.scope,r.list,b),subs:[]}); render(); }
+function delLast(key,b){ var r=resolve(key); for(var k=r.scope.items.length-1;k>=0;k--){ if(r.scope.items[k].base===b){ r.scope.items.splice(k,1); break; } } render(); }
+function toggleExpRow(key,b){ var r=resolve(key); var insts=r.scope.items.filter(function(x){return x.base===b;}); var any=insts.some(function(it){return expanded[it.id];}); insts.forEach(function(it){expanded[it.id]=!any;}); render(); }
+function toggleExp(id){ expanded[id]=!expanded[id]; render(); }
+function togglePick(key){ picking[key]=!picking[key]; render(); }
+function pick(key,b){ var r=resolve(key); if(r.scope.visible.indexOf(b)<0) r.scope.visible.push(b); addOne(key,b); /* el picker se queda abierto hasta que el usuario lo cierre */ }
+function addCustom(key){ var inp=document.getElementById('other-'+key); var v=inp&&inp.value.trim(); if(!v) return; var r=resolve(key); if(r.scope.visible.indexOf(v)<0) r.scope.visible.push(v); addOne(key,v); }
+function findInst(id){ var res=null; floors.forEach(function(f){f.items.forEach(function(it){if(it.id===id)res=it;});}); ext.items.concat(ame.items).forEach(function(it){if(it.id===id)res=it;}); return res; }
+function addSubTo(id,b,i){ var it=findInst(id); if(!it)return; var n=it.subs.filter(function(s){return s.base===b;}).length; it.subs.push({id:uid(),base:b,name:n===0?b:b+' '+(n+1),icon:i}); render(); }
+function rmSub(id,sid){ var it=findInst(id); if(!it)return; var k=it.subs.findIndex(function(s){return s.id===sid;}); if(k>=0)it.subs.splice(k,1); render(); }
+function setPisos(d){ var t=Math.max(1,floors.length+d); while(floors.length<t)floors.push(mkFloor(floors.length)); while(floors.length>t)floors.pop(); render(); }
+
+function total(){ var n=0; floors.forEach(function(f){n+=f.items.length; f.items.forEach(function(it){n+=it.subs.length;});}); [ext,ame].forEach(function(s){n+=s.items.length;}); return n; }
+
+function stepperRow(key,b,first){
+  var r=resolve(key); var c=concept(r.list,b); var n=cnt(r.scope,b);
+  var insts=r.scope.items.filter(function(x){return x.base===b;});
+  var canExp=n>0;
+  var open=canExp && insts.some(function(it){return expanded[it.id];});
+  var h='<div class="rline'+(first?' first':'')+'">'+
+    '<button class="chev'+(canExp?'':' hidden')+'" onclick="toggleExpRow(\''+key+'\',\''+esc(b)+'\')">'+icon(open?'cd':'cr')+'</button>'+
+    '<span class="rc">'+icon(c.i)+'</span><span class="rn">'+b+(n>1?' <small>'+n+' aquí</small>':'')+'</span>'+
+    '<span class="step"><button class="sb" '+(n<=0?'disabled':'')+' onclick="delLast(\''+key+'\',\''+esc(b)+'\')">'+icon('minus')+'</button>'+
+    '<span class="qn">'+n+'</span><button class="sb add" onclick="addOne(\''+key+'\',\''+esc(b)+'\')">'+icon('plus')+'</button></span></div>';
+  if(open){
+    h+='<div class="insts">'+insts.map(function(it,ii){
+      var ex=!!expanded[it.id];
+      var body= ex ? ('<div class="subchips">'+SUBS.map(function(s){return '<button class="subchip" onclick="addSubTo(\''+it.id+'\',\''+esc(s.b)+'\',\''+s.i+'\')">'+icon(s.i)+s.b+'</button>';}).join('')+'</div>'+
+        (it.subs.length?'<div class="sublist">'+it.subs.map(function(s){return '<div class="subrow">'+icon(s.icon)+'<span>'+s.name+'</span><button class="sx" onclick="rmSub(\''+it.id+'\',\''+s.id+'\')">'+icon('x')+'</button></div>';}).join('')+'</div>':'')) : '';
+      return '<div class="inst'+(ii===0?' first':'')+'"><div class="inst-h"><button class="chev" onclick="toggleExp(\''+it.id+'\')">'+icon(ex?'cd':'cr')+'</button><span class="inm">'+it.name+'</span></div>'+body+'</div>';
+    }).join('')+'</div>';
+  }
+  return h;
+}
+function sectionInner(key){
+  var r=resolve(key);
+  var h=r.scope.visible.map(function(b,bi){ return stepperRow(key,b,bi===0); }).join('');
+  var rest=r.list.filter(function(c){ return r.scope.visible.indexOf(c.b)<0; });
+  h+='<button class="addother" onclick="togglePick(\''+key+'\')">'+icon('plus')+(picking[key]?'Cerrar':'Agregar otro')+'</button>';
+  if(picking[key]) h+='<div class="picker">'+rest.map(function(c){return '<button class="pchip" onclick="pick(\''+key+'\',\''+esc(c.b)+'\')">'+icon(c.i)+c.b+'</button>';}).join('')+
+    '<div class="picker-other"><input id="other-'+key+'" placeholder="Otro cuarto…" autocomplete="off" onkeydown="if(event.key===\'Enter\')addCustom(\''+key+'\')"><button onclick="addCustom(\''+key+'\')">Agregar</button></div></div>';
+  return h;
+}
+
+function render(){
+  var h='';
+  h+='<div class="block"><div class="lbl">Tipo de propiedad</div><div class="seg">'+['Casa','Depto','Terreno','Quinta'].map(function(t){return '<button class="seg-btn'+(t==='Casa'?' active':'')+'">'+t+'</button>';}).join('')+'</div></div>';
+  h+='<div class="block"><div class="pisos-row"><span class="lab">Pisos</span><span class="step"><button class="sb" '+(floors.length<=1?'disabled':'')+' onclick="setPisos(-1)">'+icon('minus')+'</button><span class="qn">'+floors.length+'</span><button class="sb add" onclick="setPisos(1)">'+icon('plus')+'</button></span></div></div>';
+  floors.forEach(function(f,i){
+    var c=f.items.length;
+    h+='<div class="floor"><div class="floor-h">'+icon('stairs')+'<span class="nm">'+floorTitle(i)+'</span><span class="cnt">'+c+' '+(c===1?'cuarto':'cuartos')+'</span></div>'+sectionInner('f'+i)+'</div>';
+  });
+  h+='<div class="floor"><div class="sec-h">'+icon('plant')+'Exterior</div>'+sectionInner('ext')+'</div>';
+  h+='<div class="floor"><div class="sec-h">'+icon('pool')+'Amenidades</div>'+sectionInner('ame')+'</div>';
+  document.getElementById('body').innerHTML=h;
+  var n=total();
+  document.getElementById('countLine').textContent=n?(n+' '+(n===1?'espacio':'espacios')+' en total'):'Sube los números o usa "Agregar otro"';
+  document.getElementById('listo').disabled=n===0;
+}
+render();
+</script>
+</body>
+</html>

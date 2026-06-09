@@ -8,6 +8,100 @@
 
 ---
 
+### R122 — Checklist: propuesta IA con fotos (Meta B, F72–F74) (2026-06-09 10:49:37 CST)
+
+**Rama `checklist-cambios-2026-06-07`, NO integrado a main/producción.** Worker probado en el preview aislado.
+Meta B: que la propuesta de tomas sugeridas por IA se genere a partir de las fotos reales de la casa, no de una
+descripción escrita. La app sigue el mismo patrón de siempre: genera el prompt en vivo, valida y revisa; Gemini
+ve las fotos y propone las tomas.
+
+**Archivos:** `frontend/checklist-logic.js` (+`checklist-logic.test.js`), `frontend/checklist.html`,
+`docs/RONDAS.md`, `docs/ARQUITECTURA.md`.
+
+- **F72 — Prompt con fotos (`buildPropuestaPrompt`).** El prompt se reescribió a la versión con fotos: se genera
+  en vivo desde `state.espacios`, agrupando los espacios reales por piso y por zona (interior, exterior,
+  amenidades), cada uno con su `id` y su nombre. Esa lista cumple doble función: guía de qué fotografiar y tabla
+  de ids para que Gemini mapee. Incluye la instrucción para Bruno (fotografiar todos los espacios, orden libre, y
+  subir las fotos junto con el prompt) y la instrucción para Gemini (identificar cada cuarto en las fotos,
+  asignarlo al `id` correcto y proponer tomas concretas de ESTA casa por cuarto: `nombre` = la acción concreta,
+  `shotType`/`movement` SOLO del vocabulario cerrado, `enfoque` = el sujeto o encuadre, `priority` must|nice).
+  Ya **no** usa `guide.descripcion`: se retiró del flujo el campo de descripción de la propiedad (el campo
+  `guide.descripcion` se conserva en el modelo por retro-compatibilidad de estados viejos, pero el prompt ni lo
+  lee ni lo pide). Commit R119.
+- **F73 — Interfaz de la propuesta IA con fotos.** En `renderPropuestaIA()` (`checklist.html`) se quitó el campo
+  de descripción y su handler, y se actualizó el texto de ayuda para explicar el flujo con fotos (generar el
+  prompt, fotografiar todos los espacios, pegar el prompt y las fotos en Gemini, traer el JSON y pegarlo). La
+  propuesta se sigue mostrando agrupada por cuarto y el flujo pegar → parsear → confirmar/quitar (con el reporte
+  de lo ignorado) se conserva sin cambios de guardado. Commit R120.
+- **Fix R121 — `parseDictado` valida número entero.** Bug crítico detectado en revisión: un token quedaba
+  desalineado porque `parseDictado` no validaba que el número del contador fuera entero. Ahora valida número
+  entero, lo que evita el token desalineado. Commit R121.
+- **F74 — Cierre (esta ronda).** El formato de import `porCuarto` y `parsePropuesta` NO cambian; el import de la
+  Meta B SOLO toca `state.guide.proposal` (jamás mediaFiles ni cobertura), y el consumo durante la captura
+  (`proposalShotsFor`/`suggestionsForTarget`) sigue igual. El export sigue en `version:1`. Documentación en
+  `docs/RONDAS.md` y `docs/ARQUITECTURA.md`; suite `node --test frontend/checklist-logic.test.js` en verde.
+
+### R118 — Checklist: importador de dictado de bitácora (Meta A, F67–F71) (2026-06-09 09:47:31 CST)
+
+**Rama `checklist-cambios-2026-06-07`, NO integrado a main/producción.** Worker probado en el preview aislado.
+Meta A: que Bruno dicte las tomas de un rodaje (video y dron), las pase por Gemini con un prompt que genera la
+propia app, y pegue de vuelta un JSON que la app valida y, tras un paso de revisar, convierte en mediaFiles
+consistentes con la captura manual. La app no es la inteligente: genera el prompt, valida y revisa; Gemini solo
+estructura el dictado transcrito.
+
+**Archivos:** `frontend/checklist-logic.js` (+`checklist-logic.test.js`), `frontend/checklist.html`.
+
+- **F67 — Prompt generado en vivo (`buildDictadoPrompt`).** El prompt se arma desde el estado vigente: cámaras
+  activas de video y dron, cada una con su `id`, etiqueta, modo, contador actual y formato de token (`sony-main`
+  marcada como cámara por defecto); cuartos como lista de `{ id, nombre, piso }` (el `id` es la llave); el
+  vocabulario de tomas (los ids de `getShotTypes()` con su etiqueta) y los 8 movimientos de dictado
+  (`push_pull, push_in, pull_out, pan, tilt, travel, orbit, reveal`, etiqueta de `getMovements()`). Incluye
+  mishears, frases de cambio de cámara y reglas de lectura. Commit R114.
+- **F68 — Validador tolerante (`parseDictado`).** Lee el formato `bitacora-dictado` v1: un solo arreglo de
+  `eventos` ordenado por `orden`, donde cada evento es una toma (de video o dron) o un evento de `fotos` del dron
+  que avanza el contador sin crear toma ni cobertura. Valida la secuencia por carril de cámara (marca `salto` y
+  `duplicado` contra el contador y los tokens ya capturados), mapea el cuarto por `id` (`sin_identificar` o no
+  empata → bandera `sinIdentificar`), y valida shotType/movement contra el catálogo (lo de fuera → `null`,
+  bandera `vocabFuera`, el texto original se conserva en `nota`). Es tolerante como `parsePropuesta` (limpia
+  fences, fallback al primer `{`…último `}`) y NO muta el estado: solo produce el preview. Commit R115.
+- **F69 — Aplicador (`applyDictado`).** Crea los mediaFiles por el MISMO camino de la captura: `registerMediaFile`
+  con override de contador (refactor aditivo y opt-in; sin overrides el comportamiento es idéntico a hoy), y
+  avanza el contador del dron con `bumpCameraCounter` en cada evento de fotos. Resuelve el doble pegado (agregar
+  u omitir, o reemplazar). Devuelve el nuevo estado; NO escribe en D1. Commit R116.
+- **F70 — Interfaz de dictado y revisar.** En la pestaña Edición de `checklist.html`: botón para generar y copiar
+  el prompt, y un importador que pega el JSON, llama a `parseDictado`, muestra la tabla por evento con las
+  banderas, permite asignar cuarto a las tomas sin identificar y un comentario libre editable por toma, y al
+  confirmar aplica con `applyDictado`. Commit R117.
+- **F71 — Cierre (esta ronda).** El guardado entra por el flujo normal `saveNow` (candado `rev`/fusión de F62): el
+  importador no reemplaza el documento entero. El export sigue en `version:1` porque el dictado produce los
+  mismos mediaFiles que la captura manual (mismo token/contador/shotNumber). Documentación en `docs/RONDAS.md`,
+  `docs/ARQUITECTURA.md` y `docs/EXPORT_METADATA_HANDOFF.md`.
+
+### R113 — Checklist: prevención de pérdida por concurrencia (F60–F65) (2026-06-09 05:46:22 CST)
+
+**Rama `checklist-cambios-2026-06-07`, NO integrado a main/producción.** Worker probado en el preview aislado.
+Origen: incidente del 2026-06-06 en que un guardado de cobertura del equipo pisó las 104 tomas de Bruno (ver
+`memory/project_checklist_perdida_concurrencia.md`). Causa: el guardado reemplazaba el documento entero con
+last-write-wins; varias personas en el mismo token se pisaban.
+
+**Archivos:** `frontend/checklist-logic.js` (+test), `frontend/checklist.html`, `worker/src/routes/checklist.js`,
+`worker/src/cron.js`, `worker/src/index.js`, `worker/schema.sql`, `worker/migrations/r65-checklist-rev.sql`,
+`worker/migrations/r66-checklist-historial.sql`, `worker/wrangler.toml`, `worker/wrangler.preview.toml`.
+
+- **F60 — Fusión sin pérdida.** `logic.mergeChecklist(base, incoming)` une dos estados por id (gana `updatedAt`
+  mayor), funde estados de cobertura por servicio, une pisos y guide. Sellos `updatedAt` en mutaciones de mediaFile.
+- **F61 — Lápidas.** Lista `state.tombstones` ({id, deletedAt}); los borrados (mediaFile, cuarto, piso, droneItem,
+  asesorPunto) registran lápida; la fusión no revive lo borrado salvo reedición posterior. Poda a 30 días.
+- **F62 — Candado `rev` (cierra el bug).** Columna `rev` por fila; `guardarChecklist` hace compare-and-swap
+  (`UPDATE ... WHERE rev=?`); si la rev cambió, devuelve `conflict` con el estado vigente. El cliente fusiona y
+  reintenta; el sondeo y la carga fusionan en vez de reemplazar. Verificado en el preview: 104 tomas sobreviven a
+  un guardado de cobertura con rev vieja (antes las borraba).
+- **F64 — Recuperación.** Tabla `checklist_historial` (últimas 50 versiones por contrato) en cada guardado;
+  respaldo horario de cada checklist a R2 (`iav-checklist-backups`, binding `CHECKLIST_BACKUP`) vía cron.
+- **F65 — Cierre.** 240 pruebas en verde (incl. candado del incidente); evidencia en
+  `docs/superpowers/verificacion/f62/`. PENDIENTE (no ejecutado): reinsertar los 104 mediaFiles recuperados
+  (`recuperacion-mediafiles-IAV-2606.06-A.json`) ya con el sistema vivo, fusionando con la cobertura actual.
+
 ### R112 — Checklist: el demo arranca en primer arranque + sin zoom por double-tap (2026-06-05 20:05:14 CST)
 
 **Archivos:** `frontend/checklist-demo.js`, `frontend/checklist.html`, `frontend/admin.html`. Solo frontend; sin cambios en worker, lógica ni adapter.

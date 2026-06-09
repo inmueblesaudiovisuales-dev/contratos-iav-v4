@@ -204,6 +204,74 @@ Un Cron Trigger de Cloudflare (`"0 * * * *"`) ejecuta `syncToSheets()` cada hora
 
 Pérdida máxima de datos si Cloudflare falla: 1 hora.
 
+El mismo cron respalda cada fila de `checklist` a R2 (`backupChecklistToR2`, bucket `iav-checklist-backups`,
+binding `CHECKLIST_BACKUP`): un objeto con marca de tiempo y un `latest.json` por contrato.
+
+---
+
+## Concurrencia del checklist (R113, rama checklist-cambios-2026-06-07)
+
+Varias personas editan el mismo checklist a la vez (Bruno marca video, el equipo marca cobertura). Para que un
+guardado no pise lo de otro:
+
+- **Candado `rev`.** La fila `checklist` lleva una revisión monotónica. `guardarChecklist` solo escribe si la `rev`
+  que trae el cliente sigue vigente (`UPDATE ... WHERE rev=?`, compare-and-swap atómico). Si cambió, responde
+  `conflict` con el estado vigente.
+- **Fusión sin pérdida en el cliente.** `IAVChecklistLogic.mergeChecklist(base, incoming)` une por id (gana
+  `updatedAt` mayor), funde cobertura por servicio, respeta lápidas (`state.tombstones`). El cliente fusiona en
+  conflicto y reintenta; el sondeo y la carga fusionan en vez de reemplazar.
+- **Recuperación.** Tabla `checklist_historial` guarda las últimas 50 versiones por contrato; más el respaldo a R2.
+  Además D1 Time Travel da 30 días de restauración a nivel base.
+
+## Dictado de bitácora (import) (R118, rama checklist-cambios-2026-06-07)
+
+Bruno puede llenar la bitácora dictando las tomas del rodaje (video y dron) en vez de capturarlas a mano. El
+patrón es deliberado: la app no es la inteligente, solo genera el contexto, valida y revisa; Gemini únicamente
+estructura el dictado transcrito.
+
+- **La app genera el prompt en vivo.** `buildDictadoPrompt(state)` arma el prompt desde el estado vigente:
+  cámaras activas de video y dron con su `id`, contador actual y formato de token (`sony-main` por defecto),
+  cuartos como `{ id, nombre, piso }`, y el vocabulario cerrado de tomas y los 8 movimientos. Bruno copia ese
+  prompt, dicta sobre él en Gemini y obtiene un JSON.
+- **Gemini estructura; la app valida.** El JSON sigue el formato `bitacora-dictado` v1 (un arreglo de `eventos`
+  ordenado por `orden`; cada evento es una toma o un evento de `fotos` del dron que solo avanza el contador).
+  `parseDictado(texto, state)` es tolerante (como `parsePropuesta`) y NO muta el estado: valida la secuencia por
+  carril de cámara (`salto`/`duplicado`), mapea el cuarto por `id` (`sin_identificar` → bandera), y filtra el
+  vocabulario fuera de catálogo. Produce un preview con banderas.
+- **La app revisa y escribe por el camino de captura.** Tras el paso de revisar (asignar cuarto a lo sin
+  identificar, comentario libre por toma, elegir agregar o reemplazar en doble pegado), `applyDictado(state,
+  preview, opciones)` crea los mediaFiles con `registerMediaFile` (override aditivo de contador) y avanza el
+  contador del dron con `bumpCameraCounter`. Por eso token/contador/shotNumber quedan idénticos a la captura
+  manual.
+- **El guardado entra por `saveNow`.** El importador devuelve el nuevo estado y lo guarda por el flujo normal
+  (candado `rev`/fusión de F62); no reemplaza el documento entero por fuera. El export sigue en `version:1`.
+
+Punteros: `buildDictadoPrompt`, `parseDictado` y `applyDictado` viven en `frontend/checklist-logic.js`; la
+interfaz de generar prompt e importar/revisar está en la pestaña Edición de `frontend/checklist.html`.
+
+## Propuesta IA con fotos (import) (R122, rama checklist-cambios-2026-06-07)
+
+Las tomas sugeridas por IA se proponen a partir de las **fotos reales de la casa**, no de una descripción
+escrita. Mismo patrón que el dictado: la app genera el prompt en vivo, valida y revisa; Gemini ve las fotos y
+propone las tomas.
+
+- **El prompt ahora es con fotos.** `buildPropuestaPrompt(state)` se generó en vivo desde `state.espacios`,
+  agrupando los espacios reales por piso y por zona (interior, exterior, amenidades), cada uno con su `id` y su
+  nombre. Esa lista es a la vez la guía de qué fotografiar y la tabla de ids para que Gemini mapee. El prompt
+  pide a Gemini identificar cada cuarto en las fotos, **asignarlo al `id` correcto** y proponer tomas concretas
+  de esa casa por cuarto (vocabulario cerrado de `shotType`/`movement`; `nombre` = acción, `enfoque` = sujeto o
+  encuadre; `priority` must|nice). La **descripción de texto de la propiedad se retiró del flujo**: el prompt ya
+  no lee ni pide `guide.descripcion` (el campo se conserva en el modelo por retro-compatibilidad de estados
+  viejos, pero no participa en este flujo).
+- **El formato de import no cambia.** Gemini regresa el JSON `porCuarto` de siempre; `parsePropuesta(texto,
+  state)` lo valida tal cual (mapeo por id de espacio, validación de vocabulario, reporte de lo ignorado) y la
+  propuesta queda en `state.guide.proposal`. El import SOLO toca `state.guide.proposal`; jamás mediaFiles ni
+  cobertura. El consumo durante la captura (`proposalShotsFor`/`suggestionsForTarget`) sigue igual.
+
+Punteros: `buildPropuestaPrompt` y `parsePropuesta` viven en `frontend/checklist-logic.js`; la interfaz de
+generar prompt, pegar el JSON y revisar la propuesta agrupada por cuarto está en `renderPropuestaIA()` de
+`frontend/checklist.html`.
+
 ---
 
 ## Diferencias clave con v3.0
