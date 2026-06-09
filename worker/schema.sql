@@ -110,6 +110,16 @@ CREATE TABLE IF NOT EXISTS checklist (
   rev INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS checklist_historial (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  contrato_token TEXT NOT NULL,
+  cuartos_json TEXT NOT NULL,
+  rev INTEGER NOT NULL,
+  autor TEXT,
+  fecha TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_hist_token ON checklist_historial(contrato_token, id DESC);
+
 CREATE INDEX IF NOT EXISTS idx_contratos_estatus ON contratos(estatus);
 CREATE INDEX IF NOT EXISTS idx_contratos_oculto ON contratos(oculto);
 CREATE INDEX IF NOT EXISTS idx_abonos_token ON abonos(contrato_token);

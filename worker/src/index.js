@@ -11,7 +11,7 @@ import { handleClientes } from './routes/clientes.js';
 import { handleTrabajos } from './routes/trabajos.js';
 import { handleActividades } from './routes/actividades.js';
 import { handleConfig } from './routes/config.js';
-import { syncToSheets } from './cron.js';
+import { syncToSheets, backupChecklistToR2 } from './cron.js';
 import { err } from './auth.js';
 
 const CORS = {
@@ -100,5 +100,6 @@ export default {
 
   async scheduled(event, env, ctx) {
     ctx.waitUntil(syncToSheets(env));
+    ctx.waitUntil(backupChecklistToR2(env));
   }
 };

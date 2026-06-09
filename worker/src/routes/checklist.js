@@ -1,5 +1,18 @@
-import { queryOne, run, now } from '../db.js';
+import { queryOne, run, now, batch } from '../db.js';
 import { ok, err } from '../auth.js';
+
+// F64 — archiva el estado nuevo en checklist_historial y conserva las ultimas 50 versiones
+// por contrato. Recuperacion dentro del sistema sin Time Travel. No rompe el guardado si falla.
+async function archivar(db, token, cuartos, rev, autor) {
+  try {
+    await batch(db, [
+      { sql: 'INSERT INTO checklist_historial (contrato_token, cuartos_json, rev, autor, fecha) VALUES (?, ?, ?, ?, ?)', params: [token, cuartos, rev, autor || null, now()] },
+      { sql: 'DELETE FROM checklist_historial WHERE contrato_token = ? AND id NOT IN (SELECT id FROM checklist_historial WHERE contrato_token = ? ORDER BY id DESC LIMIT 50)', params: [token, token] },
+    ]);
+  } catch (e) {
+    console.error('archivar checklist_historial fallo:', e.message);
+  }
+}
 
 const COLUMNAS_DEFAULT = { foto: true, video: true, t360: true };
 
@@ -76,6 +89,7 @@ export async function handleChecklist(request, env, ctx, action) {
           'INSERT INTO checklist (contrato_token, cuartos_json, rev, fecha_creacion, fecha_actualizacion) VALUES (?, ?, 1, ?, ?)',
           [token, cuartos, now(), now()]
         );
+        await archivar(db, token, cuartos, 1, body.autor);
         return ok({ ok: true, rev: 1 });
       } catch (_) {
         const fila = await queryOne(db, 'SELECT cuartos_json, rev FROM checklist WHERE contrato_token = ?', [token]);
@@ -90,6 +104,7 @@ export async function handleChecklist(request, env, ctx, action) {
       [cuartos, now(), token, baseRev]
     );
     if (res && res.meta && res.meta.changes === 1) {
+      await archivar(db, token, cuartos, baseRev + 1, body.autor);
       return ok({ ok: true, rev: baseRev + 1 });
     }
     // Conflicto (otra escritura gano, o el cliente no mando baseRev): devolver el estado vigente.
