@@ -218,6 +218,11 @@
   const CURATED_SHOT_TYPES = Object.freeze(['general', 'detalle']);
   const CURATED_MOVEMENTS = Object.freeze(['push_pull', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
 
+  // ─── F67 — Movimientos ofrecidos en el dictado ────────────────────────────────
+  // Los 8 ids acordados para el importador de dictado. Todos existen en getMovements();
+  // las etiquetas salen del motor, el set se fija aqui (no se ofrecen ids historicos).
+  const DICTADO_MOVEMENTS = Object.freeze(['push_pull', 'push_in', 'pull_out', 'pan', 'tilt', 'travel', 'orbit', 'reveal']);
+
   // ─── Sub-controles contextuales (F28): Sentido (Push/Pull) y Pared (Reveal) ───
   // Opcionales y aditivos. Ids del sistema sin acentos; labels visibles con acentos.
   const SENTIDO_OPTS = Object.freeze(['in', 'out']);
@@ -1168,6 +1173,103 @@
       '      { "nombre": "Detalle de chimenea de piedra", "shotType": "detalle", "movement": "push_in", "enfoque": "Encuadra la piedra texturizada de la chimenea en primer plano", "priority": "must" }\n' +
       '    ]\n  }\n}\n\n' +
       'Maximo 6 tomas por cuarto.';
+  }
+
+  // ─── F67 — Prompt de dictado de bitacora (video + dron) ──────────────────────
+  // Lo genera la app en vivo desde el estado: camaras activas con su contador y
+  // formato, cuartos con id/nombre/piso, vocabulario cerrado de tomas y los 8
+  // movimientos de DICTADO_MOVEMENTS. Modela el estilo de buildPropuestaPrompt
+  // (concatenacion de string). Solo lee el estado; no lo muta.
+  function buildDictadoPrompt(state) {
+    const servicios = state.servicios || {};
+    const shotTypes = getShotTypes();
+    const movements = getMovements();
+
+    // Camaras activas de video y dron, con segmento via getCameraSequence.
+    const camaras = (state.cameras || []).filter((cam) => {
+      if (!cam || (cam.mode !== 'video' && cam.mode !== 'drone')) return false;
+      if (!servicios[cam.mode]) return false;
+      return Boolean(getCameraSequence(state, cam.id).segment);
+    });
+
+    const camarasStr = camaras.map((cam) => {
+      const seq = getCameraSequence(state, cam.id);
+      const counterNext = seq.segment.counterNext;
+      const ejemploToken = formatFileToken(seq.segment, counterNext);
+      const nota = cam.id === 'sony-main' ? '   // camara por defecto si no se menciona otra' : '';
+      return '  { "id": "' + cam.id + '", "label": "' + cam.label + '", "mode": "' + cam.mode +
+        '", "contadorActual": ' + counterNext + ', "ejemploToken": "' + ejemploToken + '" }' + nota;
+    }).join(',\n');
+
+    const tieneSony = camaras.some((cam) => cam.id === 'sony-main');
+    const camaraEjemplo = tieneSony ? 'sony-main' : (camaras[0] ? camaras[0].id : '<id de camara activa>');
+    const dronEjemplo = (camaras.find((cam) => cam.mode === 'drone') || {}).id || '<id de camara dron activa>';
+
+    const cuartos = (state.espacios || []).map((esp) => ({
+      id: esp.id,
+      nombre: esp.nombre,
+      piso: esp.piso || '',
+    }));
+    const cuartosStr = cuartos.map((c) => '  { "id": "' + c.id + '", "nombre": "' + c.nombre + '", "piso": "' + c.piso + '" }').join(',\n');
+
+    const shotTypeVocab = Object.entries(shotTypes).map(([id, v]) => '  "' + id + '": "' + v.label + '"').join('\n');
+    const movementVocab = DICTADO_MOVEMENTS.map((id) => {
+      const label = (movements[id] && movements[id].label) || id;
+      return '  "' + id + '": "' + label + '"';
+    }).join('\n');
+
+    return 'Eres un asistente que estructura el dictado de un rodaje de bienes raices (video y dron).\n' +
+      'La app es la dueña del numero de archivo y de los cuartos; tu solo transcribes y organizas lo dictado.\n\n' +
+      'Camaras activas (usa SOLO estos ids; ' + (tieneSony ? 'sony-main es la camara por defecto si no se menciona otra' : 'sin camara por defecto disponible') + '):\n[\n' + camarasStr + '\n]\n\n' +
+      'Frases de cambio de camara: "cambio de camara a dron", "cambio a Osmo", "de regreso a la Sony". ' +
+      'Cuando se menciona un cambio, las tomas siguientes usan esa camara hasta el proximo cambio.\n\n' +
+      'Cuartos (la llave es el "id"; lo ambiguo o inexistente va a "sin_identificar"):\n[\n' + cuartosStr + '\n]\n\n' +
+      'Vocabulario cerrado de tipos de toma (shotType) — usa SOLO estos ids:\n' + shotTypeVocab + '\n\n' +
+      'Vocabulario cerrado de movimientos (movement) — usa SOLO estos ids:\n' + movementVocab + '\n\n' +
+      'Correcciones de transcripcion frecuentes (mishears) — normaliza al id correcto:\n' +
+      '  "pushing"/"push" -> push_in\n' +
+      '  "rivil"/"revil" -> reveal\n' +
+      '  "paneo" -> pan\n' +
+      '  "orbita" -> orbit\n' +
+      '  "plano general" -> general\n\n' +
+      'Reglas de lectura:\n' +
+      '1. Cada toma empieza en "toma N" donde N es el numero FINAL de archivo de la camara activa.\n' +
+      '2. "fallida"/"no sirve"/"mal expuesta" = descarte (clase "discard", motivoDescarte por defecto "failed").\n' +
+      '3. "quedo bien" = buena; "favorita" = favorita. Por defecto buena true salvo descarte.\n' +
+      '4. "N fotos" en el dron es un evento de fotos (avanza el numero del dron), NO una toma ni cobertura.\n' +
+      '5. Si me corrijo, honra la ULTIMA correccion.\n' +
+      '6. Cuarto ambiguo o no listado -> "sin_identificar".\n' +
+      '7. Vocabulario fuera de catalogo (shotType/movement) va a "nota"; el campo queda en null.\n\n' +
+      'REGLAS DURAS — incumplir cualquiera invalida la respuesta:\n' +
+      '1. Responde UNICAMENTE el JSON con el formato "bitacora-dictado" version 1, sin markdown ni texto adicional.\n' +
+      '2. Usa SOLO ids de cuarto de la lista o "sin_identificar".\n' +
+      '3. Usa SOLO ids del vocabulario cerrado para shotType y movement.\n' +
+      '4. No inventes tomas: estructura unicamente lo dictado.\n\n' +
+      'Formato de respuesta (un solo arreglo "eventos" ordenado por "orden"):\n' +
+      '{\n' +
+      '  "formato": "bitacora-dictado",\n' +
+      '  "version": 1,\n' +
+      '  "eventos": [\n' +
+      '    {\n' +
+      '      "orden": 1,\n' +
+      '      "evento": "toma",\n' +
+      '      "camara": "' + camaraEjemplo + '",\n' +
+      '      "numero": 82,\n' +
+      '      "cuartoId": "<id de cuarto o sin_identificar>",\n' +
+      '      "shotType": "<id valido o null>",\n' +
+      '      "movement": "<id valido o null>",\n' +
+      '      "clase": "take",\n' +
+      '      "motivoDescarte": null,\n' +
+      '      "buena": true,\n' +
+      '      "favorita": false,\n' +
+      '      "nota": ""\n' +
+      '    },\n' +
+      '    { "orden": 6, "evento": "fotos", "camara": "' + dronEjemplo + '", "cantidad": 10 }\n' +
+      '  ]\n' +
+      '}\n\n' +
+      'Ejemplo de dictado a ordenar: "toma 82 push in cocina plano general. toma 83 detalle cocina, quedo bien, ' +
+      'favorita. toma 84 fallida, no esta bien expuesta. toma 85 recamara reveal pared izquierda. cambio de camara ' +
+      'a drone. toma 1 drone fachada reveal. 10 fotos capturadas. toma 2 drone."';
   }
 
   function parsePropuesta(texto, state) {
@@ -3473,6 +3575,7 @@
     proposalShotsFor,
     suggestionsForTarget,
     buildPropuestaPrompt,
+    buildDictadoPrompt,
     parsePropuesta,
     guideCoverage,
     capasCubiertas,

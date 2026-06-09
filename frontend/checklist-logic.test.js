@@ -3174,3 +3174,65 @@ test('initializeCameraSequence sin archivoActual mantiene el comportamiento prev
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260609_PIB0082' });
   assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB0083');
 });
+
+// ─── F67 — generador del prompt de dictado (buildDictadoPrompt) ───────────────
+// State de prueba: cocina + una recámara, sony-main en 82 y drone-dji en 1.
+function _dictadoState() {
+  let state = logic.createDefaultState();
+  state = logic.addSpacesFromText(state, 'Cocina\nRecámara principal');
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260609_PIB0082', archivoActual: true });
+  state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0001', archivoActual: true });
+  return state;
+}
+
+test('F67: buildDictadoPrompt incluye los ids reales de los cuartos del estado', () => {
+  const state = _dictadoState();
+  const prompt = logic.buildDictadoPrompt(state);
+  for (const esp of state.espacios) {
+    assert.ok(prompt.includes('"' + esp.id + '"'), 'el prompt menciona el id del cuarto ' + esp.id);
+  }
+});
+
+test('F67: buildDictadoPrompt ofrece exactamente los 8 movimientos de DICTADO_MOVEMENTS y ninguno extra', () => {
+  const state = _dictadoState();
+  const prompt = logic.buildDictadoPrompt(state);
+  const esperados = ['push_pull', 'push_in', 'pull_out', 'pan', 'tilt', 'travel', 'orbit', 'reveal'];
+  for (const id of esperados) {
+    assert.ok(prompt.includes('"' + id + '"'), 'ofrece el movimiento ' + id);
+  }
+  // Ids historicos de getMovements() que NO deben ofrecerse como opcion de movimiento.
+  const noOfrecidos = ['gimbal_walk', 'static', 'dolly', 'umbral', 'parallax', 'tilt_up', 'slider', 'tracking', 'pedestal', 'whip'];
+  for (const id of noOfrecidos) {
+    assert.ok(!prompt.includes('"' + id + '"'), 'no ofrece el movimiento historico ' + id);
+  }
+});
+
+test('F67: buildDictadoPrompt incluye los 12 ids de getShotTypes()', () => {
+  const state = _dictadoState();
+  const prompt = logic.buildDictadoPrompt(state);
+  const shotIds = Object.keys(logic.getShotTypes());
+  assert.equal(shotIds.length, 12, 'getShotTypes() tiene 12 ids');
+  for (const id of shotIds) {
+    assert.ok(prompt.includes('"' + id + '"'), 'incluye el shotType ' + id);
+  }
+});
+
+test('F67: buildDictadoPrompt marca sony-main por defecto y lista drone-dji solo si el dron está activo', () => {
+  const state = _dictadoState();
+  const prompt = logic.buildDictadoPrompt(state);
+  assert.ok(prompt.includes('sony-main'), 'menciona sony-main');
+  assert.ok(/sony-main[\s\S]*por defecto|por defecto[\s\S]*sony-main/.test(prompt), 'declara sony-main como cámara por defecto');
+  assert.ok(prompt.includes('drone-dji'), 'con dron activo lista drone-dji');
+
+  const sinDron = logic.setServiceActive(state, 'drone', false);
+  const promptSinDron = logic.buildDictadoPrompt(sinDron);
+  assert.ok(!promptSinDron.includes('drone-dji'), 'con dron apagado no aparece drone-dji');
+  assert.ok(promptSinDron.includes('sony-main'), 'sony-main sigue presente sin dron');
+});
+
+test('F67: buildDictadoPrompt declara formato y version en el ejemplo de respuesta', () => {
+  const state = _dictadoState();
+  const prompt = logic.buildDictadoPrompt(state);
+  assert.ok(prompt.includes('"formato": "bitacora-dictado"'), 'declara formato bitacora-dictado');
+  assert.ok(prompt.includes('"version": 1'), 'declara version 1');
+});
