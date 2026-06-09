@@ -24,12 +24,13 @@ const RUTAS_CONTRATOS = [
   'listarContratos','obtenerContrato','crearContrato','actualizarEstatus',
   'actualizarContratoUpsell','ocultarContrato','eliminarContrato','reservarContrato','guardarNotasInternas',
   'marcarSesionCompletada','guardarProduccion','guardarEntrega','revocarEntrega',
+  'prepararEntrega','guardarConfigEntrega','publicarEntrega',
   'guardarCaracteristicas','reagendarPropiedad','exportarCSV','enviarRecordatorio',
   'guardarNotaPropiedad','actualizarCarpeta','actualizarPdfUrl','actualizarCalendarEvent',
   'actualizarExpress','guardarFormatoPropiedad'
 ];
 
-const RUTAS_PORTAL = ['obtenerPortal','firmaCliente','guardarResena','guardarConfiguracion'];
+const RUTAS_PORTAL = ['obtenerPortal','firmaCliente','guardarResena','guardarConfiguracion','obtenerEntrega'];
 const RUTAS_ABONOS = ['registrarAbono','listarAbonos'];
 const RUTAS_PAQUETES = ['listarPaquetes','listarPaquetesTodos','crearPaquete','editarPaquete','togglePaquete'];
 const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];
@@ -49,6 +50,27 @@ export default {
 
     const url = new URL(request.url);
     const path = url.pathname;
+
+    // Media de entrega: sirve fotos desde R2, con redimensionado opcional (Image Transformations).
+    if (path.startsWith('/media/')) {
+      const key = decodeURIComponent(path.slice('/media/'.length));
+      // Ruta cruda interna: devuelve el objeto de R2 tal cual (fuente para Transformations).
+      if (url.searchParams.get('raw') === '1') {
+        const obj = await env.MEDIA.get(key);
+        if (!obj) return new Response('No encontrado', { status: 404 });
+        const h = new Headers();
+        obj.writeHttpMetadata(h);
+        h.set('Cache-Control', 'public, max-age=31536000, immutable');
+        return new Response(obj.body, { headers: h });
+      }
+      const w = parseInt(url.searchParams.get('w') || '0', 10);
+      const rawUrl = `${url.origin}/media/${key.split('/').map(encodeURIComponent).join('/')}?raw=1`;
+      if (w > 0) {
+        // Si Transformations no está habilitado, fetch devuelve el original sin redimensionar.
+        return fetch(rawUrl, { cf: { image: { width: w, quality: 80, format: 'auto', fit: 'scale-down' } } });
+      }
+      return fetch(rawUrl);
+    }
 
     if (!path.startsWith('/api/')) {
       const assetRes = await env.ASSETS.fetch(request);
