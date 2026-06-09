@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cliente recurrente — variantes</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#B08D2E; --gold-leaf:#C9A84C; --gold-hi:#D4B65C; --gold-dim:rgba(176,141,46,.10);
+    --charcoal:#211E18; --onyx:#1C1C1E; --concrete:#918975;
+    --surface:#F7F4EC; --white:#FFFDF8; --chip:#EFEADF;
+    --border:#E2DBCB; --border-strong:#D2C9B3;
+    --font:'Montserrat',system-ui,sans-serif; --font-mono:'Spline Sans Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--surface);color:var(--charcoal);padding:30px 18px 60px;-webkit-font-smoothing:antialiased}
+  .head{max-width:420px;margin:0 auto 26px;text-align:center}
+  .head h1{font-weight:700;font-size:21px;letter-spacing:-.02em;margin-bottom:6px}
+  .head p{color:var(--concrete);font-size:13px;line-height:1.5}
+  .wrap{max-width:380px;margin:0 auto}
+  .lab{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin:26px 0 10px;display:block}
+  .badge2{display:inline-block;font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-bottom:10px}
+  .ct{font-weight:700;font-size:15px;margin-bottom:4px}
+  .cd{font-size:12.5px;line-height:1.5;margin-bottom:14px}
+  .btn{border:none;border-radius:10px;padding:13px;width:100%;font-family:var(--font);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  .ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 34px;margin-bottom:11px}
+
+  /* A — papel con acento dorado a la izquierda */
+  .a{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--gold-leaf);border-radius:13px;padding:17px}
+  .a .badge2{background:var(--gold-dim);color:var(--gold)}
+  .a .cd{color:var(--concrete)}
+  .a .btn{background:var(--gold-leaf);color:var(--onyx)}
+
+  /* B — gradiente dorado suave (gemelo de la tarjeta de reseña) */
+  .b{background:linear-gradient(135deg,#fff8e8,#fbf0d8);border:1px solid var(--gold-leaf);border-radius:13px;padding:17px}
+  .b .ico{background:#fff;border:1px solid var(--gold-leaf);color:var(--gold)}
+  .b .cd{color:#7a6a3f}
+  .b .btn{background:var(--charcoal);color:#fff}
+
+  /* C — papel limpio, botón outline dorado (el más sobrio) */
+  .c{background:var(--white);border:1px solid var(--border);border-radius:13px;padding:17px;text-align:center}
+  .c .ico{background:var(--gold-dim);color:var(--gold);margin:0 auto 11px}
+  .c .cd{color:var(--concrete)}
+  .c .btn{background:none;border:1.5px solid var(--gold-leaf);color:var(--gold)}
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>“¿Tienes otra propiedad?”</h1>
+    <p>Tres tonos en papel/dorado. ¿Cuál combina mejor con el resto de la entrega?</p>
+  </div>
+  <div class="wrap">
+
+    <span class="lab">Variante A — acento dorado</span>
+    <div class="a">
+      <span class="badge2">Cliente recurrente</span>
+      <div class="ct">¿Tienes otra propiedad?</div>
+      <div class="cd">Aparta tu próxima sesión con beneficio de cliente recurrente.</div>
+      <button class="btn">Agendar otra propiedad</button>
+    </div>
+
+    <span class="lab">Variante B — gradiente dorado</span>
+    <div class="b">
+      <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+      <div class="ct">¿Tienes otra propiedad?</div>
+      <div class="cd">Aparta tu próxima sesión con beneficio de cliente recurrente.</div>
+      <button class="btn">Agendar otra propiedad</button>
+    </div>
+
+    <span class="lab">Variante C — sobria, botón outline</span>
+    <div class="c">
+      <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+      <div class="ct">¿Tienes otra propiedad?</div>
+      <div class="cd">Aparta tu próxima sesión con beneficio de cliente recurrente.</div>
+      <button class="btn">Agendar otra propiedad</button>
+    </div>
+
+  </div>
+</body>
+</html>
