@@ -27,14 +27,14 @@ propiedad. Cuatro ideas, todas validadas con prototipos (`mockups-galeria/v7-est
    se asienta en la galería. Convierte la descarga en un *evento*. Solo la primera vez
    (botón "↺ Estreno" para repetirlo).
 2. **Kit listo para publicar.** El material entregado ya empaquetado por destino:
-   **Para redes** (video + caption con hashtags y "Grabado por @inmueblesaudiovisuales") y
+   **Para redes** (video + caption con hashtags y "Grabado por @inmuebles.audiovisuales") y
    **Para tu anuncio** (fotos + descripción). Botones de descargar y de copiar texto. Le quita
    *todo* el trabajo al cliente → motor de recontratación.
 3. **Sello de marca compartible.** La entrega lleva el logo real de IAV
    (`logo-invertido.svg` sobre barra charcoal con canto dorado) y cierra con "Una producción de
    Inmuebles Audiovisuales". Vive en una URL que el cliente reenvía con orgullo.
 4. **Pico de recontratación.** Al final, en el punto de mayor emoción: reseña en Google +
-   oferta de cliente recurrente con código y vigencia.
+   invitación sobria a agendar otra propiedad (por WhatsApp, **sin descuento ni código**).
 
 ### Decisiones de estilo (cerradas con el dueño)
 - **Lenguaje visual:** "Dossier" papel editorial (papel marfil `--surface`, dorado `--gold*`,
@@ -48,8 +48,9 @@ propiedad. Cuatro ideas, todas validadas con prototipos (`mockups-galeria/v7-est
 - Tarjeta "Tu entrega incluye": lista en lenguaje humano, **sin tecnicismos ni números**
   ("Tu video, listo para publicar" / "Tus fotografías profesionales" / "Tu recorrido virtual
   360°" + "Disponible por 30 días"). Sin íconos de palomita.
-- **Reseña** en tarjeta dorada (gradiente); **reventa** en tarjeta sobria de papel con botón
-  outline dorado y código (p. ej. `OTRA15`, 15% válido 30 días).
+- **Reseña** en tarjeta dorada (gradiente); **recontratación** ("¿Tienes otra propiedad?") en
+  tarjeta sobria de papel con botón outline dorado que lleva a WhatsApp. **Sin descuento ni
+  código.**
 - **Regla de emojis:** el chrome del producto va **sin emojis** (regla de CLAUDE.md). Los
   captions generados para redes *sí* pueden incluir emojis, porque son contenido saliente que
   el realtor publica en redes (convención de la plataforma); son editables.
@@ -101,7 +102,7 @@ propiedad. Cuatro ideas, todas validadas con prototipos (`mockups-galeria/v7-est
 8. **Tu entrega incluye** (lista humana) + "Disponible por 30 días".
 9. **Cómo publicarlo en alta calidad** (guía).
 10. **¿Te encantó tu material?** → reseña en Google.
-11. **¿Tienes otra propiedad?** → reventa con código y vigencia.
+11. **¿Tienes otra propiedad?** → invitación a agendar otra propiedad por WhatsApp (sin descuento).
 12. **Comprobante de pago** (plegable) + **WhatsApp** + "Una producción de Inmuebles
     Audiovisuales".
 
@@ -145,7 +146,7 @@ de `publicado`.
 
 **Fase 1 — La galería WOW (el corazón).**
 `entrega.html` con: Estreno, hero con video real, galería de fotos (manifiesto vía adapter +
-caché), 360 con copiar-liga, "Tu entrega incluye", guía, reseña, reventa con código, comprobante,
+caché), 360 con copiar-liga, "Tu entrega incluye", guía, reseña, recontratación (sin descuento), comprobante,
 WhatsApp. Gate de configuración/preview en admin (con textos por **plantilla** editable, aún sin
 IA). Estado solo-video. Esto entrega el ~90% del WOW y del motor de recontratación.
 
