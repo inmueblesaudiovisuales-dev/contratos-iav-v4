@@ -4327,6 +4327,43 @@ function renderPanel(data) {
       </div>
     </details>
 
+    <!-- Galería de entrega — El Estreno (R123) -->
+    <details class="panel-acord">
+      <summary onclick="setTimeout(cargarConfigEntregaGaleria,0)">Galería de entrega — El Estreno</summary>
+      <div class="panel-acord-body">
+        <p class="form-hint">Migra las fotos (a R2) y el video <code>_web</code> (a Stream) desde la carpeta Entregables, revisa y publica. El cliente solo ve la galería cuando la publicas.</p>
+        <button class="btn-secundario btn-sm" style="width:100%" id="btn-preparar" onclick="prepararEntregaGaleria()"><i class="ti ti-photo-up"></i> Preparar entrega (migrar media)</button>
+        <div class="form-msg" id="msg-galeria"></div>
+
+        <div id="galeria-config" style="display:none;margin-top:12px">
+          <div class="campo"><label>Foto destacada (portada)</label>
+            <select id="gal-destacado"></select>
+          </div>
+          <div class="campo"><label>Texto para redes</label>
+            <textarea id="gal-redes" rows="4" placeholder="Caption para Instagram/Facebook..."></textarea>
+          </div>
+          <div class="campo"><label>Texto para tu anuncio</label>
+            <textarea id="gal-anuncio" rows="4" placeholder="Descripción para el portal inmobiliario..."></textarea>
+          </div>
+          <div class="campo"><label>Video (proveedor)</label>
+            <select id="gal-vprov"><option value="">— Ninguno —</option><option value="stream">Cloudflare Stream</option><option value="youtube">YouTube</option></select>
+          </div>
+          <div class="campo"><label>ID del video</label>
+            <input type="text" id="gal-vid" placeholder="UID de Stream o ID de YouTube">
+            <p class="form-hint">Si subiste un archivo <code>_web</code>, ya viene detectado. También puedes pegar el ID a mano.</p>
+          </div>
+          <div class="campo"><label>Liga del recorrido 360</label>
+            <input type="url" id="gal-360" placeholder="https://...">
+          </div>
+          <button class="btn-secundario btn-sm" style="width:100%" onclick="guardarConfigEntregaGaleria()"><i class="ti ti-device-floppy"></i> Guardar configuración</button>
+          <div class="form-msg" id="msg-galeria-cfg"></div>
+          <div style="margin-top:10px"><a href="#" id="gal-preview" target="_blank" rel="noopener" class="form-hint"><i class="ti ti-external-link"></i> Abrir vista previa</a></div>
+          <button class="btn-primario gold" style="width:100%;margin-top:12px" onclick="publicarEntregaGaleria()"><i class="ti ti-send"></i> Publicar entrega</button>
+          <div class="form-msg" id="msg-galeria-pub"></div>
+        </div>
+      </div>
+    </details>
+
     <!-- Acciones por propiedad -->
     ${_props.length ? `<details class="panel-acord"><summary>Acciones por propiedad</summary><div class="panel-acord-body">
       ${propActionsHtml}
@@ -4724,6 +4761,79 @@ async function guardarEntrega() {
   } finally {
     const b = document.getElementById('btn-entrega');
     if (b && b.disabled) { b.disabled = false; b.innerHTML = '<i class="ti ti-send"></i> Enviar al cliente'; }
+  }
+}
+
+// ── Galería El Estreno (R123) ───────────────────────────────────────────────
+async function prepararEntregaGaleria() {
+  const t = tokenActivo;
+  const btn = document.getElementById('btn-preparar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Migrando…'; }
+  setMsg('msg-galeria', 'Migrando fotos y video, puede tardar un momento…', '');
+  try {
+    const data = await apiPost({ action: 'prepararEntrega', token: t });
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    setMsg('msg-galeria', 'Listo: ' + data.fotos + ' foto(s) migradas' + (data.video ? ', video en Stream.' : ', sin video web detectado.'), 'ok');
+    await cargarConfigEntregaGaleria();
+  } catch (e) {
+    setMsg('msg-galeria', 'Error: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-photo-up"></i> Preparar entrega (migrar media)'; }
+  }
+}
+
+async function cargarConfigEntregaGaleria() {
+  const t = tokenActivo;
+  if (!t) return;
+  let d; try { d = await (await fetch('/api/obtenerEntrega?token=' + encodeURIComponent(t))).json(); } catch (e) { return; }
+  if (!d || !d.ok) return;
+  const m = d.manifiesto || {};
+  const fotos = Array.isArray(m.fotos) ? m.fotos : [];
+  const tieneAlgo = fotos.length || d.videoId || d.tour360Url;
+  if (!tieneAlgo) return; // aún no se ha preparado nada
+  const sel = document.getElementById('gal-destacado');
+  if (sel) sel.innerHTML = fotos.length
+    ? fotos.map(function (f) { return '<option value="' + esc(f.id) + '"' + (f.id === m.destacadoId ? ' selected' : '') + '>' + esc(f.nombre || f.id) + '</option>'; }).join('')
+    : '<option value="">(sin fotos)</option>';
+  const setVal = function (id, v) { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  setVal('gal-redes', d.textos && d.textos.redes);
+  setVal('gal-anuncio', d.textos && d.textos.anuncio);
+  setVal('gal-vprov', d.videoProveedor);
+  setVal('gal-vid', d.videoId);
+  setVal('gal-360', d.tour360Url);
+  const prev = document.getElementById('gal-preview');
+  if (prev) prev.href = 'entrega.html?token=' + encodeURIComponent(t) + '&preview=1';
+  document.getElementById('galeria-config').style.display = '';
+}
+
+async function guardarConfigEntregaGaleria() {
+  const t = tokenActivo;
+  setMsg('msg-galeria-cfg', '', '');
+  try {
+    const data = await apiPost({
+      action: 'guardarConfigEntrega', token: t,
+      textos: { redes: document.getElementById('gal-redes').value, anuncio: document.getElementById('gal-anuncio').value },
+      destacadoId: document.getElementById('gal-destacado').value,
+      videoProveedor: document.getElementById('gal-vprov').value,
+      videoId: document.getElementById('gal-vid').value.trim(),
+      tour360Url: document.getElementById('gal-360').value.trim()
+    });
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    setMsg('msg-galeria-cfg', 'Configuración guardada.', 'ok');
+  } catch (e) {
+    setMsg('msg-galeria-cfg', 'Error: ' + e.message, 'error');
+  }
+}
+
+async function publicarEntregaGaleria() {
+  const t = tokenActivo;
+  setMsg('msg-galeria-pub', '', '');
+  try {
+    const data = await apiPost({ action: 'publicarEntrega', token: t });
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    setMsg('msg-galeria-pub', 'Entrega publicada. El cliente ya puede verla.', 'ok');
+  } catch (e) {
+    setMsg('msg-galeria-pub', 'Error: ' + e.message, 'error');
   }
 }
 

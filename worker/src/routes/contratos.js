@@ -2,6 +2,7 @@ import { query, queryOne, run, batch, uuid, now } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter, callAdapterSync } from '../google.js';
 import { generarFolio, asignarFolio } from '../folios.js';
+import { esFotoWeb, hashDeVariante } from '../entrega-media.js';
 
 export async function handleContratos(request, env, ctx, action) {
   const db = env.DB;
@@ -411,6 +412,114 @@ export async function handleContratos(request, env, ctx, action) {
         linkPortal: `https://contratos.inmueblesaudiovisuales.com/portal.html?token=${token}`
       });
     }
+    return ok({ ok: true });
+  }
+
+  if (action === 'prepararEntrega') {
+    const { token } = await request.json();
+    if (!token) return err('Token requerido');
+    const c = await queryOne(db, 'SELECT * FROM contratos WHERE token=?', [token]);
+    if (!c) return err('Contrato no encontrado', 404);
+
+    const prop = await queryOne(db,
+      'SELECT carpeta_entregables_id, direccion FROM propiedades WHERE contrato_token=? ORDER BY num_propiedad LIMIT 1',
+      [token]);
+    if (!prop || !prop.carpeta_entregables_id) {
+      return err('No hay carpeta de Entregables registrada para este trabajo', 400);
+    }
+
+    await run(db, `UPDATE contratos SET entrega_media_estado='migrando' WHERE token=?`, [token]);
+
+    // 1) El adapter lista las subcarpetas Fotos/Videos y marca los archivos como públicos
+    let lista = { fotos: [], videoWeb: null };
+    try {
+      lista = await callAdapterSync(env, 'prepararCarpetaEntrega', { carpetaEntregablesId: prop.carpeta_entregables_id });
+    } catch (e) {
+      await run(db, `UPDATE contratos SET entrega_media_estado='error' WHERE token=?`, [token]);
+      return err('No se pudo leer la carpeta de entrega: ' + e.message, 502);
+    }
+
+    // 2) Migrar fotos a Cloudflare Images (el Worker jala de Drive; sin el límite de 50 MB de Apps Script)
+    const fotosManifiesto = [];
+    let imagesHash = '';
+    for (const f of (lista.fotos || [])) {
+      if (!esFotoWeb(f)) continue;
+      try {
+        const r = await fetch(`https://drive.google.com/uc?export=download&id=${f.id}`);
+        if (!r.ok) continue;
+        const form = new FormData();
+        form.append('file', await r.blob(), f.nombre || (f.id + '.jpg'));
+        const up = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/images/v1`,
+          { method: 'POST', headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}` }, body: form });
+        const uj = await up.json();
+        if (uj && uj.success && uj.result && uj.result.id) {
+          fotosManifiesto.push({ id: uj.result.id, nombre: f.nombre });
+          if (!imagesHash && uj.result.variants && uj.result.variants[0]) imagesHash = hashDeVariante(uj.result.variants[0]);
+        }
+      } catch (e) { console.error('migrar foto falló', f.id, e.message); }
+    }
+
+    // 3) Subir el video _web a Stream (copy-from-URL: Stream lo jala de Drive)
+    let videoProveedor = c.entrega_video_proveedor || '';
+    let videoId = c.entrega_video_id || '';
+    let streamCustomer = '';
+    if (lista.videoWeb && lista.videoWeb.id) {
+      try {
+        const resp = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/copy`,
+          { method: 'POST',
+            headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: `https://drive.google.com/uc?export=download&id=${lista.videoWeb.id}`,
+                                   meta: { name: `entrega-${token}` } }) });
+        const j = await resp.json();
+        if (j && j.success && j.result && j.result.uid) {
+          videoProveedor = 'stream'; videoId = j.result.uid;
+          // El subdominio (customer-xxxx) viene en las URLs del resultado; se captura solo.
+          const mm = String(j.result.preview || j.result.thumbnail || '').match(/(customer-[^.]+)\./);
+          if (mm) streamCustomer = mm[1];
+        }
+      } catch (e) { console.error('subir video a Stream falló', e.message); }
+    }
+
+    const manifiesto = {
+      fotos: fotosManifiesto,
+      destacadoId: fotosManifiesto.length ? fotosManifiesto[0].id : '',
+      imagesHash,
+      streamCustomer,
+      propiedadNombre: c.nombre_cliente || '',
+      propiedadUbicacion: prop.direccion || ''
+    };
+
+    await run(db,
+      `UPDATE contratos SET entrega_manifiesto_json=?, entrega_video_proveedor=?, entrega_video_id=?,
+         entrega_textos_json=COALESCE(entrega_textos_json, ?), entrega_config_estado='borrador',
+         entrega_media_estado='listo' WHERE token=?`,
+      [JSON.stringify(manifiesto), videoProveedor, videoId, JSON.stringify({ redes: '', anuncio: '' }), token]);
+
+    return ok({ ok: true, fotos: fotosManifiesto.length, video: videoProveedor === 'stream' ? videoId : '', manifiesto });
+  }
+
+  if (action === 'guardarConfigEntrega') {
+    const { token, textos, destacadoId, videoProveedor, videoId, tour360Url } = await request.json();
+    if (!token) return err('Token requerido');
+    const c = await queryOne(db, 'SELECT entrega_manifiesto_json FROM contratos WHERE token=?', [token]);
+    if (!c) return err('Contrato no encontrado', 404);
+    let man = {}; try { man = JSON.parse(c.entrega_manifiesto_json || '{}'); } catch (e) {}
+    if (destacadoId !== undefined) man.destacadoId = destacadoId;
+    await run(db,
+      `UPDATE contratos SET entrega_manifiesto_json=?, entrega_textos_json=?,
+         entrega_video_proveedor=COALESCE(NULLIF(?, ''), entrega_video_proveedor),
+         entrega_video_id=COALESCE(NULLIF(?, ''), entrega_video_id),
+         recorrido_url=COALESCE(NULLIF(?, ''), recorrido_url) WHERE token=?`,
+      [JSON.stringify(man), JSON.stringify(textos || {}), videoProveedor || '', videoId || '', tour360Url || '', token]);
+    return ok({ ok: true });
+  }
+
+  if (action === 'publicarEntrega') {
+    const { token } = await request.json();
+    if (!token) return err('Token requerido');
+    await run(db, `UPDATE contratos SET entrega_config_estado='publicado' WHERE token=?`, [token]);
     return ok({ ok: true });
   }
 

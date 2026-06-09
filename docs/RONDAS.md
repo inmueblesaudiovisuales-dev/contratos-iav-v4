@@ -8,6 +8,31 @@
 
 ---
 
+### R123 — Entrega WOW "El Estreno" (Fase 1): galería desde Cloudflare Images/Stream (2026-06-09 11:06:13 CST)
+
+Nueva experiencia de entrega (`frontend/entrega.html`) que reemplaza el link gris a Drive. Las fotos
+se suben a **Cloudflare Images** y el video a **Cloudflare Stream** (Starter Bundle); la galería del
+cliente no toca Drive. El portal redirige a `entrega.html` solo cuando hay una galería **publicada**
+(compatibilidad total con entregas clásicas).
+
+- **Adapter (`adapter/AdapterScript4_v1.js`) — requiere despliegue manual** en script.google.com:
+  nueva función `prepararCarpetaEntrega` (abre subcarpetas Fotos/Videos de la carpeta Entregables,
+  marca cada archivo como público y devuelve `{fotos, videoWeb(_web)}`).
+- D1: columnas nuevas en `contratos` (`entrega_manifiesto_json`, `entrega_textos_json`,
+  `entrega_config_estado`, `entrega_media_estado`, `entrega_video_proveedor`, `entrega_video_id`) —
+  migración `worker/migrations/r123-entrega-manifiesto.sql` (aplicada a D1 remoto).
+- Worker: `prepararEntrega` (sube fotos a Images + video a Stream; captura `imagesHash` y el
+  `customer-code` de Stream solos), `obtenerEntrega`, `guardarConfigEntrega`, `publicarEntrega`.
+  Las fotos se sirven desde `imagedelivery.net` (variantes flexibles `w=...,format=auto`).
+- Admin: panel "Galería de entrega — El Estreno" con Preparar → revisar/editar → Publicar (gate
+  `borrador`/`publicado`).
+- Infra (hecha): secret `CF_MEDIA_TOKEN` (Stream+Images:Edit), variantes flexibles activadas,
+  migración aplicada. Pendiente de Bruno: subir el adapter y exportar el reel `_web` (<45 MB).
+- Spec: `docs/superpowers/specs/2026-06-09-entrega-estreno-design.md`. Plan:
+  `docs/superpowers/plans/2026-06-09-entrega-estreno-fase1.md`.
+
+---
+
 ### R122 — Checklist: propuesta IA con fotos (Meta B, F72–F74) (2026-06-09 10:49:37 CST)
 
 **Rama `checklist-cambios-2026-06-07`, NO integrado a main/producción.** Worker probado en el preview aislado.
@@ -101,6 +126,7 @@ last-write-wins; varias personas en el mismo token se pisaban.
 - **F65 — Cierre.** 240 pruebas en verde (incl. candado del incidente); evidencia en
   `docs/superpowers/verificacion/f62/`. PENDIENTE (no ejecutado): reinsertar los 104 mediaFiles recuperados
   (`recuperacion-mediafiles-IAV-2606.06-A.json`) ya con el sistema vivo, fusionando con la cobertura actual.
+---
 
 ### R112 — Checklist: el demo arranca en primer arranque + sin zoom por double-tap (2026-06-05 20:05:14 CST)
 

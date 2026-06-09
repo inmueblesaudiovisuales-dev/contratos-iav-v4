@@ -366,5 +366,33 @@ export async function handlePortal(request, env, ctx, action) {
     return err('Este endpoint ha sido deprecado en v5.0. Los contratos ahora se crean directamente con propiedades desde el admin.', 410);
   }
 
+  if (action === 'obtenerEntrega') {
+    const token = url.searchParams.get('token');
+    if (!token) return err('Token requerido');
+    const c = await queryOne(db, 'SELECT * FROM contratos WHERE token = ?', [token]);
+    if (!c) return err('Contrato no encontrado', 404);
+
+    let manifiesto = {}; try { manifiesto = JSON.parse(c.entrega_manifiesto_json || '{}'); } catch (e) {}
+    let textos = {}; try { textos = JSON.parse(c.entrega_textos_json || '{}'); } catch (e) {}
+
+    return ok({
+      ok: true,
+      token: c.token,
+      estatus: c.estatus,
+      publicado: c.entrega_config_estado === 'publicado',
+      mediaEstado: c.entrega_media_estado || '',
+      revocada: !!(c.entrega_revocada && String(c.entrega_revocada).trim()),
+      nombreCliente: c.nombre_cliente,
+      driveLink: c.entrega_drive_link || '',
+      manifiesto, textos,
+      videoProveedor: c.entrega_video_proveedor || '',
+      videoId: c.entrega_video_id || '',
+      streamCustomer: (manifiesto && manifiesto.streamCustomer) || env.STREAM_CUSTOMER_CODE || '',
+      tour360Url: c.tiene_recorrido === 0 ? '' : (c.recorrido_url || ''),
+      waLink: 'https://wa.me/5218127174207',
+      igHandle: '@inmuebles.audiovisuales'
+    });
+  }
+
   return err('Acción no encontrada', 404);
 }

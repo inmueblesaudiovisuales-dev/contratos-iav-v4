@@ -2591,6 +2591,21 @@ function renderEtapa3() {
 /* ── ETAPA 4 — ENTREGA ──────────────────────────────────────────────────────── */
 
 function renderEtapa4() {
+  // Si existe una galería "El Estreno" publicada, redirige a la nueva experiencia;
+  // si no (entregas clásicas/antiguas), usa la entrega de siempre. Compatibilidad total.
+  var tk = (portalData && portalData.token) || '';
+  fetch('/api/obtenerEntrega?token=' + encodeURIComponent(tk))
+    .then(function (r) { return r.json(); })
+    .then(function (e) {
+      var fotos = e && e.manifiesto && e.manifiesto.fotos;
+      var tieneGaleria = e && e.ok && e.publicado && ((fotos && fotos.length) || e.videoId);
+      if (tieneGaleria) { location.replace('entrega.html?token=' + encodeURIComponent(tk)); }
+      else { renderEtapa4Clasica(); }
+    })
+    .catch(function () { renderEtapa4Clasica(); });
+}
+
+function renderEtapa4Clasica() {
   mostrarEstado('');
   var d       = portalData;
   var estatus = d.estatus || '';

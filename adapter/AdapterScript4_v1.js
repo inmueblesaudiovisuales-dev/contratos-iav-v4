@@ -1,12 +1,12 @@
 // AdapterScript4_v1.js — Google Services Adapter para IAV Contratos v4.0
 // Recibe POST desde Cloudflare Workers. No tiene UI propia.
 // Solo maneja: Drive, Calendar, Gmail, PDF.
-// Ultima modificacion: 2026-06-05 16:35:22 CST (R90) — nueva función registrarUsoTomas:
-//   anexa al Sheet maestro (tab "UsoTomas" en SHEETS_BACKUP_ID) una fila por toma con su
-//   archivo y si se usó en el video final; idempotente por folio. Banco de datos de aprendizaje.
-//   Registrada en el router doPost.
-//   Previo R64 (main): procesarFirma clona hasta 3 versiones de logo (body.logosClienteUrls[])
-//   a Control Interno con sufijo -v1/-v2/-v3; compatible con body.logoClienteUrl único de R63.
+// Ultima modificacion: 2026-06-09 11:06:13 CST (R123) — nueva función prepararCarpetaEntrega:
+//   abre subcarpetas Fotos/Videos de la carpeta Entregables, marca cada archivo como público
+//   (ANYONE_WITH_LINK) y devuelve {fotos:[{id,nombre,mimeType}], videoWeb(_web)} para que el
+//   Worker migre las fotos a R2 y el video a Stream. Registrada en el router doPost.
+//   Previo R90: registrarUsoTomas anexa al Sheet maestro una fila por toma (banco de aprendizaje).
+//   Previo R64 (main): procesarFirma clona hasta 3 versiones de logo (body.logosClienteUrls[]).
 
 var CONFIG = {
   CARPETA_PROYECTOS_ID: '1PRZeVQr6cEgjkrso6eBPf9BA6dbv8XU3',
@@ -52,7 +52,8 @@ function doPost(e) {
       syncBackup: syncBackup,
       registrarUsoTomas: registrarUsoTomas,
       agendarLlamadaProspecto: agendarLlamadaCliente,
-      agendarLlamadaCliente: agendarLlamadaCliente
+      agendarLlamadaCliente: agendarLlamadaCliente,
+      prepararCarpetaEntrega: prepararCarpetaEntrega
     };
     if (!handlers[action]) return jsonResp({ error: 'Acción no reconocida: ' + action });
     var result = handlers[action](body);
@@ -83,6 +84,54 @@ function escHtml_(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ── ENTREGA — lista Fotos/Videos y marca público (R123) ─────────────────────
+// Dada la carpeta Entregables, abre subcarpetas "Fotos" y "Videos", marca cada
+// archivo como público (para que el Worker lo jale a R2/Stream) y devuelve la lista.
+// Recibe { carpetaEntregablesId }. Devuelve { ok, fotos:[{id,nombre,mimeType}], videoWeb:{id,nombre}|null }.
+function prepararCarpetaEntrega(body) {
+  var id = body.carpetaEntregablesId;
+  if (!id) return { ok: false, error: 'carpetaEntregablesId requerido' };
+  var entregables = DriveApp.getFolderById(id);
+
+  function subcarpeta(nombre) {
+    var it = entregables.getFoldersByName(nombre);
+    return it.hasNext() ? it.next() : null;
+  }
+  function publicar(file) {
+    try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+  }
+
+  var fotos = [];
+  var cFotos = subcarpeta('Fotos');
+  if (cFotos) {
+    var itf = cFotos.getFiles();
+    while (itf.hasNext() && fotos.length < 200) {
+      var f = itf.next();
+      var mime = f.getMimeType();
+      if (mime === 'image/jpeg' || mime === 'image/png' || mime === 'image/webp') {
+        publicar(f);
+        fotos.push({ id: f.getId(), nombre: f.getName(), mimeType: mime });
+      }
+    }
+  }
+
+  var videoWeb = null;
+  var cVideos = subcarpeta('Videos');
+  if (cVideos) {
+    var itv = cVideos.getFiles();
+    while (itv.hasNext()) {
+      var v = itv.next();
+      if (/_web\.[a-z0-9]+$/i.test(v.getName())) {
+        publicar(v);
+        videoWeb = { id: v.getId(), nombre: v.getName() };
+        break;
+      }
+    }
+  }
+
+  return { ok: true, fotos: fotos, videoWeb: videoWeb };
 }
 
 // ── FIRMA — guarda PNG en Drive, genera PDF diferido ────────────────────────

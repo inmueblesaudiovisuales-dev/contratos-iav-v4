@@ -24,12 +24,13 @@ const RUTAS_CONTRATOS = [
   'listarContratos','obtenerContrato','crearContrato','actualizarEstatus',
   'actualizarContratoUpsell','ocultarContrato','eliminarContrato','reservarContrato','guardarNotasInternas',
   'marcarSesionCompletada','guardarProduccion','guardarEntrega','revocarEntrega',
+  'prepararEntrega','guardarConfigEntrega','publicarEntrega',
   'guardarCaracteristicas','reagendarPropiedad','exportarCSV','enviarRecordatorio',
   'guardarNotaPropiedad','actualizarCarpeta','actualizarPdfUrl','actualizarCalendarEvent',
   'actualizarExpress','guardarFormatoPropiedad'
 ];
 
-const RUTAS_PORTAL = ['obtenerPortal','firmaCliente','guardarResena','guardarConfiguracion'];
+const RUTAS_PORTAL = ['obtenerPortal','firmaCliente','guardarResena','guardarConfiguracion','obtenerEntrega'];
 const RUTAS_ABONOS = ['registrarAbono','listarAbonos'];
 const RUTAS_PAQUETES = ['listarPaquetes','listarPaquetesTodos','crearPaquete','editarPaquete','togglePaquete'];
 const RUTAS_CHECKLIST = ['obtenerChecklist','guardarChecklist'];

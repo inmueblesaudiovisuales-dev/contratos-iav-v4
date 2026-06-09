@@ -19,6 +19,12 @@ bucket_name = "iav-checklist-backups"
 [vars]
 ADMIN_KEY = "framedock"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwv6J6Mh-y31LYGdLBasL0bFDOloosEaiaLJDXH-TIF2-A_VpFUbh14I9zHt43LEfY/exec"
+CF_ACCOUNT_ID = "0d0d6aaf107ae092f9fb5da06ddb338c"
+# Subdominio de Stream para los embeds (ej. "customer-xxxx"). Llenar tras activar Stream (bundle).
+STREAM_CUSTOMER_CODE = ""
+# CF_MEDIA_TOKEN es secret: wrangler secret put CF_MEDIA_TOKEN
+#   (API token con permisos Cloudflare Stream:Edit + Cloudflare Images:Edit).
+#   Lo usa el Worker para subir fotos a Cloudflare Images y el video a Stream.
 
 [triggers]
 crons = ["0 * * * *"]
