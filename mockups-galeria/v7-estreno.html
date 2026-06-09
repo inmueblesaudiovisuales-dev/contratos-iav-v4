@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>El Estreno — v7</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Spline+Sans+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#B08D2E; --gold-leaf:#C9A84C; --gold-hi:#D4B65C; --gold-dim:rgba(176,141,46,.10);
+    --charcoal:#211E18; --onyx:#1C1C1E; --concrete:#918975;
+    --surface:#F7F4EC; --white:#FFFDF8; --chip:#EFEADF;
+    --border:#E2DBCB; --border-strong:#D2C9B3;
+    --green:#2F7D55; --wa:#25D366;
+    --font:'Montserrat',system-ui,sans-serif; --mono:'Spline Sans Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:var(--font);background:#0e0d0b;color:#fff;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+  .device{position:relative;width:100%;max-width:412px;height:100vh;max-height:892px;background:var(--surface);overflow:hidden}
+  @media(min-width:480px){body{padding:24px}.device{height:850px;border-radius:42px;border:11px solid #000;box-shadow:0 30px 80px rgba(0,0,0,.6)}}
+  .scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden}
+  .scroll::-webkit-scrollbar{width:0}
+
+  /* ESTRENO */
+  #estreno{position:absolute;inset:0;z-index:60;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  #estreno .kb{position:absolute;inset:0;background:center/cover;opacity:0;animation:kbFade 1.2s ease 2.4s forwards, kbZoom 9s ease 2.4s forwards}
+  #estreno .kb::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.84),rgba(0,0,0,.4))}
+  @keyframes kbFade{to{opacity:1}}@keyframes kbZoom{from{transform:scale(1.18)}to{transform:scale(1)}}
+  #estreno .titles{position:relative;z-index:2;text-align:center;padding:0 30px}
+  .e-logo{height:30px;width:auto;margin-bottom:24px;opacity:0;animation:up .9s ease .3s forwards}
+  .e-pre{font-family:var(--mono);font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold-hi);opacity:0;animation:up .9s ease .8s forwards}
+  .e-name{font-weight:800;font-size:34px;line-height:1.08;letter-spacing:-.02em;margin:14px 0 6px;opacity:0;animation:up 1s ease 1.2s forwards}
+  .e-loc{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:#cfc7b5;opacity:0;animation:up .9s ease 1.8s forwards}
+  .e-cta{margin-top:34px;opacity:0;animation:up .9s ease 3s forwards}
+  .e-btn{background:var(--gold-leaf);color:#000;border:none;border-radius:999px;padding:15px 30px;font-family:var(--font);font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:9px;cursor:pointer;box-shadow:0 10px 30px rgba(201,168,76,.3)}
+  .e-skip{position:absolute;top:18px;right:18px;z-index:3;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.6);background:none;border:none;cursor:pointer;opacity:0;animation:up .6s ease 1s forwards}
+  @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  #estreno.closing{animation:fadeOut .6s ease forwards}
+  @keyframes fadeOut{to{opacity:0;visibility:hidden}}
+
+  /* header real: barra charcoal + logo */
+  header{background:var(--charcoal);padding:14px 24px;display:flex;align-items:center;justify-content:center;position:sticky;top:0;z-index:20}
+  header img{height:30px;width:auto}
+  header .replay{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:1px solid rgba(201,168,76,.4);border-radius:999px;color:var(--gold-hi);font-family:var(--mono);font-size:10px;letter-spacing:.04em;padding:6px 10px;cursor:pointer}
+  .hairline{height:1px;background:var(--gold-leaf);opacity:.6}
+
+  .screen{background:var(--surface);color:var(--charcoal);min-height:100%}
+  .hero{position:relative;height:330px;background:#222 center/cover;overflow:hidden}
+  .hero .kbimg{position:absolute;inset:0;background:center/cover;animation:heroPan 18s ease-in-out infinite alternate}
+  @keyframes heroPan{from{transform:scale(1.06)}to{transform:scale(1.16)}}
+  .hero::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(20,16,10,.78),rgba(20,16,10,.05) 58%)}
+  .hero .ov{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:space-between;padding:16px}
+  .badge{align-self:flex-start;background:rgba(255,253,248,.92);color:var(--charcoal);font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:6px 11px;border-radius:999px;display:flex;align-items:center;gap:6px}
+  .play{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.94);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(0,0,0,.4);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);cursor:pointer;animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 8px 30px rgba(0,0,0,.4),0 0 0 0 rgba(255,255,255,.4)}50%{box-shadow:0 8px 30px rgba(0,0,0,.4),0 0 0 14px rgba(255,255,255,0)}}
+  .hero .foot{color:#fff;z-index:2}
+  .hero .foot .ey{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-hi);margin-bottom:5px}
+  .hero .foot .ti{font-weight:800;font-size:24px;line-height:1.1;letter-spacing:-.02em}
+
+  .body{padding:24px 18px 40px}
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+  .kick{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:0 0 6px}
+  .h{font-weight:800;font-size:22px;letter-spacing:-.02em;margin-bottom:6px;line-height:1.18}
+  .sub{font-size:13px;color:var(--concrete);line-height:1.55;margin-bottom:24px}
+  .sect{font-weight:800;font-size:12.5px;letter-spacing:.04em;color:var(--charcoal);display:flex;align-items:center;gap:10px;margin:0 0 14px;text-transform:uppercase}
+  .sect::after{content:'';flex:1;height:1px;background:var(--border-strong)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+  .grid div{aspect-ratio:1;border-radius:9px;background:#999 center/cover;opacity:0;transform:scale(.96);animation:pop .6s ease forwards}
+  .grid div:first-child{grid-column:1/3;aspect-ratio:16/10}
+  .grid div:nth-child(1){animation-delay:.05s}.grid div:nth-child(2){animation-delay:.13s}.grid div:nth-child(3){animation-delay:.21s}.grid div:nth-child(4){animation-delay:.29s}.grid div:nth-child(5){animation-delay:.37s}
+  @keyframes pop{to{opacity:1;transform:none}}
+  .more{font-family:var(--mono);font-size:11px;color:var(--gold);text-align:center;margin:8px 0 28px}
+
+  .t360{position:relative;height:160px;border-radius:12px 12px 0 0;overflow:hidden;background:#333 center/cover}
+  .t360::after{content:'';position:absolute;inset:0;background:rgba(20,16,10,.4)}
+  .t360 .note{position:absolute;top:10px;right:10px;z-index:3;font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:rgba(20,16,10,.55);border-radius:999px;padding:4px 9px}
+  .t360 .c{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:#fff;cursor:pointer}
+  .t360 .ring{width:48px;height:48px;border-radius:50%;border:1.6px solid #fff;display:flex;align-items:center;justify-content:center}
+  .t360 .lab{font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+  .copyrow{display:flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:10px 12px;margin-bottom:28px}
+  .copyrow .url{flex:1;font-family:var(--mono);font-size:11px;color:var(--concrete);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .kit{display:flex;flex-direction:column;gap:9px;margin-bottom:16px}
+  .kititem{background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .kithead{display:flex;align-items:center;gap:11px;padding:13px 14px;cursor:pointer}
+  .kithead .pi{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 34px;color:#fff}
+  .kithead .soc{background:linear-gradient(45deg,#f09433,#dc2743,#bc1888)}
+  .kithead .an{background:var(--charcoal)}
+  .kithead .kt{flex:1}
+  .kithead .kt b{font-weight:700;font-size:13.5px;display:block}
+  .kithead .kt span{font-size:11px;color:var(--concrete)}
+  .kithead .chev{transition:transform .25s}
+  .kititem.open .chev{transform:rotate(180deg)}
+  .kitbody{max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .kititem.open .kitbody{max-height:360px}
+  .kitinner{padding:0 14px 14px}
+  .caption{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:11px;font-size:12px;line-height:1.55;color:var(--charcoal);margin-bottom:10px}
+  .caption .hash{color:var(--gold)}
+  .kbtns{display:flex;gap:8px}
+  .kbtn{flex:1;border-radius:9px;padding:11px;font-family:var(--font);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;border:none}
+  .kbtn.dl{background:var(--gold-leaf);color:var(--onyx)}
+  .kbtn.cp{background:var(--chip);border:1px solid var(--border-strong);color:var(--charcoal)}
+  .kbtn.done{background:var(--green);color:#fff}
+  .dlall{background:var(--charcoal);color:#fff;border:none;border-radius:12px;padding:16px;width:100%;font-family:var(--font);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;margin-bottom:14px}
+
+  .card{background:var(--white);border:1px solid var(--border);border-radius:13px;padding:16px;margin-top:14px}
+  .incl-t{font-weight:800;font-size:14px;margin-bottom:11px}
+  .incl-l{list-style:none}
+  .incl-l li{font-size:13px;color:var(--charcoal);padding:9px 0;border-bottom:1px solid var(--border)}
+  .incl-l li:last-child{border:none}
+  .incl-a{font-family:var(--mono);font-size:10.5px;color:var(--concrete);margin-top:9px;display:flex;align-items:center;gap:6px}
+  .ico{width:30px;height:30px;border-radius:8px;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;flex:0 0 30px;color:var(--gold)}
+  .guia{background:var(--white);border:1px solid var(--border);border-radius:13px;padding:15px;margin-top:14px;display:flex;gap:11px;align-items:flex-start;cursor:pointer}
+  .guia b{font-weight:700;font-size:13.5px;display:block;margin-bottom:2px}
+  .guia span{font-size:12px;color:var(--concrete);line-height:1.5}
+
+  .review{background:linear-gradient(135deg,#fff8e8,#fdf3df);border:1px solid var(--gold-leaf);border-radius:13px;padding:18px;margin-top:14px;text-align:center}
+  .stars{color:var(--gold-leaf);font-size:20px;letter-spacing:3px;margin-bottom:9px}
+  .review b{font-weight:800;font-size:15px;display:block;margin-bottom:4px}
+  .review p{font-size:12px;color:#7a6a3f;line-height:1.5;margin-bottom:14px}
+  .btn-review{background:var(--charcoal);color:#fff;border:none;border-radius:10px;padding:13px;width:100%;font-family:var(--font);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+
+  .rebook{background:var(--white);border:1px solid var(--border);border-radius:13px;padding:18px;margin-top:14px;text-align:center}
+  .rebook .ico{margin:0 auto 11px}
+  .rebook b{font-weight:800;font-size:15px;display:block;margin-bottom:4px}
+  .rebook p{font-size:12.5px;color:var(--concrete);line-height:1.5;margin-bottom:13px}
+  .code{display:flex;align-items:center;justify-content:center;gap:9px;border:1.5px dashed var(--gold-leaf);border-radius:9px;padding:11px;margin-bottom:7px;background:var(--gold-dim)}
+  .code .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--concrete)}
+  .code .val{font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:.06em;color:var(--gold)}
+  .exp{font-family:var(--mono);font-size:10px;color:var(--concrete);margin-bottom:13px;display:block}
+  .btn-rebook{background:none;border:1.5px solid var(--gold-leaf);color:var(--gold);border-radius:10px;padding:13px;width:100%;font-family:var(--font);font-weight:700;font-size:13px;cursor:pointer}
+
+  .collapse{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:15px;margin-top:14px;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px;color:var(--gold);cursor:pointer}
+  .wa{margin-top:14px;border:1px solid var(--wa);color:var(--green);border-radius:12px;padding:14px;width:100%;background:none;font-family:var(--font);font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+  .madeby{text-align:center;margin-top:28px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--concrete)}
+  .madeby b{color:var(--gold);font-weight:600}
+
+  #toast{position:absolute;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--charcoal);color:#fff;padding:11px 18px;border-radius:999px;font-size:12.5px;font-weight:600;z-index:80;opacity:0;transition:.25s;pointer-events:none}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="device">
+
+  <div id="estreno">
+    <div class="kb" style="background-image:url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80')"></div>
+    <button class="e-skip" onclick="cerrarEstreno()">Saltar intro ›</button>
+    <div class="titles">
+      <img class="e-logo" src="https://inmueblesaudiovisuales.com/logo-invertido.svg" alt="Inmuebles Audiovisuales">
+      <div class="e-pre">presenta</div>
+      <div class="e-name">Casa Lomas<br>del Valle</div>
+      <div class="e-loc">San Pedro · Monterrey</div>
+      <div class="e-cta"><button class="e-btn" onclick="cerrarEstreno()"><svg width="17" height="17" viewBox="0 0 24 24" fill="#000"><path d="M8 5v14l11-7z"/></svg>Ver mi producción</button></div>
+    </div>
+  </div>
+
+  <div class="scroll" id="scroll">
+    <header>
+      <img src="https://inmueblesaudiovisuales.com/logo-invertido.svg" alt="Inmuebles Audiovisuales">
+      <button class="replay" onclick="abrirEstreno()">↺ Estreno</button>
+    </header>
+    <div class="hairline"></div>
+
+    <div class="screen">
+      <div class="hero">
+        <div class="kbimg" style="background-image:url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=900&q=80')"></div>
+        <div class="ov">
+          <span class="badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Reel · 0:32</span>
+          <div class="foot"><div class="ey">Tu producción está lista</div><div class="ti">Casa Lomas del Valle</div></div>
+        </div>
+        <div class="play" onclick="toast('▶ Reproduciendo tu reel')"><svg width="20" height="20" viewBox="0 0 24 24" fill="#211E18"><path d="M8 5v14l11-7z"/></svg></div>
+      </div>
+
+      <div class="body">
+        <div class="reveal"><p class="kick">Tu producción</p>
+        <h2 class="h">Todo tu material, en un solo lugar</h2>
+        <p class="sub">Disfruta tu video, tus fotografías y tu recorrido virtual. Te dejamos todo listo para publicar.</p></div>
+
+        <div class="reveal"><p class="sect">Fotografías</p>
+        <div class="grid">
+          <div style="background-image:url('https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80')"></div>
+          <div style="background-image:url('https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80')"></div>
+          <div style="background-image:url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400&q=80')"></div>
+          <div style="background-image:url('https://images.unsplash.com/photo-1620626011761-996317b8d101?w=400&q=80')"></div>
+          <div style="background-image:url('https://images.unsplash.com/photo-1617104551722-3b2d51366400?w=400&q=80')"></div>
+        </div>
+        <p class="more">Ver todas las fotos →</p></div>
+
+        <div class="reveal"><p class="sect">Recorrido 360°</p>
+        <div class="t360" style="background-image:url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=700&q=80')" onclick="toast('Abriendo recorrido 360°')">
+          <span class="note">Solo en línea</span>
+          <div class="c"><div class="ring"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></div><span class="lab">Abrir recorrido</span></div>
+        </div>
+        <div class="copyrow">
+          <span class="url">cloudpano.com/tour/casa-lomas-del-valle</span>
+          <button class="kbtn cp" style="flex:0 0 auto" onclick="copiar('https://cloudpano.com/tour/casa-lomas-del-valle',this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar</button>
+        </div></div>
+
+        <div class="reveal"><p class="sect">Listo para publicar</p>
+        <div class="kit">
+          <div class="kititem open" id="k1">
+            <div class="kithead" onclick="togKit('k1')">
+              <div class="pi soc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg></div>
+              <div class="kt"><b>Para redes</b><span>Tu video + texto listo para publicar</span></div>
+              <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#918975" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="kitbody"><div class="kitinner">
+              <div class="caption" id="cap1">✨ Nueva propiedad en San Pedro. Casa Lomas del Valle: espacios amplios, luz natural y acabados de lujo. ¿Quieres conocerla? Escríbeme. <span class="hash">#SanPedro #CasaEnVenta #BienesRaíces</span> · 📹 <span class="hash">@inmueblesaudiovisuales</span></div>
+              <div class="kbtns">
+                <button class="kbtn dl" onclick="toast('Descargando tu video')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Video</button>
+                <button class="kbtn cp" onclick="copiarTxt('cap1',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar texto</button>
+              </div>
+            </div></div>
+          </div>
+          <div class="kititem" id="k2">
+            <div class="kithead" onclick="togKit('k2')">
+              <div class="pi an"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+              <div class="kt"><b>Para tu anuncio</b><span>Fotos en alta + descripción</span></div>
+              <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#918975" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="kitbody"><div class="kitinner">
+              <div class="caption" id="cap2">Casa en venta · Lomas del Valle, San Pedro. 3 recámaras, 3.5 baños, doble altura, jardín y cochera para 3 autos. Excelente ubicación y plusvalía. Agenda tu visita.</div>
+              <div class="kbtns">
+                <button class="kbtn dl" onclick="toast('Descargando fotos en alta')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Fotos</button>
+                <button class="kbtn cp" onclick="copiarTxt('cap2',this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar texto</button>
+              </div>
+            </div></div>
+          </div>
+        </div>
+        <button class="dlall" onclick="toast('Descargando todo el material')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Descargar todo el material</button></div>
+
+        <div class="reveal"><div class="card">
+          <div class="incl-t">Tu entrega incluye</div>
+          <ul class="incl-l">
+            <li>Tu video, listo para publicar</li>
+            <li>Tus fotografías profesionales</li>
+            <li>Tu recorrido virtual 360°</li>
+          </ul>
+          <div class="incl-a"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Disponible por 30 días</div>
+        </div>
+
+        <div class="guia" onclick="toast('Abriendo guía de publicación')">
+          <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg></span>
+          <div><b>Cómo publicarlo en alta calidad</b><span>Guía rápida para subir tus reels y fotos sin perder calidad.</span></div>
+        </div>
+
+        <div class="review">
+          <div class="stars">★★★★★</div>
+          <b>¿Te encantó tu material?</b>
+          <p>Tu reseña nos ayuda muchísimo. Toma 20 segundos.</p>
+          <button class="btn-review" onclick="toast('Abriendo Google para tu reseña')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z"/></svg>Dejar reseña en Google</button>
+        </div>
+
+        <div class="rebook">
+          <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+          <b>¿Tienes otra propiedad?</b>
+          <p>Como cliente, tu próxima sesión tiene un beneficio especial.</p>
+          <div class="code"><span class="lbl">Código</span><span class="val">OTRA15</span></div>
+          <span class="exp">15% de descuento · válido 30 días</span>
+          <button class="btn-rebook" onclick="toast('Agendando por WhatsApp')">Agendar otra propiedad</button>
+        </div>
+
+        <div class="collapse" onclick="toast('Mostrando comprobante')"><span>Ver comprobante de pago</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#918975" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <button class="wa" onclick="toast('Abriendo WhatsApp')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>¿Dudas? Escríbenos por WhatsApp</button>
+
+        <div class="madeby">Una producción de <b>Inmuebles Audiovisuales</b></div></div>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
+</div>
+
+<script>
+  function cerrarEstreno(){var e=document.getElementById('estreno');e.classList.add('closing');setTimeout(function(){e.style.display='none';revealOn();},600);}
+  function abrirEstreno(){var e=document.getElementById('estreno');e.style.display='flex';e.classList.remove('closing');e.style.opacity='';e.style.visibility='';e.querySelectorAll('.e-logo,.e-pre,.e-name,.e-loc,.e-cta,.e-skip,.kb').forEach(function(n){n.style.animation='none';n.offsetHeight;n.style.animation='';});document.getElementById('scroll').scrollTop=0;}
+  var toastT;
+  function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('show');},1600);}
+  function copiar(txt,btn){navigator.clipboard&&navigator.clipboard.writeText(txt);flash(btn);toast('Liga copiada');}
+  function copiarTxt(id,btn){var el=document.getElementById(id);navigator.clipboard&&navigator.clipboard.writeText(el.innerText);flash(btn);toast('Texto copiado, pégalo y listo');}
+  function flash(btn){var o=btn.innerHTML;btn.classList.add('done');btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>¡Copiado!';setTimeout(function(){btn.classList.remove('done');btn.innerHTML=o;},1400);}
+  function togKit(id){document.getElementById(id).classList.toggle('open');}
+  function revealOn(){var els=document.querySelectorAll('.reveal');var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12,root:document.getElementById('scroll')});els.forEach(function(el){io.observe(el);});}
+</script>
+</body>
+</html>
