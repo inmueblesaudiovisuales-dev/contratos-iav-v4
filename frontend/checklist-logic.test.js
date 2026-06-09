@@ -3048,22 +3048,8 @@ test('defaultVisible exterior y amenidades', () => {
   assert.deepEqual(logic.defaultVisible('amenidades', 0), []);
 });
 
-// F51 — Las habitaciones viven en el piso de arriba. En una propiedad de UN piso
-// la planta baja sugiere Recámara; al haber 2+ pisos, la Recámara deja de
-// sugerirse en planta baja (se va a las plantas altas). Sin contar pisos -> 1.
-test('defaultVisible PB con un solo piso incluye Recámara', () => {
-  const pb1 = logic.defaultVisible('interior', 0, 1);
-  assert.ok(pb1.includes('Recámara'), 'PB de 1 piso incluye Recámara');
-  // sin el 3er argumento se asume 1 piso (compatibilidad)
-  assert.ok(logic.defaultVisible('interior', 0).includes('Recámara'), 'default = 1 piso');
-});
-
-test('defaultVisible PB con 2+ pisos NO incluye Recámara pero sí lo demás', () => {
-  const pb2 = logic.defaultVisible('interior', 0, 2);
-  assert.ok(!pb2.includes('Recámara'), 'PB de 2 pisos NO sugiere Recámara');
-  assert.deepEqual(pb2, ['Sala', 'Comedor', 'Cocina', 'Medio baño', 'Baño']);
-});
-
-test('defaultVisible planta alta siempre sugiere Recámara', () => {
-  assert.ok(logic.defaultVisible('interior', 1, 2).includes('Recámara'), 'planta alta incluye Recámara');
+// La Recámara se sugiere SIEMPRE en planta baja, aun con varias plantas.
+test('defaultVisible planta baja siempre incluye Recámara', () => {
+  assert.ok(logic.defaultVisible('interior', 0).includes('Recámara'), 'PB incluye Recámara');
+  assert.ok(logic.defaultVisible('interior', 1).includes('Recámara'), 'planta alta incluye Recámara');
 });

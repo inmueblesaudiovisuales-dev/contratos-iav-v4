@@ -737,6 +737,20 @@
     .cs-pdrop { width: 100%; display: grid; gap: 6px; margin-top: 4px; }
     .cs-pdrop-item { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%; min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink-1); font-size: var(--ts-body); font-weight: 600; text-align: left; }
     .cs-pdi-add { font-size: 11px; color: var(--ink-3); font-weight: 700; flex: none; }
+    /* F52 — Acordeón de categorías del picker "Agregar otro" (compacto al cerrar). */
+    .cs-picker-cats { display: block; }
+    .cs-cat { border: 1px solid var(--line); border-radius: 10px; background: var(--card); margin-bottom: 6px; overflow: hidden; }
+    .cs-cat:last-child { margin-bottom: 0; }
+    .cs-cat-h { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 46px; padding: 0 var(--sp-3); border: 0; background: transparent; color: var(--ink-1); font-size: 13px; font-weight: 700; text-align: left; }
+    .cs-cat-h > i:first-child { font-size: 16px; color: var(--ink-3); flex: none; }
+    .cs-cat.open .cs-cat-h { border-bottom: 1px solid var(--line); }
+    .cs-cat-lbl { flex: 1; }
+    .cs-cat-n { font-size: 11px; color: var(--ink-3); font-weight: 700; flex: none; }
+    .cs-cat-body { display: grid; gap: 4px; padding: 6px; }
+    .cs-popt { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 0 var(--sp-2); border: 0; border-radius: 8px; background: var(--page); color: var(--ink-1); font-size: var(--ts-body); font-weight: 600; text-align: left; }
+    .cs-popt-ic { font-size: 18px; color: var(--gold); flex: none; }
+    .cs-popt-nm { flex: 1; }
+    .cs-popt-add { font-size: 16px; color: var(--ink-3); flex: none; }
 
     /* F36 — Rótulo discreto de escala del target de drone (breadcrumb / micro-texto). */
     .cap-scale { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--ts-cap); font-weight: 600; color: var(--ink-2); letter-spacing: 0; margin-bottom: 2px; }
@@ -1106,6 +1120,9 @@ let setupSubFor = null;
 let setupExpand = {};
 let setupPicker = {};
 let setupPickerQuery = {};
+// F52 — Acordeón de categorías del picker "Agregar otro": clave `${scopeKey}::${catId}`
+// → bool (categoría abierta). Todas arrancan CERRADAS para ocupar poco espacio.
+let setupPickerCat = {};
 // F48 — Pantalla consolidada de "Armar cuartos". setupVisible es estado SOLO de
 // UI (clave de scope → arreglo de bases visibles): 'f0','f1',… para pisos,
 // 'ext' para Exterior, 'ame' para Amenidades. Se inicializa perezosamente con
@@ -1780,21 +1797,15 @@ function setupScope(key) {
   return { zona: 'interior', piso: logic.floorLabel(i), floorIndex: i, lista: 'interior' };
 }
 
-// F51 — Pisos (no-drone) mostrados; refleja el mismo cálculo que renderSetup
-// (la Planta baja está implícita aunque state.pisos esté vacío => mínimo 1).
-function setupPisosCount() {
-  const pisos = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : ['Planta baja'];
-  return pisos.length || 1;
-}
-
-// F48/F51 — Bases visibles de un scope = default EN VIVO (logic.defaultVisible,
-// que ahora depende del número de pisos) + lo que el usuario agregó por el picker
-// (setupVisible[key] guarda SOLO esos extras) + cualquier concepto con instancias.
-// Recalcular el default cada render hace que, al agregar un 2º piso, la planta baja
-// deje de sugerir Recámara sin perder nada de lo ya armado.
+// F48 — Bases visibles de un scope: inicializa setupVisible[key] perezosamente con
+// logic.defaultVisible la primera vez que se ve el scope; además, cualquier
+// concepto con instancias en state.espacios se muestra aunque no esté en visible
+// (así, lo que agregues por el picker aparece como renglón sin tocar este estado).
 function setupVisibleFor(key, sc) {
-  const vis = logic.defaultVisible(sc.zona, sc.floorIndex || 0, setupPisosCount()).slice();
-  (setupVisible[key] || []).forEach((b) => { if (vis.indexOf(b) < 0) vis.push(b); });
+  if (!setupVisible[key]) {
+    setupVisible[key] = logic.defaultVisible(sc.zona, sc.floorIndex || 0).slice();
+  }
+  const vis = setupVisible[key].slice();
   setupScopeEspacios(sc).forEach((e) => {
     const base = logic.baseConcept(e.nombre, setupTipo);
     if (base && vis.indexOf(base) < 0) vis.push(base);
@@ -1935,26 +1946,107 @@ function setupStepPisos(delta) {
 // hasta que el usuario lo cierra (vuelve a tocar el botón). Estado solo de UI.
 function setupTogglePicker(key) {
   setupPicker[key] = !setupPicker[key];
-  if (!setupPicker[key]) setupPickerQuery[key] = '';
+  if (!setupPicker[key]) {
+    // Al cerrar el picker, limpia el texto y colapsa todas sus categorías.
+    setupPickerQuery[key] = '';
+    Object.keys(setupPickerCat).forEach((k) => { if (k.indexOf(key + '::') === 0) delete setupPickerCat[k]; });
+  }
   render();
 }
 
-// F49 — Contenido del picker de un scope: chips con los conceptos de la zona que
-// NO estén ya visibles + un input "Otro cuarto…" con autocompletado (searchSpaces).
-// Tocar un chip agrega el concepto (lo hace visible + crea instancia) y el picker
-// SE QUEDA ABIERTO. El autocompletado SOLO va en este input.
-function setupPickerHtml(key) {
-  const sc = setupScope(key);
-  const vis = setupVisibleFor(key, sc);
+// F52 — Abre/cierra una categoría del picker (acordeón). Clave `${scopeKey}::${catId}`.
+function setupTogglePickerCat(key, catId) {
+  const k = key + '::' + catId;
+  setupPickerCat[k] = !setupPickerCat[k];
+  render();
+  // Al abrir "Otro (escribir)", enfoca el input para quien sí quiera teclear.
+  if (catId === '__otro' && setupPickerCat[k]) {
+    const i = document.getElementById('cs-other-' + key);
+    if (i) { i.focus(); const n = i.value.length; i.setSelectionRange(n, n); }
+  }
+}
+
+// F52 — Catálogo del picker agrupado en CATEGORÍAS (universal: desde cualquier
+// sección se llega a cualquier cuarto). Cada categoría declara las zonas y bases
+// que la componen; los conceptos que existen en dos zonas (p. ej. Alberca en
+// exterior y en amenidades) aparecen en AMBAS categorías para hallarlos fácil. Se
+// filtra a lo que el tipo activo realmente tiene en su catálogo.
+const SETUP_CATS = [
+  { id: 'soc', label: 'Áreas sociales', zonas: ['interior'], bases: ['Recibidor', 'Sala', 'Comedor', 'Antecomedor', 'Sala de TV', 'Bar', 'Terraza'] },
+  { id: 'hab', label: 'Habitaciones', zonas: ['interior'], bases: ['Recámara', 'Estudio'] },
+  { id: 'cyb', label: 'Cocina y baños', zonas: ['interior'], bases: ['Cocina', 'Baño', 'Medio baño'] },
+  { id: 'ser', label: 'Servicio', zonas: ['interior'], bases: ['Lavandería', 'Cuarto de servicio'] },
+  { id: 'ter', label: 'Terrazas y balcones', zonas: ['exterior'], bases: ['Terraza', 'Balcón', 'Roof garden', 'Deck', 'Pérgola', 'Palapa', 'Mirador'] },
+  { id: 'jar', label: 'Jardín, fachada y acceso', zonas: ['exterior'], bases: ['Fachada', 'Acceso principal', 'Caseta', 'Jardín', 'Áreas verdes', 'Patio'] },
+  { id: 'coch', label: 'Cochera y bodega', zonas: ['exterior'], bases: ['Cochera', 'Estacionamiento', 'Bodega'] },
+  { id: 'alb', label: 'Alberca, asador y cancha', zonas: ['exterior'], bases: ['Alberca', 'Fuente', 'Asadores', 'Fogatero', 'Cocina exterior', 'Cancha'] },
+  { id: 'ame', label: 'Amenidades del desarrollo', zonas: ['amenidades'], bases: ['Lobby', 'Casa club', 'Salón de eventos', 'Cowork', 'Cine', 'Sala de negocios', 'Gimnasio', 'Spa', 'Alberca', 'Cancha', 'Áreas verdes', 'Parque', 'Área infantil', 'Área canina', 'Ludoteca', 'Asadores', 'Palapa', 'Cocina exterior', 'Caseta'] },
+];
+
+function setupPickerCats() {
   const cat = logic.catalogByZone(setupTipo) || {};
-  const lib = (cat[sc.zona] || []);
-  const rest = lib.filter((c) => vis.indexOf(c.base) < 0);
-  const chips = rest.map((c) => `<button class="cs-pchip" onclick="setupPickerPick('${key}','${esc(c.base)}')"><i class="ti ${setupIconClass(c.icon)}"></i>${esc(c.base)}</button>`).join('');
-  // Autocompletado: sugerencias de searchSpaces (biblioteca con sinónimos +
-  // "crear nuevo" con el texto literal). Solo cuando hay texto.
+  const byZoneBase = {};
+  ['interior', 'exterior', 'amenidades'].forEach((z) => {
+    byZoneBase[z] = {};
+    (cat[z] || []).forEach((c) => { byZoneBase[z][c.base] = c; });
+  });
+  return SETUP_CATS.map((g) => {
+    const items = [];
+    g.zonas.forEach((z) => {
+      g.bases.forEach((b) => {
+        const c = byZoneBase[z] && byZoneBase[z][b];
+        if (c) items.push({ base: c.base, zona: z, icon: c.icon });
+      });
+    });
+    return { id: g.id, label: g.label, items };
+  }).filter((g) => g.items.length);
+}
+
+// F52 — Agrega un cuarto desde el picker de categorías. Enruta SOLO: interior cae
+// en el piso donde estás (o Planta baja si el picker es de Exterior/Amenidades);
+// exterior/amenidades caen en su sección global. Numera con logic.nextRoomName.
+// Si cae en otra sección distinta a la actual, avisa con un toast.
+function setupPickerAdd(key, base, zona) {
+  setupOpen = true;
+  const sc = setupScope(key);
+  const z = (zona === 'interior' || zona === 'exterior' || zona === 'amenidades') ? zona : sc.zona;
+  const piso = z === 'interior' ? (sc.zona === 'interior' && sc.piso ? sc.piso : logic.floorLabel(0)) : null;
+  const concept = (logic.BASE_CONCEPTS[setupTipo] || []).find((c) => c.base === base && c.zona === z) || { base };
+  const existing = state.espacios.filter((e) => {
+    if (e.parentId) return false;
+    if (setupZona(e) !== z) return false;
+    if (z === 'interior') return (e.piso || logic.floorLabel(0)) === piso;
+    return true;
+  }).map((e) => e.nombre);
+  const nombre = logic.nextRoomName(existing, concept);
+  nuevoEspacio(nombre, piso, z, null, logic.detectCategoria(nombre));
+  if (z !== sc.zona) {
+    showToast('Agregado a ' + (z === 'exterior' ? 'Exterior' : z === 'amenidades' ? 'Amenidades' : esc(piso)));
+  }
+  scheduleSave(); render();
+}
+
+// F52 — Contenido del picker "Agregar otro": acordeón UNIVERSAL de categorías
+// (desde cualquier sección se llega a cualquier cuarto). Todas las categorías
+// arrancan CERRADAS (compacto); abres una y picas un cuarto para agregarlo (enruta
+// solo a su sección). Al fondo, una categoría "Otro (escribir)" colapsada conserva
+// la opción de crear a mano con autocompletado, sin obligar a teclear.
+function setupPickerHtml(key) {
+  const cats = setupPickerCats();
+  const groups = cats.map((g) => {
+    const open = !!setupPickerCat[key + '::' + g.id];
+    const body = open
+      ? `<div class="cs-cat-body">${g.items.map((it) => `<button class="cs-popt" onclick="setupPickerAdd('${key}','${esc(it.base)}','${it.zona}')"><i class="ti ${setupIconClass(it.icon)} cs-popt-ic"></i><span class="cs-popt-nm">${esc(it.base)}</span><i class="ti ti-plus cs-popt-add"></i></button>`).join('')}</div>`
+      : '';
+    return `<div class="cs-cat${open ? ' open' : ''}">
+      <button class="cs-cat-h" onclick="setupTogglePickerCat('${key}','${g.id}')"><i class="ti ${open ? 'ti-chevron-down' : 'ti-chevron-right'}"></i><span class="cs-cat-lbl">${esc(g.label)}</span><span class="cs-cat-n">${g.items.length}</span></button>
+      ${body}</div>`;
+  }).join('');
+  // "Otro (escribir)" — última categoría, cerrada; dentro va el input + autocompletado.
+  const oOpen = !!setupPickerCat[key + '::__otro'];
   const q = (setupPickerQuery[key] || '').trim();
   let dropHtml = '';
-  if (q) {
+  if (oOpen && q) {
     const results = logic.searchSpaces(q) || [];
     dropHtml = `<div class="cs-pdrop">${results.map((r) => {
       if (r.kind === 'create') {
@@ -1965,22 +2057,10 @@ function setupPickerHtml(key) {
       return `<button class="cs-pdrop-item" onclick="setupPickerCustom('${key}','${esc(r.nombre)}'${z}${cg})"><span>${esc(r.nombre)}</span><span class="cs-pdi-add">agregar</span></button>`;
     }).join('')}</div>`;
   }
-  return `<div class="cs-picker">
-    ${chips}
-    <div class="cs-picker-other">
-      <input id="cs-other-${key}" type="text" value="${esc(setupPickerQuery[key] || '')}" placeholder="Otro cuarto…" autocomplete="off" oninput="setupPickerInput('${key}',this.value)" onkeydown="if(event.key==='Enter')setupPickerEnter('${key}')">
-    </div>
-    ${dropHtml}
-  </div>`;
-}
-
-// F49 — Tocar un chip del picker: hace visible el concepto y crea una instancia
-// (reusa setupStepPlus). El picker permanece abierto.
-function setupPickerPick(key, base) {
-  // F51 — setupVisible[key] guarda solo los extras del usuario (el default es en vivo).
-  if (!setupVisible[key]) setupVisible[key] = [];
-  if (setupVisible[key].indexOf(base) < 0) setupVisible[key].push(base);
-  setupStepPlus(key, base);
+  const otro = `<div class="cs-cat${oOpen ? ' open' : ''}">
+    <button class="cs-cat-h" onclick="setupTogglePickerCat('${key}','__otro')"><i class="ti ${oOpen ? 'ti-chevron-down' : 'ti-chevron-right'}"></i><span class="cs-cat-lbl">Otro (escribir)</span></button>
+    ${oOpen ? `<div class="cs-cat-body"><div class="cs-picker-other"><input id="cs-other-${key}" type="text" value="${esc(setupPickerQuery[key] || '')}" placeholder="Otro cuarto…" autocomplete="off" oninput="setupPickerInput('${key}',this.value)" onkeydown="if(event.key==='Enter')setupPickerEnter('${key}')"></div>${dropHtml}</div>` : ''}</div>`;
+  return `<div class="cs-picker cs-picker-cats">${groups}${otro}</div>`;
 }
 
 // F49 — Texto del input "Otro cuarto…": re-render conservando foco/cursor.
@@ -2013,14 +2093,13 @@ function setupPickerCustom(key, nombre, zonaHint, categoriaHint) {
   // otra zona → primera planta; exterior/amenidades → sin piso (property-wide).
   const interior = zona === 'interior';
   const piso = interior ? (zona === sc.zona && sc.piso ? sc.piso : 'Planta baja') : null;
-  const base = logic.baseConcept(v, setupTipo);
-  // Mostrar la base en este scope solo si la zona heredada es la del scope.
-  if (zona === sc.zona) {
-    if (!setupVisible[key]) setupVisible[key] = []; // F51 — solo extras del usuario.
-    if (setupVisible[key].indexOf(base) < 0) setupVisible[key].push(base);
-  }
+  // El cuarto creado se muestra como renglón vía la fusión de instancias de
+  // setupVisibleFor; no hace falta tocar setupVisible.
   nuevoEspacio(v, piso, zona, null, categoria);
   setupPickerQuery[key] = '';
+  if (zona !== sc.zona) {
+    showToast('Agregado a ' + (zona === 'exterior' ? 'Exterior' : zona === 'amenidades' ? 'Amenidades' : esc(piso)));
+  }
   scheduleSave(); render();
 }
 
