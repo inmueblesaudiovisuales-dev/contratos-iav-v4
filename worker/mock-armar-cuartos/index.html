@@ -67,6 +67,9 @@
   .addother{display:flex;align-items:center;gap:6px;width:100%;min-height:44px;border:0;border-top:1px solid var(--line);background:var(--surface);color:var(--ink-2);font-weight:700;font-size:13px;padding:0 var(--sp-4);justify-content:flex-start}
   .picker{padding:8px var(--sp-4) 12px;border-top:1px solid var(--line);background:var(--surface);display:flex;flex-wrap:wrap;gap:6px}
   .pchip{min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink-1);font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .picker-other{display:flex;gap:6px;width:100%;margin-top:4px}
+  .picker-other input{flex:1;min-height:42px;border:1px solid var(--line);border-radius:8px;padding:0 12px;font:inherit;background:#fff;color:var(--ink-1)}
+  .picker-other button{min-height:42px;padding:0 14px;border:0;border-radius:8px;background:var(--ink-1);color:#fff;font-weight:700;font-size:13px}
 
   .foot{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(to top,var(--bg) 72%,transparent);padding:var(--sp-3) var(--sp-4) var(--sp-5);z-index:6}
   .foot .inner{max-width:430px;margin:0 auto}
@@ -132,7 +135,7 @@ var INT = [
   {b:'Medio baño',i:'droplet'},{b:'Estudio',i:'books'},{b:'Sala de TV',i:'tv'},{b:'Bar',i:'cup'},
   {b:'Terraza',i:'sun'},{b:'Lavandería',i:'wash'},{b:'Cuarto de servicio',i:'door'}
 ];
-var EXT = [{b:'Fachada',i:'home'},{b:'Jardín',i:'plant'},{b:'Cochera',i:'car'},{b:'Patio',i:'fence'},{b:'Terraza',i:'sun'},{b:'Roof garden',i:'building'}];
+var EXT = [{b:'Fachada',i:'home'},{b:'Jardín',i:'plant'},{b:'Cochera',i:'car'},{b:'Patio',i:'fence'},{b:'Terraza',i:'sun'},{b:'Roof garden',i:'building'},{b:'Alberca',i:'pool'},{b:'Palapa',i:'umbrella'},{b:'Asadores',i:'flame'},{b:'Cocina exterior',i:'cup'},{b:'Fuente',i:'droplet'},{b:'Pérgola',i:'umbrella'},{b:'Deck',i:'sun'},{b:'Fogatero',i:'flame'},{b:'Estacionamiento',i:'car'},{b:'Áreas verdes',i:'trees'},{b:'Cancha',i:'ball'},{b:'Acceso principal',i:'door'},{b:'Mirador',i:'sun'},{b:'Bodega',i:'building'}];
 var AME = [{b:'Alberca',i:'pool'},{b:'Casa club',i:'building'},{b:'Gimnasio',i:'barbell'},{b:'Cancha',i:'ball'},{b:'Áreas verdes',i:'trees'},{b:'Caseta',i:'shield'},{b:'Asadores',i:'flame'},{b:'Palapa',i:'umbrella'},{b:'Cocina exterior',i:'cup'},{b:'Parque',i:'trees'},{b:'Área canina',i:'paw'},{b:'Ludoteca',i:'blocks'},{b:'Área infantil',i:'smile'},{b:'Sala de negocios',i:'briefcase'},{b:'Salón de eventos',i:'cup'},{b:'Cowork',i:'laptop'},{b:'Spa',i:'droplet'},{b:'Cine',i:'movie'}];
 var SUBS=[{b:'Clóset',i:'hanger'},{b:'Baño',i:'bath'},{b:'Vestidor',i:'shirt'},{b:'Balcón',i:'sun'}];
 
@@ -163,6 +166,7 @@ function toggleExpRow(key,b){ var r=resolve(key); var insts=r.scope.items.filter
 function toggleExp(id){ expanded[id]=!expanded[id]; render(); }
 function togglePick(key){ picking[key]=!picking[key]; render(); }
 function pick(key,b){ var r=resolve(key); if(r.scope.visible.indexOf(b)<0) r.scope.visible.push(b); addOne(key,b); /* el picker se queda abierto hasta que el usuario lo cierre */ }
+function addCustom(key){ var inp=document.getElementById('other-'+key); var v=inp&&inp.value.trim(); if(!v) return; var r=resolve(key); if(r.scope.visible.indexOf(v)<0) r.scope.visible.push(v); addOne(key,v); }
 function findInst(id){ var res=null; floors.forEach(function(f){f.items.forEach(function(it){if(it.id===id)res=it;});}); ext.items.concat(ame.items).forEach(function(it){if(it.id===id)res=it;}); return res; }
 function addSubTo(id,b,i){ var it=findInst(id); if(!it)return; var n=it.subs.filter(function(s){return s.base===b;}).length; it.subs.push({id:uid(),base:b,name:n===0?b:b+' '+(n+1),icon:i}); render(); }
 function rmSub(id,sid){ var it=findInst(id); if(!it)return; var k=it.subs.findIndex(function(s){return s.id===sid;}); if(k>=0)it.subs.splice(k,1); render(); }
@@ -195,7 +199,8 @@ function sectionInner(key){
   var h=r.scope.visible.map(function(b,bi){ return stepperRow(key,b,bi===0); }).join('');
   var rest=r.list.filter(function(c){ return r.scope.visible.indexOf(c.b)<0; });
   h+='<button class="addother" onclick="togglePick(\''+key+'\')">'+icon('plus')+(picking[key]?'Cerrar':'Agregar otro')+'</button>';
-  if(picking[key]) h+='<div class="picker">'+rest.map(function(c){return '<button class="pchip" onclick="pick(\''+key+'\',\''+esc(c.b)+'\')">'+icon(c.i)+c.b+'</button>';}).join('')+'</div>';
+  if(picking[key]) h+='<div class="picker">'+rest.map(function(c){return '<button class="pchip" onclick="pick(\''+key+'\',\''+esc(c.b)+'\')">'+icon(c.i)+c.b+'</button>';}).join('')+
+    '<div class="picker-other"><input id="other-'+key+'" placeholder="Otro cuarto…" autocomplete="off" onkeydown="if(event.key===\'Enter\')addCustom(\''+key+'\')"><button onclick="addCustom(\''+key+'\')">Agregar</button></div></div>';
   return h;
 }
 
