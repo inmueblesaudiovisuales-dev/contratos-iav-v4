@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/tabler-icons.css">
+  <link rel="stylesheet" href="./assets/tabler-icons.css?v=f50">
   <link rel="icon" href="data:,">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -701,7 +701,7 @@
     .cs-sb { width: 44px; height: 44px; flex: none; border-radius: 999px; border: 1px solid var(--tint-line); background: var(--tint); color: var(--ink-1); font-size: 22px; font-weight: 800; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
     .cs-sb:disabled { opacity: .3; }
     .cs-sb.add { background: var(--gold); border-color: var(--gold); color: #241c08; }
-    .cs-sb i { font-size: 20px; }
+    .cs-sb i { font-size: 22px; } /* F50 — glifo +/− al mismo peso del mockup; "−" y "+" se leen como un solo par. */
     .cs-qn { min-width: 22px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
     /* F49 — Chevron del renglón: despliega los subcuartos inline. */
     .cs-chev { width: 30px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--ink-3); padding: 0; margin-left: calc(-1 * var(--sp-2)); }
@@ -1884,6 +1884,10 @@ function setupToggleRow(key, base) {
 
 // F48 — Stepper "+": crea una instancia numerada del concepto en el ámbito.
 function setupStepPlus(key, base) {
+  // F50 — al crear el PRIMER cuarto, state.espacios pasa de 0 a 1; sin esto,
+  // showSetup (= setupOpen || !state.espacios.length) se volvía false y el render
+  // saltaba a captura. Armar un cuarto SIEMPRE es "seguir armando": fija setupOpen.
+  setupOpen = true;
   const sc = setupScope(key);
   const concept = (logic.BASE_CONCEPTS[setupTipo] || []).find((c) => c.base === base) || { base };
   const nombres = setupScopeEspacios(sc).map((e) => e.nombre);
@@ -1993,6 +1997,7 @@ function setupPickerEnter(key) {
 function setupPickerCustom(key, nombre, zonaHint, categoriaHint) {
   const v = String(nombre || '').trim();
   if (!v) return;
+  setupOpen = true; // F50 — igual que setupStepPlus: agregar desde el picker mantiene el setup abierto.
   const sc = setupScope(key);
   const zona = (zonaHint === 'interior' || zonaHint === 'exterior' || zonaHint === 'amenidades') ? zonaHint : sc.zona;
   const categoria = categoriaHint || logic.detectCategoria(v);
