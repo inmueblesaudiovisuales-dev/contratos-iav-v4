@@ -223,6 +223,32 @@ guardado no pise lo de otro:
 - **Recuperación.** Tabla `checklist_historial` guarda las últimas 50 versiones por contrato; más el respaldo a R2.
   Además D1 Time Travel da 30 días de restauración a nivel base.
 
+## Dictado de bitácora (import) (R118, rama checklist-cambios-2026-06-07)
+
+Bruno puede llenar la bitácora dictando las tomas del rodaje (video y dron) en vez de capturarlas a mano. El
+patrón es deliberado: la app no es la inteligente, solo genera el contexto, valida y revisa; Gemini únicamente
+estructura el dictado transcrito.
+
+- **La app genera el prompt en vivo.** `buildDictadoPrompt(state)` arma el prompt desde el estado vigente:
+  cámaras activas de video y dron con su `id`, contador actual y formato de token (`sony-main` por defecto),
+  cuartos como `{ id, nombre, piso }`, y el vocabulario cerrado de tomas y los 8 movimientos. Bruno copia ese
+  prompt, dicta sobre él en Gemini y obtiene un JSON.
+- **Gemini estructura; la app valida.** El JSON sigue el formato `bitacora-dictado` v1 (un arreglo de `eventos`
+  ordenado por `orden`; cada evento es una toma o un evento de `fotos` del dron que solo avanza el contador).
+  `parseDictado(texto, state)` es tolerante (como `parsePropuesta`) y NO muta el estado: valida la secuencia por
+  carril de cámara (`salto`/`duplicado`), mapea el cuarto por `id` (`sin_identificar` → bandera), y filtra el
+  vocabulario fuera de catálogo. Produce un preview con banderas.
+- **La app revisa y escribe por el camino de captura.** Tras el paso de revisar (asignar cuarto a lo sin
+  identificar, comentario libre por toma, elegir agregar o reemplazar en doble pegado), `applyDictado(state,
+  preview, opciones)` crea los mediaFiles con `registerMediaFile` (override aditivo de contador) y avanza el
+  contador del dron con `bumpCameraCounter`. Por eso token/contador/shotNumber quedan idénticos a la captura
+  manual.
+- **El guardado entra por `saveNow`.** El importador devuelve el nuevo estado y lo guarda por el flujo normal
+  (candado `rev`/fusión de F62); no reemplaza el documento entero por fuera. El export sigue en `version:1`.
+
+Punteros: `buildDictadoPrompt`, `parseDictado` y `applyDictado` viven en `frontend/checklist-logic.js`; la
+interfaz de generar prompt e importar/revisar está en la pestaña Edición de `frontend/checklist.html`.
+
 ---
 
 ## Diferencias clave con v3.0

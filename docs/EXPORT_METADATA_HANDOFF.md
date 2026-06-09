@@ -96,6 +96,7 @@ En `checklist.html`, pestaña **Edición**, botón **"Exportar"** → descarga `
 
 **Notas importantes del modelo:**
 - **`version: 1` permanece intacto.** Los campos del modo guiado son aditivos; la app de metadatos de Mac los ignora sin problema y sigue operando igual.
+- **La bitácora puede llenarse por dictado (Meta A, R118).** Bruno dicta las tomas y la app las importa como mediaFiles. El export `version:1` NO cambia: el dictado produce los mismos mediaFiles que la captura manual (mismo `token`/contador/`shotNumber`), incluyendo el comentario libre por toma, que viaja al campo `Comment`/`LogComment` igual que una `nota` capturada a mano.
 - **Foto y 360 NO aparecen** en el export. Son cobertura (qué cuarto se cubrió), no archivos individuales con nombre. El programa solo trabaja **video / drone / asesor** (clips).
 - `tipo`:
   - `take` = toma real (puede ser `buena` o no).

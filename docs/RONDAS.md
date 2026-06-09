@@ -8,6 +8,42 @@
 
 ---
 
+### R118 — Checklist: importador de dictado de bitácora (Meta A, F67–F71) (2026-06-09 09:47:31 CST)
+
+**Rama `checklist-cambios-2026-06-07`, NO integrado a main/producción.** Worker probado en el preview aislado.
+Meta A: que Bruno dicte las tomas de un rodaje (video y dron), las pase por Gemini con un prompt que genera la
+propia app, y pegue de vuelta un JSON que la app valida y, tras un paso de revisar, convierte en mediaFiles
+consistentes con la captura manual. La app no es la inteligente: genera el prompt, valida y revisa; Gemini solo
+estructura el dictado transcrito.
+
+**Archivos:** `frontend/checklist-logic.js` (+`checklist-logic.test.js`), `frontend/checklist.html`.
+
+- **F67 — Prompt generado en vivo (`buildDictadoPrompt`).** El prompt se arma desde el estado vigente: cámaras
+  activas de video y dron, cada una con su `id`, etiqueta, modo, contador actual y formato de token (`sony-main`
+  marcada como cámara por defecto); cuartos como lista de `{ id, nombre, piso }` (el `id` es la llave); el
+  vocabulario de tomas (los ids de `getShotTypes()` con su etiqueta) y los 8 movimientos de dictado
+  (`push_pull, push_in, pull_out, pan, tilt, travel, orbit, reveal`, etiqueta de `getMovements()`). Incluye
+  mishears, frases de cambio de cámara y reglas de lectura. Commit R114.
+- **F68 — Validador tolerante (`parseDictado`).** Lee el formato `bitacora-dictado` v1: un solo arreglo de
+  `eventos` ordenado por `orden`, donde cada evento es una toma (de video o dron) o un evento de `fotos` del dron
+  que avanza el contador sin crear toma ni cobertura. Valida la secuencia por carril de cámara (marca `salto` y
+  `duplicado` contra el contador y los tokens ya capturados), mapea el cuarto por `id` (`sin_identificar` o no
+  empata → bandera `sinIdentificar`), y valida shotType/movement contra el catálogo (lo de fuera → `null`,
+  bandera `vocabFuera`, el texto original se conserva en `nota`). Es tolerante como `parsePropuesta` (limpia
+  fences, fallback al primer `{`…último `}`) y NO muta el estado: solo produce el preview. Commit R115.
+- **F69 — Aplicador (`applyDictado`).** Crea los mediaFiles por el MISMO camino de la captura: `registerMediaFile`
+  con override de contador (refactor aditivo y opt-in; sin overrides el comportamiento es idéntico a hoy), y
+  avanza el contador del dron con `bumpCameraCounter` en cada evento de fotos. Resuelve el doble pegado (agregar
+  u omitir, o reemplazar). Devuelve el nuevo estado; NO escribe en D1. Commit R116.
+- **F70 — Interfaz de dictado y revisar.** En la pestaña Edición de `checklist.html`: botón para generar y copiar
+  el prompt, y un importador que pega el JSON, llama a `parseDictado`, muestra la tabla por evento con las
+  banderas, permite asignar cuarto a las tomas sin identificar y un comentario libre editable por toma, y al
+  confirmar aplica con `applyDictado`. Commit R117.
+- **F71 — Cierre (esta ronda).** El guardado entra por el flujo normal `saveNow` (candado `rev`/fusión de F62): el
+  importador no reemplaza el documento entero. El export sigue en `version:1` porque el dictado produce los
+  mismos mediaFiles que la captura manual (mismo token/contador/shotNumber). Documentación en `docs/RONDAS.md`,
+  `docs/ARQUITECTURA.md` y `docs/EXPORT_METADATA_HANDOFF.md`.
+
 ### R113 — Checklist: prevención de pérdida por concurrencia (F60–F65) (2026-06-09 05:46:22 CST)
 
 **Rama `checklist-cambios-2026-06-07`, NO integrado a main/producción.** Worker probado en el preview aislado.
