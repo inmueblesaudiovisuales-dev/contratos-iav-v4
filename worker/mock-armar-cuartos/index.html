@@ -114,6 +114,12 @@ var IC={
   umbrella:'<path d="M12 3a8 8 0 018 8H4a8 8 0 018-8zM12 11v7a2 2 0 002 2"/>',
   hanger:'<path d="M10.5 5a1.5 1.5 0 112.5 1.2L12 8v1l8 5H4l8-5"/>',
   shirt:'<path d="M8 4l4 2 4-2 4 3-3 3v9H7v-9L4 7z"/>',
+  paw:'<path d="M6 11a1.5 1.5 0 100-3 1.5 1.5 0 000 3M10 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3M14 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3M18 11a1.5 1.5 0 100-3 1.5 1.5 0 000 3M12 12c-2.5 0-4 1.8-4 3.5A2.5 2.5 0 0010.5 18c.7 0 1-.3 1.5-.3s.8.3 1.5.3A2.5 2.5 0 0016 15.5c0-1.7-1.5-3.5-4-3.5z"/>',
+  blocks:'<path d="M4 13h7v7H4zM13 13h7v7h-7zM8 4h8v7H8z"/>',
+  smile:'<circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M8.5 14.5a4 4 0 007 0"/>',
+  briefcase:'<path d="M3 8h18v11H3zM8 8V6a2 2 0 012-2h4a2 2 0 012 2v2"/>',
+  laptop:'<path d="M5 6h14v10H5zM3 18h18"/>',
+  movie:'<path d="M4 5h16v14H4zM4 9h16M8 5v4M12 5v4M16 5v4"/>',
   room:'<path d="M5 5h14v14H5z"/>'
 };
 function icon(n){return '<svg class="i" viewBox="0 0 24 24">'+(IC[n]||IC.room)+'</svg>';}
@@ -127,7 +133,7 @@ var INT = [
   {b:'Terraza',i:'sun'},{b:'Lavandería',i:'wash'},{b:'Cuarto de servicio',i:'door'}
 ];
 var EXT = [{b:'Fachada',i:'home'},{b:'Jardín',i:'plant'},{b:'Cochera',i:'car'},{b:'Patio',i:'fence'},{b:'Terraza',i:'sun'},{b:'Roof garden',i:'building'}];
-var AME = [{b:'Alberca',i:'pool'},{b:'Casa club',i:'building'},{b:'Gimnasio',i:'barbell'},{b:'Cancha',i:'ball'},{b:'Áreas verdes',i:'trees'},{b:'Caseta',i:'shield'},{b:'Asadores',i:'flame'},{b:'Palapa',i:'umbrella'},{b:'Cocina exterior',i:'cup'}];
+var AME = [{b:'Alberca',i:'pool'},{b:'Casa club',i:'building'},{b:'Gimnasio',i:'barbell'},{b:'Cancha',i:'ball'},{b:'Áreas verdes',i:'trees'},{b:'Caseta',i:'shield'},{b:'Asadores',i:'flame'},{b:'Palapa',i:'umbrella'},{b:'Cocina exterior',i:'cup'},{b:'Parque',i:'trees'},{b:'Área canina',i:'paw'},{b:'Ludoteca',i:'blocks'},{b:'Área infantil',i:'smile'},{b:'Sala de negocios',i:'briefcase'},{b:'Salón de eventos',i:'cup'},{b:'Cowork',i:'laptop'},{b:'Spa',i:'droplet'},{b:'Cine',i:'movie'}];
 var SUBS=[{b:'Clóset',i:'hanger'},{b:'Baño',i:'bath'},{b:'Vestidor',i:'shirt'},{b:'Balcón',i:'sun'}];
 
 var DEF_PB = ['Sala','Comedor','Cocina','Medio baño','Recámara','Baño'];
@@ -156,7 +162,7 @@ function delLast(key,b){ var r=resolve(key); for(var k=r.scope.items.length-1;k>
 function toggleExpRow(key,b){ var r=resolve(key); var insts=r.scope.items.filter(function(x){return x.base===b;}); var any=insts.some(function(it){return expanded[it.id];}); insts.forEach(function(it){expanded[it.id]=!any;}); render(); }
 function toggleExp(id){ expanded[id]=!expanded[id]; render(); }
 function togglePick(key){ picking[key]=!picking[key]; render(); }
-function pick(key,b){ var r=resolve(key); if(r.scope.visible.indexOf(b)<0) r.scope.visible.push(b); picking[key]=false; addOne(key,b); }
+function pick(key,b){ var r=resolve(key); if(r.scope.visible.indexOf(b)<0) r.scope.visible.push(b); addOne(key,b); /* el picker se queda abierto hasta que el usuario lo cierre */ }
 function findInst(id){ var res=null; floors.forEach(function(f){f.items.forEach(function(it){if(it.id===id)res=it;});}); ext.items.concat(ame.items).forEach(function(it){if(it.id===id)res=it;}); return res; }
 function addSubTo(id,b,i){ var it=findInst(id); if(!it)return; var n=it.subs.filter(function(s){return s.base===b;}).length; it.subs.push({id:uid(),base:b,name:n===0?b:b+' '+(n+1),icon:i}); render(); }
 function rmSub(id,sid){ var it=findInst(id); if(!it)return; var k=it.subs.findIndex(function(s){return s.id===sid;}); if(k>=0)it.subs.splice(k,1); render(); }
