@@ -2,7 +2,7 @@ import { query, queryOne, run, batch, uuid, now } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter, callAdapterSync } from '../google.js';
 import { generarFolio, asignarFolio } from '../folios.js';
-import { esFotoWeb, claveFoto } from '../entrega-media.js';
+import { esFotoWeb, hashDeVariante } from '../entrega-media.js';
 
 export async function handleContratos(request, env, ctx, action) {
   const db = env.DB;
@@ -439,16 +439,24 @@ export async function handleContratos(request, env, ctx, action) {
       return err('No se pudo leer la carpeta de entrega: ' + e.message, 502);
     }
 
-    // 2) Migrar fotos a R2 (el Worker jala de Drive; sin el límite de 50 MB de Apps Script)
+    // 2) Migrar fotos a Cloudflare Images (el Worker jala de Drive; sin el límite de 50 MB de Apps Script)
     const fotosManifiesto = [];
+    let imagesHash = '';
     for (const f of (lista.fotos || [])) {
       if (!esFotoWeb(f)) continue;
       try {
         const r = await fetch(`https://drive.google.com/uc?export=download&id=${f.id}`);
         if (!r.ok) continue;
-        const key = claveFoto(token, f);
-        await env.MEDIA.put(key, r.body, { httpMetadata: { contentType: f.mimeType } });
-        fotosManifiesto.push({ key, nombre: f.nombre });
+        const form = new FormData();
+        form.append('file', await r.blob(), f.nombre || (f.id + '.jpg'));
+        const up = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/images/v1`,
+          { method: 'POST', headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}` }, body: form });
+        const uj = await up.json();
+        if (uj && uj.success && uj.result && uj.result.id) {
+          fotosManifiesto.push({ id: uj.result.id, nombre: f.nombre });
+          if (!imagesHash && uj.result.variants && uj.result.variants[0]) imagesHash = hashDeVariante(uj.result.variants[0]);
+        }
       } catch (e) { console.error('migrar foto falló', f.id, e.message); }
     }
 
@@ -460,7 +468,7 @@ export async function handleContratos(request, env, ctx, action) {
         const resp = await fetch(
           `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/copy`,
           { method: 'POST',
-            headers: { 'Authorization': `Bearer ${env.STREAM_TOKEN}`, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: `https://drive.google.com/uc?export=download&id=${lista.videoWeb.id}`,
                                    meta: { name: `entrega-${token}` } }) });
         const j = await resp.json();
@@ -470,7 +478,8 @@ export async function handleContratos(request, env, ctx, action) {
 
     const manifiesto = {
       fotos: fotosManifiesto,
-      destacadoKey: fotosManifiesto.length ? fotosManifiesto[0].key : '',
+      destacadoId: fotosManifiesto.length ? fotosManifiesto[0].id : '',
+      imagesHash,
       propiedadNombre: c.nombre_cliente || '',
       propiedadUbicacion: prop.direccion || ''
     };
@@ -485,12 +494,12 @@ export async function handleContratos(request, env, ctx, action) {
   }
 
   if (action === 'guardarConfigEntrega') {
-    const { token, textos, destacadoKey, videoProveedor, videoId, tour360Url } = await request.json();
+    const { token, textos, destacadoId, videoProveedor, videoId, tour360Url } = await request.json();
     if (!token) return err('Token requerido');
     const c = await queryOne(db, 'SELECT entrega_manifiesto_json FROM contratos WHERE token=?', [token]);
     if (!c) return err('Contrato no encontrado', 404);
     let man = {}; try { man = JSON.parse(c.entrega_manifiesto_json || '{}'); } catch (e) {}
-    if (destacadoKey !== undefined) man.destacadoKey = destacadoKey;
+    if (destacadoId !== undefined) man.destacadoId = destacadoId;
     await run(db,
       `UPDATE contratos SET entrega_manifiesto_json=?, entrega_textos_json=?,
          entrega_video_proveedor=COALESCE(NULLIF(?, ''), entrega_video_proveedor),

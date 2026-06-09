@@ -285,9 +285,9 @@
   var RESENA_URL = 'https://www.google.com/maps/search/?api=1&query=Inmuebles+Audiovisuales';
   var token = new URLSearchParams(location.search).get('token') || '';
   var preview = new URLSearchParams(location.search).get('preview') === '1';
-  var D = null, compCargado = false;
+  var D = null, compCargado = false, imagesHash = '';
 
-  function fotoUrl(key, w){ if(!key) return ''; return '/media/' + key.split('/').map(encodeURIComponent).join('/') + '?w=' + w; }
+  function fotoUrl(id, w){ if(!id || !imagesHash) return ''; return 'https://imagedelivery.net/' + imagesHash + '/' + id + '/w=' + w + ',quality=80,format=auto'; }
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];});}
   function money(n){return '$' + (Number(n)||0).toLocaleString('es-MX');}
 
@@ -313,13 +313,14 @@
 
   function render(){
     var m = D.manifiesto || {};
+    imagesHash = m.imagesHash || '';
     var fotos = Array.isArray(m.fotos) ? m.fotos.slice() : [];
     // Poner la foto destacada primero
-    if(m.destacadoKey){
-      var i = fotos.findIndex(function(f){ return f.key === m.destacadoKey; });
+    if(m.destacadoId){
+      var i = fotos.findIndex(function(f){ return f.id === m.destacadoId; });
       if(i > 0){ fotos.unshift(fotos.splice(i,1)[0]); }
     }
-    var portada = (m.destacadoKey) || (fotos[0] && fotos[0].key) || '';
+    var portada = (m.destacadoId) || (fotos[0] && fotos[0].id) || '';
 
     // Estreno (solo primera visita)
     document.getElementById('eName').textContent = m.propiedadNombre || 'Tu propiedad';
@@ -341,9 +342,9 @@
       var g = document.getElementById('grid'); g.innerHTML = '';
       fotos.forEach(function(f, idx){
         var d = document.createElement('div');
-        d.style.backgroundImage = "url('" + fotoUrl(f.key, 600) + "')";
+        d.style.backgroundImage = "url('" + fotoUrl(f.id, 600) + "')";
         d.style.animationDelay = (0.05 + idx*0.07) + 's';
-        d.onclick = function(){ abrirFoto(fotoUrl(f.key, 1600)); };
+        d.onclick = function(){ abrirFoto(fotoUrl(f.id, 1600)); };
         g.appendChild(d);
       });
       document.getElementById('secFotos').style.display = '';

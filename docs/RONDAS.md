@@ -11,7 +11,8 @@
 ### R113 — Entrega WOW "El Estreno" (Fase 1): galería desde R2/Stream (2026-06-09 10:11:50 CST)
 
 **En curso.** Nueva experiencia de entrega (`frontend/entrega.html`) que reemplaza el link gris a Drive.
-Las fotos se migran a R2 y el video a Cloudflare Stream; la galería del cliente no toca Drive.
+Las fotos se migran a **Cloudflare Images** y el video a **Cloudflare Stream**; la galería del cliente
+no toca Drive (Starter Bundle de Cloudflare).
 
 - **Adapter (`adapter/AdapterScript4_v1.js`) — requiere despliegue manual** en script.google.com:
   nueva función `prepararCarpetaEntrega` (abre subcarpetas Fotos/Videos de la carpeta Entregables,
@@ -19,10 +20,11 @@ Las fotos se migran a R2 y el video a Cloudflare Stream; la galería del cliente
 - D1: columnas nuevas en `contratos` (`entrega_manifiesto_json`, `entrega_textos_json`,
   `entrega_config_estado`, `entrega_media_estado`, `entrega_video_proveedor`, `entrega_video_id`) —
   migración `worker/migrations/r113-entrega-manifiesto.sql`.
-- Worker: ruta `/media/...` (sirve fotos de R2 con Image Transformations), `prepararEntrega`
-  (migra a R2/Stream), `obtenerEntrega`, `guardarConfigEntrega`, `publicarEntrega`. Binding R2 `MEDIA`.
-- Infra pendiente de Bruno: crear bucket R2, cuenta/token de Stream, `STREAM_CUSTOMER_CODE`,
-  `wrangler secret put STREAM_TOKEN`, habilitar Transformations. Ver `docs/CREDENCIALES.md`.
+- Worker: `prepararEntrega` (sube fotos a Cloudflare Images y el video a Stream),
+  `obtenerEntrega`, `guardarConfigEntrega`, `publicarEntrega`. Las fotos se sirven directo desde
+  `imagedelivery.net` (variantes flexibles `w=...,format=auto`).
+- Infra pendiente de Bruno: comprar Starter Bundle, token `CF_MEDIA_TOKEN` (`wrangler secret put`),
+  `STREAM_CUSTOMER_CODE`, habilitar variantes flexibles de Images. Ver `docs/CREDENCIALES.md`.
 - Spec: `docs/superpowers/specs/2026-06-09-entrega-estreno-design.md`. Plan:
   `docs/superpowers/plans/2026-06-09-entrega-estreno-fase1.md`.
 

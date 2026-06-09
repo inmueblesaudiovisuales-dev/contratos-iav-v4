@@ -9,8 +9,9 @@ export function esVideoWeb(nombre) {
   return /_web\.[a-z0-9]+$/i.test(nombre || '');
 }
 
-export function claveFoto(token, file) {
-  const m = (file.nombre || '').match(/\.([a-z0-9]+)$/i);
-  const ext = m ? m[1].toLowerCase() : 'jpg';
-  return `entrega/${token}/${file.id}.${ext}`;
+// Extrae el "account hash" de Cloudflare Images de una URL de variante que
+// devuelve la API al subir, p. ej. https://imagedelivery.net/<hash>/<id>/public
+export function hashDeVariante(url) {
+  const m = String(url || '').match(/imagedelivery\.net\/([^/]+)\//);
+  return m ? m[1] : '';
 }

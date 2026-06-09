@@ -10,6 +10,15 @@
 
 **Rama de trabajo:** `claude/focused-galileo-diwu4c` (no `main`). Commits frecuentes.
 
+> **NOTA (cambio durante la ejecución):** se reemplazó **R2 + Transformations** por **Cloudflare
+> Images** para las fotos (el Starter Bundle de Cloudflare —que se compra para Stream— ya incluye
+> Images, así que desapareció la razón de costo para usar R2). Implicaciones sobre las tareas de
+> abajo: **no hay bucket R2 ni ruta `/media`**; el Worker sube cada foto a Cloudflare Images
+> (`POST /accounts/{id}/images/v1`) con el secret `CF_MEDIA_TOKEN` (`Stream:Edit`+`Images:Edit`);
+> el manifiesto guarda `fotos:[{id,nombre}]`, `destacadoId` e `imagesHash`; el frontend arma las
+> URLs como `https://imagedelivery.net/<imagesHash>/<id>/w=<n>,format=auto` (variantes flexibles).
+> El resto del flujo (adapter, gate de admin, redirección del portal, estados) queda igual.
+
 **Fuente visual de verdad:** `mockups-galeria/v7-estreno.html` (aprobado). `entrega.html` adapta su estructura/estilos; este plan da el contrato de datos y el cableado.
 
 ---

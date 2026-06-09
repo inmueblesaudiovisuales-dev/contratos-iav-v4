@@ -22,17 +22,20 @@
 > Los datos bancarios que ve el cliente (CLABE/cuenta/tarjeta) **no** están aquí: viven en la
 > tabla `config` de D1 (claves `pago_cuenta` / `pago_tarjeta`), editables desde Ajustes en el admin.
 
-## Entrega (media: R2 + Stream) — R113
+## Entrega (media: Cloudflare Images + Stream) — R113
 
-La galería de entrega (`entrega.html`) sirve las fotos desde R2 y el video desde Cloudflare Stream.
+La galería de entrega (`entrega.html`) sirve las fotos desde **Cloudflare Images**
+(imagedelivery.net) y el video desde **Cloudflare Stream**. Ambos vienen en el **Starter Bundle**
+de Cloudflare (~$5/mes: Images + Stream + Transformations).
 
 | Ítem | Valor / dónde |
 |------|------|
-| Bucket R2 (fotos) | `contratos-iav-media` (binding `MEDIA`) — crear: `wrangler r2 bucket create contratos-iav-media` |
 | `CF_ACCOUNT_ID` | `0d0d6aaf107ae092f9fb5da06ddb338c` (en `[vars]` de wrangler.toml) |
-| `STREAM_CUSTOMER_CODE` | subdominio de Stream para embeds (`customer-xxxx`) — llenar en `[vars]` tras crear Stream |
-| `STREAM_TOKEN` | **secret** — `wrangler secret put STREAM_TOKEN` (API token con permiso `Stream:Edit`) |
-| Image Transformations | habilitar en zona `inmueblesaudiovisuales.com` > Images > Transformations |
+| `STREAM_CUSTOMER_CODE` | subdominio de Stream para embeds (`customer-xxxx`) — llenar en `[vars]` |
+| `CF_MEDIA_TOKEN` | **secret** — `wrangler secret put CF_MEDIA_TOKEN` (API token con `Stream:Edit` + `Cloudflare Images:Edit`). El Worker lo usa para subir fotos a Images y el video a Stream. |
+| Images: variantes flexibles | habilitar una vez (URLs tipo `w=600,format=auto`). Ver setup. |
+| Account hash de Images | se guarda solo en el manifiesto al subir la primera foto (no hay que copiarlo). |
 
-> Setup pendiente de Bruno (una sola vez): crear bucket R2, crear cuenta/token de Stream, poner
-> `STREAM_CUSTOMER_CODE`, `wrangler secret put STREAM_TOKEN`, y activar Transformations.
+> Setup pendiente de Bruno (una sola vez): comprar el Starter Bundle, crear el API token
+> `CF_MEDIA_TOKEN` (`wrangler secret put CF_MEDIA_TOKEN`), poner `STREAM_CUSTOMER_CODE`, y
+> habilitar variantes flexibles de Images. No hace falta bucket R2.

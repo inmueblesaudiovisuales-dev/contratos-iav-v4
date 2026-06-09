@@ -4793,7 +4793,7 @@ async function cargarConfigEntregaGaleria() {
   if (!tieneAlgo) return; // aún no se ha preparado nada
   const sel = document.getElementById('gal-destacado');
   if (sel) sel.innerHTML = fotos.length
-    ? fotos.map(function (f) { return '<option value="' + esc(f.key) + '"' + (f.key === m.destacadoKey ? ' selected' : '') + '>' + esc(f.nombre || f.key) + '</option>'; }).join('')
+    ? fotos.map(function (f) { return '<option value="' + esc(f.id) + '"' + (f.id === m.destacadoId ? ' selected' : '') + '>' + esc(f.nombre || f.id) + '</option>'; }).join('')
     : '<option value="">(sin fotos)</option>';
   const setVal = function (id, v) { const el = document.getElementById(id); if (el) el.value = v || ''; };
   setVal('gal-redes', d.textos && d.textos.redes);
@@ -4813,7 +4813,7 @@ async function guardarConfigEntregaGaleria() {
     const data = await apiPost({
       action: 'guardarConfigEntrega', token: t,
       textos: { redes: document.getElementById('gal-redes').value, anuncio: document.getElementById('gal-anuncio').value },
-      destacadoKey: document.getElementById('gal-destacado').value,
+      destacadoId: document.getElementById('gal-destacado').value,
       videoProveedor: document.getElementById('gal-vprov').value,
       videoId: document.getElementById('gal-vid').value.trim(),
       tour360Url: document.getElementById('gal-360').value.trim()

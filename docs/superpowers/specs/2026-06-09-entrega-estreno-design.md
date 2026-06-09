@@ -62,36 +62,39 @@ propiedad. Cuatro ideas, todas validadas con prototipos (`mockups-galeria/v7-est
   (~2,900 líneas) ligero. Reusa el mismo token y autenticación de portal.
 - **Decisión clave: el material se migra a Cloudflare, no se sirve desde Drive.** Para que la
   galería sea rápida en celular y sin los problemas de permisos/estrangulamiento de Drive, al
-  preparar la entrega se **copian las fotos a R2** y el **video a Stream**. La galería del cliente
-  nunca toca Drive. Los originales full-res se quedan en Drive (link "descargar todo").
+  preparar la entrega se **suben las fotos a Cloudflare Images** y el **video a Stream** (ambos en
+  el Starter Bundle de Cloudflare, ~$5/mes). La galería del cliente nunca toca Drive. Los
+  originales full-res se quedan en Drive (link "descargar todo").
 - **Carpeta de origen (ya existe en D1).** Cada trabajo tiene `propiedades.carpeta_entregables_id`
   (carpeta **Entregables** creada por el adapter en `crearCarpetas`). Dentro están las subcarpetas
   **Fotos** y **Videos**. No hay que pegar ninguna URL: "Preparar entrega" usa ese ID.
 - **Migración (quién mueve los bytes).** El **adapter** (Apps Script) solo **lista** las
   subcarpetas Fotos/Videos y **marca cada archivo como público** (`ANYONE_WITH_LINK`), devolviendo
   `{ fotos:[{id,nombre}], videoWeb:{id,nombre}|null }`. El **Worker** hace el trabajo pesado: jala
-  cada foto de Drive y la guarda en **R2** (`env.MEDIA.put`), y manda el video a **Stream** vía la
+  cada foto de Drive y la **sube a Cloudflare Images** (API), y manda el video a **Stream** vía la
   API "copy from URL" (el Worker no tiene el límite de 50 MB de Apps Script). Así el adapter queda
   ligero y dentro de sus límites de ejecución.
-- **Fotos → R2 + Cloudflare Image Transformations.** Se sirven por una ruta del Worker
-  (`/media/entrega/<token>/<archivo>?w=600`) con redimensionado al vuelo (miniatura para la
-  cuadrícula, tamaño grande para pantalla completa), formato `auto` (WebP/AVIF), cacheadas en el
-  edge. Requiere **Transformations habilitado** en la zona. Las fotos son siempre **4:3**.
+- **Fotos → Cloudflare Images.** Se sirven directo desde `imagedelivery.net` con **variantes
+  flexibles** (`.../w=600,format=auto` para la cuadrícula, `w=1600` para pantalla completa),
+  optimizadas (WebP/AVIF) y cacheadas globalmente. Sin ruta propia en el Worker. Las fotos son
+  siempre **4:3**.
 - **Video → Cloudflare Stream.** El adapter detecta en la carpeta Videos el archivo cuyo nombre
   termina en **`_web`** (versión 1080p comprimida que Bruno exporta, idealmente < 45 MB) y el
   Worker lo sube a Stream (copy-from-URL). Reproductor limpio con autoplay para el Estreno.
   Respaldo: pegar el ID/URL a mano en el admin. **No** reproducir 4K desde Drive.
 - **Modelo de datos (D1).** Columnas nuevas en `contratos` (no tabla aparte; **D1 no soporta
   foreign keys**):
-  - `entrega_manifiesto_json`: `{ fotos:[{ key, nombre }], destacadoKey, propiedadNombre,
-    propiedadUbicacion }` (las URLs se arman desde `key` apuntando a la ruta `/media/...`).
+  - `entrega_manifiesto_json`: `{ fotos:[{ id, nombre }], destacadoId, imagesHash, propiedadNombre,
+    propiedadUbicacion }` (la URL de cada foto se arma con `imagesHash` + `id` apuntando a
+    `imagedelivery.net`).
   - `entrega_video_proveedor` (`stream | youtube | ''`) + `entrega_video_id` (UID de Stream).
   - `entrega_textos_json`: `{ redes, anuncio }` (plantilla editable en Fase 1; IA en Fase 2).
   - `entrega_config_estado`: `borrador | publicado` (gate de revisión, ver §5).
   - `entrega_media_estado`: `pendiente | migrando | listo | error` (progreso de la copia).
   - El tour 360 reutiliza `contratos.recorrido_url` + `tiene_recorrido` (ya existen).
-- **Infra nueva a aprovisionar:** bucket **R2** con binding `MEDIA`, cuenta **Stream** (account id
-  + API token como *secret*), y **Transformations** habilitado en la zona. Documentar en
+- **Infra nueva a aprovisionar:** **Starter Bundle** de Cloudflare (Images + Stream +
+  Transformations), API token `CF_MEDIA_TOKEN` (`Stream:Edit` + `Images:Edit`) como *secret*,
+  `STREAM_CUSTOMER_CODE`, y **variantes flexibles** de Images habilitadas. Documentar en
   `docs/CREDENCIALES.md`.
 - **IA de textos (Fase 2).** Ruta nueva en el Worker `/api/generarTextosEntrega` que toma datos
   de la propiedad + cuartos del **checklist** (`checklist.html`/tabla de checklist) y devuelve
@@ -149,7 +152,7 @@ de `publicado`.
 | Video pesado no cabe por el límite de Apps Script (~50 MB) | Bruno exporta una versión `_web` 1080p comprimida (< 45 MB) y el Worker la sube a Stream vía copy-from-URL (sin pasar por Apps Script). Respaldo: pegar ID a mano. |
 | Falta el archivo `_web` o la subcarpeta Fotos/Videos no existe | El gate de admin avisa "no se encontró video web / fotos"; Bruno corrige y re-prepara. Pegar ID a mano siempre disponible. |
 | Reproducir 4K desde Drive es lento y feo | Host de video real (Cloudflare Stream). Ya decidido. |
-| Transformations no habilitado en la zona | Verificar en setup (Task de infra); si no, fallback a servir el original de R2 sin redimensionar. |
+| Variantes flexibles de Images no habilitadas | Verificar en setup; si no, las URLs `w=...` fallan. Activar variantes flexibles (un toggle) en Images. |
 | Foto en formato no visible (RAW/TIFF) en la carpeta Fotos | El Worker/adaptador solo migra imágenes web (jpg/png/webp); RAW/TIFF se ignoran. |
 | "Acceso 30 días" y "revocación" son ilusorios (link de Drive sigue público) | Tratarlos como **informativos** en Fase 1. Enforcement real (adapter cambia permisos vía cron) = fuera de alcance inicial. |
 | IA inventa datos en los textos | Gate de revisión: el dueño edita y aprueba antes de publicar. Prompt acotado a datos reales del checklist. |

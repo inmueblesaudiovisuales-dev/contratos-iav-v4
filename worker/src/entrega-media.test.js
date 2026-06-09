@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { esFotoWeb, esVideoWeb, claveFoto } from './entrega-media.js';
+import { esFotoWeb, esVideoWeb, hashDeVariante } from './entrega-media.js';
 
 test('esFotoWeb acepta formatos que el navegador muestra', () => {
   assert.equal(esFotoWeb({ mimeType: 'image/jpeg' }), true);
@@ -17,7 +17,9 @@ test('esVideoWeb detecta el sufijo _web', () => {
   assert.equal(esVideoWeb('reel.mp4'), false);
 });
 
-test('claveFoto arma la ruta en R2 con la extensión del archivo', () => {
-  assert.equal(claveFoto('TKN', { id: 'ABC', nombre: 'frente.JPG' }), 'entrega/TKN/ABC.jpg');
-  assert.equal(claveFoto('TKN', { id: 'XYZ', nombre: 'sin-ext' }), 'entrega/TKN/XYZ.jpg');
+test('hashDeVariante extrae el account hash de la URL de Images', () => {
+  assert.equal(hashDeVariante('https://imagedelivery.net/abc123HASH/img-uid/public'), 'abc123HASH');
+  assert.equal(hashDeVariante('https://imagedelivery.net/Zx-9/otra/public'), 'Zx-9');
+  assert.equal(hashDeVariante(''), '');
+  assert.equal(hashDeVariante(null), '');
 });
