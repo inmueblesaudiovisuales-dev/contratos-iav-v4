@@ -60,25 +60,39 @@ propiedad. Cuatro ideas, todas validadas con prototipos (`mockups-galeria/v7-est
 - **Archivo nuevo `frontend/entrega.html?token=<token>`.** El portal (`portal.html`) redirige
   o enlaza aquí cuando el estatus es `Entregado`/`Liquidado`/`Completado`. Mantiene `portal.html`
   (~2,900 líneas) ligero. Reusa el mismo token y autenticación de portal.
-- **Modelo de datos (D1).** Hoy solo existen `contratos.entrega_drive_link` y
-  `entrega_links_extra`. Se agrega un **manifiesto de entrega** estructurado. Propuesta: tabla
-  nueva `entregas` (o columna `entrega_manifiesto_json` en `contratos`) con:
-  - `fotos`: lista de `{ id, thumb_url, full_url, orientacion }`.
-  - `video`: `{ proveedor, video_id, poster_url }` (Cloudflare Stream / YouTube sin listar).
-  - `tour360`: `{ url }` (CloudPano u otro; se ve **solo en línea**, no se descarga).
-  - `destacado`: referencia a la foto/portada marcada por el admin.
-  - `textos`: `{ redes, anuncio }` (generados por IA, editables).
-  - `estado_config`: `borrador | publicado` (gate de revisión, ver §5).
-  - `propiedad`: `{ nombre, ubicacion }` para el Estreno y los textos.
-  - Recordar: **D1 no soporta foreign keys**; cascadas a mano con `db.batch()`.
-- **Adapter (Apps Script).** Nueva función que **enumera la carpeta de Drive de entrega** y
-  devuelve la lista de archivos clasificados (foto/video) con sus IDs y miniaturas. Se llama
-  **una sola vez** al preparar la entrega (es lento, 2-4s, y cada cambio requiere **despliegue
-  manual** — regla del adapter). El resultado se cachea en D1.
-- **Video premium.** El reel vive en **Cloudflare Stream** (recomendado; mismo stack,
-  reproductor limpio, autoplay para el Estreno) o **YouTube/Vimeo sin listar** (alternativa
-  gratis con UI ajena). El admin sube el reel y pega el ID/URL. **No** reproducir 4K incrustado
-  desde Drive (lento, UI de Google, autoplay no confiable).
+- **Decisión clave: el material se migra a Cloudflare, no se sirve desde Drive.** Para que la
+  galería sea rápida en celular y sin los problemas de permisos/estrangulamiento de Drive, al
+  preparar la entrega se **copian las fotos a R2** y el **video a Stream**. La galería del cliente
+  nunca toca Drive. Los originales full-res se quedan en Drive (link "descargar todo").
+- **Carpeta de origen (ya existe en D1).** Cada trabajo tiene `propiedades.carpeta_entregables_id`
+  (carpeta **Entregables** creada por el adapter en `crearCarpetas`). Dentro están las subcarpetas
+  **Fotos** y **Videos**. No hay que pegar ninguna URL: "Preparar entrega" usa ese ID.
+- **Migración (quién mueve los bytes).** El **adapter** (Apps Script) solo **lista** las
+  subcarpetas Fotos/Videos y **marca cada archivo como público** (`ANYONE_WITH_LINK`), devolviendo
+  `{ fotos:[{id,nombre}], videoWeb:{id,nombre}|null }`. El **Worker** hace el trabajo pesado: jala
+  cada foto de Drive y la guarda en **R2** (`env.MEDIA.put`), y manda el video a **Stream** vía la
+  API "copy from URL" (el Worker no tiene el límite de 50 MB de Apps Script). Así el adapter queda
+  ligero y dentro de sus límites de ejecución.
+- **Fotos → R2 + Cloudflare Image Transformations.** Se sirven por una ruta del Worker
+  (`/media/entrega/<token>/<archivo>?w=600`) con redimensionado al vuelo (miniatura para la
+  cuadrícula, tamaño grande para pantalla completa), formato `auto` (WebP/AVIF), cacheadas en el
+  edge. Requiere **Transformations habilitado** en la zona. Las fotos son siempre **4:3**.
+- **Video → Cloudflare Stream.** El adapter detecta en la carpeta Videos el archivo cuyo nombre
+  termina en **`_web`** (versión 1080p comprimida que Bruno exporta, idealmente < 45 MB) y el
+  Worker lo sube a Stream (copy-from-URL). Reproductor limpio con autoplay para el Estreno.
+  Respaldo: pegar el ID/URL a mano en el admin. **No** reproducir 4K desde Drive.
+- **Modelo de datos (D1).** Columnas nuevas en `contratos` (no tabla aparte; **D1 no soporta
+  foreign keys**):
+  - `entrega_manifiesto_json`: `{ fotos:[{ key, nombre }], destacadoKey, propiedadNombre,
+    propiedadUbicacion }` (las URLs se arman desde `key` apuntando a la ruta `/media/...`).
+  - `entrega_video_proveedor` (`stream | youtube | ''`) + `entrega_video_id` (UID de Stream).
+  - `entrega_textos_json`: `{ redes, anuncio }` (plantilla editable en Fase 1; IA en Fase 2).
+  - `entrega_config_estado`: `borrador | publicado` (gate de revisión, ver §5).
+  - `entrega_media_estado`: `pendiente | migrando | listo | error` (progreso de la copia).
+  - El tour 360 reutiliza `contratos.recorrido_url` + `tiene_recorrido` (ya existen).
+- **Infra nueva a aprovisionar:** bucket **R2** con binding `MEDIA`, cuenta **Stream** (account id
+  + API token como *secret*), y **Transformations** habilitado en la zona. Documentar en
+  `docs/CREDENCIALES.md`.
 - **IA de textos (Fase 2).** Ruta nueva en el Worker `/api/generarTextosEntrega` que toma datos
   de la propiedad + cuartos del **checklist** (`checklist.html`/tabla de checklist) y devuelve
   `textos.redes` y `textos.anuncio`. Proveedor: Cloudflare Workers AI o DeepSeek (barato,
@@ -115,14 +129,14 @@ que **no se sienta vacía**. Validado en `mockups-galeria/v3-completo.html` (der
 Requisito del dueño: **revisar antes de publicar**. La entrega tiene un estado `borrador` antes
 de `publicado`.
 
-1. El dueño prepara la entrega (al marcar material listo / Entregado).
-2. El sistema arma el manifiesto (adapter lista la carpeta) y, en Fase 2, genera los textos con IA.
+1. El dueño aprieta **"Preparar entrega"** (usa `carpeta_entregables_id`).
+2. El sistema **migra** fotos a R2 y el `_web` a Stream (estado `migrando → listo`), arma el
+   manifiesto y, en Fase 2, genera los textos con IA.
 3. **Pantalla de configuración / vista previa** en `admin.html`:
    - Ve la `entrega.html` tal cual la verá el cliente (vista previa).
    - **Edita** los textos (redes/anuncio) y cualquier copy.
    - Marca el **destacado** (foto estrella / portada).
-   - Pega/confirma el ID del video y la liga del 360.
-   - Corrige clasificación si el adapter se equivocó.
+   - Confirma el video detectado (`_web` → Stream) o pega un ID a mano; pega la liga del 360.
 4. **Publicar** → `estado_config = publicado` → el cliente obtiene acceso. Antes de eso, el
    cliente no ve la entrega nueva.
 
@@ -130,10 +144,13 @@ de `publicado`.
 
 | Riesgo | Mitigación |
 |---|---|
-| Drive estrangula miniaturas (403 intermitente) en galerías grandes | Cachear miniaturas (adapter copia a R2/Cloudflare Images) o cargar pocas + "ver todas" abre Drive. Lazy-load. |
-| Reproducir 4K desde Drive es lento y feo | Host de video real (Cloudflare Stream / YT sin listar). Ya decidido. |
-| Adapter lento y con despliegue manual | Enumerar **una vez** al preparar entrega; cachear en D1; botón "re-sincronizar" si cambian archivos. |
-| Clasificación foto/video falla con carpetas desordenadas | Heurística por tipo de archivo + corrección manual en el gate de revisión. |
+| Velocidad/permisos de Drive en la galería | **Resuelto:** las fotos se migran a R2 y se sirven con Transformations desde tu dominio; la galería del cliente nunca toca Drive. |
+| La migración (copiar 40+ fotos) tarda | El Worker hace el trabajo en segundo plano con estado `migrando → listo`; el admin ve progreso. Es una sola vez por entrega. |
+| Video pesado no cabe por el límite de Apps Script (~50 MB) | Bruno exporta una versión `_web` 1080p comprimida (< 45 MB) y el Worker la sube a Stream vía copy-from-URL (sin pasar por Apps Script). Respaldo: pegar ID a mano. |
+| Falta el archivo `_web` o la subcarpeta Fotos/Videos no existe | El gate de admin avisa "no se encontró video web / fotos"; Bruno corrige y re-prepara. Pegar ID a mano siempre disponible. |
+| Reproducir 4K desde Drive es lento y feo | Host de video real (Cloudflare Stream). Ya decidido. |
+| Transformations no habilitado en la zona | Verificar en setup (Task de infra); si no, fallback a servir el original de R2 sin redimensionar. |
+| Foto en formato no visible (RAW/TIFF) en la carpeta Fotos | El Worker/adaptador solo migra imágenes web (jpg/png/webp); RAW/TIFF se ignoran. |
 | "Acceso 30 días" y "revocación" son ilusorios (link de Drive sigue público) | Tratarlos como **informativos** en Fase 1. Enforcement real (adapter cambia permisos vía cron) = fuera de alcance inicial. |
 | IA inventa datos en los textos | Gate de revisión: el dueño edita y aprueba antes de publicar. Prompt acotado a datos reales del checklist. |
 | Datos de propiedad insuficientes para buen texto | Conectar `checklist` (cuartos) + datos del contrato; lo que falte se deja en blanco/editable. |
