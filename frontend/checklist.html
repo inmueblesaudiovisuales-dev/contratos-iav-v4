@@ -1089,6 +1089,100 @@
     .propuesta-shot { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; }
     .propuesta-shot-name { font-size: 13px; font-weight: 600; color: var(--ink-1); }
     .propuesta-shot-type { font-size: 11px; color: var(--ink-3); }
+
+    /* F70 — Dictado: bloque de entrada en Edicion */
+    .dictado-bar { display: flex; flex-direction: column; gap: var(--sp-3);
+      padding: var(--sp-4); margin-bottom: var(--sp-3);
+      border: 1px solid var(--line); background: var(--card);
+      border-radius: var(--radius); box-shadow: var(--el-1); }
+    .dictado-copy { min-width: 0; }
+    .dictado-copy strong { display: block; font-size: var(--ts-base); font-weight: 600; color: var(--ink-1); line-height: 1.25; }
+    .dictado-copy span { display: block; font-size: var(--ts-cap); color: var(--ink-2); margin-top: var(--sp-1); line-height: 1.4; }
+    .dictado-btns { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+    .dictado-bar .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; flex: 1 1 auto; }
+    .dictado-bar .btn i { font-size: 18px; }
+    @media (min-width: 560px) {
+      .dictado-bar { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--sp-4); }
+      .dictado-btns { flex: none; }
+      .dictado-bar .btn { flex: none; }
+    }
+
+    /* F70 — Dictado: pantalla de importar (sheet a pantalla completa) */
+    .sheet.full { max-height: 100dvh; height: 100dvh; border-radius: 0; padding: 0;
+      display: flex; flex-direction: column; }
+    .dimp-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: max(14px, env(safe-area-inset-top)) 16px 12px; border-bottom: 1px solid var(--line);
+      flex: none; background: var(--card); }
+    .dimp-head h2 { font-size: 18px; font-weight: 700; }
+    .dimp-scroll { flex: 1; min-height: 0; overflow: auto; padding: 16px; }
+    .dimp-zone { margin-bottom: 22px; }
+    .dimp-zone:last-child { margin-bottom: 0; }
+    .dimp-zone-hd { font-size: var(--ts-cap); font-weight: 700; color: var(--ink-2);
+      letter-spacing: .04em; text-transform: uppercase; margin-bottom: 8px; }
+    .dimp-ta { width: 100%; min-height: 130px; resize: vertical; border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 12px; font-size: 13px; line-height: 1.5;
+      font-family: var(--font-mono, monospace); background: var(--page); color: var(--ink-1); }
+    .dimp-error { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; margin-bottom: 12px;
+      border-radius: var(--radius); background: var(--red-soft); color: var(--red); border: 1px solid var(--red);
+      font-size: 13px; font-weight: 600; line-height: 1.4; }
+    .dimp-error i { font-size: 18px; flex: none; margin-top: 1px; }
+    .dimp-resumen { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .dimp-stat { display: inline-flex; align-items: baseline; gap: 5px; min-height: 30px; padding: 4px 10px;
+      border-radius: 999px; border: 1px solid var(--line); background: var(--page); color: var(--ink-2);
+      font-size: 12px; font-weight: 600; }
+    .dimp-stat b { color: var(--ink-1); font-weight: 800; font-variant-numeric: tabular-nums; }
+    .dimp-stat.alert { border-color: var(--amber); background: var(--amber-soft); color: var(--amber); }
+    .dimp-stat.alert b { color: var(--amber); }
+    .dimp-card { border: 1px solid var(--line); background: var(--card); border-radius: var(--radius);
+      padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); }
+    .dimp-card.invalida { border-color: var(--red); background: var(--red-soft); }
+    .dimp-card-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .dimp-token { font-family: var(--font-mono, monospace); font-size: var(--ts-lg); font-weight: 800;
+      color: var(--ink-1); letter-spacing: -.01em; }
+    .dimp-cam { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+    .dimp-cuarto { font-size: var(--ts-body); font-weight: 600; color: var(--ink-1); margin-left: auto; }
+    .dimp-clase { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 6px; }
+    .dimp-clase.take { background: var(--green-soft); color: var(--green); }
+    .dimp-clase.discard { background: var(--red-soft); color: var(--red); }
+    .dimp-meta { font-size: 12px; color: var(--ink-2); margin-top: 6px; line-height: 1.45; }
+    .dimp-meta b { color: var(--ink-1); font-weight: 600; }
+    .dimp-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .dimp-flag { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 2px 9px;
+      border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .dimp-flag i { font-size: 13px; }
+    .dimp-flag.warn { background: var(--amber-soft); color: var(--amber); border: 1px solid var(--amber); }
+    .dimp-flag.bad { background: var(--red-soft); color: var(--red); border: 1px solid var(--red); }
+    .dimp-flag.info { background: var(--gold-soft); color: var(--amber); border: 1px solid var(--gold-leaf); }
+    .dimp-asign { margin-top: 10px; }
+    .dimp-asign label { display: block; font-size: 11px; font-weight: 700; color: var(--ink-2); margin-bottom: 4px; }
+    .dimp-asign select { width: 100%; min-height: 44px; border: 1.5px solid var(--amber); border-radius: var(--radius);
+      padding: 0 12px; font: inherit; font-size: var(--ts-body); background: var(--card); color: var(--ink-1); }
+    .dimp-comentario { margin-top: 10px; }
+    .dimp-comentario label { display: block; font-size: 11px; font-weight: 700; color: var(--ink-2); margin-bottom: 4px; }
+    .dimp-comentario textarea { width: 100%; min-height: 44px; resize: vertical; border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 10px 12px; font: inherit; font-size: var(--ts-body); line-height: 1.45;
+      background: var(--card); color: var(--ink-1); }
+    .dimp-fotos { display: flex; align-items: center; gap: 8px; padding: 9px 14px; margin-bottom: 8px;
+      border: 1px dashed var(--line); border-radius: var(--radius); background: var(--page);
+      color: var(--ink-3); font-size: 13px; font-weight: 600; }
+    .dimp-fotos i { font-size: 16px; }
+    .dimp-dup { margin-top: 4px; }
+    .dimp-dup-hd { font-size: var(--ts-cap); font-weight: 700; color: var(--amber); margin-bottom: 8px; }
+    .dimp-dup-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .dimp-dup-opt { min-height: 56px; border: 1.5px solid var(--line); border-radius: var(--radius);
+      background: var(--card); color: var(--ink-1); font-size: 13px; font-weight: 700; padding: 8px 10px;
+      display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; text-align: left; }
+    .dimp-dup-opt span { font-size: 11px; font-weight: 600; color: var(--ink-2); }
+    .dimp-dup-opt.active { border-color: var(--amber); background: var(--amber-soft); }
+    .dimp-foot { flex: none; padding: 12px 16px max(14px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line); background: var(--card); }
+    .dimp-foot .primary { width: 100%; min-height: 52px; display: inline-flex; align-items: center;
+      justify-content: center; gap: 8px; font-size: var(--ts-base); }
+    .dimp-foot .primary:disabled { opacity: .45; }
+    .dictado-prompt-ta { width: 100%; min-height: 200px; resize: vertical; border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 12px; font-size: 12px; line-height: 1.5;
+      font-family: var(--font-mono, monospace); background: var(--page); color: var(--ink-1); }
   </style>
 </head>
 <body>
@@ -1165,6 +1259,11 @@ let guideConfigDraft = null;
 let currentGuideConfig = null;
 let propuestaIAText = '';
 let propuestaIAParsed = null;
+// F70 — estado de importacion de dictado (volatil, no se guarda)
+let dictadoText = '';
+let dictadoParsed = null;
+let dictadoAsignaciones = {};
+let dictadoReemplazar = false;
 let capturaScreen = 'lista';
 
 // ===== Rol por celular (F5) =====
@@ -3927,6 +4026,209 @@ function quitarPropuestaIA() {
   showToast('Propuesta eliminada');
 }
 
+// ===== F70 — Dictado de bitacora: prompt + pantalla de revisar =====
+
+function copiarPromptDictado() {
+  const prompt = logic.buildDictadoPrompt(state);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(prompt)
+      .then(() => { showToast('Prompt copiado'); mostrarPromptDictado(prompt); })
+      .catch(() => mostrarPromptDictado(prompt));
+  } else {
+    mostrarPromptDictado(prompt);
+  }
+}
+
+function mostrarPromptDictado(prompt) {
+  abrirModal(`<div class="sheet-head"><h2>Prompt de dictado</h2><button class="icon-btn" onclick="cerrarModal()" aria-label="Cerrar"><i class="ti ti-x"></i></button></div>
+    <p class="sheet-note">Dicta tus tomas y transcríbelas; pega ese texto en Gemini con este prompt y trae de vuelta el JSON. Si el copiado falla, selecciona el texto de abajo y cópialo a mano.</p>
+    <textarea class="dictado-prompt-ta" onclick="this.select()" readonly>${esc(prompt)}</textarea>`);
+}
+
+function abrirImportarDictado() {
+  dictadoParsed = null;
+  dictadoAsignaciones = {};
+  dictadoReemplazar = false;
+  renderImportarDictado();
+}
+
+function renderImportarDictado() {
+  const parsed = dictadoParsed;
+  let zonaResultado = '';
+  let footer = `<button class="primary" disabled>Confirmar e importar</button>`;
+
+  if (parsed && !parsed.ok) {
+    zonaResultado = `<div class="dimp-error"><i class="ti ti-alert-triangle"></i><div>${esc(parsed.error || 'No se pudo leer el dictado.')}</div></div>`;
+  } else if (parsed && parsed.ok) {
+    zonaResultado = renderDictadoResumen(parsed.resumen) + renderDictadoPreview(parsed.preview);
+    const tieneDup = (parsed.preview || []).some((it) => it.banderas && it.banderas.duplicado);
+    if (tieneDup) zonaResultado += renderDictadoDuplicados();
+    footer = `<button class="primary" onclick="confirmarImportarDictado()"><i class="ti ti-check"></i> Confirmar e importar</button>`;
+  }
+
+  const html = `<div class="dimp-head">
+      <h2>Importar dictado</h2>
+      <button class="icon-btn" onclick="cerrarModal()" aria-label="Cerrar"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="dimp-scroll">
+      <div class="dimp-zone">
+        <div class="dimp-zone-hd">Pegar</div>
+        <textarea id="dictadoTA" class="dimp-ta" placeholder="Pega aquí el JSON del dictado...">${esc(dictadoText)}</textarea>
+        <div class="action-stack" style="margin-top:8px">
+          <button class="btn" onclick="revisarDictado()"><i class="ti ti-search"></i> Revisar</button>
+        </div>
+      </div>
+      ${(parsed && parsed.ok) ? `<div class="dimp-zone"><div class="dimp-zone-hd">Revisión</div>${zonaResultado}</div>` : zonaResultado}
+    </div>
+    <div class="dimp-foot">${footer}</div>`;
+
+  abrirModal(html);
+  const sheet = document.getElementById('sheet');
+  if (sheet) sheet.classList.add('full');
+}
+
+function renderDictadoResumen(r) {
+  if (!r) return '';
+  const stat = (label, n, alert) => `<span class="dimp-stat${alert && n > 0 ? ' alert' : ''}"><b>${n}</b> ${label}</span>`;
+  return `<div class="dimp-resumen">
+    ${stat('tomas', r.tomas, false)}
+    ${stat('descartes', r.descartes, false)}
+    ${stat('fotos dron', r.fotosDron, false)}
+    ${stat('saltos', r.saltos, true)}
+    ${stat('duplicados', r.duplicados, true)}
+  </div>`;
+}
+
+function renderDictadoPreview(preview) {
+  if (!preview || !preview.length) return `<p class="sheet-note">El dictado no trae eventos.</p>`;
+  const shotTypes = logic.getShotTypes();
+  const movements = logic.getMovements();
+  const camLabel = (camId) => {
+    const cam = (state.cameras || []).find((c) => c && c.id === camId);
+    return (cam && cam.label) || camId || 'Sin cámara';
+  };
+  return preview.map((it) => {
+    if (it.evento === 'fotos') {
+      if (it.banderas && it.banderas.camaraInvalida) {
+        return `<div class="dimp-card invalida"><div class="dimp-card-top"><span class="dimp-token">Fotos ×${it.cantidad}</span><span class="dimp-cam">${esc(camLabel(it.camara))}</span></div>${renderDictadoFlags(it.banderas)}</div>`;
+      }
+      return `<div class="dimp-fotos"><i class="ti ti-camera"></i> Fotos dron ×${it.cantidad}, avanza el contador</div>`;
+    }
+    const flagsInvalida = it.banderas && it.banderas.camaraInvalida;
+    const tokenTxt = it.tokenExpandido || ('toma ' + (it.numeroDictado != null ? it.numeroDictado : '?'));
+    const claseTxt = it.clase === 'discard' ? 'descarte' : 'toma';
+    const metaParts = [];
+    if (it.shotType && shotTypes[it.shotType]) metaParts.push(esc(shotTypes[it.shotType].label));
+    if (it.movement && movements[it.movement]) metaParts.push(esc(movements[it.movement].label));
+    const banderasTxt = [];
+    if (it.buena) banderasTxt.push('buena');
+    if (it.favorita) banderasTxt.push('favorita');
+    if (it.clase === 'discard' && it.motivoDescarte) banderasTxt.push('motivo: ' + esc(it.motivoDescarte));
+    const metaLine = (metaParts.length || banderasTxt.length)
+      ? `<div class="dimp-meta">${metaParts.join(' · ')}${(metaParts.length && banderasTxt.length) ? ' — ' : ''}${banderasTxt.length ? '<b>' + banderasTxt.join(', ') + '</b>' : ''}</div>`
+      : '';
+    const notaLine = `<div class="dimp-comentario">
+        <label>Comentario</label>
+        <textarea rows="2" placeholder="Comentario libre para el editor (opcional)" oninput="setNotaDictado(${Number(it.orden)}, this.value)">${esc(it.nota)}</textarea>
+      </div>`;
+    const asignSel = (it.banderas && it.banderas.sinIdentificar) ? renderDictadoAsignSelect(it.orden) : '';
+    return `<div class="dimp-card${flagsInvalida ? ' invalida' : ''}">
+      <div class="dimp-card-top">
+        <span class="dimp-token">${esc(tokenTxt)}</span>
+        <span class="dimp-cam">${esc(camLabel(it.camara))}</span>
+        <span class="dimp-cuarto">${esc(it.cuartoNombre || 'Sin identificar')}</span>
+        <span class="dimp-clase ${it.clase === 'discard' ? 'discard' : 'take'}">${claseTxt}</span>
+      </div>
+      ${metaLine}
+      ${notaLine}
+      ${renderDictadoFlags(it.banderas)}
+      ${asignSel}
+    </div>`;
+  }).join('');
+}
+
+function renderDictadoFlags(b) {
+  if (!b) return '';
+  const flags = [];
+  if (b.salto) flags.push(`<span class="dimp-flag warn"><i class="ti ti-arrow-jump-over"></i> Salto de número</span>`);
+  if (b.duplicado) flags.push(`<span class="dimp-flag warn"><i class="ti ti-copy"></i> Duplicado</span>`);
+  if (b.camaraInvalida) flags.push(`<span class="dimp-flag bad"><i class="ti ti-camera-off"></i> Cámara inválida</span>`);
+  if (b.sinIdentificar) flags.push(`<span class="dimp-flag info"><i class="ti ti-help-circle"></i> Sin identificar</span>`);
+  if (b.vocabFuera) flags.push(`<span class="dimp-flag info"><i class="ti ti-note"></i> Vocabulario fuera de catálogo (quedó como nota)</span>`);
+  return flags.length ? `<div class="dimp-flags">${flags.join('')}</div>` : '';
+}
+
+function renderDictadoAsignSelect(orden) {
+  const espacios = state.espacios || [];
+  const sel = dictadoAsignaciones[orden] || '';
+  const opts = ['<option value="">Sin identificar</option>']
+    .concat(espacios.map((e) => `<option value="${esc(e.id)}"${sel === e.id ? ' selected' : ''}>${esc(e.nombre)}${e.piso ? ' · ' + esc(e.piso) : ''}</option>`));
+  return `<div class="dimp-asign">
+    <label>Asignar cuarto</label>
+    <select onchange="setAsignacionDictado(${Number(orden)}, this.value)">${opts.join('')}</select>
+  </div>`;
+}
+
+function renderDictadoDuplicados() {
+  return `<div class="dimp-zone dimp-dup">
+    <div class="dimp-dup-hd">Hay tomas con un token que ya existe en el contrato. ¿Qué hago con las repetidas?</div>
+    <div class="dimp-dup-opts">
+      <button class="dimp-dup-opt${!dictadoReemplazar ? ' active' : ''}" onclick="setReemplazarDictado(false)">Agregar<span>Omite las repetidas</span></button>
+      <button class="dimp-dup-opt${dictadoReemplazar ? ' active' : ''}" onclick="setReemplazarDictado(true)">Reemplazar<span>Quita la vieja, mete la nueva</span></button>
+    </div>
+  </div>`;
+}
+
+function revisarDictado() {
+  const ta = document.getElementById('dictadoTA');
+  if (ta) dictadoText = ta.value;
+  dictadoAsignaciones = {};
+  dictadoReemplazar = false;
+  dictadoParsed = logic.parseDictado(dictadoText, state);
+  renderImportarDictado();
+}
+
+function setAsignacionDictado(orden, value) {
+  if (value) dictadoAsignaciones[orden] = value;
+  else delete dictadoAsignaciones[orden];
+}
+
+function setNotaDictado(orden, value) {
+  if (!dictadoParsed || !dictadoParsed.preview) return;
+  const item = dictadoParsed.preview.find((it) => Number(it.orden) === Number(orden));
+  if (item) item.nota = String(value);
+}
+
+function setReemplazarDictado(val) {
+  dictadoReemplazar = !!val;
+  renderImportarDictado();
+}
+
+function confirmarImportarDictado() {
+  if (!dictadoParsed || !dictadoParsed.ok) return;
+  const result = logic.applyDictado(state, dictadoParsed.preview, {
+    asignaciones: dictadoAsignaciones,
+    reemplazar: dictadoReemplazar,
+  });
+  state = result.state;
+  const rep = result.report || {};
+  // Guardado por el flujo normal (rev/fusion F62): scheduleSave marca dirty,
+  // refleja el espejo y dispara saveNow.
+  scheduleSave();
+  saveNow();
+  dictadoParsed = null;
+  dictadoText = '';
+  dictadoAsignaciones = {};
+  dictadoReemplazar = false;
+  cerrarModal();
+  render();
+  const partes = [];
+  if (rep.creadas) partes.push(rep.creadas + ' toma' + (rep.creadas === 1 ? '' : 's'));
+  if (rep.reemplazadas) partes.push(rep.reemplazadas + ' reemplazada' + (rep.reemplazadas === 1 ? '' : 's'));
+  if (rep.omitidasDuplicado) partes.push(rep.omitidasDuplicado + ' omitida' + (rep.omitidasDuplicado === 1 ? '' : 's'));
+  showToast(partes.length ? ('Dictado importado: ' + partes.join(', ')) : 'Dictado importado');
+}
+
 async function ensureAdminKey() {
   let key = localStorage.getItem('iav_admin_auth');
   if (key) return key;
@@ -5077,6 +5379,17 @@ function renderExportBar() {
       <button class="secondary" onclick="imprimirGuionEdicion()"><i class="ti ti-files"></i> Guion de edición</button>
       <button class="primary" onclick="exportarBitacora()"><i class="ti ti-download"></i> Exportar</button>
     </div>
+  </div>
+  ${renderDictadoBar()}`;
+}
+
+function renderDictadoBar() {
+  return `<div class="dictado-bar">
+    <div class="dictado-copy"><strong>Dictado</strong><span>Dicta las tomas, pásalas por Gemini y trae el JSON</span></div>
+    <div class="dictado-btns">
+      <button class="btn" onclick="copiarPromptDictado()"><i class="ti ti-file-text"></i> Generar prompt de dictado</button>
+      <button class="btn" onclick="abrirImportarDictado()"><i class="ti ti-clipboard-text"></i> Importar dictado</button>
+    </div>
   </div>`;
 }
 
@@ -5463,6 +5776,8 @@ function abrirModal(html) {
 function cerrarModal(event) {
   if (event && event.target && event.target.id !== 'overlay') return;
   document.getElementById('overlay').classList.remove('visible');
+  const sheet = document.getElementById('sheet');
+  if (sheet) sheet.classList.remove('full');
   document.getElementById('app').inert = false;
   selectedAction = null;
 }
