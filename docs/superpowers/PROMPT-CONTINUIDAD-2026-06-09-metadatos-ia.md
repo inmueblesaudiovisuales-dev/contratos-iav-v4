@@ -194,6 +194,10 @@ Esto es el corazón de todo lo que sigue. Fuente de verdad: `buildExport(state, 
 
 ## 6. PRÓXIMAS METAS (en orden de prioridad de Bruno)
 
+> ALCANCE AHORA: solo se trabaja en CHECKLIST (metas A y B, que son features de checklist.html). La app de
+> metadatos (meta C) es meta FUTURA: NO se toca hasta que Bruno dé por terminado el checklist. No arranques en
+> la app de metadatos. La meta C queda documentada aquí solo como contexto de hacia dónde va todo.
+
 ### Meta A (idea 2, la de más valor): dictar la bitácora en vez de escribirla
 Flujo deseado:
 1. Bruno arma los cuartos en checklist.html y pone el número inicial de archivo de cada cámara.
@@ -227,9 +231,10 @@ Flujo deseado:
   sugerencias. Esto probablemente vuelve obsoleta la librería de sugerencias fija que la app tiene hoy (Bruno
   dijo "ya no sé si la quiero"); la versión con fotos es mejor porque se adapta a la casa real.
 
-### Meta C (la app de metadatos, lo que Bruno pidió explícitamente para el chat nuevo)
+### Meta C (FUTURA — NO ahora — la app de metadatos)
+No se aborda hasta terminar checklist (metas A y B). No empieces aquí; queda solo como contexto.
 "Modificar iav-metadata-app para que durante la importación de archivos se pongan los metadatos que saquemos de
-checklist.html." Nota para el chat nuevo: la app YA hace el núcleo de esto (importa carpetas, empareja por
+checklist.html." Nota: la app YA hace el núcleo de esto (importa carpetas, empareja por
 consecutivo, escribe los 6 campos de Premiere desde la bitácora). Aclara con Bruno qué falta exactamente; lo más
 probable es una de estas (o ambas):
 - Escribir además los campos del modo guiado como un namespace XMP propio `XMP-IAV` (fase 2, ya documentada en
@@ -309,8 +314,8 @@ Dos principios que cubren casi todos los riesgos:
 ## 8. Primeros pasos sugeridos para el chat nuevo (no empieces a programar sin acordar)
 
 1. Lee este documento completo y `docs/EXPORT_METADATA_HANDOFF.md` y `buildExport` en checklist-logic.js.
-2. Confirma con Bruno por cuál meta arrancar (él dijo que la A, dictado, es la de más valor; la C es la que pidió
-   para este chat sobre la app de metadatos — aclara el alcance exacto de C porque el núcleo ya existe).
+2. Confirma con Bruno por cuál meta de CHECKLIST arrancar: A (dictado, la de más valor) o B (sugerencias por IA
+   con fotos). La meta C (app de metadatos) NO se toca todavía: es hasta terminar checklist.
 3. Para A y B, el primer entregable de diseño es el PAR: el prompt exacto que genera la app + el formato JSON de
    importación. Es el corazón. Propónlo y acuérdalo con Bruno ANTES de tocar código (regla de proponer primero).
 4. Diseña el paso de "Revisar" del import como parte del MVP, no como extra.
