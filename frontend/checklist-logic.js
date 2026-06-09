@@ -2094,14 +2094,23 @@
     ],
   };
 
-  // F47 — defaultVisible(zona, floorIndex) -> bases visibles por defecto al armar.
-  // Replica DEF_PB/DEF_ALTA del mockup consolidado. Solo UI; no se persiste.
-  function defaultVisible(zona, floorIndex) {
+  // F47/F51 — defaultVisible(zona, floorIndex, pisosCount) -> bases visibles por
+  // defecto al armar. Replica DEF_PB/DEF_ALTA del mockup consolidado. Solo UI; no
+  // se persiste. F51: las habitaciones viven en el piso de arriba — en una
+  // propiedad de UN piso la planta baja sugiere Recámara, pero al haber 2+ pisos
+  // la Recámara deja de sugerirse en planta baja (se va a las plantas altas). El
+  // usuario siempre puede agregarla con "Agregar otro"; lo ya agregado no se borra.
+  // pisosCount ausente o <2 => se asume un solo piso (compatibilidad).
+  function defaultVisible(zona, floorIndex, pisosCount) {
     const i = Math.max(0, parseInt(floorIndex, 10) || 0);
+    const pisos = Math.max(1, parseInt(pisosCount, 10) || 1);
     if (zona === 'interior') {
-      return i === 0
-        ? ['Sala', 'Comedor', 'Cocina', 'Medio baño', 'Recámara', 'Baño']
-        : ['Recámara', 'Baño', 'Sala', 'Estudio'];
+      if (i === 0) {
+        return pisos > 1
+          ? ['Sala', 'Comedor', 'Cocina', 'Medio baño', 'Baño']
+          : ['Sala', 'Comedor', 'Cocina', 'Medio baño', 'Recámara', 'Baño'];
+      }
+      return ['Recámara', 'Baño', 'Sala', 'Estudio'];
     }
     if (zona === 'exterior') return ['Fachada'];
     return [];

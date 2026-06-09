@@ -1780,14 +1780,21 @@ function setupScope(key) {
   return { zona: 'interior', piso: logic.floorLabel(i), floorIndex: i, lista: 'interior' };
 }
 
-// F48 — Bases visibles de un scope: inicializa setupVisible[key] perezosamente con
-// logic.defaultVisible la primera vez que se ve el scope; además, cualquier
-// concepto con instancias en state.espacios se muestra aunque no esté en visible.
+// F51 — Pisos (no-drone) mostrados; refleja el mismo cálculo que renderSetup
+// (la Planta baja está implícita aunque state.pisos esté vacío => mínimo 1).
+function setupPisosCount() {
+  const pisos = state.pisos && state.pisos.length ? state.pisos.filter((p) => !logic.isDronePiso(p)) : ['Planta baja'];
+  return pisos.length || 1;
+}
+
+// F48/F51 — Bases visibles de un scope = default EN VIVO (logic.defaultVisible,
+// que ahora depende del número de pisos) + lo que el usuario agregó por el picker
+// (setupVisible[key] guarda SOLO esos extras) + cualquier concepto con instancias.
+// Recalcular el default cada render hace que, al agregar un 2º piso, la planta baja
+// deje de sugerir Recámara sin perder nada de lo ya armado.
 function setupVisibleFor(key, sc) {
-  if (!setupVisible[key]) {
-    setupVisible[key] = logic.defaultVisible(sc.zona, sc.floorIndex || 0).slice();
-  }
-  const vis = setupVisible[key].slice();
+  const vis = logic.defaultVisible(sc.zona, sc.floorIndex || 0, setupPisosCount()).slice();
+  (setupVisible[key] || []).forEach((b) => { if (vis.indexOf(b) < 0) vis.push(b); });
   setupScopeEspacios(sc).forEach((e) => {
     const base = logic.baseConcept(e.nombre, setupTipo);
     if (base && vis.indexOf(base) < 0) vis.push(base);
@@ -1970,7 +1977,8 @@ function setupPickerHtml(key) {
 // F49 — Tocar un chip del picker: hace visible el concepto y crea una instancia
 // (reusa setupStepPlus). El picker permanece abierto.
 function setupPickerPick(key, base) {
-  if (!setupVisible[key]) { const sc = setupScope(key); setupVisible[key] = logic.defaultVisible(sc.zona, sc.floorIndex || 0).slice(); }
+  // F51 — setupVisible[key] guarda solo los extras del usuario (el default es en vivo).
+  if (!setupVisible[key]) setupVisible[key] = [];
   if (setupVisible[key].indexOf(base) < 0) setupVisible[key].push(base);
   setupStepPlus(key, base);
 }
@@ -2008,7 +2016,7 @@ function setupPickerCustom(key, nombre, zonaHint, categoriaHint) {
   const base = logic.baseConcept(v, setupTipo);
   // Mostrar la base en este scope solo si la zona heredada es la del scope.
   if (zona === sc.zona) {
-    if (!setupVisible[key]) setupVisible[key] = logic.defaultVisible(sc.zona, sc.floorIndex || 0).slice();
+    if (!setupVisible[key]) setupVisible[key] = []; // F51 — solo extras del usuario.
     if (setupVisible[key].indexOf(base) < 0) setupVisible[key].push(base);
   }
   nuevoEspacio(v, piso, zona, null, categoria);
