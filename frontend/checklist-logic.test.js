@@ -3160,3 +3160,17 @@ test('addTombstones registra ids borrados y la fusión no los revive', () => {
   const otro = _mergeState({ espacios: [{ id: 'e1' }, { id: 'e2' }] }); // copia vieja con e1
   assert.equal(logic.mergeChecklist(otro, borrado).espacios.filter((e) => e.id === 'e1').length, 0);
 });
+
+// F66 — archivoActual: el nombre capturado ES el archivo actual; la primera toma arranca
+// EN ese numero (no en el siguiente). Sin la opcion se conserva el comportamiento previo (+1).
+test('initializeCameraSequence con archivoActual arranca EN el número capturado', () => {
+  let state = logic.normalizeChecklistData({ version: 3, espacios: [] });
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260609_PIB0082', archivoActual: true });
+  assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB0082');
+});
+
+test('initializeCameraSequence sin archivoActual mantiene el comportamiento previo (+1)', () => {
+  let state = logic.normalizeChecklistData({ version: 3, espacios: [] });
+  state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260609_PIB0082' });
+  assert.equal(logic.getCameraSequence(state, 'sony-main').nextToken, 'PIB0083');
+});

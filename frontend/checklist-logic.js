@@ -2620,11 +2620,14 @@
     if (!camera) return next;
     const parsed = parseFilenameSequence(options.lastFilename, camera.kind);
     if (!parsed) return next;
+    // F66 — archivoActual: el nombre capturado ES el archivo actual, la primera toma arranca
+    // EN ese numero. Sin la opcion se interpreta como el ultimo ya grabado (+1, previo).
+    const offset = options.archivoActual ? 0 : 1;
     const segment = Object.assign({
       id: makeId('segment'),
       cameraId: camera.id,
-      counterStart: parsed.counter + 1,
-      counterNext: parsed.counter + 1,
+      counterStart: parsed.counter + offset,
+      counterNext: parsed.counter + offset,
       createdAt: new Date().toISOString(),
     }, parsed);
     next.sequenceSegments.push(segment);

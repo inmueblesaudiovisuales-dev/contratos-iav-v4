@@ -2741,10 +2741,11 @@ function abrirSecuenciaAsesor(cameraId) {
   if (!camera) return;
   abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-body">
-      <div class="sequence-alert">Escribe el último archivo que ya existe en esta cámara. Empezamos con el siguiente.</div>
-      <input class="field" id="last-filename-asesor" type="text" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
+      <div class="sequence-alert">Escribe el archivo actual de la cámara: el que vas a grabar ahora. La secuencia arranca en ese número.</div>
+      <input class="field" id="last-filename-asesor" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
       <button class="primary block" style="width:100%" onclick="iniciarSecuenciaAsesor('${cameraId}')">Iniciar</button>
     </div>`);
+  setTimeout(() => { const i = document.getElementById('last-filename-asesor'); if (i) { i.focus(); const v = i.value; i.setSelectionRange(v.length, v.length); } }, 50);
 }
 
 function iniciarSecuenciaAsesor(cameraId) {
@@ -2752,7 +2753,9 @@ function iniciarSecuenciaAsesor(cameraId) {
   const input = document.getElementById('last-filename-asesor');
   if (!camera || !input || !input.value.trim()) return;
   const filename = input.value.trim();
-  if (!logic.parseFilenameSequence(filename, camera.kind)) return showToast('No encontramos un consecutivo en ese nombre');
+  const parsed = logic.parseFilenameSequence(filename, camera.kind);
+  if (!parsed) return showToast('No encontramos un consecutivo en ese nombre');
+  if (camera.kind === 'sony' && !parsed.prefixHint) return showToast('Completa el número del archivo (p. ej. PIB0082)');
   aplicarSecuencia(cameraId, filename);
 }
 
@@ -4661,10 +4664,11 @@ function abrirSecuencia() {
   if (!camera) return;
   abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-body">
-      <div class="sequence-alert">Escribe el ultimo archivo que ya existe en la camara. Checklist comenzara con el siguiente consecutivo.</div>
-      <input class="field" id="last-filename" type="text" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off" autofocus>
+      <div class="sequence-alert">Escribe el archivo actual de la cámara: el que vas a grabar ahora. La secuencia arranca en ese número.</div>
+      <input class="field" id="last-filename" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
       <button class="primary" onclick="iniciarSecuencia()">Iniciar nuevo tramo</button>
     </div>`);
+  setTimeout(() => { const i = document.getElementById('last-filename'); if (i) { i.focus(); const v = i.value; i.setSelectionRange(v.length, v.length); } }, 50);
 }
 
 function iniciarSecuencia() {
@@ -4672,7 +4676,9 @@ function iniciarSecuencia() {
   const input = document.getElementById('last-filename');
   if (!camera || !input || !input.value.trim()) return;
   const filename = input.value.trim();
-  if (!logic.parseFilenameSequence(filename, camera.kind)) return showToast('No encontramos un consecutivo en ese nombre');
+  const parsed = logic.parseFilenameSequence(filename, camera.kind);
+  if (!parsed) return showToast('No encontramos un consecutivo en ese nombre');
+  if (camera.kind === 'sony' && !parsed.prefixHint) return showToast('Completa el número del archivo (p. ej. PIB0082)');
   const current = logic.getCameraSequence(state, camera.id);
   if (current.nextToken) {
     confirmSheet('Nuevo tramo', `El tramo actual de ${camera.label} termina antes de ${current.nextToken}. ¿Iniciar uno nuevo?`, 'Iniciar nuevo tramo', () => aplicarSecuencia(camera.id, filename));
@@ -4681,8 +4687,19 @@ function iniciarSecuencia() {
   }
 }
 
+// F66 — sugerencia del nombre de archivo. Para Sony pre-rellena el patron de fecha de hoy
+// + prefijo ("YYYYMMDD_PIB") para que solo se complete el numero. Para DJI/Osmo: sin sugerencia
+// (string vacio) hasta dejar los archivos consistentes.
+function sugerenciaNombre(camera) {
+  if (!camera || camera.kind !== 'sony') return '';
+  const d = new Date();
+  const ymd = '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  return ymd + '_PIB';
+}
+
 function aplicarSecuencia(cameraId, filename) {
-  const next = logic.initializeCameraSequence(state, { cameraId, lastFilename: filename });
+  // F66 — el nombre capturado es el archivo ACTUAL: la secuencia arranca EN ese numero.
+  const next = logic.initializeCameraSequence(state, { cameraId, lastFilename: filename, archivoActual: true });
   const nextToken = logic.getCameraSequence(next, cameraId).nextToken;
   if ((state.mediaFiles || []).some((file) => file.cameraId === cameraId && file.fileToken === nextToken)) return showToast(`El siguiente archivo ${nextToken} ya está registrado`);
   state = next;
