@@ -8,6 +8,38 @@
 
 ---
 
+### R127 — Asesor con Tascam como cámara (F75–F77): documentación (2026-06-09 18:43:43 CST)
+
+**Rama `checklist-asesor-tascam-2026-06-09`, NO integrada a main/producción.** Cierre documental (F77) de la
+serie del asesor. La pieza central del cambio: el audio del asesor dejó de ser un campo derivado y pasó a ser
+**una cámara más**, la Tascam, con su propia secuencia de nombre de archivo y su token real, exactamente como la
+Sony o el dron.
+
+**Archivos (solo docs):** `docs/RONDAS.md`, `docs/ARQUITECTURA.md`, `docs/EXPORT_METADATA_HANDOFF.md`.
+
+Resumen del cambio (F75–F77):
+
+- **La Tascam es una cámara con secuencia propia.** Cámara `tascam-asesor` (`kind:'tascam'`, `role:'audio'`),
+  que reemplaza a `osmo-asesor` como dispositivo de audio del asesor. El operador teclea el primer nombre de
+  archivo y la app numera sola los siguientes, igual que la Sony o el dron. El token real se expande de su
+  secuencia (`parseFilenameSequence`/`formatFileToken`): la última corrida de dígitos es el contador.
+- **Cada punto graba la pareja Sony + Tascam con tokens reales.** En un punto normal se crean **dos** registros:
+  el video de la Sony FX30 (`sony-asesor`) y el audio de la Tascam (`tascam-asesor`), cada uno con su token real.
+  Se ligan por `par = codigo de punto + "_T" + toma` (p. ej. `P03_T2`), idéntico en ambos registros.
+- **La voz en off es una toma solo de Tascam.** Genera un único registro de `tascam-asesor` con `soloAudio: true`
+  (sin registro de Sony en esa toma).
+- **Se retiraron `audioExterno` y `audioSugerido`.** El audio ya no se sugiere por nombre ni se renombra al
+  ingestar: se empareja por **token real** (el nombre del archivo CONTIENE el token), igual que Sony y DJI.
+- **Se reconectó la entrada al modo asesor** como una tarjeta de sesión en la lista de captura, espejo de la
+  sesión de dron, gateada por el servicio asesor activo y por el rol operador (Bruno).
+
+Commits previos de la serie: **R125** (commit `5ef221b`, F75: Tascam como cámara con secuencia, pareja
+Sony+Tascam con tokens reales, export y pruebas) y **R126** (commit `075acdb`, F76: entrada al modo asesor +
+captura con la secuencia de la Tascam). El export sigue en `version: 1`. Suite `node --test
+frontend/checklist-logic.test.js` en verde. Plan: `docs/superpowers/plans/2026-06-09-asesor-tascam-plan.md`.
+
+---
+
 ### R123 — Entrega WOW "El Estreno" (Fase 1): galería desde Cloudflare Images/Stream (2026-06-09 11:06:13 CST)
 
 Nueva experiencia de entrega (`frontend/entrega.html`) que reemplaza el link gris a Drive. Las fotos

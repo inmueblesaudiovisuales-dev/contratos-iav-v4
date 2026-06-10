@@ -656,35 +656,105 @@ test('quinta template builds spaces with pisos', () => {
 test('default state has asesor cameras and default puntos', () => {
   const s = logic.createDefaultState();
   assert.ok(s.cameras.some((c) => c.id === 'sony-asesor' && c.mode === 'asesor' && c.role === 'video'));
-  assert.ok(s.cameras.some((c) => c.id === 'osmo-asesor' && c.mode === 'asesor' && c.role === 'audio'));
+  assert.ok(s.cameras.some((c) => c.id === 'tascam-asesor' && c.mode === 'asesor' && c.kind === 'tascam' && c.role === 'audio'));
   assert.ok(Array.isArray(s.asesorPuntos) && s.asesorPuntos.length >= 2);
 });
 
-test('registerAsesorFile creates a linked Sony+Osmo pair for a normal point', () => {
+test('createAsesorPuntos assigns unique stable codes P01, P02, ...', () => {
+  const s = logic.createDefaultState();
+  const codigos = s.asesorPuntos.map((p) => p.codigo);
+  assert.equal(codigos[0], 'P01');
+  assert.equal(codigos[1], 'P02');
+  assert.equal(new Set(codigos).size, codigos.length, 'todos los codigos son unicos');
+});
+
+test('nextAsesorCodigo gives the next unused code after deleting one (no reuse, no renumber)', () => {
+  let s = logic.createDefaultState();
+  // tres puntos: P01, P02, P03
+  s.asesorPuntos = [
+    { id: 'a', nombre: 'A', tipo: 'normal', estado: 'pendiente', ordenLista: 1, codigo: 'P01' },
+    { id: 'b', nombre: 'B', tipo: 'normal', estado: 'pendiente', ordenLista: 2, codigo: 'P02' },
+    { id: 'c', nombre: 'C', tipo: 'normal', estado: 'pendiente', ordenLista: 3, codigo: 'P03' },
+  ];
+  assert.equal(logic.nextAsesorCodigo(s), 'P04');
+  // borro el del medio (P02): el siguiente sigue siendo max+1 = P04, no reusa P02
+  s.asesorPuntos = s.asesorPuntos.filter((p) => p.codigo !== 'P02');
+  assert.equal(logic.nextAsesorCodigo(s), 'P04');
+});
+
+test('parAsesor builds the pairing key codigo_Ttoma', () => {
+  assert.equal(logic.parAsesor('P03', 2), 'P03_T2');
+});
+
+test('parseFilenameSequence parses tascam token (last digit run, empty prefix)', () => {
+  const seq = logic.parseFilenameSequence('20260609_0001', 'tascam');
+  assert.equal(seq.counter, 1);
+  assert.equal(seq.counterWidth, 4);
+  assert.equal(seq.prefixHint, '', 'prefijo vacio: solo digitos antes del contador');
+  // el token real se expande desde un segmento; aqui validamos el ancho del padding
+  assert.equal(String(seq.counter).padStart(seq.counterWidth, '0'), '0001');
+});
+
+test('normalizeChecklistData backfills missing codigo without changing existing ones', () => {
+  const data = {
+    version: 3,
+    asesorPuntos: [
+      { id: 'a', nombre: 'A', tipo: 'normal', estado: 'pendiente', ordenLista: 1, codigo: 'P05' },
+      { id: 'b', nombre: 'B', tipo: 'normal', estado: 'pendiente', ordenLista: 2 },
+      { id: 'c', nombre: 'C', tipo: 'normal', estado: 'pendiente', ordenLista: 3 },
+    ],
+  };
+  const norm = logic.normalizeChecklistData(data);
+  const byId = Object.fromEntries(norm.asesorPuntos.map((p) => [p.id, p.codigo]));
+  assert.equal(byId.a, 'P05', 'no cambia el codigo existente');
+  assert.equal(byId.b, 'P06', 'backfill: siguiente no usado');
+  assert.equal(byId.c, 'P07', 'backfill: siguiente no usado');
+  assert.equal(new Set(Object.values(byId)).size, 3, 'unicos');
+});
+
+test('registerAsesorFile on a normal point creates TWO files (sony-asesor + tascam-asesor) with same par and distinct real tokens', () => {
   let s = logic.createDefaultState();
   s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
-  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260517111742_0245_D' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'tascam-asesor', lastFilename: '20260609_0001' });
   const punto = s.asesorPuntos[0];
   s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take', autor: 'Bruno' });
   assert.equal(s.mediaFiles.length, 2);
-  assert.equal(s.mediaFiles[0].pairId, s.mediaFiles[1].pairId);
   const sony = s.mediaFiles.find((f) => f.cameraId === 'sony-asesor');
-  const osmo = s.mediaFiles.find((f) => f.cameraId === 'osmo-asesor');
+  const tascam = s.mediaFiles.find((f) => f.cameraId === 'tascam-asesor');
+  assert.ok(sony && tascam);
   assert.equal(sony.fileToken, 'PIB2819');
-  assert.equal(osmo.fileToken, '0246');
+  assert.equal(tascam.fileToken, '0002');
+  assert.notEqual(sony.fileToken, tascam.fileToken);
+  assert.equal(sony.pairId, 'P01_T1');
+  assert.equal(tascam.pairId, 'P01_T1');
+  assert.equal(sony.pairId, punto.codigo + '_T1');
+  assert.equal(sony.audioExterno, undefined);
+  assert.equal(tascam.audioExterno, undefined);
+  assert.equal(tascam.soloAudio, undefined);
   assert.equal(sony.scene, punto.nombre);
+  assert.equal(s.mediaFiles.filter((f) => f.cameraId === 'osmo-asesor').length, 0);
   assert.equal(s.asesorPuntos[0].estado, 'hecho');
+  // ambos contadores avanzaron
+  assert.equal(logic.getCameraSequence(s, 'sony-asesor').nextToken, 'PIB2820');
+  assert.equal(logic.getCameraSequence(s, 'tascam-asesor').nextToken, '0003');
 });
 
-test('registerAsesorFile on a voz point uses only the Osmo audio', () => {
+test('registerAsesorFile on a voz point creates ONE tascam-asesor solo-audio file with a real token', () => {
   let s = logic.createDefaultState();
-  s.asesorPuntos.push({ id: 'voz1', nombre: 'Voz en off', tipo: 'voz', estado: 'pendiente', ordenLista: 99 });
-  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
-  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260517111742_0245_D' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'tascam-asesor', lastFilename: '20260609_0001' });
+  s.asesorPuntos.push({ id: 'voz1', nombre: 'Voz en off', tipo: 'voz', estado: 'pendiente', ordenLista: 99, codigo: 'P09' });
   s = logic.registerAsesorFile(s, { puntoId: 'voz1', kind: 'take', autor: 'Fer' });
   assert.equal(s.mediaFiles.length, 1);
-  assert.equal(s.mediaFiles[0].cameraId, 'osmo-asesor');
-  assert.equal(s.mediaFiles[0].fileToken, '0246');
+  const audio = s.mediaFiles[0];
+  assert.equal(audio.cameraId, 'tascam-asesor');
+  assert.equal(audio.soloAudio, true);
+  assert.equal(audio.audioExterno, undefined);
+  assert.equal(audio.fileToken, '0002');
+  assert.ok(audio.segmentId);
+  assert.equal(audio.fileCounter, 2);
+  assert.equal(audio.pairId, 'P09_T1');
+  assert.equal(s.mediaFiles.filter((f) => f.cameraId === 'sony-asesor').length, 0);
+  assert.equal(s.asesorPuntos.find((p) => p.id === 'voz1').estado, 'hecho');
 });
 
 test('buildExport produces file records with premiere metadata mapping', () => {
@@ -715,27 +785,89 @@ test('buildExport produces file records with premiere metadata mapping', () => {
   assert.equal(a.premiere.Description, 'video · toma buena');
 });
 
-test('buildExport links asesor pairs with the same par id', () => {
+test('buildExport of a normal asesor point emits Sony and Tascam records with same par and real tokens, no audioExterno/audioSugerido', () => {
   let s = logic.createDefaultState();
   s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB4810' });
-  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260520_0090_D' });
-  s = logic.registerAsesorFile(s, { puntoId: s.asesorPuntos[0].id, kind: 'take', autor: 'Fer' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'tascam-asesor', lastFilename: '20260609_0001' });
+  const punto = s.asesorPuntos[0];
+  s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take', autor: 'Fer' });
   const exp = logic.buildExport(s, {});
   assert.equal(exp.archivos.length, 2);
-  assert.equal(exp.archivos[0].par, exp.archivos[1].par);
-  assert.equal(exp.archivos[0].servicio, 'asesor');
+  const sony = exp.archivos.find((a) => a.camaraId === 'sony-asesor');
+  const tascam = exp.archivos.find((a) => a.camaraId === 'tascam-asesor');
+  assert.ok(sony && tascam);
+  // Sony
+  assert.equal(sony.servicio, 'asesor');
+  assert.equal(sony.camaraTipo, 'sony');
+  assert.equal(sony.puntoId, punto.id);
+  assert.equal(sony.par, punto.codigo + '_T1');
+  assert.equal(sony.archivo, 'PIB4811');
+  assert.equal(sony.audioExterno, undefined);
+  assert.equal(sony.audioSugerido, undefined);
+  // Tascam — camara con token real
+  assert.equal(tascam.servicio, 'asesor');
+  assert.equal(tascam.camaraTipo, 'tascam');
+  assert.equal(tascam.puntoId, punto.id);
+  assert.equal(tascam.par, punto.codigo + '_T1');
+  assert.equal(tascam.archivo, '0002');
+  assert.equal(tascam.consecutivo, 2);
+  assert.equal(tascam.ancho, 4);
+  assert.equal(tascam.audioExterno, undefined);
+  assert.equal(tascam.audioSugerido, undefined);
+  assert.equal(tascam.soloAudio, undefined);
+  // mismo par
+  assert.equal(sony.par, tascam.par);
 });
 
-test('asesor pair keeps independent consecutives across two takes', () => {
+test('buildExport of a voz en off record is a Tascam record with real token, soloAudio:true, no audioExterno/audioSugerido', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'tascam-asesor', lastFilename: '20260609_0001' });
+  s.asesorPuntos.push({ id: 'voz1', nombre: 'Voz en off', tipo: 'voz', estado: 'pendiente', ordenLista: 99, codigo: 'P09' });
+  s = logic.registerAsesorFile(s, { puntoId: 'voz1', kind: 'take', autor: 'Fer' });
+  const exp = logic.buildExport(s, {});
+  assert.equal(exp.archivos.length, 1);
+  const a = exp.archivos[0];
+  assert.equal(a.servicio, 'asesor');
+  assert.equal(a.soloAudio, true);
+  assert.equal(a.camaraId, 'tascam-asesor');
+  assert.equal(a.camaraTipo, 'tascam');
+  assert.equal(a.archivo, '0002');
+  assert.equal(a.consecutivo, 2);
+  assert.equal(a.par, 'P09_T1');
+  assert.equal(a.audioExterno, undefined);
+  assert.equal(a.audioSugerido, undefined);
+});
+
+test('asesor normal point keeps advancing both sony-asesor and tascam-asesor consecutives across takes', () => {
   let s = logic.createDefaultState();
   s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB2818' });
-  s = logic.initializeCameraSequence(s, { cameraId: 'osmo-asesor', lastFilename: 'DJI_20260517111742_0245_D' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'tascam-asesor', lastFilename: '20260609_0001' });
   const punto = s.asesorPuntos[0];
   s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take' });
   s = logic.registerAsesorFile(s, { puntoId: punto.id, kind: 'take' });
   assert.equal(logic.getCameraSequence(s, 'sony-asesor').nextToken, 'PIB2821');
-  assert.equal(logic.getCameraSequence(s, 'osmo-asesor').nextToken, '0248');
+  assert.equal(logic.getCameraSequence(s, 'tascam-asesor').nextToken, '0004');
   assert.equal(s.mediaFiles.filter((f) => f.cameraId === 'sony-asesor').length, 2);
+  assert.equal(s.mediaFiles.filter((f) => f.cameraId === 'tascam-asesor').length, 2);
+  const sony2 = s.mediaFiles.filter((f) => f.cameraId === 'sony-asesor')[1];
+  assert.equal(sony2.pairId, punto.codigo + '_T2');
+});
+
+test('buildExport stays version 1 with asesor and video records present', () => {
+  let s = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
+  s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: s.espacios[0].id, kind: 'take' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260520_PIB4810' });
+  s = logic.initializeCameraSequence(s, { cameraId: 'tascam-asesor', lastFilename: '20260609_0001' });
+  s = logic.registerAsesorFile(s, { puntoId: s.asesorPuntos[0].id, kind: 'take' });
+  const exp = logic.buildExport(s, {});
+  assert.equal(exp.version, 1);
+  const video = exp.archivos.find((a) => a.servicio === 'video');
+  assert.equal(video.archivo, 'PIB2819');
+  assert.equal(video.servicio, 'video');
+  assert.equal(video.soloAudio, undefined, 'el registro de video no cambia de forma');
+  assert.equal(video.puntoId, undefined);
+  assert.equal(video.par, null, 'video normal no tiene par de asesor');
 });
 
 // ─── F1: biblioteca de datos ──────────────────────────────────────────────────

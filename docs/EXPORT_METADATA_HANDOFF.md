@@ -9,7 +9,7 @@
 
 ## 1. De dónde sale el JSON
 
-En `checklist.html`, pestaña **Edición**, botón **"Exportar"** → descarga `bitacora-<folio>.json`. El programa local recibe ese archivo + las carpetas de video (Sony, Osmo, drone). No necesita internet ni API.
+En `checklist.html`, pestaña **Edición**, botón **"Exportar"** → descarga `bitacora-<folio>.json`. El programa local recibe ese archivo + las carpetas de video (Sony, Osmo, drone) y, para el asesor, las carpetas de la Sony FX30 y de la Tascam (audio). No necesita internet ni API.
 
 (El export se genera con `IAVChecklistLogic.buildExport(state, meta)` en `frontend/checklist-logic.js` — esa función es la fuente de verdad del esquema. Si cambia el esquema, cambia ahí.)
 
@@ -29,18 +29,19 @@ En `checklist.html`, pestaña **Edición**, botón **"Exportar"** → descarga `
       "ancho": 4,                     // dígitos del contador (padding), p.ej. 0091
       "ejemploNombre": "20260520_PIB2818", // patrón real del nombre (lo que tecleó el camarógrafo al iniciar)
       "camara": "Sony principal",     // etiqueta legible
-      "camaraId": "sony-main",        // sony-main | osmo-pocket-3 | drone-dji | sony-asesor | osmo-asesor
-      "camaraTipo": "sony",           // "sony" | "dji"  (define cómo se ve el nombre del archivo)
+      "camaraId": "sony-main",        // sony-main | osmo-pocket-3 | drone-dji | sony-asesor | tascam-asesor
+      "camaraTipo": "sony",           // "sony" | "dji" | "tascam"  (define cómo se ve el nombre del archivo)
       "servicio": "video",            // "video" | "drone" | "asesor"
       "escena": "Recamara principal",
       "escenaRuta": "Recamara principal > Bano principal", // ruta con subespacios
-      "piso": "Piso 2",               // null en drone/asesor
+      "piso": "Piso 2",               // null en drone; en asesor escena/escenaRuta/piso describen el punto
       "toma": 1,                      // shotNumber (n-ésima toma de esa escena); null en descartes
       "tipo": "take",                 // "take" | "discard" | "omitted"
       "motivoDescarte": null,         // "failed" | "unrelated" | "empty" (solo si tipo=discard)
       "buena": true,                  // marcada como buena
       "nota": "se trabo al inicio",   // comentario para edición
-      "par": null,                    // ASESOR: liga el par Sony↔Osmo (mismo par id = misma toma)
+      "par": null,                    // ASESOR: liga el par Sony↔Tascam (= codigo+"_T"+toma, p. ej. P03_T2)
+      "soloAudio": false,             // ASESOR: true en la voz en off (registro Tascam sin par Sony)
       "autor": "Bruno",
       "hora": "2026-06-05T03:11:38.636Z",
 
@@ -102,7 +103,7 @@ En `checklist.html`, pestaña **Edición**, botón **"Exportar"** → descarga `
   - `take` = toma real (puede ser `buena` o no).
   - `discard` = la cámara SÍ creó archivo pero no sirve (`motivoDescarte`: `failed` fallida, `unrelated` no relacionado/basura, `empty` vacío/accidental). Útil para que el editor las ignore o las borre.
   - `omitted` = archivo que existe en la tarjeta pero quedó sin identificar (escena "Sin identificar").
-- `par` (asesores): un punto normal se graba con **dos cámaras a la vez** (Sony video + Osmo audio). Los dos archivos comparten el mismo `par`. El editor usa el **video de Sony** y le pega el **audio de la Osmo** del mismo `par`. La voz en off es solo Osmo (sin par Sony).
+- **Asesor (Sony + Tascam):** el asesor se graba con **dos cámaras a la vez** — la Sony FX30 (video, `camaraId "sony-asesor"`, `camaraTipo "sony"`) y la Tascam (audio, `camaraId "tascam-asesor"`, `camaraTipo "tascam"`), ambas `servicio "asesor"`. Por eso un punto normal produce **dos registros** en `archivos[]`, cada uno con su token real (`archivo`/`consecutivo`/`ancho`/`ejemploNombre`), su `escena`/`escenaRuta`/`piso` (que describen el punto del asesor), su `toma` y el **mismo `par`** (= `codigo del punto + "_T" + toma`, p. ej. `P03_T2`). El editor usa el **video de la Sony** y le pega el **audio de la Tascam** del mismo `par`. La **voz en off** es un único registro de Tascam con `soloAudio: true` (sin par de Sony). La Tascam expande su token de su propia secuencia, igual que Sony/DJI; su `camaraTipo "tascam"` es **nuevo**. Se retiraron los campos `audioExterno`/`audioSugerido`: el audio ya no se sugiere por nombre, se empareja por token real.
 
 ### §2a. Vocabulario del modo guiado
 
@@ -228,6 +229,7 @@ El nombre real del archivo **no se conoce exacto** en checklist (la fecha y, en 
 |---|---|---|---|---|
 | Sony | `sony` | `PIB2819` | `20260520_PIB2819.MP4` | el nombre **contiene** `archivo` (`PIB2819`) |
 | Osmo / Drone (DJI) | `dji` | `0091` | `DJI_20260520_0091_D.MP4` | el nombre **contiene** `archivo` (el contador con padding, `0091`) |
+| Tascam (asesor, audio) | `tascam` | `0001` | `20260609_0001.WAV` | el nombre **contiene** `archivo` (la corrida de dígitos, `0001`) |
 
 **Algoritmo recomendado por carpeta:**
 1. El usuario asigna cada carpeta a un `camaraId`/`camaraTipo` (carpeta Sony, carpeta Osmo, carpeta Drone).
@@ -272,7 +274,7 @@ Si en vez de embeber XMP prefieres el flujo nativo de Premiere: genera un archiv
 ## 6. Casos borde a manejar
 - **Descartes** (`tipo:"discard"`): igual se escriben (con `Good=False` y `Description` indicando el motivo) para que el editor sepa que existen pero no sirven. O el programa puede ofrecer moverlos a una subcarpeta `_descartes/`.
 - **`omitted`** (sin identificar): escena vacía; márcalo o repórtalo, no adivines la escena.
-- **Pares de asesor** (`par`): escribe ambos (video Sony + audio Osmo). Opcional: agrega al `Comment` el token del par contrario para que el editor sepa qué audio va con qué video.
+- **Pares de asesor** (`par`): un punto normal trae dos registros con el mismo `par` — video Sony (`camaraTipo "sony"`) + audio Tascam (`camaraTipo "tascam"`). Escribe ambos. Opcional: agrega al `Comment` el token del par contrario para que el editor sepa qué audio va con qué video. La **voz en off** llega como un único registro Tascam con `soloAudio: true` (sin par de Sony). El audio se empareja por **token real** (el nombre del archivo contiene el token), no por nombre sugerido; ya no existen `audioExterno`/`audioSugerido`.
 - **Varias cámaras / tramos**: el `archivo` (token) ya es único por cámara; no mezcles carpetas.
 - **`version` del esquema**: si `version` sube, revisa cambios antes de procesar.
 - **Campos del modo guiado ausentes**: si un archivo tiene `tipoToma: null` y `movimiento: null`, simplemente ignóralos. La app de metadatos escribe el bloque `premiere` tal cual; los campos de guía son para uso editorial, no para exiftool.

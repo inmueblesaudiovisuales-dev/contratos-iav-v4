@@ -1740,6 +1740,7 @@ function renderPropertyLanding() {
   return `<div class="landing">
     ${groups}
     ${renderDroneSessionCard()}
+    ${renderAsesorSessionCard()}
     <button class="addroom" onclick="abrirSetup()"><i class="ti ti-plus"></i> Agregar cuarto · Modo cuartos</button>
   </div>`;
 }
@@ -1770,6 +1771,33 @@ function renderDroneSessionCard() {
       <span class="room-info">
         <span class="room-name"><i class="ti ti-drone drone-session-ic"></i>Sesión de drone</span>
         <span class="drone-session-sub">${sugeridas} toma${sugeridas === 1 ? '' : 's'} sugerida${sugeridas === 1 ? '' : 's'} · ${grabadas} grabada${grabadas === 1 ? '' : 's'}</span>
+      </span>
+      <i class="ti ti-chevron-right room-chev"></i>
+    </button>
+  </section>`;
+}
+
+// F76 — ¿se muestra el acceso a la "Sesión de asesor" en la lista de captura?
+// Solo si la propiedad incluye el servicio de asesor y el operador es Bruno. NO se
+// usa loopModesForRole().includes('asesor') porque ningún rol trae asesor en su
+// loop (por eso el dron sí aparece y el asesor no aparecería de otra forma).
+function sesionAsesorAplica() {
+  return Boolean(state.servicios && state.servicios.asesor) && isBruno();
+}
+
+// F76 — Tarjeta única "Sesión de asesor", espejo de la de drone. Un toque entra a
+// la pantalla de captura del asesor (entrarSesionAsesor). Conteo: puntos definidos
+// y puntos ya grabados. Fila ≥44px, ícono ti-microphone-2 + chevron.
+function renderAsesorSessionCard() {
+  if (!sesionAsesorAplica()) return '';
+  const puntos = state.asesorPuntos || [];
+  const total = puntos.length;
+  const grabados = puntos.filter((p) => p.estado === 'hecho').length;
+  return `<section class="floor drone-session-wrap">
+    <button class="room drone-session-card" onclick="entrarSesionAsesor()">
+      <span class="room-info">
+        <span class="room-name"><i class="ti ti-microphone-2 drone-session-ic"></i>Sesión de asesor</span>
+        <span class="drone-session-sub">${total} punto${total === 1 ? '' : 's'} · ${grabados} grabado${grabados === 1 ? '' : 's'}</span>
       </span>
       <i class="ti ti-chevron-right room-chev"></i>
     </button>
@@ -2629,7 +2657,7 @@ function coberturaNoAplica(id) {
 }
 
 function asesorFilesForPunto(puntoId) {
-  return (state.mediaFiles || []).filter((f) => (f.cameraId === 'sony-asesor' || f.cameraId === 'osmo-asesor') && f.targetId === puntoId);
+  return (state.mediaFiles || []).filter((f) => (f.cameraId === 'sony-asesor' || f.cameraId === 'tascam-asesor') && f.targetId === puntoId);
 }
 
 function renderAsesorCapture() {
@@ -2640,18 +2668,19 @@ function renderAsesorCapture() {
   const punto = activeTarget();
   const esVoz = punto.tipo === 'voz';
   const sony = logic.getCameraSequence(state, 'sony-asesor');
-  const osmo = logic.getCameraSequence(state, 'osmo-asesor');
+  const tascam = logic.getCameraSequence(state, 'tascam-asesor');
   const files = asesorFilesForPunto(punto.id);
   const pairsMap = {};
   files.forEach((f) => { (pairsMap[f.pairId] = pairsMap[f.pairId] || []).push(f); });
   const pairList = Object.values(pairsMap);
   const goodCount = pairList.filter((p) => p[0].kind !== 'discard' && p.some((f) => f.good)).length;
-  const nextLabel = esVoz ? (osmo.nextToken || '—') : `${sony.nextToken || '—'} + ${osmo.nextToken || '—'}`;
+  const nextLabel = esVoz ? (tascam.nextToken || '—') : `${sony.nextToken || '—'} + ${tascam.nextToken || '—'}`;
   return `
   <section class="cap-focus">
+    <button class="back-prop" onclick="salirSesionAsesor()"><i class="ti ti-chevron-left"></i> Captura</button>
     <div class="cap-focus-head">
       <div class="cap-focus-copy">
-        <span class="cap-floor"><i class="ti ti-microphone-2"></i>${esVoz ? 'Voz en off · solo audio' : 'Punto · Sony + Osmo'}</span>
+        <span class="cap-floor"><i class="ti ti-microphone-2"></i>${esVoz ? 'Voz en off · solo audio' : 'Punto · Sony + Tascam'}</span>
         <h2 class="cap-room">${esc(punto.nombre)}</h2>
       </div>
       <button class="cap-focus-opts" onclick="abrirAccionesFoco()" aria-label="Opciones del punto"><i class="ti ti-dots-vertical"></i></button>
@@ -2659,7 +2688,7 @@ function renderAsesorCapture() {
   </section>
   <div class="cap-cam asesor-cam">
     ${esVoz ? '' : asesorCamRow('Sony FX30', 'video', sony, 'sony-asesor')}
-    ${asesorCamRow('Osmo + DJI Mic', 'audio', osmo, 'osmo-asesor')}
+    ${asesorCamRow('Tascam (DJI Mic)', 'audio', tascam, 'tascam-asesor')}
   </div>
   ${renderCapNav('punto', 'abrirCambiarPunto()')}
   <section class="cap-takes">
@@ -2684,18 +2713,18 @@ function asesorCamRow(label, role, seq, cameraId) {
 function renderAsesorPairs(pairList) {
   return pairList.slice().reverse().map((pair, i) => {
     const sony = pair.find((f) => f.cameraId === 'sony-asesor');
-    const osmo = pair.find((f) => f.cameraId === 'osmo-asesor');
+    const tascam = pair.find((f) => f.cameraId === 'tascam-asesor');
     const isDiscard = pair[0].kind === 'discard';
     const good = pair.some((f) => f.good);
-    const target = sony || osmo;
-    const tokens = sony ? `${esc(sony.fileToken)} <span class="pair-plus">+</span> ${esc(osmo.fileToken)}` : esc(osmo.fileToken);
+    const target = sony || tascam;
+    const tokens = sony ? `${esc(sony.fileToken)} <span class="pair-plus">+</span> ${esc(tascam.fileToken)}` : esc(tascam.fileToken);
     const right = isDiscard
       ? `<span class="cap-badge fail"><i class="ti ti-x"></i>${esc(discardShort(pair[0]))}</span>`
       : good ? `<span class="cap-badge good"><i class="ti ti-star-filled"></i>buena</span>`
              : `<button class="cap-mark" onclick="toggleBuena('${target.id}')"><i class="ti ti-star"></i>Marcar buena</button>`;
     const note = pair.map((f) => f.note).filter(Boolean)[0];
     return `<div class="cap-take${i === 0 ? ' latest' : ''}">
-      <button class="cap-take-main" onclick="agregarNotaArchivo('${target.id}')"><span class="cap-tok asesor-tok">${tokens}</span><span class="cap-take-meta">${sony ? 'Sony + Osmo' : 'Solo audio'}${pair[0].author ? ' · ' + esc(pair[0].author) : ''}${note ? ' · ' + esc(note) : ''}</span></button>
+      <button class="cap-take-main" onclick="agregarNotaArchivo('${target.id}')"><span class="cap-tok asesor-tok">${tokens}</span><span class="cap-take-meta">${sony ? 'Sony + Tascam' : 'Solo audio'}${pair[0].author ? ' · ' + esc(pair[0].author) : ''}${note ? ' · ' + esc(note) : ''}</span></button>
       ${right}</div>`;
   }).join('');
 }
@@ -2703,7 +2732,7 @@ function renderAsesorPairs(pairList) {
 function registrarAsesor(puntoId, kind) {
   const punto = (state.asesorPuntos || []).find((p) => p.id === puntoId);
   if (!punto) return;
-  const cams = punto.tipo === 'voz' ? ['osmo-asesor'] : ['sony-asesor', 'osmo-asesor'];
+  const cams = punto.tipo === 'voz' ? ['tascam-asesor'] : ['sony-asesor', 'tascam-asesor'];
   for (let i = 0; i < cams.length; i++) {
     if (!logic.getCameraSequence(state, cams[i]).segment) return abrirSecuenciaAsesor(cams[i]);
   }
@@ -2841,7 +2870,7 @@ function abrirSecuenciaAsesor(cameraId) {
   abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-body">
       <div class="sequence-alert">Escribe el archivo actual de la cámara: el que vas a grabar ahora. La secuencia arranca en ese número.</div>
-      <input class="field" id="last-filename-asesor" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
+      <input class="field" id="last-filename-asesor" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'tascam' ? '20260520_0001' : camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
       <button class="primary block" style="width:100%" onclick="iniciarSecuenciaAsesor('${cameraId}')">Iniciar</button>
     </div>`);
   setTimeout(() => { const i = document.getElementById('last-filename-asesor'); if (i) { i.focus(); const v = i.value; const m = v.match(/\d+$/); if (m) i.setSelectionRange(v.length - m[0].length, v.length); else i.setSelectionRange(v.length, v.length); } }, 50);
@@ -3147,6 +3176,30 @@ function entrarSesionDrone() {
   capturaScreen = 'cuarto';
   activeView = 'captura';
   scheduleSave();
+  render();
+}
+
+// F76 — entra a la sesión de asesor desde la lista de captura: fija modo asesor,
+// el primer punto como target activo y abre la vista de Captura. Espejo de
+// entrarSesionDrone.
+function entrarSesionAsesor() {
+  state.modoActual = 'asesor';
+  localStorage.setItem(laneKey(), 'asesor');
+  const puntos = (state.asesorPuntos || []).slice().sort((a, b) => (a.ordenLista || 0) - (b.ordenLista || 0));
+  if (puntos.length) {
+    activeRoomId = puntos[0].id;
+    localStorage.setItem(roomKey(), activeRoomId);
+  }
+  capturaScreen = 'cuarto';
+  activeView = 'captura';
+  scheduleSave();
+  render();
+}
+
+// F76 — sale de la sesión de asesor de vuelta a la lista de captura. Espejo de
+// salirSesionDrone.
+function salirSesionAsesor() {
+  capturaScreen = 'lista';
   render();
 }
 

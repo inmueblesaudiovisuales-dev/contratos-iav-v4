@@ -275,6 +275,36 @@ generar prompt, pegar el JSON y revisar la propuesta agrupada por cuarto está e
 
 ---
 
+## Asesor con Tascam como cámara (F75–F77, rama checklist-asesor-tascam-2026-06-09)
+
+El modo asesor graba al asesor frente a cámara: video de la Sony FX30 más el audio de la Tascam. El diseño actual
+trata la **Tascam como una cámara más**, con su propia secuencia de nombre de archivo y su token real, igual que
+la Sony o el dron.
+
+- **Cámaras del asesor.** `sony-asesor` (Sony FX30, video) y `tascam-asesor` (Tascam, audio; `kind:'tascam'`,
+  `role:'audio'`, `mode:'asesor'`). La `tascam-asesor` reemplaza a `osmo-asesor` como dispositivo de audio del
+  asesor y tiene su propia secuencia (segmento): el operador teclea el primer nombre de archivo y la app numera
+  los siguientes. El token real se expande de la secuencia (`parseFilenameSequence` soporta `kind:'tascam'`: la
+  última corrida de dígitos es el contador; `formatFileToken` lo formatea).
+- **Par por código de punto y toma.** Cada punto de asesor tiene un `codigo` corto y estable (`P01`, `P02`, …,
+  asignado al crear, no se renumera). Un punto normal crea **dos** mediaFiles —`sony-asesor` (video) y
+  `tascam-asesor` (audio)—, ambos con su token real, ligados por `par = codigo + "_T" + toma` (p. ej. `P03_T2`),
+  idéntico en los dos registros.
+- **Voz en off = solo audio.** Una toma de voz en off crea un único mediaFile de `tascam-asesor` con
+  `soloAudio:true` (sin registro de Sony en esa toma).
+- **Emparejamiento por token real.** Se retiraron `audioExterno`/`audioSugerido`: el audio ya no se sugiere por
+  nombre ni se renombra al ingestar; se empareja por token real (el nombre del archivo CONTIENE el token), igual
+  que Sony y DJI. En el export el registro Tascam sale con `camaraTipo "tascam"` (nuevo) y `servicio "asesor"`.
+- **Entrada como sesión por tarjeta.** El modo asesor se alcanza con una tarjeta "Sesión de asesor" en la lista
+  de captura, espejo de la sesión de dron, gateada por el servicio asesor activo (`state.servicios.asesor`) y por
+  el rol operador (Bruno). El export sigue en `version: 1`.
+
+Punteros: `registerAsesorFile` (crea la pareja o la voz en off) y `buildExport` (emite los registros con
+`camaraTipo`, `par` y `soloAudio`) viven en `frontend/checklist-logic.js`; `entrarSesionAsesor` (entrada por
+tarjeta) y `renderAsesorCapture` (captura con la secuencia de la Tascam) están en `frontend/checklist.html`.
+
+---
+
 ## Diferencias clave con v3.0
 
 Ver la tabla comparativa en `docs/PROYECTO.md` → "Diferencias clave con v3.0".
