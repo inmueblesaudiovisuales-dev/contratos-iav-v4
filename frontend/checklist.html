@@ -1107,6 +1107,23 @@
       .dictado-bar .btn { flex: none; }
     }
 
+    /* Rangos de archivo (foto y 360) — entrada manual de primer/ultimo archivo */
+    .rangos-bar { display: flex; flex-direction: column; gap: var(--sp-3);
+      padding: var(--sp-4); margin-bottom: var(--sp-3);
+      border: 1px solid var(--line); background: var(--card);
+      border-radius: var(--radius); box-shadow: var(--el-1); }
+    .rangos-copy strong { display: block; font-size: var(--ts-base); font-weight: 600; color: var(--ink-1); line-height: 1.25; }
+    .rangos-copy span { display: block; font-size: var(--ts-cap); color: var(--ink-2); margin-top: var(--sp-1); line-height: 1.4; }
+    .rango-fila { display: flex; flex-direction: column; gap: var(--sp-2); }
+    .rango-cam { font-size: var(--ts-cap); font-weight: 600; color: var(--ink-1); }
+    .rango-input { min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--tint-line);
+      border-radius: var(--radius-sm, 8px); background: var(--bg, #fff); color: var(--ink-1); font-size: var(--ts-base); }
+    @media (min-width: 560px) {
+      .rango-fila { flex-direction: row; align-items: center; }
+      .rango-cam { flex: 0 0 130px; }
+      .rango-input { flex: 1 1 auto; }
+    }
+
     /* F70 — Dictado: pantalla de importar (sheet a pantalla completa) */
     .sheet.full { max-height: 100dvh; height: 100dvh; border-radius: 0; padding: 0;
       display: flex; flex-direction: column; }
@@ -1502,11 +1519,67 @@ function bootDesdeEspejo() {
   }
 }
 
+// Extrae el FILE_ID de una URL de Drive (formatos /d/<id> o ?id=<id>).
+function extraerIdDrive(url) {
+  const m = String(url || '').match(/\/d\/([^/?&]+)/) || String(url || '').match(/[?&]id=([^&]+)/);
+  return m ? m[1] : '';
+}
+
+// Trae los datos de negocio del contrato (carpeta de entregables, logos, paquete) y deja
+// meta.entrega/meta.logo/meta.negocio listos. La app NUNCA toca la DB; este fetch es el unico
+// puente y vive aqui, en checklist.html (que si esta conectado). Degrada en silencio: si no
+// hay red o el token es invalido, meta se queda sin esos bloques y el export sale igual.
+async function enriquecerMetaDesdeContrato() {
+  if (!TOKEN) return;
+  try {
+    const data = await apiGet({ action: 'obtenerContrato' });
+    if (!data || data.error) return;
+    const prop = (data.propiedades && data.propiedades[0]) || {};
+
+    // entrega: solo si ya existe carpeta (se crea al firmar). Sin firmar -> se omite.
+    const carpetaId = prop.carpeta_entregables_id || '';
+    if (carpetaId || data.carpetaEntregablesUrl) {
+      meta.entrega = {
+        carpetaEntregablesId: carpetaId || null,
+        carpetaEntregablesUrl: data.carpetaEntregablesUrl || (carpetaId ? 'https://drive.google.com/drive/folders/' + carpetaId : null),
+        carpetaControlId: prop.carpeta_control_id || null,
+      };
+    }
+
+    // logo: preferir logos_json (ids confiables); si no, sacar el id de logo_url con regex.
+    let todos = [];
+    if (prop.logos_json) {
+      try {
+        const parsed = JSON.parse(prop.logos_json);
+        if (Array.isArray(parsed)) {
+          todos = parsed.map((l) => ({
+            id: l.id || l.fileId || extraerIdDrive(l.url || ''),
+            nombre: l.nombre || l.name || 'logo',
+          })).filter((l) => l.id);
+        }
+      } catch (_) { /* ignora json malformado */ }
+    }
+    if (!todos.length && prop.logo_url) {
+      const id = extraerIdDrive(prop.logo_url);
+      if (id) todos = [{ id, nombre: 'logo' }];
+    }
+    if (todos.length) {
+      meta.logo = { url: 'https://drive.google.com/uc?export=download&id=' + todos[0].id, todos };
+    }
+
+    // negocio: texto guia (no se parsea), el paquete ya viene con nombre.
+    if (prop.paquete || prop.entregables) {
+      meta.negocio = { paquete: prop.paquete || '', entregablesTexto: prop.entregables || '' };
+    }
+  } catch (_) { /* sin red / token invalido: el export sale sin estos bloques */ }
+}
+
 async function cargar() {
   try {
     const data = await apiGet({ action: 'obtenerChecklist' });
     if (data.error) return mostrarError(data.error);
     meta = { folio: data.folio || '', nombreCliente: data.nombreCliente || '' };
+    await enriquecerMetaDesdeContrato();
     const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     const servidor = logic.normalizeChecklistData(payload);
     currentRev = data.rev || 0;
@@ -5412,6 +5485,47 @@ function renderReviewItem(item) {
   return `<div class="review-item"><span>—</span><div>${item}</div></div>`;
 }
 
+// Dispositivos de rango manual: foto y 360 (servicios, no camaras de state.cameras).
+// Catalogo fijo condicionado por servicios activos. Los ids son el contrato con la app.
+function camarasRangoManual() {
+  const cat = [];
+  const svc = state.servicios || {};
+  if (svc.foto) cat.push({ id: 'foto-sony', label: 'Fotos Sony' });
+  if (svc.t360) cat.push({ id: 'insta360', label: 'Insta360' });
+  if (svc.t360 && svc.drone) cat.push({ id: 'drone-360', label: 'Drone 360' });
+  return cat;
+}
+
+function setRangoManual(cameraId, campo, valor) {
+  if (!state.rangosManuales) state.rangosManuales = {};
+  const actual = state.rangosManuales[cameraId] || { primer: '', ultimo: '' };
+  actual[campo] = (valor || '').trim();
+  if (!actual.primer && !actual.ultimo) {
+    delete state.rangosManuales[cameraId];
+  } else {
+    state.rangosManuales[cameraId] = actual;
+  }
+  scheduleSave();
+}
+
+function renderRangosManuales() {
+  const cams = camarasRangoManual();
+  if (!cams.length) return '';
+  return `<div class="rangos-bar">
+    <div class="rangos-copy"><strong>Rangos de archivo (foto y 360)</strong><span>Opcional. Primer y último archivo de cada dispositivo que no se registra toma por toma.</span></div>
+    ${cams.map((c) => {
+      const r = (state.rangosManuales || {})[c.id] || {};
+      return `<div class="rango-fila">
+        <span class="rango-cam">${esc(c.label || c.id)}</span>
+        <input type="text" class="rango-input" placeholder="primer archivo" value="${esc(r.primer || '')}"
+          onchange="setRangoManual('${c.id}', 'primer', this.value)">
+        <input type="text" class="rango-input" placeholder="último archivo" value="${esc(r.ultimo || '')}"
+          onchange="setRangoManual('${c.id}', 'ultimo', this.value)">
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 function renderExportBar() {
   const n = (state.mediaFiles || []).length;
   return `<div class="export-bar">
@@ -5421,7 +5535,8 @@ function renderExportBar() {
       <button class="primary" onclick="exportarBitacora()"><i class="ti ti-download"></i> Exportar</button>
     </div>
   </div>
-  ${renderDictadoBar()}`;
+  ${renderDictadoBar()}
+  ${renderRangosManuales()}`;
 }
 
 function renderDictadoBar() {
@@ -5435,6 +5550,8 @@ function renderDictadoBar() {
 }
 
 function exportarBitacora() {
+  meta.token = TOKEN;
+  meta.rev = currentRev;
   const data = logic.buildExport(state, meta);
   if (!data.totalArchivos) return showToast('Aún no hay archivos para exportar');
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
