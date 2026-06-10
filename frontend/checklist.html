@@ -1579,7 +1579,9 @@ async function cargar() {
     const data = await apiGet({ action: 'obtenerChecklist' });
     if (data.error) return mostrarError(data.error);
     meta = { folio: data.folio || '', nombreCliente: data.nombreCliente || '' };
-    await enriquecerMetaDesdeContrato();
+    // Sin await: el enriquecimiento es opcional y solo se lee al exportar (no en el render).
+    // Bloquear el arranque por el costaria hasta el timeout de apiGet (10 s) en red lenta.
+    enriquecerMetaDesdeContrato();
     const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     const servidor = logic.normalizeChecklistData(payload);
     currentRev = data.rev || 0;

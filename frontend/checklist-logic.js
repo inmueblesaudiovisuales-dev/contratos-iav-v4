@@ -3989,11 +3989,14 @@
     porCamara.forEach((files, cameraId) => {
       const cam = camById(cameraId);
       const ordenados = files.slice().sort((a, b) => (a.fileCounter || 0) - (b.fileCounter || 0));
+      // El rango es por nombre de archivo: solo cuentan los que tienen fileToken (un
+      // omitted/discard sin token no debe volver null el primer/ultimo si hay tomas con token).
+      const conToken = ordenados.filter((f) => f.fileToken);
       grabaciones.push({
         camaraId: cameraId,
         camara: cam.label || cameraId,
-        primerArchivo: ordenados[0].fileToken || null,
-        ultimoArchivo: ordenados[ordenados.length - 1].fileToken || null,
+        primerArchivo: conToken.length ? conToken[0].fileToken : null,
+        ultimoArchivo: conToken.length ? conToken[conToken.length - 1].fileToken : null,
         conteo: ordenados.length,
       });
     });

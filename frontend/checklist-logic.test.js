@@ -3909,3 +3909,19 @@ test('buildExport incluye rangos manuales para camaras sin tomas logueadas', () 
   assert.equal(g.ultimoArchivo, 'DSC00260');
   assert.equal(g.conteo, null);
 });
+
+test('grabaciones: primer/ultimo salen de archivos con fileToken aunque haya omitted sin token', () => {
+  const state = logic.normalizeChecklistData({
+    version: 3, espacios: [],
+    mediaFiles: [
+      { id: 'a', cameraId: 'sony-main', fileCounter: 5, kind: 'omitted' }, // sin fileToken
+      { id: 'b', cameraId: 'sony-main', fileToken: 'C0012', fileCounter: 12, kind: 'take' },
+      { id: 'c', cameraId: 'sony-main', fileToken: 'C0040', fileCounter: 40, kind: 'discard' },
+    ],
+  });
+  const out = logic.buildExport(state, { folio: 'F', nombreCliente: 'C' });
+  const g = out.grabaciones.find((x) => x.camaraId === 'sony-main');
+  assert.equal(g.primerArchivo, 'C0012');
+  assert.equal(g.ultimoArchivo, 'C0040');
+  assert.equal(g.conteo, 3);
+});
