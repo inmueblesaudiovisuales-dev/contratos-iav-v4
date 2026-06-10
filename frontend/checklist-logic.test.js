@@ -324,7 +324,7 @@ test('toggleMediaFavorite marca favorite y fuerza good', () => {
   assert.equal(f2.good, true); // al desmarcar favorite NO quita good
 });
 
-test('buildExport incluye favorita y mantiene version 1', () => {
+test('buildExport incluye favorita y usa version 2', () => {
   let state = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
   const salaId = state.espacios[0].id;
   state = logic.initializeCameraSequence(state, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
@@ -333,7 +333,7 @@ test('buildExport incluye favorita y mantiene version 1', () => {
   state = logic.toggleMediaFavorite(state, id);
 
   const out = logic.buildExport(state, { folio: 'F1', nombreCliente: 'X' });
-  assert.equal(out.version, 1);
+  assert.equal(out.version, 2);
   const archivo = out.archivos.find((a) => a.favorita === true);
   assert.ok(archivo, 'el export incluye un archivo favorito');
   assert.equal(archivo.premiere.Favorite, true);
@@ -853,7 +853,7 @@ test('asesor normal point keeps advancing both sony-asesor and tascam-asesor con
   assert.equal(sony2.pairId, punto.codigo + '_T2');
 });
 
-test('buildExport stays version 1 with asesor and video records present', () => {
+test('buildExport stays version 2 with asesor and video records present', () => {
   let s = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
   s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
   s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: s.espacios[0].id, kind: 'take' });
@@ -861,7 +861,7 @@ test('buildExport stays version 1 with asesor and video records present', () => 
   s = logic.initializeCameraSequence(s, { cameraId: 'tascam-asesor', lastFilename: '20260609_0001' });
   s = logic.registerAsesorFile(s, { puntoId: s.asesorPuntos[0].id, kind: 'take' });
   const exp = logic.buildExport(s, {});
-  assert.equal(exp.version, 1);
+  assert.equal(exp.version, 2);
   const video = exp.archivos.find((a) => a.servicio === 'video');
   assert.equal(video.archivo, 'PIB2819');
   assert.equal(video.servicio, 'video');
@@ -1263,10 +1263,10 @@ test('F3: guideCoverage respeta guideSkip (excluye sugerencias marcadas no aplic
 
 // ─── F4: export enriquecido ────────────────────────────────────────────────────
 
-test('F4: buildExport version sigue siendo 1', () => {
+test('F4: buildExport version es 2', () => {
   const state = logic.createDefaultState();
   const exp = logic.buildExport(state, {});
-  assert.equal(exp.version, 1);
+  assert.equal(exp.version, 2);
 });
 
 test('F4: buildExport incluye resumenGuia y guionEdicion', () => {
@@ -1989,7 +1989,7 @@ test('F15: una toma LIBRE puede registrarse con shotType+movement sin sugerencia
 
   // El export mantiene version:1 y refleja los labels de plano+movimiento.
   const out = logic.buildExport(state, { folio: 'X', nombreCliente: 'Y' });
-  assert.equal(out.version, 1);
+  assert.equal(out.version, 2);
   const exported = out.archivos.find((a) => a.tipoToma === 'detalle');
   assert.equal(exported.movimientoLabel, 'Travel');
 });
@@ -2084,7 +2084,7 @@ test('F17: suggestionsForTarget en drone con sujeto sin match conserva el compor
   assert.deepEqual(drone.map((s) => s.id), previo.map((s) => s.id), 'cae al comportamiento previo por tipo de propiedad');
 });
 
-test('F17 (C): buildExport lleva el label aereo por archivo de drone sin cambiar version:1', () => {
+test('F17 (C): buildExport lleva el label aereo por archivo de drone (version:2)', () => {
   // F38 — el drone registra contra el target unico de sesion (drone-session).
   let state = logic.createDefaultState();
   state = logic.initializeCameraSequence(state, { cameraId: 'drone-dji', lastFilename: 'DJI_0245' });
@@ -2099,7 +2099,7 @@ test('F17 (C): buildExport lleva el label aereo por archivo de drone sin cambiar
   });
 
   const exp = logic.buildExport(state, { folio: 'IAV-1', nombreCliente: 'Cliente X' });
-  assert.equal(exp.version, 1, 'version sigue siendo 1');
+  assert.equal(exp.version, 2, 'version subio a 2');
 
   const archivo = exp.archivos.find((a) => a.tipoToma === 'orbita');
   assert.ok(archivo, 'hay un archivo de drone con shotType aereo');
@@ -2367,7 +2367,7 @@ test('F19: searchSpaces deduplica espacios repetidos entre pisos/tipos', () => {
 test('F19: cambios aditivos: version export sigue en 1 y normalizeChecklistData carga estado viejo', () => {
   const state = logic.createDefaultState();
   const exp = logic.buildExport(state);
-  assert.equal(exp.version, 1, 'el export sigue en version 1');
+  assert.equal(exp.version, 2, 'el export subio a version 2');
   const norm = logic.normalizeChecklistData({ espacios: [], servicios: {} });
   assert.ok(norm, 'normalizeChecklistData sigue cargando estado viejo');
 });
@@ -2500,12 +2500,12 @@ test('F28: export de reveal con pared izq lleva token y campo discreto', () => {
   assert.ok(a.premiere.Description.includes('Reveal · pared izq'), a.premiere.Description);
 });
 
-test('F28: buildExport version sigue siendo 1 con sentido/pared', () => {
+test('F28: buildExport version es 2 con sentido/pared', () => {
   let s = logic.addSpacesFromText(logic.createDefaultState(), 'Sala');
   s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260520_PIB2818' });
   s = logic.registerMediaFile(s, { cameraId: 'sony-main', targetId: s.espacios[0].id, kind: 'take', movement: 'push_pull', sentido: 'out' });
   const exp = logic.buildExport(s, {});
-  assert.equal(exp.version, 1);
+  assert.equal(exp.version, 2);
 });
 
 test('F28: estado viejo sin sentido/pared carga sin romper (default null)', () => {
@@ -2575,7 +2575,7 @@ test('F32: detectCategoria("cuarto de servicio") y sus tomas no truenan', () => 
 
 test('F32: version sigue siendo 1 y estado viejo carga sin romper', () => {
   const exp = logic.buildExport(logic.createDefaultState(), {});
-  assert.equal(exp.version, 1);
+  assert.equal(exp.version, 2);
   const viejo = {
     version: 3,
     espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
@@ -2729,9 +2729,9 @@ test('F34: suggestionsForTarget conserva el comportamiento viejo por nombre y po
   assert.deepEqual(drone2.map((x) => x.id), logic.suggestionsForDrone('casa').map((x) => x.id));
 });
 
-test('F34: version sigue siendo 1 (buildExport intacto)', () => {
+test('F34: version es 2 (archivos[] de buildExport intacto)', () => {
   const exp = logic.buildExport(logic.createDefaultState(), {});
-  assert.equal(exp.version, 1);
+  assert.equal(exp.version, 2);
 });
 
 // ─── F35 — derivar targets de drone de espacios reales + incluirDrone + migracion ─
@@ -2938,7 +2938,7 @@ test('F35: el sujeto terreno expone las 14 tomas y version:1 intacto', () => {
   assert.ok(sugs.slice(0, 7).every((s) => s.must === true), 'los 7 must van primero');
 
   const exp = logic.buildExport(logic.createDefaultState(), {});
-  assert.equal(exp.version, 1, 'version:1 intacto');
+  assert.equal(exp.version, 2, 'version:2 (archivos[] intacto)');
 });
 
 // ─── F38 — sesion unica de drone: target unico + lista ordenada de sugerencias ─
@@ -3076,7 +3076,7 @@ test('F38 MIGRACION: estado viejo drone-piso + 1 toma -> NO omitted, conserva ta
 
 test('F38: version:1 intacto', () => {
   const exp = logic.buildExport(logic.createDefaultState(), {});
-  assert.equal(exp.version, 1, 'version:1 intacto');
+  assert.equal(exp.version, 2, 'version:2 (archivos[] intacto)');
 });
 
 test('F38 curacion: las tomas de espacio (derivable) y situacional NO salen como fijas; los features solo por derivacion', () => {
@@ -3791,14 +3791,121 @@ test('F69: el estado resultante pasa por mergeChecklist conservando tomas import
   assert.equal(cocinaFundida.estados.video.estado, 'hecho', 'conserva la cobertura del otro dispositivo');
 });
 
-test('F69: buildExport(applyDictado(...).state) sigue dando version:1 y exporta las tomas con su token', () => {
+test('F69: buildExport(applyDictado(...).state) da version:2 y exporta las tomas con su token', () => {
   const state = _dictadoState();
   const recamara = _recamaraId(state);
   const r = logic.parseDictado(_dictadoEjemploJSON(state), state);
   const next = logic.applyDictado(state, r.preview, { asignaciones: { 4: recamara } }).state;
   const exportado = logic.buildExport(next);
-  assert.equal(exportado.version, 1, 'export sigue en version 1');
+  assert.equal(exportado.version, 2, 'export subio a version 2');
   const json = JSON.stringify(exportado);
   assert.ok(json.includes('PIB0082'), 'el export incluye el token de una toma importada');
   assert.ok(json.includes('0012') || json.includes('"0012"'), 'el export incluye el token de la toma dron');
+});
+
+// ─── JSON version 2 para la app de metadatos (R109-R111) ─────────────────────
+
+test('createDefaultState incluye rangosManuales vacio', () => {
+  const s = logic.normalizeChecklistData({ version: 3, espacios: [] });
+  assert.deepEqual(s.rangosManuales, {});
+});
+
+test('normalizeChecklistData preserva rangosManuales entrante', () => {
+  const s = logic.normalizeChecklistData({
+    version: 3,
+    espacios: [],
+    rangosManuales: { 'foto-sony': { primer: 'DSC00101', ultimo: 'DSC00260' } },
+  });
+  assert.deepEqual(s.rangosManuales, { 'foto-sony': { primer: 'DSC00101', ultimo: 'DSC00260' } });
+});
+
+test('mergeChecklist funde rangosManuales por camara sin perder ninguno', () => {
+  const base = logic.normalizeChecklistData({
+    version: 3, espacios: [],
+    rangosManuales: { 'foto-sony': { primer: 'DSC00101', ultimo: 'DSC00260' } },
+  });
+  const incoming = logic.normalizeChecklistData({
+    version: 3, espacios: [],
+    rangosManuales: { 'insta360': { primer: 'IMG_0001', ultimo: 'IMG_0090' } },
+  });
+  const merged = logic.mergeChecklist(base, incoming);
+  assert.deepEqual(merged.rangosManuales, {
+    'foto-sony': { primer: 'DSC00101', ultimo: 'DSC00260' },
+    'insta360': { primer: 'IMG_0001', ultimo: 'IMG_0090' },
+  });
+});
+
+test('mergeChecklist: incoming gana en la misma camara', () => {
+  const base = logic.normalizeChecklistData({
+    version: 3, espacios: [],
+    rangosManuales: { 'foto-sony': { primer: 'DSC00001', ultimo: 'DSC00100' } },
+  });
+  const incoming = logic.normalizeChecklistData({
+    version: 3, espacios: [],
+    rangosManuales: { 'foto-sony': { primer: 'DSC00101', ultimo: 'DSC00260' } },
+  });
+  const merged = logic.mergeChecklist(base, incoming);
+  assert.deepEqual(merged.rangosManuales['foto-sony'], { primer: 'DSC00101', ultimo: 'DSC00260' });
+});
+
+test('buildExport version 2 con token, rev y bloques de negocio desde meta', () => {
+  const state = logic.normalizeChecklistData({
+    version: 3, espacios: [],
+    mediaFiles: [{ id: 'm1', cameraId: 'sony-main', fileToken: 'C0012', fileCounter: 12, kind: 'take' }],
+  });
+  const meta = {
+    folio: '2026-06-001', nombreCliente: 'ABC', token: 'tok-123', rev: 7,
+    entrega: { carpetaEntregablesId: '1AbC', carpetaEntregablesUrl: 'https://drive.google.com/drive/folders/1AbC', carpetaControlId: '1XyZ' },
+    logo: { url: 'https://drive.google.com/uc?export=download&id=FILE', todos: [{ id: 'FILE', nombre: 'logo.png' }] },
+    negocio: { paquete: 'Paquete Basico - Casa', entregablesTexto: '50 fotos' },
+  };
+  const out = logic.buildExport(state, meta);
+  assert.equal(out.version, 2);
+  assert.equal(out.token, 'tok-123');
+  assert.equal(out.rev, 7);
+  assert.deepEqual(out.entrega, meta.entrega);
+  assert.deepEqual(out.logo, meta.logo);
+  assert.deepEqual(out.negocio, meta.negocio);
+  assert.equal(out.archivos[0].archivo, 'C0012');
+});
+
+test('buildExport omite entrega/logo/negocio si meta no los trae', () => {
+  const state = logic.normalizeChecklistData({
+    version: 3, espacios: [],
+    mediaFiles: [{ id: 'm1', cameraId: 'sony-main', fileToken: 'C0012', fileCounter: 12, kind: 'take' }],
+  });
+  const out = logic.buildExport(state, { folio: 'F', nombreCliente: 'C' });
+  assert.equal(out.version, 2);
+  assert.equal(out.token, '');
+  assert.ok(!('entrega' in out));
+  assert.ok(!('logo' in out));
+  assert.ok(!('negocio' in out));
+});
+
+test('buildExport deriva grabaciones de mediaFiles agrupando por camara, todos los kind', () => {
+  const state = logic.normalizeChecklistData({
+    version: 3, espacios: [],
+    mediaFiles: [
+      { id: 'a', cameraId: 'sony-main', fileToken: 'C0048', fileCounter: 48, kind: 'discard' },
+      { id: 'b', cameraId: 'sony-main', fileToken: 'C0012', fileCounter: 12, kind: 'take' },
+      { id: 'c', cameraId: 'sony-main', fileToken: 'C0030', fileCounter: 30, kind: 'omitted' },
+    ],
+  });
+  const out = logic.buildExport(state, { folio: 'F', nombreCliente: 'C' });
+  const g = out.grabaciones.find((x) => x.camaraId === 'sony-main');
+  assert.equal(g.primerArchivo, 'C0012');
+  assert.equal(g.ultimoArchivo, 'C0048');
+  assert.equal(g.conteo, 3);
+});
+
+test('buildExport incluye rangos manuales para camaras sin tomas logueadas', () => {
+  const state = logic.normalizeChecklistData({
+    version: 3, espacios: [], mediaFiles: [],
+    rangosManuales: { 'foto-sony': { primer: 'DSC00101', ultimo: 'DSC00260' } },
+  });
+  const out = logic.buildExport(state, { folio: 'F', nombreCliente: 'C' });
+  const g = out.grabaciones.find((x) => x.camaraId === 'foto-sony');
+  assert.equal(g.primerArchivo, 'DSC00101');
+  assert.equal(g.ultimoArchivo, 'DSC00260');
+  assert.equal(g.conteo, null);
 });

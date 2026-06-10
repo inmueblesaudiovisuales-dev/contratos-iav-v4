@@ -453,9 +453,7 @@ git commit -m "R113 — checklist.html: exportarBitacora inyecta token y rev vig
 **Files:**
 - Modify: `frontend/checklist.html` (vista de edición, `renderEditView`, y un setter)
 
-El panel muestra una fila por cada cámara activa NO logueada toma por toma (foto Sony, Insta360, drone 360). Cada fila: dos `input` de texto, "primer archivo" y "último archivo". Al cambiar, escribe `state.rangosManuales[cameraId] = { primer, ultimo }` y llama `scheduleSave()` (pasa por el guardado con candado por `rev`). Son opcionales.
-
-Determinar las cámaras candidatas: las de `state.cameras` cuyo `mode` sea de foto/360 (o por id conocido `foto-sony`, `insta360`, drones 360) que estén activas. Para no inventar reglas nuevas, usar las cámaras de foto/360 presentes en `state.cameras` que NO aparezcan en `state.mediaFiles`.
+El panel muestra una fila por cada dispositivo de foto/360 con su servicio activo. CORRECCIÓN tras revisar el código: foto y 360 NO son cámaras en `state.cameras` (CAMERA_DEFAULTS solo tiene video/drone/asesor); son servicios (`state.servicios.foto`, `state.servicios.t360`). Por eso el catálogo es fijo (los tres del spec: Fotos Sony, Insta360, Drone 360), condicionado por los servicios activos. Los ids del catálogo son el contrato con la app consumidora. Cada fila: dos `input` de texto, "primer archivo" y "último archivo". Al cambiar, escribe `state.rangosManuales[id] = { primer, ultimo }` y llama `scheduleSave()` (pasa por el candado por `rev`). Son opcionales. El panel va dentro de `renderExportBar()` (línea 5415) para verse en las dos vistas de edición (`renderEditView` y `renderMediaEditView`).
 
 - [ ] **Step 1: Agregar el setter**
 
@@ -474,40 +472,48 @@ function setRangoManual(cameraId, campo, valor) {
   scheduleSave();
 }
 
-// Camaras candidatas a rango manual: foto y 360 (no se loguean toma por toma).
+// Dispositivos de rango manual: foto y 360 (servicios, no camaras de state.cameras).
+// Catalogo fijo condicionado por servicios activos. Los ids son el contrato con la app.
 function camarasRangoManual() {
-  const FOTO_360_MODES = ['foto', 't360', '360'];
-  const FOTO_360_IDS = ['foto-sony', 'insta360', 'drone-360'];
-  return (state.cameras || []).filter((c) =>
-    c && (FOTO_360_MODES.includes(c.mode) || FOTO_360_IDS.includes(c.id))
-  );
+  const cat = [];
+  const svc = state.servicios || {};
+  if (svc.foto) cat.push({ id: 'foto-sony', label: 'Fotos Sony' });
+  if (svc.t360) cat.push({ id: 'insta360', label: 'Insta360' });
+  if (svc.t360 && svc.drone) cat.push({ id: 'drone-360', label: 'Drone 360' });
+  return cat;
 }
 ```
 
-- [ ] **Step 2: Renderizar el panel en la vista de edición**
+- [ ] **Step 2: Renderizar el panel dentro de `renderExportBar()`**
 
-Dentro de `renderEditView()`, junto a los otros bloques de la vista (cerca del botón "Guion de edición", línea ~5420), insertar el panel:
+Agregar un helper de render y enchufarlo al final del template de `renderExportBar()` (después de `${renderDictadoBar()}`):
 
 ```javascript
-  const camsManual = camarasRangoManual();
-  const panelRangos = camsManual.length ? `
-    <section class="panel">
-      <h3>Rangos de archivo (foto y 360)</h3>
-      <p class="line">Opcional. Primer y último archivo de cada cámara que no se registra toma por toma. Ayuda a la app a acotar el emparejado.</p>
-      ${camsManual.map((c) => {
-        const r = (state.rangosManuales || {})[c.id] || {};
-        return `<div class="rango-fila">
-          <span class="rango-cam">${esc(c.label || c.id)}</span>
-          <input type="text" placeholder="primer archivo" value="${esc(r.primer || '')}"
-            onchange="setRangoManual('${c.id}', 'primer', this.value)">
-          <input type="text" placeholder="último archivo" value="${esc(r.ultimo || '')}"
-            onchange="setRangoManual('${c.id}', 'ultimo', this.value)">
-        </div>`;
-      }).join('')}
-    </section>` : '';
+function renderRangosManuales() {
+  const cams = camarasRangoManual();
+  if (!cams.length) return '';
+  return `<div class="rangos-bar">
+    <div class="rangos-copy"><strong>Rangos de archivo (foto y 360)</strong><span>Opcional. Primer y último archivo de cada dispositivo que no se registra toma por toma.</span></div>
+    ${cams.map((c) => {
+      const r = (state.rangosManuales || {})[c.id] || {};
+      return `<div class="rango-fila">
+        <span class="rango-cam">${esc(c.label || c.id)}</span>
+        <input type="text" class="rango-input" placeholder="primer archivo" value="${esc(r.primer || '')}"
+          onchange="setRangoManual('${c.id}', 'primer', this.value)">
+        <input type="text" class="rango-input" placeholder="último archivo" value="${esc(r.ultimo || '')}"
+          onchange="setRangoManual('${c.id}', 'ultimo', this.value)">
+      </div>`;
+    }).join('')}
+  </div>`;
+}
 ```
 
-Y agregar `panelRangos` al HTML que retorna `renderEditView` (junto a los demás `panel`). Si la función arma un string con `return [...].join('')` o template, intercalar `${panelRangos}` en el lugar apropiado de la vista de edición.
+Y en `renderExportBar()` cambiar la última línea del template de `${renderDictadoBar()}`;\` a:
+
+```javascript
+  ${renderDictadoBar()}
+  ${renderRangosManuales()}`;
+```
 
 - [ ] **Step 3: Verificar legible y que `esc` existe**
 

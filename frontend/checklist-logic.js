@@ -1892,6 +1892,9 @@
       merged[k] = (merged[k] || []).filter(aliveAfter);
     });
     merged.pisos = (merged.pisos || []).filter((p) => !tomb.has('piso:' + p));
+    // rangosManuales: fundir por cameraId (incoming gana en la misma camara). Un Object.assign
+    // plano del merged perderia las camaras que solo estan en base; aqui se unen ambas.
+    merged.rangosManuales = Object.assign({}, base.rangosManuales || {}, incoming.rangosManuales || {});
     return merged;
   }
 
@@ -2532,6 +2535,7 @@
       sequenceSegments: [],
       mediaFiles: [],
       tombstones: [],
+      rangosManuales: {},
       guide: { tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false },
     };
   }
@@ -3000,6 +3004,8 @@
           });
       }
       normalized.bitacora = normalized.bitacora || [];
+      normalized.rangosManuales = (normalized.rangosManuales && typeof normalized.rangosManuales === 'object')
+        ? normalized.rangosManuales : {};
       const savedCameras = normalized.cameras || [];
       normalized.cameras = CAMERA_DEFAULTS.map((camera) => Object.assign({}, camera, savedCameras.find((item) => item.id === camera.id) || {}))
         .concat(savedCameras.filter((camera) => !CAMERA_DEFAULTS.some((item) => item.id === camera.id)));
@@ -3970,8 +3976,45 @@
 
     const guionEdicion = { contexto, clips };
 
-    return {
-      version: 1,
+    // grabaciones[]: rango de archivos por camara para acotar el emparejado en la app.
+    // Cubre TODOS los kind (take/discard/omitted). Las camaras de foto/360 no se loguean
+    // toma por toma; sus rangos vienen de state.rangosManuales (entrada manual).
+    const porCamara = new Map();
+    (state.mediaFiles || []).forEach((f) => {
+      if (!f || !f.cameraId) return;
+      if (!porCamara.has(f.cameraId)) porCamara.set(f.cameraId, []);
+      porCamara.get(f.cameraId).push(f);
+    });
+    const grabaciones = [];
+    porCamara.forEach((files, cameraId) => {
+      const cam = camById(cameraId);
+      const ordenados = files.slice().sort((a, b) => (a.fileCounter || 0) - (b.fileCounter || 0));
+      grabaciones.push({
+        camaraId: cameraId,
+        camara: cam.label || cameraId,
+        primerArchivo: ordenados[0].fileToken || null,
+        ultimoArchivo: ordenados[ordenados.length - 1].fileToken || null,
+        conteo: ordenados.length,
+      });
+    });
+    Object.keys(state.rangosManuales || {}).forEach((cameraId) => {
+      if (porCamara.has(cameraId)) return; // ya cubierta por tomas logueadas
+      const r = state.rangosManuales[cameraId] || {};
+      if (!r.primer && !r.ultimo) return;
+      const cam = camById(cameraId);
+      grabaciones.push({
+        camaraId: cameraId,
+        camara: cam.label || cameraId,
+        primerArchivo: r.primer || null,
+        ultimoArchivo: r.ultimo || null,
+        conteo: null,
+      });
+    });
+
+    const out = {
+      version: 2,
+      token: meta.token || '',
+      rev: meta.rev != null ? meta.rev : null,
       folio: meta.folio || '',
       cliente: meta.nombreCliente || '',
       exportadoEn: new Date().toISOString(),
@@ -3979,7 +4022,12 @@
       archivos,
       resumenGuia,
       guionEdicion,
+      grabaciones,
     };
+    if (meta.entrega) out.entrega = meta.entrega;
+    if (meta.logo) out.logo = meta.logo;
+    if (meta.negocio) out.negocio = meta.negocio;
+    return out;
   }
 
   return {
