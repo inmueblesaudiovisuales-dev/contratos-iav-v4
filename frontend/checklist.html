@@ -1519,59 +1519,15 @@ function bootDesdeEspejo() {
   }
 }
 
-// Extrae el FILE_ID de una URL de Drive (formatos /d/<id> o ?id=<id>).
-function extraerIdDrive(url) {
-  const m = String(url || '').match(/\/d\/([^/?&]+)/) || String(url || '').match(/[?&]id=([^&]+)/);
-  return m ? m[1] : '';
-}
-
-// Trae los datos de negocio del contrato (carpeta de entregables, logos, paquete) y deja
-// meta.entrega/meta.logo/meta.negocio listos. La app NUNCA toca la DB; este fetch es el unico
-// puente y vive aqui, en checklist.html (que si esta conectado). Degrada en silencio: si no
-// hay red o el token es invalido, meta se queda sin esos bloques y el export sale igual.
-async function enriquecerMetaDesdeContrato() {
-  if (!TOKEN) return;
-  try {
-    const data = await apiGet({ action: 'obtenerContrato' });
-    if (!data || data.error) return;
-    const prop = (data.propiedades && data.propiedades[0]) || {};
-
-    // entrega: solo si ya existe carpeta (se crea al firmar). Sin firmar -> se omite.
-    const carpetaId = prop.carpeta_entregables_id || '';
-    if (carpetaId || data.carpetaEntregablesUrl) {
-      meta.entrega = {
-        carpetaEntregablesId: carpetaId || null,
-        carpetaEntregablesUrl: data.carpetaEntregablesUrl || (carpetaId ? 'https://drive.google.com/drive/folders/' + carpetaId : null),
-        carpetaControlId: prop.carpeta_control_id || null,
-      };
-    }
-
-    // logo: preferir logos_json (ids confiables); si no, sacar el id de logo_url con regex.
-    let todos = [];
-    if (prop.logos_json) {
-      try {
-        const parsed = JSON.parse(prop.logos_json);
-        if (Array.isArray(parsed)) {
-          todos = parsed.map((l) => ({
-            id: l.id || l.fileId || extraerIdDrive(l.url || ''),
-            nombre: l.nombre || l.name || 'logo',
-          })).filter((l) => l.id);
-        }
-      } catch (_) { /* ignora json malformado */ }
-    }
-    if (!todos.length && prop.logo_url) {
-      const id = extraerIdDrive(prop.logo_url);
-      if (id) todos = [{ id, nombre: 'logo' }];
-    }
-    if (todos.length) {
-      meta.logo = { url: 'https://drive.google.com/uc?export=download&id=' + todos[0].id, todos };
-    }
-
-    // negocio: texto guia (no se parsea), el paquete ya viene con nombre.
-    if (prop.paquete || prop.entregables) {
-      meta.negocio = { paquete: prop.paquete || '', entregablesTexto: prop.entregables || '' };
-    }
-  } catch (_) { /* sin red / token invalido: el export sale sin estos bloques */ }
+// Toma del response de obtenerChecklist los bloques de negocio (entrega/logo/negocio) que el
+// worker ya ensamblo y los deja en meta para el export. La app es offline y NO toca la DB; el
+// unico puente es obtenerChecklist (publico por token). obtenerContrato NO sirve aqui: exige
+// admin. Si el contrato no tiene carpeta/logo, los bloques no vienen y el export sale sin ellos.
+function tomarNegocioDeChecklist(data) {
+  if (!data) return;
+  if (data.entrega) meta.entrega = data.entrega;
+  if (data.logo) meta.logo = data.logo;
+  if (data.negocio) meta.negocio = data.negocio;
 }
 
 async function cargar() {
@@ -1579,9 +1535,7 @@ async function cargar() {
     const data = await apiGet({ action: 'obtenerChecklist' });
     if (data.error) return mostrarError(data.error);
     meta = { folio: data.folio || '', nombreCliente: data.nombreCliente || '' };
-    // Sin await: el enriquecimiento es opcional y solo se lee al exportar (no en el render).
-    // Bloquear el arranque por el costaria hasta el timeout de apiGet (10 s) en red lenta.
-    enriquecerMetaDesdeContrato();
+    tomarNegocioDeChecklist(data);
     const payload = data.cuartos && data.cuartos.version >= 2 ? data.cuartos : { cuartos: data.cuartos || [], columnas: data.columnas || {} };
     const servidor = logic.normalizeChecklistData(payload);
     currentRev = data.rev || 0;

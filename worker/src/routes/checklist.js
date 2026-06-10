@@ -16,6 +16,68 @@ async function archivar(db, token, cuartos, rev, autor) {
 
 const COLUMNAS_DEFAULT = { foto: true, video: true, t360: true };
 
+// Extrae el FILE_ID de una URL de Drive (formatos /d/<id> o ?id=<id>).
+function extraerIdDrive(url) {
+  const s = String(url || '');
+  const m = s.match(/\/d\/([^/?&]+)/) || s.match(/[?&]id=([^&]+)/);
+  return m ? m[1] : '';
+}
+
+// Ensambla los datos de negocio que necesita la app de metadatos (offline) a partir de la
+// primera propiedad del contrato: carpeta de entregables, logos y paquete/entregables. Se
+// adjunta a la respuesta de obtenerChecklist (publico por token) porque obtenerContrato exige
+// admin. Todo es opcional/aditivo: si no hay carpeta o logo, ese bloque no se incluye.
+async function datosNegocio(db, token) {
+  const out = {};
+  const prop = await queryOne(db,
+    'SELECT * FROM propiedades WHERE contrato_token = ? ORDER BY num_propiedad LIMIT 1', [token]);
+  if (!prop) return out;
+
+  // entrega: la carpeta se crea al firmar. Sin carpeta -> se omite (contrato sin firmar).
+  const carpetaId = prop.carpeta_entregables_id || '';
+  const carpetaCtrl = prop.carpeta_control_id || '';
+  if (carpetaId || carpetaCtrl) {
+    out.entrega = {
+      carpetaEntregablesId: carpetaId || null,
+      carpetaEntregablesUrl: carpetaId
+        ? 'https://drive.google.com/drive/folders/' + carpetaId
+        : 'https://drive.google.com/drive/folders/' + carpetaCtrl,
+      carpetaControlId: carpetaCtrl || null,
+    };
+  }
+
+  // logo: preferir logos_json (ids confiables); si no, sacar el id de logo_url con regex.
+  let todos = [];
+  if (prop.logos_json) {
+    try {
+      const parsed = JSON.parse(prop.logos_json);
+      if (Array.isArray(parsed)) {
+        todos = parsed
+          .map((l) => ({ id: l.id || l.fileId || extraerIdDrive(l.url || ''), nombre: l.nombre || l.name || 'logo' }))
+          .filter((l) => l.id);
+      }
+    } catch (_) { /* json malformado: se ignora */ }
+  }
+  if (!todos.length && prop.logo_url) {
+    const id = extraerIdDrive(prop.logo_url);
+    if (id) todos = [{ id, nombre: 'logo' }];
+  }
+  if (todos.length) {
+    out.logo = { url: 'https://drive.google.com/uc?export=download&id=' + todos[0].id, todos };
+  }
+
+  // negocio: paquete con nombre legible (mapear clave->nombre) + entregables (texto libre).
+  let paquete = prop.paquete || '';
+  if (paquete) {
+    const pk = await queryOne(db, 'SELECT nombre FROM paquetes WHERE clave = ?', [paquete]);
+    if (pk && pk.nombre) paquete = pk.nombre;
+  }
+  if (paquete || prop.entregables) {
+    out.negocio = { paquete: paquete || '', entregablesTexto: prop.entregables || '' };
+  }
+  return out;
+}
+
 const TEMPLATE_CUARTOS = JSON.stringify({
   cuartos: [
     { nombre: 'Sala', foto: false, video: false, t360: false },
@@ -61,7 +123,8 @@ export async function handleChecklist(request, env, ctx, action) {
 
   if (action === 'obtenerChecklist') {
     const row = await queryOne(db, 'SELECT * FROM checklist WHERE contrato_token = ?', [token]);
-    const base = { token, folio: contrato.folio || '', nombreCliente: contrato.nombre_cliente || '' };
+    const negocio = await datosNegocio(db, token);
+    const base = { token, folio: contrato.folio || '', nombreCliente: contrato.nombre_cliente || '', ...negocio };
     if (!row) {
       const parsed = JSON.parse(TEMPLATE_CUARTOS);
       return ok({ ...base, ...parsed, esTemplate: true, rev: 0 });
