@@ -4071,7 +4071,9 @@
   }
 
   function setVlogOsmoAction(state, value) {
-    return Object.assign({}, state, { vlogOsmoAction: value === true });
+    const next = clone(state);
+    next.vlogOsmoAction = value === true;
+    return next;
   }
 
   return {

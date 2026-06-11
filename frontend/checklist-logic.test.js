@@ -3963,8 +3963,7 @@ test('sugerirNombreArchivo: sony sin counterExample usa el prefijo PIB por defec
 // ─── vlogOsmoAction ───────────────────────────────────────────────────────────
 
 test('buildExport emite vlogOsmoAction false por defecto', () => {
-  const state = logic.createInitialState ? logic.createInitialState() : null;
-  const s = state || { mediaFiles: [], espacios: [], cameras: [], sequenceSegments: [], servicios: {}, rangosManuales: {}, guide: {} };
+  const s = logic.createDefaultState();
   const out = logic.buildExport(s, { folio: 'IAV-2606.11-A' });
   assert.strictEqual(out.vlogOsmoAction, false);
   assert.strictEqual(out.version, 2); // no se sube la version
@@ -3981,4 +3980,12 @@ test('setVlogOsmoAction cambia el flag sin mutar el original', () => {
   const next = logic.setVlogOsmoAction(s, true);
   assert.strictEqual(next.vlogOsmoAction, true);
   assert.strictEqual(s.vlogOsmoAction, false);
+});
+
+test('normalizeChecklistData coerciona vlogOsmoAction a false cuando el valor es invalido o falta', () => {
+  const conString = { version: 3, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [], vlogOsmoAction: 'si' };
+  assert.equal(logic.normalizeChecklistData(conString).vlogOsmoAction, false, 'string "si" -> false');
+
+  const sinCampo = { version: 3, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [] };
+  assert.equal(logic.normalizeChecklistData(sinCampo).vlogOsmoAction, false, 'campo ausente -> false');
 });
