@@ -4011,3 +4011,22 @@ test('normalizeChecklistData coerciona configurado a false cuando el valor es in
   const sinCampo = { version: 3, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [] };
   assert.equal(logic.normalizeChecklistData(sinCampo).configurado, false, 'campo ausente -> false');
 });
+
+test('FX30: iniciar sony-asesor reusa el segmento de sony-main si ya existe (un solo contador)', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260611_PIB0010.MP4', archivoActual: true });
+  const segMain = logic.getCameraSequence(s, 'sony-main').segment;
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260611_PIB0099.MP4', archivoActual: true });
+  const segAsesor = logic.getCameraSequence(s, 'sony-asesor').segment;
+  assert.strictEqual(segAsesor.id, segMain.id, 'asesor comparte el segmento de la FX30');
+  assert.strictEqual(s.sequenceSegments.length, 1, 'no se crea un segundo segmento para la FX30');
+  assert.strictEqual(segAsesor.counterNext, segMain.counterNext, 'no se re-siembra al reusar');
+});
+
+test('FX30: si asesor inicia primero, video reusa su segmento', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260611_PIB0010.MP4', archivoActual: true });
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260611_PIB0050.MP4', archivoActual: true });
+  assert.strictEqual(s.sequenceSegments.length, 1);
+  assert.strictEqual(logic.getCameraSequence(s, 'sony-main').segment.id, logic.getCameraSequence(s, 'sony-asesor').segment.id);
+});

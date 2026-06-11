@@ -24,6 +24,9 @@
     { nombre: 'Introducción', tipo: 'normal' },
     { nombre: 'Despedida', tipo: 'normal' },
   ];
+  // FX30: las dos camaras son la misma camara fisica y comparten un solo contador.
+  const FX30_IDS = ['sony-main', 'sony-asesor'];
+  function esFx30(id) { return FX30_IDS.indexOf(id) !== -1; }
   function pad2(n) {
     return String(n).padStart(2, '0');
   }
@@ -3126,6 +3129,19 @@
     if (!camera) return next;
     const parsed = parseFilenameSequence(options.lastFilename, camera.kind);
     if (!parsed) return next;
+    // FX30: si la otra camara FX30 ya tiene un segmento activo, reusar ese segmento
+    // sin crear uno nuevo ni re-sembrar el contador.
+    if (esFx30(options.cameraId)) {
+      const otherFx30Id = FX30_IDS.find((id) => id !== options.cameraId);
+      const otherCamera = getCamera(next, otherFx30Id);
+      const existingSegment = otherCamera && otherCamera.activeSegmentId &&
+        (next.sequenceSegments || []).find((seg) => seg.id === otherCamera.activeSegmentId);
+      if (existingSegment) {
+        camera.activeSegmentId = existingSegment.id;
+        next.activeCameraByMode[camera.mode] = camera.id;
+        return next;
+      }
+    }
     // F66 — archivoActual: el nombre capturado ES el archivo actual, la primera toma arranca
     // EN ese numero. Sin la opcion se interpreta como el ultimo ya grabado (+1, previo).
     const offset = options.archivoActual ? 0 : 1;
