@@ -3547,7 +3547,9 @@ function renderMediaCapture() {
   </section>
   ${latestPanel}
   <div class="cap-thumb">
-    <button class="cap-btn-toma" onclick="darToma('${esc(target.id)}')"><span class="cap-toma-lbl">Toma</span>${tomaSubLabel}</button>
+    ${confirmTargetId === target.id
+      ? `<button class="cap-btn-toma cap-toma-confirmed" disabled><span class="cap-toma-lbl"><i class="ti ti-check"></i> Registrada</span></button>`
+      : `<button class="cap-btn-toma" onclick="darToma('${esc(target.id)}')"><span class="cap-toma-lbl">Toma</span>${tomaSubLabel}</button>`}
     <button class="cap-btn-no" onclick="noSirve('${esc(target.id)}')"><i class="ti ti-circle-x"></i><span>No sirve</span></button>
   </div>`;
 }
@@ -3872,6 +3874,11 @@ function renderCapLatest(file) {
   const noteHtml = file.note
     ? `<button class="cap-notef has" onclick="agregarNotaArchivo('${esc(file.id)}')"><i class="ti ti-note"></i>${esc(file.note)}</button>`
     : `<button class="cap-notef" onclick="agregarNotaArchivo('${esc(file.id)}')"><i class="ti ti-plus"></i>describir lo que grabaste</button>`;
+  // T6.1 — deshacer inline en la toma recien registrada (mismo patron que asesor/tarjetas):
+  // visible mientras undoTargetId apunte a este cuarto y exista el handler de deshacer.
+  const undo = (undoTargetId === file.targetId && undoUltimaToma)
+    ? `<button class="cap-undo cap-undo-inline" onclick="deshacerUltimaToma()"><i class="ti ti-arrow-back-up"></i> Deshacer última toma</button>`
+    : '';
   return `<div class="cap-latest">
     <div class="cap-latest-h"><span class="cap-latest-who">recién grabada</span><span class="cap-latest-tk">${esc(file.fileToken)}${meta}</span></div>
     <div class="cap-qa">
@@ -3880,6 +3887,7 @@ function renderCapLatest(file) {
     </div>
     ${noteHtml}
     ${renderLatestTag(file)}
+    ${undo}
   </div>`;
 }
 
@@ -5324,6 +5332,12 @@ function registrarArchivo(targetId, kind, discardReason, ctx) {
   // No auto-avance: la etiqueta de la proxima toma se limpia tras grabar.
   if (kind === 'take') { pendingShotType = null; pendingMovement = null; pendingSentido = null; pendingPared = null; activeSugId = null; tagLibre = false; }
   render(); scheduleSave();
+  // T6.1 — sin toast en exito de toma de video/drone: confirmacion breve en el boton
+  // Toma de este cuarto + deshacer inline en la toma recien grabada (mismo patron que asesor).
+  // Los descartes ('discard') no llevan confirm/deshacer aqui (registro directo, sin banner).
+  if (kind === 'take') {
+    marcarTomaRegistrada(() => { state = previous; render(); scheduleSave(); }, targetId);
+  }
 }
 
 function abrirDescarte(targetId) {
