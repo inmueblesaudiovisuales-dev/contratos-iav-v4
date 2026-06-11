@@ -5075,11 +5075,6 @@ function prefijoSony(camera) {
   const m = ej.match(/([A-Za-z]+)\d+\s*$/); // letras justo antes de los digitos finales del ejemplo
   return (m && m[1]) || 'PIB'; // fallback conservador al prefijo historico
 }
-function fechaDeFolio(folio) {
-  const m = String(folio || '').match(/-(\d{2})(\d{2})\.(\d{2})-/); // SISTEMA-YYMM.DD-X
-  if (!m) return null;
-  return new Date(2000 + Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-}
 function sugerenciaNombre(camera, fecha) {
   if (!camera) return '';
   const folio = meta && meta.folio;

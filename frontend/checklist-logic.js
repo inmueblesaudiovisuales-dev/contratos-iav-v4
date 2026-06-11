@@ -4036,8 +4036,8 @@
   // Sugerencia del primer nombre de archivo por camara. Parte predecible lista; la hora (que solo
   // conoce la camara) queda como hueco visible "______". Numero arranca en 0001. La fecha sale del
   // folio (SISTEMA-YYMM.DD-X). Formatos reales: ver docs estructuras-tarjetas.
-  // Contraparte de fechaDeFolio en checklist.html (~5078). Devuelve objeto plano {yy,yyyy,mm,dd},
-  // no un Date, para armar los distintos formatos de nombre por camara.
+  // Deriva la fecha del folio (SISTEMA-YYMM.DD-X). Devuelve objeto plano {yy,yyyy,mm,dd} (no un Date),
+  // para armar los distintos formatos de nombre por camara. Es la unica fuente de esta logica.
   function fechaDesdeFolio(folio) {
     const m = String(folio || '').match(/-(\d{2})(\d{2})\.(\d{2})-/);
     if (!m) return null;
