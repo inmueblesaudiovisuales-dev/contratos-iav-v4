@@ -4047,3 +4047,33 @@ test('FX30: la toma de asesor continua la numeracion del video (mismo contador)'
   // El numero del token debe ser el continuo (11), NO 1 ni 9999
   assert.match(sonyFile.fileToken, /0011/);
 });
+
+test('adoptarSegmentoFx30: sony-asesor adopta el segmento de sony-main SIN nombre de archivo', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260611_PIB0010.MP4', archivoActual: true });
+  const segMain = logic.getCameraSequence(s, 'sony-main').segment;
+  assert.strictEqual(logic.getCameraSequence(s, 'sony-asesor').segment, undefined, 'asesor sin segmento aun');
+  s = logic.adoptarSegmentoFx30(s, 'sony-asesor');
+  const segAsesor = logic.getCameraSequence(s, 'sony-asesor').segment;
+  assert.ok(segAsesor, 'asesor adopta un segmento');
+  assert.strictEqual(segAsesor.id, segMain.id, 'mismo segmento que la FX30 principal');
+  assert.strictEqual(s.sequenceSegments.length, 1, 'no se crea un segundo segmento');
+  assert.strictEqual(s.activeCameraByMode.asesor, 'sony-asesor', 'queda como camara activa del modo');
+});
+
+test('adoptarSegmentoFx30: no-op si la pareja FX30 no tiene segmento', () => {
+  let s = logic.createDefaultState();
+  const antes = s;
+  s = logic.adoptarSegmentoFx30(s, 'sony-asesor');
+  assert.strictEqual(s, antes, 'estado sin cambios cuando no hay segmento que adoptar');
+  assert.strictEqual(logic.getCameraSequence(s, 'sony-asesor').segment, undefined);
+});
+
+test('adoptarSegmentoFx30: no-op para una camara que no es FX30 (Tascam)', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260611_PIB0010.MP4', archivoActual: true });
+  const antes = s;
+  s = logic.adoptarSegmentoFx30(s, 'tascam-asesor');
+  assert.strictEqual(s, antes, 'la Tascam no comparte la secuencia de la FX30');
+  assert.strictEqual(logic.getCameraSequence(s, 'tascam-asesor').segment, undefined);
+});

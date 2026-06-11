@@ -3123,6 +3123,33 @@
     };
   }
 
+  // FX30: localiza el segmento activo de la OTRA camara FX30 (la pareja fisica), si existe.
+  // Devuelve null si no aplica (no es FX30) o la pareja aun no tiene secuencia.
+  function fx30SiblingSegment(state, cameraId) {
+    if (!esFx30(cameraId)) return null;
+    const otherFx30Id = FX30_IDS.find((id) => id !== cameraId);
+    const otherCamera = getCamera(state, otherFx30Id);
+    return (otherCamera && otherCamera.activeSegmentId &&
+      (state.sequenceSegments || []).find((seg) => seg.id === otherCamera.activeSegmentId)) || null;
+  }
+
+  // FX30: adopta el segmento compartido SIN pedir nombre de archivo. Si la camara FX30 no
+  // tiene ya un segmento activo valido pero su pareja si, apunta a ese mismo segmento.
+  // En cualquier otro caso (no es FX30, ya tiene segmento, o la pareja no lo tiene)
+  // devuelve el estado sin cambios.
+  function adoptarSegmentoFx30(state, cameraId) {
+    if (!esFx30(cameraId)) return state;
+    if (getCameraSequence(state, cameraId).segment) return state;
+    const sibling = fx30SiblingSegment(state, cameraId);
+    if (!sibling) return state;
+    const next = clone(state);
+    const camera = getCamera(next, cameraId);
+    if (!camera) return state;
+    camera.activeSegmentId = sibling.id;
+    next.activeCameraByMode[camera.mode] = camera.id;
+    return next;
+  }
+
   function initializeCameraSequence(state, options) {
     const next = clone(state);
     const camera = getCamera(next, options.cameraId);
@@ -3132,10 +3159,7 @@
     // FX30: si la otra camara FX30 ya tiene un segmento activo, reusar ese segmento
     // sin crear uno nuevo ni re-sembrar el contador.
     if (esFx30(options.cameraId)) {
-      const otherFx30Id = FX30_IDS.find((id) => id !== options.cameraId);
-      const otherCamera = getCamera(next, otherFx30Id);
-      const existingSegment = otherCamera && otherCamera.activeSegmentId &&
-        (next.sequenceSegments || []).find((seg) => seg.id === otherCamera.activeSegmentId);
+      const existingSegment = fx30SiblingSegment(next, options.cameraId);
       if (existingSegment) {
         camera.activeSegmentId = existingSegment.id;
         next.activeCameraByMode[camera.mode] = camera.id;
@@ -4200,6 +4224,7 @@
     setServiceActive,
     parseFilenameSequence,
     getCameraSequence,
+    adoptarSegmentoFx30,
     initializeCameraSequence,
     bumpCameraCounter,
     getScenePath,

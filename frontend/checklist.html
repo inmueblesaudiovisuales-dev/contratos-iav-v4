@@ -2890,6 +2890,9 @@ function registrarAsesor(puntoId, kind) {
   const punto = (state.asesorPuntos || []).find((p) => p.id === puntoId);
   if (!punto) return;
   const cams = punto.tipo === 'voz' ? ['tascam-asesor'] : ['sony-asesor', 'tascam-asesor'];
+  // FX30: si la Sony principal (video) ya inicio su secuencia, el asesor la reusa sin
+  // re-pedir el nombre del archivo. La Tascam es su propio dispositivo y no se comparte.
+  state = logic.adoptarSegmentoFx30(state, 'sony-asesor');
   for (let i = 0; i < cams.length; i++) {
     if (!logic.getCameraSequence(state, cams[i]).segment) return abrirSecuenciaAsesor(cams[i]);
   }
