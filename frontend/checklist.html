@@ -1907,7 +1907,7 @@ function renderPropertyLanding() {
 // Terreno NO usa esta tarjeta (terreno no tiene lista de cuartos; su captura entra
 // directo al sujeto terreno).
 function sesionDroneAplica() {
-  if (!(state.guide && state.guide.incluirDrone)) return false;
+  if (!(state.servicios && state.servicios.drone)) return false;
   if (state.modoActual === 'asesor') return false;
   if (state.guide && state.guide.tipoPropiedad === 'terreno') return false;
   return loopModesForRole().includes('drone');
@@ -2056,34 +2056,10 @@ function renderActiveView() {
 
 const TIPO_LABEL = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terreno', quinta: 'Quinta' };
 
-// F36 — Interruptor "Incluir tomas de drone". Reemplaza al piso Drone con sus
-// pseudo-cuartos: el drone deja de curarse en Armar cuartos y pasa a volarse en
-// la lane de Captura. Setea state.guide.incluirDrone (true/false). Estilo R1,
-// tinte neutro, área táctil ≥44px (la fila completa es el control).
-function renderDroneToggle() {
-  const on = !!(state.guide && state.guide.incluirDrone);
-  return `<div class="setup-block">
-    <button class="setup-toggle${on ? ' on' : ''}" role="switch" aria-checked="${on ? 'true' : 'false'}" onclick="toggleIncluirDrone()">
-      <i class="ti ti-drone st-icon"></i>
-      <span class="st-copy">
-        <span class="st-title">Incluir tomas de drone</span>
-        <span class="st-sub">${on ? 'Las tomas aéreas se vuelan por escalas en Captura.' : 'Actívalo si esta propiedad lleva tomas aéreas.'}</span>
-      </span>
-      <span class="st-sw" aria-hidden="true"></span>
-    </button>
-  </div>`;
-}
-
-function toggleIncluirDrone() {
-  if (!state.guide) state.guide = {};
-  state.guide.incluirDrone = !state.guide.incluirDrone;
-  scheduleSave();
-  render();
-}
-
 // F48 — Pantalla consolidada de "Armar cuartos". Una sola superficie por
 // secciones: Tipo → Pisos (stepper) → un bloque por piso (interior) → Exterior →
-// Amenidades → toggle de drone (intacto) → footer "Listo, a capturar". Los
+// Amenidades → footer "Listo, a capturar". El drone se controla solo desde la
+// pantalla de inicio (servicios.drone); aquí ya no hay toggle. Los
 // steppers operan en vivo sobre state.espacios; nada nuevo se persiste fuera de
 // state.espacios/state.pisos (setupVisible es solo UI).
 function renderSetup() {
@@ -2130,7 +2106,6 @@ function renderSetup() {
     ${tipoSeg}
     ${pisoStepper}
     <div class="setup-block">${floorBlocks}${exterior}${amenidades}</div>
-    ${renderDroneToggle()}
     <div class="setup-foot">
       <button class="primary" style="flex:1" onclick="cerrarSetup()"${tieneEspacios ? '' : ' disabled'}>Listo, a capturar</button>
     </div>
