@@ -792,6 +792,7 @@
     .cov-tile { display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; justify-content: space-between; min-height: 74px; padding: var(--sp-3); border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--el-1); text-align: left; transition: box-shadow .15s, opacity .15s; }
     .cov-tile.sub { grid-column: auto; }
     .cov-name { font-family: var(--font-display); font-size: var(--ts-base); font-weight: 500; line-height: 1.2; color: var(--ink-1); }
+    .cov-parent { font-family: var(--font-ui); font-size: var(--ts-cap); color: var(--ink-3); line-height: 1.1; }
     .cov-state { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: var(--ts-cap); font-weight: 500; color: var(--amber); }
     .cov-check { display: inline-flex; }
     .cov-check svg { width: 14px; height: 14px; }
@@ -3080,8 +3081,11 @@ function covTile(room, svc) {
   const st = (room.estados[svc] || {}).estado || 'pendiente';
   const label = st === 'hecho' ? 'listo' : st === 'no_aplica' ? 'no aplica' : 'pendiente';
   const mark = st === 'hecho' ? `<span class="cov-check">${COV_CHECK_SVG}</span>` : '';
+  const padre = room.parentId ? (state.espacios.find((e) => e.id === room.parentId) || {}).nombre : '';
+  const subtxt = padre ? `<span class="cov-parent">de ${esc(padre)}</span>` : '';
   return `<button class="cov-tile ${st}${room.parentId ? ' sub' : ''}" onclick="cycleCobertura('${room.id}')">
     <span class="cov-name">${esc(room.nombre)}</span>
+    ${subtxt}
     <span class="cov-state">${mark}${label}</span>
   </button>`;
 }
@@ -5585,13 +5589,15 @@ function renderReviewItem(item) {
 function camarasRangoManual() {
   const cat = [];
   const svc = state.servicios || {};
-  if (svc.foto) cat.push({ id: 'foto-sony', label: 'Fotos Sony', svc: 'foto' });
-  if (svc.t360) cat.push({ id: 'insta360', label: 'Insta360', svc: 't360' });
-  if (svc.t360 && svc.drone) cat.push({ id: 'drone-360', label: 'Drone 360', svc: 't360' });
-  if (svc.video) cat.push({ id: 'sony-main', label: 'Sony principal (video)', redSeguridad: true, svc: 'video' });
-  if (svc.video) cat.push({ id: 'osmo-pocket-3', label: 'Osmo Pocket 3', redSeguridad: true, svc: 'video' });
-  if (svc.drone) cat.push({ id: 'drone-dji', label: 'DJI Air 3 (drone)', redSeguridad: true, svc: 'drone' });
-  if (svc.drone) cat.push({ id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', redSeguridad: true, svc: 'drone' });
+  // counterExample real de la Sony (si alguna camara lo trae), para el prefijo sugerido.
+  const ejSony = ((state.cameras || []).find((c) => c.kind === 'sony' && c.counterExample) || {}).counterExample;
+  if (svc.foto) cat.push({ id: 'foto-sony', label: 'Fotos Sony', svc: 'foto', kind: 'sony', counterExample: ejSony });
+  if (svc.t360) cat.push({ id: 'insta360', label: 'Insta360', svc: 't360', kind: 'insta360' });
+  if (svc.t360 && svc.drone) cat.push({ id: 'drone-360', label: 'Drone 360', svc: 't360', kind: 'dji' });
+  if (svc.video) cat.push({ id: 'sony-main', label: 'Sony principal (video)', redSeguridad: true, svc: 'video', kind: 'sony', counterExample: ejSony });
+  if (svc.video) cat.push({ id: 'osmo-pocket-3', label: 'Osmo Pocket 3', redSeguridad: true, svc: 'video', kind: 'dji' });
+  if (svc.drone) cat.push({ id: 'drone-dji', label: 'DJI Air 3 (drone)', redSeguridad: true, svc: 'drone', kind: 'dji' });
+  if (svc.drone) cat.push({ id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', redSeguridad: true, svc: 'drone', kind: 'dji' });
   return cat;
 }
 
@@ -5622,9 +5628,12 @@ function renderRangosManuales(soloSvc) {
     <div class="rangos-copy"><strong>Rangos de archivo</strong><span>${copy}</span></div>
     ${cams.map((c) => {
       const r = (state.rangosManuales || {})[c.id] || {};
+      // Sugerencia de nombre por camara (con hueco para la hora donde aplique); el operador
+      // ajusta el numero/hora en vez de teclear todo. Solo como valor inicial si esta vacio.
+      const sug = sugerenciaNombre({ kind: c.kind, counterExample: c.counterExample });
       return `<div class="rango-fila">
         <span class="rango-cam">${esc(c.label || c.id)}${c.redSeguridad ? '<span class="rango-nota"> · red de seguridad</span>' : ''}</span>
-        <input type="text" class="rango-input" placeholder="primer archivo" value="${esc(r.primer || '')}"
+        <input type="text" class="rango-input" placeholder="${esc(sug || 'primer archivo')}" value="${esc(r.primer || sug)}"
           onchange="setRangoManual('${c.id}', 'primer', this.value)">
         <input type="text" class="rango-input" placeholder="último archivo" value="${esc(r.ultimo || '')}"
           onchange="setRangoManual('${c.id}', 'ultimo', this.value)">

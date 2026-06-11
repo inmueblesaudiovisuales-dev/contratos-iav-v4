@@ -4,7 +4,7 @@
    armar cuartos -> input del último archivo -> capturar) pero en memoria,
    sin token ni backend. No afecta producción. */
 window.IAVChecklistDemo = {
-  meta: { folio: 'NUEVO', nombreCliente: 'Primer arranque (demo)' },
+  meta: { folio: 'IAV-2606.11-A', nombreCliente: 'Primer arranque (demo)' },
   build(logic) {
     return logic.createDefaultState();
   },
