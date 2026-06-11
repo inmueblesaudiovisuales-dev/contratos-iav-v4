@@ -3955,3 +3955,7 @@ test('sugerirNombreArchivo: sin formato conocido devuelve cadena vacia', () => {
 test('sugerirNombreArchivo: folio que no parsea cae a fecha vacia pero no truena', () => {
   assert.strictEqual(logic.sugerirNombreArchivo({ kind: 'sony', counterExample: 'PIB1' }, ''), '');
 });
+
+test('sugerirNombreArchivo: sony sin counterExample usa el prefijo PIB por defecto', () => {
+  assert.strictEqual(logic.sugerirNombreArchivo({ kind: 'sony' }, 'IAV-2606.11-A'), '20260611_PIB0001');
+});

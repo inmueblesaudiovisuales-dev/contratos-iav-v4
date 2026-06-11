@@ -4036,11 +4036,15 @@
   // Sugerencia del primer nombre de archivo por camara. Parte predecible lista; la hora (que solo
   // conoce la camara) queda como hueco visible "______". Numero arranca en 0001. La fecha sale del
   // folio (SISTEMA-YYMM.DD-X). Formatos reales: ver docs estructuras-tarjetas.
+  // Contraparte de fechaDeFolio en checklist.html (~5078). Devuelve objeto plano {yy,yyyy,mm,dd},
+  // no un Date, para armar los distintos formatos de nombre por camara.
   function fechaDesdeFolio(folio) {
     const m = String(folio || '').match(/-(\d{2})(\d{2})\.(\d{2})-/);
     if (!m) return null;
     return { yy: m[1], yyyy: '20' + m[1], mm: m[2], dd: m[3] };
   }
+  // Contraparte de prefijoSony en checklist.html (~5073). Extrae el prefijo alfabetico del ejemplo;
+  // usa el mismo fallback 'PIB' cuando no hay ejemplo o no coincide el patron.
   function prefijoDesdeEjemplo(ej) {
     const m = String(ej || '').match(/([A-Za-z]+)\d+\s*$/);
     return (m && m[1]) || 'PIB';
