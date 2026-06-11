@@ -501,7 +501,7 @@
       transition: border-color .12s ease, background .12s ease, transform .06s ease, box-shadow .12s ease; }
     .role-opt:hover { border-color: var(--tint-line); box-shadow: var(--shadow); transform: translateY(-1px); }
     .role-opt:active { transform: translateY(0) scale(.992); }
-    .role-opt.sel { border-color: var(--tint-line); background: var(--tint); color: var(--ink-1); box-shadow: inset 0 0 0 1px var(--tint-line); }
+    .role-opt.sel { border-color: var(--gold); background: var(--gold-soft); color: var(--ink-1); box-shadow: inset 0 0 0 1px var(--gold); }
     .role-opt-copy { flex: 1; min-width: 0; }
     .role-opt-copy strong { display: block; font-size: 16px; font-weight: 600; }
     .role-opt-copy span { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
@@ -579,7 +579,7 @@
     /* Chip de cámara: área táctil ≥44px. Cámara seleccionada = estado activo →
        tinte neutro + borde marcado + tinta fuerte, NO dorado (reservado a Toma). */
     .seg-btn { min-height: 44px; padding: 0 var(--sp-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink-2); font-weight: 600; font-size: var(--ts-body); }
-    .seg-btn.active { border-color: var(--tint-line); background: var(--tint); color: var(--ink-1); box-shadow: inset 0 0 0 1px var(--tint-line); }
+    .seg-btn.active { border-color: var(--gold); background: var(--gold-soft); color: var(--ink-1); box-shadow: inset 0 0 0 1px var(--gold); }
     .chips { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
     .chip { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 11px; border: 1px solid var(--line-2, #D2C9B3); border-radius: 999px; background: var(--card); color: var(--ink-1); font-size: 13px; font-weight: 600; }
     .chip i { font-size: 15px; color: var(--ink-3); }
@@ -673,7 +673,7 @@
        dorado se reserva a la acción primaria). Área táctil ≥44px en toda la fila. */
     .setup-toggle { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 56px; padding: var(--sp-3) var(--sp-4);
       border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--el-1); text-align: left; }
-    .setup-toggle.on { border-color: var(--tint-line); background: var(--tint); }
+    .setup-toggle.on { border-color: var(--gold); background: var(--gold-soft); }
     .setup-toggle .st-icon { font-size: 22px; color: var(--ink-3); flex: none; }
     .setup-toggle.on .st-icon { color: var(--ink-1); }
     .setup-toggle .st-copy { flex: 1; min-width: 0; }
