@@ -3925,3 +3925,33 @@ test('grabaciones: primer/ultimo salen de archivos con fileToken aunque haya omi
   assert.equal(g.ultimoArchivo, 'C0040');
   assert.equal(g.conteo, 3);
 });
+
+// ─── sugerirNombreArchivo ─────────────────────────────────────────────────────
+
+test('sugerirNombreArchivo: sony usa fecha del folio + prefijo del ejemplo + 0001', () => {
+  const cam = { kind: 'sony', counterExample: 'PIB2818' };
+  assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), '20260611_PIB0001');
+});
+
+test('sugerirNombreArchivo: dji deja hueco para la hora y sufijo _D', () => {
+  const cam = { kind: 'dji' };
+  assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), 'DJI_20260611______0001_D');
+});
+
+test('sugerirNombreArchivo: tascam usa año de 2 digitos sin prefijo', () => {
+  const cam = { kind: 'tascam' };
+  assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), '260611_0001');
+});
+
+test('sugerirNombreArchivo: insta360 deja hueco de hora, _00_ y 3 digitos', () => {
+  const cam = { kind: 'insta360' };
+  assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), 'IMG_20260611______00_001');
+});
+
+test('sugerirNombreArchivo: sin formato conocido devuelve cadena vacia', () => {
+  assert.strictEqual(logic.sugerirNombreArchivo({ kind: 'otra' }, 'IAV-2606.11-A'), '');
+});
+
+test('sugerirNombreArchivo: folio que no parsea cae a fecha vacia pero no truena', () => {
+  assert.strictEqual(logic.sugerirNombreArchivo({ kind: 'sony', counterExample: 'PIB1' }, ''), '');
+});

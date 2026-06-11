@@ -4033,6 +4033,36 @@
     return out;
   }
 
+  // Sugerencia del primer nombre de archivo por camara. Parte predecible lista; la hora (que solo
+  // conoce la camara) queda como hueco visible "______". Numero arranca en 0001. La fecha sale del
+  // folio (SISTEMA-YYMM.DD-X). Formatos reales: ver docs estructuras-tarjetas.
+  function fechaDesdeFolio(folio) {
+    const m = String(folio || '').match(/-(\d{2})(\d{2})\.(\d{2})-/);
+    if (!m) return null;
+    return { yy: m[1], yyyy: '20' + m[1], mm: m[2], dd: m[3] };
+  }
+  function prefijoDesdeEjemplo(ej) {
+    const m = String(ej || '').match(/([A-Za-z]+)\d+\s*$/);
+    return (m && m[1]) || 'PIB';
+  }
+  function sugerirNombreArchivo(camera, folio) {
+    if (!camera) return '';
+    const f = fechaDesdeFolio(folio);
+    const ymd = f ? (f.yyyy + f.mm + f.dd) : '';
+    switch (camera.kind) {
+      case 'sony':
+        return ymd ? (ymd + '_' + prefijoDesdeEjemplo(camera.counterExample) + '0001') : '';
+      case 'dji':
+        return ymd ? ('DJI_' + ymd + '______0001_D') : '';
+      case 'insta360':
+        return ymd ? ('IMG_' + ymd + '______00_001') : '';
+      case 'tascam':
+        return f ? (f.yy + f.mm + f.dd + '_0001') : '';
+      default:
+        return '';
+    }
+  }
+
   return {
     SERVICES_DEFAULT,
     SERVICE_LABELS,
@@ -4152,5 +4182,6 @@
     getPendingSummary,
     filterLog,
     buildExport,
+    sugerirNombreArchivo,
   };
 });
