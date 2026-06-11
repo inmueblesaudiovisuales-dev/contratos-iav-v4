@@ -1260,6 +1260,7 @@ let saving = false;
 let dirty = false;
 let retryCount = 0;
 let toastTimer = null;
+let saltoInicioLocal = false;
 let syncStatus = 'ok';
 let currentRev = 0; // F62 — revision vigente del servidor (candado de concurrencia)
 let guideMode = localStorage.getItem('checklist_guide_' + (TOKEN || 'demo')) === '1';
@@ -1645,7 +1646,7 @@ function render() {
   // botón "Empezar" y el enlace "Saltar" marcan configurado y caen al flujo normal
   // (que mostrará el selector de rol si aún no hay rol elegido). El chip de rol
   // ("Configurar trabajo") puede reabrirla luego volviendo configurado a false.
-  if (!state.configurado) {
+  if (!state.configurado && !saltoInicioLocal) {
     app.innerHTML = renderInicio();
     app.classList.remove('has-thumb');
     app.classList.remove('has-botnav');
@@ -1823,12 +1824,11 @@ function inicioToggleVlog() {
   render();
 }
 
-// "Saltar configuración y entrar": marca configurado localmente SIN tocar la
-// configuración (no cambia tipo/servicios) y entra a la captura.
+// "Saltar configuración y entrar": bypass LOCAL únicamente — no persiste
+// configurado en el estado compartido. Solo este dispositivo entra a captura.
 function saltarConfiguracion() {
-  state = logic.setConfigurado(state, true);
+  saltoInicioLocal = true;
   render();
-  scheduleSave();
 }
 
 // "Empezar": marca configurado y entra a la vista de captura. Si aún no se
@@ -1842,6 +1842,7 @@ function empezarTrabajo() {
 // Reabre la pantalla de inicio del trabajo más tarde: vuelve configurado a
 // false localmente y re-renderiza (el gate de render muestra renderInicio).
 function abrirConfigurarTrabajo() {
+  saltoInicioLocal = false;
   state = logic.setConfigurado(state, false);
   cerrarModal();
   render();
