@@ -1128,10 +1128,16 @@
       border-radius: var(--radius-sm, 8px); cursor: pointer; display: inline-flex; align-items: center;
       justify-content: center; gap: 6px; }
     .rango-guardar.ok { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+    .rango-contexto { font-size: var(--ts-cap); color: var(--ink-2); font-family: var(--mono, ui-monospace, monospace); }
+    .rango-num-wrap { display: flex; align-items: center; gap: var(--sp-2); }
+    .rango-num-lbl { font-size: var(--ts-cap); color: var(--ink-2); flex: 0 0 auto; }
+    .rango-num { width: 100%; text-align: center; font-variant-numeric: tabular-nums; }
     @media (min-width: 560px) {
-      .rango-fila { flex-direction: row; align-items: center; }
-      .rango-cam { flex: 0 0 130px; }
-      .rango-input { flex: 1 1 auto; }
+      .rango-fila { flex-direction: row; align-items: center; flex-wrap: wrap; }
+      .rango-cam { flex: 0 0 110px; }
+      .rango-contexto { flex: 0 0 auto; }
+      .rango-num-wrap { flex: 1 1 auto; }
+      .rango-num { flex: 1 1 auto; min-width: 0; }
       .rango-guardar { flex: 0 0 auto; }
     }
 
@@ -5560,7 +5566,9 @@ function renderReviewItem(item) {
   return `<div class="review-item"><span>—</span><div>${item}</div></div>`;
 }
 
-// Dispositivos de rango manual: foto, 360, video y drone (servicios, no camaras de state.cameras).
+// Dispositivos de rango manual: SOLO foto y 360 (no se loguean toma por toma; la app los
+// empareja por el NUMERO final del archivo). Video y drone NO van aqui: sus grabaciones salen de
+// las tomas registradas en vivo (porCamara en buildExport), no de este bloque.
 // Catalogo fijo condicionado por servicios activos. Los ids son el contrato con la app.
 function camarasRangoManual() {
   const cat = [];
@@ -5569,12 +5577,29 @@ function camarasRangoManual() {
   const ejSony = ((state.cameras || []).find((c) => c.kind === 'sony' && c.counterExample) || {}).counterExample;
   if (svc.foto) cat.push({ id: 'foto-sony', label: 'Fotos Sony', svc: 'foto', kind: 'sony', counterExample: ejSony });
   if (svc.t360) cat.push({ id: 'insta360', label: 'Insta360', svc: 't360', kind: 'insta360' });
-  if (svc.t360 && svc.drone) cat.push({ id: 'drone-360', label: 'Drone 360', svc: 't360', kind: 'dji' });
-  if (svc.video) cat.push({ id: 'sony-main', label: 'Sony principal (video)', redSeguridad: true, svc: 'video', kind: 'sony', counterExample: ejSony });
-  if (svc.video) cat.push({ id: 'osmo-pocket-3', label: 'Osmo Pocket 3', redSeguridad: true, svc: 'video', kind: 'dji' });
-  if (svc.drone) cat.push({ id: 'drone-dji', label: 'DJI Air 3 (drone)', redSeguridad: true, svc: 'drone', kind: 'dji' });
-  if (svc.drone) cat.push({ id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', redSeguridad: true, svc: 'drone', kind: 'dji' });
   return cat;
+}
+
+// Parte fija + numero de la sugerencia de nombre. La app empareja por los DIGITOS FINALES del
+// nombre, asi que pedimos solo el numero: el prefijo (fecha + lo predecible, incluido el hueco de
+// hora "______" donde aplique) se muestra como contexto fijo y NO se edita.
+// Devuelve { prefijo, sufijo, ancho } o null si no hay sugerencia.
+function partesRangoManual(camera) {
+  const base = sugerenciaNombre(camera);
+  if (!base) return null;
+  const m = base.match(/^(.*?)(\d+)(\D*)$/); // ...prefijo + digitos finales + sufijo (normalmente vacio)
+  if (!m) return null;
+  return { prefijo: m[1], sufijo: m[3] || '', ancho: m[2].length };
+}
+
+// Reconstruye el nombre completo a partir del numero tecleado, terminando en ese numero (con el
+// padding correcto). Si el campo va vacio, devuelve '' (rango sin definir / tarjeta reseteada).
+function nombreRangoDesdeNumero(camera, numeroStr) {
+  const n = String(numeroStr == null ? '' : numeroStr).replace(/\D/g, '');
+  if (!n) return '';
+  const partes = partesRangoManual(camera);
+  if (!partes) return n; // sin plantilla: el numero crudo basta (la app lee solo los digitos finales)
+  return partes.prefijo + n.padStart(partes.ancho, '0') + partes.sufijo;
 }
 
 function setRangoManual(cameraId, campo, valor) {
@@ -5609,8 +5634,11 @@ function rangoInput(id, campo, value) {
 function guardarRango(id) {
   const p = document.getElementById('ri-' + id + '-primer');
   const u = document.getElementById('ri-' + id + '-ultimo');
-  setRangoManual(id, 'primer', p ? p.value : '');
-  setRangoManual(id, 'ultimo', u ? u.value : '');
+  // Los inputs son NUMEROS; reconstruimos el nombre que termina en ese numero (con padding) para
+  // que la app empareje por los digitos finales. primer vacio = rango sin definir / reset.
+  const cam = camarasRangoManual().find((c) => c.id === id) || { kind: id };
+  setRangoManual(id, 'primer', nombreRangoDesdeNumero(cam, p ? p.value : ''));
+  setRangoManual(id, 'ultimo', nombreRangoDesdeNumero(cam, u ? u.value : ''));
   const ok = !!(state.rangosManuales && state.rangosManuales[id]);
   const btn = document.getElementById('rg-' + id);
   if (btn) {
@@ -5635,29 +5663,35 @@ function renderRangosManuales(soloSvc) {
     cams = cams.filter((c) => allow.includes(c.svc));
   }
   if (!cams.length) return '';
-  // Cuando se acota a un rol (foto/360), el texto de "red de seguridad" no aplica.
-  const copy = soloSvc
-    ? 'Opcional. Primer y último archivo de tu sesión, para delimitar el material.'
-    : 'Opcional. Primer y último archivo de cada dispositivo. Para foto y 360 delimita la sesión; para video y drone es una red de seguridad que solo aplica si no se registraron tomas en vivo.';
+  // Solo foto y 360: pedimos unicamente el numero del primer y último archivo de la sesión.
+  const copy = 'Opcional. Solo el número del primer y último archivo de tu sesión, para delimitar el material.';
   return `<div class="rangos-bar">
     <div class="rangos-copy"><strong>Rangos de archivo</strong><span>${copy}</span></div>
     ${cams.map((c) => {
       const r = (state.rangosManuales || {})[c.id] || {};
-      // Sugerencia de nombre por camara (con hueco para la hora donde aplique); el operador
-      // ajusta el numero/hora en vez de teclear todo. Ambos campos arrancan con la plantilla.
-      const sug = sugerenciaNombre({ kind: c.kind, counterExample: c.counterExample });
-      // Borrador local: conserva el texto sin guardar entre re-renders (no se pierde al tocar otra cosa).
+      // Solo pedimos el NUMERO de archivo: el prefijo (fecha + lo predecible) se muestra como
+      // contexto fijo. La app empareja por los digitos finales, asi que el nombre completo da igual.
+      const partes = partesRangoManual({ kind: c.kind, counterExample: c.counterExample });
+      const ctx = partes ? partes.prefijo : '';
+      const ancho = partes ? partes.ancho : 4;
+      const ph = ''.padStart(ancho, '0'); // p. ej. 0001 / 001 — sugiere el ancho del numero
+      const numDe = (val) => { const m = String(val || '').match(/(\d+)\D*$/); return m ? m[1] : ''; };
+      // Borrador local: conserva lo sin guardar entre re-renders (no se pierde al tocar otra cosa).
       const dP = rangoDraft[c.id + '|primer'];
       const dU = rangoDraft[c.id + '|ultimo'];
-      const valP = dP != null ? dP : (r.primer || sug);
-      const valU = dU != null ? dU : (r.ultimo || sug);
+      const valP = dP != null ? dP : numDe(r.primer);
+      const valU = dU != null ? dU : numDe(r.ultimo);
       const guardado = !!(r.primer || r.ultimo);
+      const ctxHtml = ctx ? `<span class="rango-contexto">${esc(ctx)}</span>` : '';
       return `<div class="rango-fila" data-cam="${esc(c.id)}">
-        <span class="rango-cam">${esc(c.label || c.id)}${c.redSeguridad ? '<span class="rango-nota"> · red de seguridad</span>' : ''}</span>
-        <input type="text" class="rango-input" id="ri-${esc(c.id)}-primer" placeholder="${esc(sug || 'primer archivo')}" value="${esc(valP)}"
-          oninput="rangoInput('${esc(c.id)}','primer',this.value)" onfocus="selNumeroRango(this)">
-        <input type="text" class="rango-input" id="ri-${esc(c.id)}-ultimo" placeholder="${esc(sug || 'último archivo')}" value="${esc(valU)}"
-          oninput="rangoInput('${esc(c.id)}','ultimo',this.value)" onfocus="selNumeroRango(this)">
+        <span class="rango-cam">${esc(c.label || c.id)}</span>
+        ${ctxHtml}
+        <div class="rango-num-wrap"><span class="rango-num-lbl">primer</span>
+          <input type="text" inputmode="numeric" class="rango-input rango-num" id="ri-${esc(c.id)}-primer" placeholder="${esc(ph)}" value="${esc(valP)}"
+            oninput="rangoInput('${esc(c.id)}','primer',this.value)" onfocus="selNumeroRango(this)"></div>
+        <div class="rango-num-wrap"><span class="rango-num-lbl">último</span>
+          <input type="text" inputmode="numeric" class="rango-input rango-num" id="ri-${esc(c.id)}-ultimo" placeholder="${esc(ph)}" value="${esc(valU)}"
+            oninput="rangoInput('${esc(c.id)}','ultimo',this.value)" onfocus="selNumeroRango(this)"></div>
         <button type="button" class="rango-guardar${guardado ? ' ok' : ''}" id="rg-${esc(c.id)}" onclick="guardarRango('${esc(c.id)}')">${guardado ? '<i class="ti ti-check"></i> Guardado' : 'Guardar'}</button>
       </div>`;
     }).join('')}
