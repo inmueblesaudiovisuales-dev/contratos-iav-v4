@@ -3070,7 +3070,8 @@ function renderCoverage() {
     </button>
     <div class="cov-body${covHighlightPend ? ' hl-pend' : ''}">
       ${groups || '<div class="empty"><h2>Sin cuartos</h2><p>Arma la lista de cuartos para empezar.</p></div>'}
-    </div>`;
+    </div>
+    ${renderRangosManuales(svc)}`;
 }
 
 const COV_CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12l5 5L20 6"/></svg>';
@@ -5584,13 +5585,13 @@ function renderReviewItem(item) {
 function camarasRangoManual() {
   const cat = [];
   const svc = state.servicios || {};
-  if (svc.foto) cat.push({ id: 'foto-sony', label: 'Fotos Sony' });
-  if (svc.t360) cat.push({ id: 'insta360', label: 'Insta360' });
-  if (svc.t360 && svc.drone) cat.push({ id: 'drone-360', label: 'Drone 360' });
-  if (svc.video) cat.push({ id: 'sony-main', label: 'Sony principal (video)', redSeguridad: true });
-  if (svc.video) cat.push({ id: 'osmo-pocket-3', label: 'Osmo Pocket 3', redSeguridad: true });
-  if (svc.drone) cat.push({ id: 'drone-dji', label: 'DJI Air 3 (drone)', redSeguridad: true });
-  if (svc.drone) cat.push({ id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', redSeguridad: true });
+  if (svc.foto) cat.push({ id: 'foto-sony', label: 'Fotos Sony', svc: 'foto' });
+  if (svc.t360) cat.push({ id: 'insta360', label: 'Insta360', svc: 't360' });
+  if (svc.t360 && svc.drone) cat.push({ id: 'drone-360', label: 'Drone 360', svc: 't360' });
+  if (svc.video) cat.push({ id: 'sony-main', label: 'Sony principal (video)', redSeguridad: true, svc: 'video' });
+  if (svc.video) cat.push({ id: 'osmo-pocket-3', label: 'Osmo Pocket 3', redSeguridad: true, svc: 'video' });
+  if (svc.drone) cat.push({ id: 'drone-dji', label: 'DJI Air 3 (drone)', redSeguridad: true, svc: 'drone' });
+  if (svc.drone) cat.push({ id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', redSeguridad: true, svc: 'drone' });
   return cat;
 }
 
@@ -5606,11 +5607,19 @@ function setRangoManual(cameraId, campo, valor) {
   scheduleSave();
 }
 
-function renderRangosManuales() {
-  const cams = camarasRangoManual();
+function renderRangosManuales(soloSvc) {
+  let cams = camarasRangoManual();
+  if (soloSvc) {
+    const allow = Array.isArray(soloSvc) ? soloSvc : [soloSvc];
+    cams = cams.filter((c) => allow.includes(c.svc));
+  }
   if (!cams.length) return '';
+  // Cuando se acota a un rol (foto/360), el texto de "red de seguridad" no aplica.
+  const copy = soloSvc
+    ? 'Opcional. Primer y último archivo de tu sesión, para delimitar el material.'
+    : 'Opcional. Primer y último archivo de cada dispositivo. Para foto y 360 delimita la sesión; para video y drone es una red de seguridad que solo aplica si no se registraron tomas en vivo.';
   return `<div class="rangos-bar">
-    <div class="rangos-copy"><strong>Rangos de archivo</strong><span>Opcional. Primer y último archivo de cada dispositivo. Para foto y 360 delimita la sesión; para video y drone es una red de seguridad que solo aplica si no se registraron tomas en vivo.</span></div>
+    <div class="rangos-copy"><strong>Rangos de archivo</strong><span>${copy}</span></div>
     ${cams.map((c) => {
       const r = (state.rangosManuales || {})[c.id] || {};
       return `<div class="rango-fila">
