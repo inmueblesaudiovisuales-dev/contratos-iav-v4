@@ -4111,3 +4111,21 @@ test('normalize no fuerza asesor a true cuando viene false', () => {
   const s = logic.normalizeChecklistData({ version: 2, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [], servicios: { asesor: false }, guide: {} });
   assert.strictEqual(s.servicios.asesor, false);
 });
+
+test('espaciosOrdenados: subcuarto queda inmediatamente despues de su cuarto padre', () => {
+  const rec = { id: 'r', nombre: 'Recamara', parentId: null, orden: 1, piso: 'Planta baja' };
+  const sala = { id: 's', nombre: 'Sala', parentId: null, orden: 2, piso: 'Planta baja' };
+  const closet = { id: 'c', nombre: 'Closet', parentId: 'r', orden: 3, piso: 'Planta baja' };
+  const ordenado = logic.espaciosOrdenados([rec, sala, closet], ['Planta baja']);
+  assert.deepEqual(ordenado.map((e) => e.id), ['r', 'c', 's']);
+});
+
+test('espaciosOrdenados: respeta pisos y agrupa hijos con su padre en cada piso', () => {
+  const rec = { id: 'r', nombre: 'Recamara', parentId: null, orden: 1, piso: 'Planta alta' };
+  const closet = { id: 'c', nombre: 'Closet', parentId: 'r', orden: 2, piso: 'Planta alta' };
+  const sala = { id: 's', nombre: 'Sala', parentId: null, orden: 1, piso: 'Planta baja' };
+  const bano = { id: 'b', nombre: 'Bano', parentId: 's', orden: 2, piso: 'Planta baja' };
+  // Pasados en orden mezclado y con planta baja listada primero.
+  const ordenado = logic.espaciosOrdenados([rec, sala, closet, bano], ['Planta baja', 'Planta alta']);
+  assert.deepEqual(ordenado.map((e) => e.id), ['s', 'b', 'r', 'c']);
+});

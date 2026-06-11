@@ -3206,6 +3206,39 @@
     return next;
   }
 
+  // Orden canonico de espacios: agrupa por piso (en el orden de `pisos`, con un
+  // grupo final para pisos no listados) y, dentro de cada piso, coloca cada cuarto
+  // raiz (sin parentId, por `orden`) seguido inmediatamente por sus subcuartos
+  // (parentId === raiz.id, por `orden`). Asi un subcuarto SIEMPRE aparece justo
+  // despues de su cuarto padre. Funcion pura y reusable en cobertura, recorrido y
+  // export. Los huerfanos (parentId que no resuelve) se tratan como raices.
+  function espaciosOrdenados(espacios, pisos) {
+    const list = Array.isArray(espacios) ? espacios.slice() : [];
+    const byId = new Set(list.map((e) => e && e.id));
+    const esRaiz = (e) => !e.parentId || !byId.has(e.parentId);
+    const ordenDe = (e) => (e && e.orden) || 0;
+    const pisoDe = (e) => (e && e.piso) || 'Sin piso';
+    const listados = Array.isArray(pisos) ? pisos.slice() : [];
+    const extras = [...new Set(list.map(pisoDe))].filter((p) => !listados.includes(p));
+    const ordenPisos = [...listados, ...extras];
+    const result = [];
+    ordenPisos.forEach((p) => {
+      const enPiso = list.filter((e) => pisoDe(e) === p);
+      const hijosDe = (id) => enPiso
+        .filter((e) => !esRaiz(e) && e.parentId === id)
+        .sort((a, b) => ordenDe(a) - ordenDe(b));
+      // Recorrido profundo: cada nodo, seguido inmediatamente por su subarbol. Asi
+      // un subcuarto (y sub-subcuarto) siempre queda justo despues de su padre, sin
+      // perder ningun espacio aunque haya anidamiento de varios niveles.
+      const pushSubtree = (nodo) => {
+        result.push(nodo);
+        hijosDe(nodo.id).forEach(pushSubtree);
+      };
+      enPiso.filter(esRaiz).sort((a, b) => ordenDe(a) - ordenDe(b)).forEach(pushSubtree);
+    });
+    return result;
+  }
+
   function targetsForMode(state, mode) {
     if (mode === 'asesor') return state.asesorPuntos || [];
     // F38 — el drone es UNA sola sesion: devuelve UN unico target de sesion
@@ -3242,7 +3275,7 @@
       });
       return result;
     }
-    return state.espacios || [];
+    return espaciosOrdenados(state.espacios || [], state.pisos);
   }
 
   function getScenePath(state, targetId, mode) {
@@ -4205,6 +4238,7 @@
     droneSessionSubject,
     droneSessionSuggestions,
     targetsForMode,
+    espaciosOrdenados,
     SPACE_LIBRARY_BY_FLOOR,
     SPACE_LIBRARY_INDEX,
     suggestedSpacesFor,

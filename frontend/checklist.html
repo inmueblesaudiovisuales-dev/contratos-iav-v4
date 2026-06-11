@@ -3082,7 +3082,8 @@ function renderCoverage() {
 
   const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(all.map((e) => e.piso || 'Sin piso'))];
   const groups = pisos.map((p) => {
-    const rooms = all.filter((e) => (e.piso || 'Sin piso') === p).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    const enPiso = all.filter((e) => (e.piso || 'Sin piso') === p);
+    const rooms = logic.espaciosOrdenados(enPiso, [p]);
     if (!rooms.length) return '';
     return `<section class="cov-group">
       <div class="cov-piso">${esc(p)}</div>
@@ -3164,17 +3165,11 @@ function activeTarget() {
 }
 
 // ===== Recorrido (orden de cuartos por servicio) + Siguiente cuarto =====
-function pisoIndex(piso) {
-  const pisos = state.pisos || [];
-  const i = pisos.indexOf(piso || '');
-  return i < 0 ? 999 : i;
-}
-
 function recorridoEspacios(servicio) {
-  const def = state.espacios.slice().sort((a, b) => {
-    const pa = pisoIndex(a.piso), pb = pisoIndex(b.piso);
-    return pa !== pb ? pa - pb : (a.orden || 0) - (b.orden || 0);
-  });
+  // Orden por defecto canonico: por piso y, dentro de cada piso, cada subcuarto
+  // justo despues de su cuarto padre (logic.espaciosOrdenados). El orden guardado
+  // por el usuario (state.recorrido) se respeta encima de este default.
+  const def = logic.espaciosOrdenados(state.espacios, state.pisos);
   const stored = (state.recorrido && state.recorrido[servicio]) || [];
   const ids = state.espacios.map((e) => e.id);
   const valid = stored.filter((id) => ids.includes(id));
@@ -3239,16 +3234,27 @@ function abrirOrdenarRecorrido() {
       (byPiso[p] = byPiso[p] || []).push(id);
     });
     let globalNum = 0;
+    const espDe = (id) => state.espacios.find((x) => x.id === id);
+    const esSub = (id) => { const e = espDe(id); return !!(e && e.parentId && state.espacios.some((x) => x.id === e.parentId)); };
     body = pisos.filter((p) => byPiso[p] && byPiso[p].length).map((p) => {
       const ids = byPiso[p];
-      const rows = ids.map((id, idx) => {
+      // Solo los cuartos raiz se reordenan: los subcuartos viajan con su padre y no
+      // tienen botones (no se pueden separar). Las flechas de un raiz se desactivan
+      // cuando no hay otro raiz arriba/abajo dentro del piso.
+      const raicesPiso = ids.filter((id) => !esSub(id));
+      const rows = ids.map((id) => {
         globalNum++;
-        const isFirst = idx === 0;
-        const isLast = idx === ids.length - 1;
+        const sub = esSub(id);
+        const ri = raicesPiso.indexOf(id);
+        const isFirst = ri === 0;
+        const isLast = ri === raicesPiso.length - 1;
+        const ctrls = sub
+          ? ''
+          : `<button class="setup-mini" onclick="moverRecorrido('${id}',-1)" aria-label="Subir"${isFirst ? ' disabled' : ''}><i class="ti ti-chevron-up"></i></button>
+          <button class="setup-mini" onclick="moverRecorrido('${id}',1)" aria-label="Bajar"${isLast ? ' disabled' : ''}><i class="ti ti-chevron-down"></i></button>`;
         return `<div class="cuarto-row-wrap">
           <span class="cuarto-row"><span class="cuarto-name"><span class="rec-num">${globalNum}</span>${esc(nombre(id))}</span></span>
-          <button class="setup-mini" onclick="moverRecorrido('${id}',-1)" aria-label="Subir"${isFirst ? ' disabled' : ''}><i class="ti ti-chevron-up"></i></button>
-          <button class="setup-mini" onclick="moverRecorrido('${id}',1)" aria-label="Bajar"${isLast ? ' disabled' : ''}><i class="ti ti-chevron-down"></i></button>
+          ${ctrls}
         </div>`;
       }).join('');
       return `<div class="rec-piso-label">${esc(p)}</div>${rows}`;
@@ -3269,13 +3275,38 @@ function abrirOrdenarRecorrido() {
 function moverRecorrido(id, dir) {
   const servicio = state.modoActual;
   if (servicio === 'drone' || servicio === 'asesor') return moverLista(servicio, id, dir);
+  // Solo se reordenan cuartos raiz; un subcuarto nunca se mueve por su cuenta para
+  // no separarse de su padre. Se mueve el BLOQUE completo (raiz + sus subcuartos
+  // contiguos) intercambiandolo con el bloque del raiz vecino, dentro del mismo piso.
+  const espDe = (x) => state.espacios.find((e) => e.id === x);
+  const esRaiz = (x) => { const e = espDe(x); return !e || !e.parentId || !state.espacios.some((s) => s.id === e.parentId); };
+  const sel = espDe(id);
+  if (!sel || !esRaiz(id)) return;
   const orden = recorridoEspacios(servicio);
-  const i = orden.indexOf(id), j = i + dir;
-  if (j < 0 || j >= orden.length) return;
-  const espI = state.espacios.find((x) => x.id === orden[i]);
-  const espJ = state.espacios.find((x) => x.id === orden[j]);
-  if (!espI || !espJ || espI.piso !== espJ.piso) return;
-  const t = orden[i]; orden[i] = orden[j]; orden[j] = t;
+  const i = orden.indexOf(id);
+  if (i < 0) return;
+  // Limite del bloque del raiz seleccionado: hasta el siguiente raiz.
+  let endI = i + 1;
+  while (endI < orden.length && !esRaiz(orden[endI])) endI++;
+  const block = orden.slice(i, endI);
+  if (dir < 0) {
+    // Raiz anterior (su bloque empieza en startPrev): retrocede hasta el raiz previo.
+    let startPrev = i - 1;
+    while (startPrev >= 0 && !esRaiz(orden[startPrev])) startPrev--;
+    if (startPrev < 0) return;
+    const prev = espDe(orden[startPrev]);
+    if (!prev || (prev.piso || '') !== (sel.piso || '')) return;
+    const prevBlock = orden.slice(startPrev, i);
+    orden.splice(startPrev, prevBlock.length + block.length, ...block, ...prevBlock);
+  } else {
+    if (endI >= orden.length) return;
+    const next = espDe(orden[endI]);
+    if (!next || (next.piso || '') !== (sel.piso || '')) return;
+    let endNext = endI + 1;
+    while (endNext < orden.length && !esRaiz(orden[endNext])) endNext++;
+    const nextBlock = orden.slice(endI, endNext);
+    orden.splice(i, block.length + nextBlock.length, ...nextBlock, ...block);
+  }
   if (!state.recorrido) state.recorrido = {};
   state.recorrido[servicio] = orden;
   scheduleSave();
