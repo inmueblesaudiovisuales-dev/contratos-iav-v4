@@ -1640,6 +1640,18 @@ function render() {
     app.innerHTML = `<main class="content">${renderConfigGuia()}</main>`;
     return;
   }
+  // Task 6 — Inicio del trabajo: mientras el trabajo no esté `configurado` en este
+  // estado, mostramos la pantalla de inicio (rol + tipo + servicios + vlog). El
+  // botón "Empezar" y el enlace "Saltar" marcan configurado y caen al flujo normal
+  // (que mostrará el selector de rol si aún no hay rol elegido). El chip de rol
+  // ("Configurar trabajo") puede reabrirla luego volviendo configurado a false.
+  if (!state.configurado) {
+    app.innerHTML = renderInicio();
+    app.classList.remove('has-thumb');
+    app.classList.remove('has-botnav');
+    bindNameInput();
+    return;
+  }
   // Sin rol: selector discreto una sola vez (reemplaza la pantalla de servicios).
   if (!roleReady()) {
     app.innerHTML = renderRoleSelect();
@@ -1731,13 +1743,119 @@ function renderRoleSelect() {
   </div>`;
 }
 
+// Etiqueta de TRABAJO derivada del servicio del rol (decisión "etiqueta por
+// trabajo, claves intactas"): los botones muestran Video/Fotografía/360 pero
+// por debajo llaman setRole con la clave-persona intacta ('bruno'/'fernanda'/'danna').
+const ROLE_WORK_LABEL = { foto: 'Fotografía', t360: '360', video: 'Video' };
+function workLabelForRole(role) {
+  const def = ROLE_DEF[role];
+  return (def && ROLE_WORK_LABEL[def.service]) || (def ? def.label : role);
+}
+
+// ===== Pantalla de inicio del trabajo (Task 6) =====
+// Opción A — todo a la vista, con scroll. Reusa el sistema visual existente:
+// .role-select/.role-hd/.role-opts/.role-opt (saludo + rol), .setup-block/.seg
+// (tipo + servicios), .setup-toggle (switch Osmo), .primary.block (Empezar).
+// No renombra claves de rol ni de servicio; solo muestra etiquetas por trabajo.
+function renderInicio() {
+  const cur = getRole();
+  const tipo = state.guide ? state.guide.tipoPropiedad : null;
+  const servicios = ['video', 'foto', 't360', 'drone', 'asesor'];
+  return `<div class="role-select">
+    <div class="role-hd">
+      <span class="lane-brand"><span class="ob-logo">IAV</span>bitácora</span>
+      <h1>Configurar trabajo</h1>
+      ${meta.nombreCliente || meta.folio ? `<p>${esc(meta.nombreCliente || 'Sesión')}${meta.folio ? ' · ' + esc(meta.folio) : ''}</p>` : ''}
+      <p class="role-hint">Elige quién eres y ajusta el trabajo. Lo recordamos en este celular.</p>
+    </div>
+
+    <label class="setup-lbl" style="margin-top:22px">¿Quién eres?</label>
+    <div class="role-opts" style="margin-top:10px">${ROLE_ORDER.map((r) => {
+      const d = ROLE_DEF[r];
+      return `<button class="role-opt" onclick="setRole('${r}')">
+        <span class="rc-avatar lg">${esc(d.initials)}</span>
+        <span class="role-opt-copy"><strong>${esc(workLabelForRole(r))}</strong><span>${esc(d.label)}</span></span>
+        <i class="ti ti-chevron-right role-opt-chev"></i>
+      </button>`;
+    }).join('')}</div>
+
+    <div class="setup-block">
+      <label class="setup-lbl">Tipo de propiedad</label>
+      <div class="seg">${['casa', 'departamento', 'terreno', 'quinta'].map((t) => `<button class="seg-btn${tipo === t ? ' active' : ''}" onclick="setSetupTipo('${t}')">${TIPO_LABEL[t]}</button>`).join('')}</div>
+    </div>
+
+    <div class="setup-block">
+      <label class="setup-lbl">Servicios de este trabajo</label>
+      <div class="seg">${servicios.map((key) => `<button class="seg-btn${state.servicios[key] ? ' active' : ''}" role="switch" aria-checked="${state.servicios[key] ? 'true' : 'false'}" onclick="inicioToggleServicio('${key}')">${SERVICE_UI[key].label}</button>`).join('')}</div>
+    </div>
+
+    <div class="setup-block">
+      <button class="setup-toggle${state.vlogOsmoAction ? ' on' : ''}" role="switch" aria-checked="${state.vlogOsmoAction ? 'true' : 'false'}" onclick="inicioToggleVlog()">
+        <i class="ti ti-camera st-icon"></i>
+        <span class="st-copy">
+          <span class="st-title">¿Estás grabando con tu Osmo Action?</span>
+          <span class="st-sub">${state.vlogOsmoAction ? 'Vlog activo: la captura considera la Osmo Action.' : 'Actívalo si llevas la Osmo Action para vlog.'}</span>
+        </span>
+        <span class="st-sw" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <button class="primary block" onclick="empezarTrabajo()">${cur ? 'Empezar' : 'Elige quién eres para empezar'}</button>
+    <div class="action-stack" style="margin-top:14px">
+      <button class="btn ghost" onclick="saltarConfiguracion()">Saltar configuración y entrar</button>
+    </div>
+  </div>`;
+}
+
+// Toggle de servicio desde la pantalla de inicio: reusa la lógica pura
+// setServiceActive (igual que toggleServicio) pero re-renderiza la pantalla de
+// inicio en vez del modal de "Servicios activos".
+function inicioToggleServicio(key) {
+  state = logic.setServiceActive(state, key, !state.servicios[key]);
+  ensureActiveMode();
+  scheduleSave();
+  render();
+}
+
+function inicioToggleVlog() {
+  state = logic.setVlogOsmoAction(state, !state.vlogOsmoAction);
+  scheduleSave();
+  render();
+}
+
+// "Saltar configuración y entrar": marca configurado localmente SIN tocar la
+// configuración (no cambia tipo/servicios) y entra a la captura.
+function saltarConfiguracion() {
+  state = logic.setConfigurado(state, true);
+  render();
+  scheduleSave();
+}
+
+// "Empezar": marca configurado y entra a la vista de captura. Si aún no se
+// eligió rol, el flujo cae al selector de rol existente (renderRoleSelect).
+function empezarTrabajo() {
+  state = logic.setConfigurado(state, true);
+  render();
+  scheduleSave();
+}
+
+// Reabre la pantalla de inicio del trabajo más tarde: vuelve configurado a
+// false localmente y re-renderiza (el gate de render muestra renderInicio).
+function abrirConfigurarTrabajo() {
+  state = logic.setConfigurado(state, false);
+  cerrarModal();
+  render();
+  scheduleSave();
+}
+
 function abrirCambiarRol() {
   const cur = getRole();
   abrirModal(`<div class="sheet-head"><h2>Cambiar de rol</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="action-stack">${ROLE_ORDER.map((r) => {
       const d = ROLE_DEF[r];
-      return `<button class="${cur === r ? 'primary' : 'btn'}" onclick="setRole('${r}')"><span class="rc-avatar sm">${esc(d.initials)}</span> ${esc(d.label)} · ${esc(d.sub)}</button>`;
+      return `<button class="${cur === r ? 'primary' : 'btn'}" onclick="setRole('${r}')"><span class="rc-avatar sm">${esc(d.initials)}</span> ${esc(workLabelForRole(r))} · ${esc(d.label)}</button>`;
     }).join('')}
+      <button class="btn ghost" onclick="abrirConfigurarTrabajo()"><i class="ti ti-adjustments"></i> Configurar trabajo</button>
       <button class="btn ghost" onclick="abrirSetup()"><i class="ti ti-home-cog"></i> Armar cuartos</button>
     </div>`);
 }
