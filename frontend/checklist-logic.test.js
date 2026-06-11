@@ -4104,3 +4104,10 @@ test('normalize: servicios.drone true se conserva aunque no haya incluirDrone', 
   const s = logic.normalizeChecklistData({ version: 2, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [], servicios: { drone: true }, guide: {} });
   assert.strictEqual(s.servicios.drone, true);
 });
+test('asesor arranca apagado por defecto', () => {
+  assert.strictEqual(logic.createDefaultState().servicios.asesor, false);
+});
+test('normalize no fuerza asesor a true cuando viene false', () => {
+  const s = logic.normalizeChecklistData({ version: 2, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [], servicios: { asesor: false }, guide: {} });
+  assert.strictEqual(s.servicios.asesor, false);
+});

@@ -3,7 +3,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.IAVChecklistLogic = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
-  const SERVICES_DEFAULT = { foto: true, t360: true, video: true, drone: true, asesor: true };
+  const SERVICES_DEFAULT = { foto: true, t360: true, video: true, drone: true, asesor: false };
   const SERVICE_LABELS = { foto: 'Foto', t360: '360', video: 'Video', drone: 'Drone', asesor: 'Asesores' };
   const CAMERA_DEFAULTS = [
     { id: 'sony-main', label: 'Sony principal', mode: 'video', kind: 'sony' },
