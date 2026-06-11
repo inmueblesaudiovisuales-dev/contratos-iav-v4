@@ -2538,6 +2538,7 @@
       rangosManuales: {},
       guide: { tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false },
       vlogOsmoAction: false,
+      configurado: false,
     };
   }
 
@@ -2936,6 +2937,7 @@
       const normalized = Object.assign(createDefaultState(), clone(data));
       normalized.servicios = Object.assign(clone(SERVICES_DEFAULT), normalized.servicios || {});
       normalized.vlogOsmoAction = normalized.vlogOsmoAction === true;
+      normalized.configurado = normalized.configurado === true;
       normalized.guide = Object.assign({ tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false }, normalized.guide || {});
       // F35 — migracion del default incluirDrone: el campo es nuevo. Si el estado
       // entrante NO lo trae pero tiene rastro de drone (algun espacio kind:'drone' o
@@ -4076,6 +4078,12 @@
     return next;
   }
 
+  function setConfigurado(state, value) {
+    const next = clone(state);
+    next.configurado = value === true;
+    return next;
+  }
+
   return {
     SERVICES_DEFAULT,
     SERVICE_LABELS,
@@ -4197,5 +4205,6 @@
     buildExport,
     sugerirNombreArchivo,
     setVlogOsmoAction,
+    setConfigurado,
   };
 });

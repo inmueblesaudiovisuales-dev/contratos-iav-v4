@@ -3989,3 +3989,25 @@ test('normalizeChecklistData coerciona vlogOsmoAction a false cuando el valor es
   const sinCampo = { version: 3, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [] };
   assert.equal(logic.normalizeChecklistData(sinCampo).vlogOsmoAction, false, 'campo ausente -> false');
 });
+
+// ─── configurado ──────────────────────────────────────────────────────────────
+
+test('createDefaultState incluye configurado en false', () => {
+  const s = logic.createDefaultState();
+  assert.strictEqual(s.configurado, false);
+});
+
+test('setConfigurado cambia el flag sin mutar el original', () => {
+  const s = logic.createDefaultState();
+  const next = logic.setConfigurado(s, true);
+  assert.strictEqual(next.configurado, true);
+  assert.strictEqual(s.configurado, false);
+});
+
+test('normalizeChecklistData coerciona configurado a false cuando el valor es invalido o falta', () => {
+  const conString = { version: 3, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [], configurado: 'si' };
+  assert.equal(logic.normalizeChecklistData(conString).configurado, false, 'string "si" -> false');
+
+  const sinCampo = { version: 3, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [] };
+  assert.equal(logic.normalizeChecklistData(sinCampo).configurado, false, 'campo ausente -> false');
+});
