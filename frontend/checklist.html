@@ -2029,7 +2029,7 @@ function landingRoomRow(room) {
     <i class="ti ti-chevron-right room-chev"></i>
   </button>
   ${subs.map((s) => `<button class="room sub" onclick="entrarCuarto('${s.id}')">
-    <span class="room-info"><span class="room-name">${esc(s.nombre)}</span><span class="pills">${roomPills(s)}</span></span>
+    <span class="room-info"><span class="room-name">${esc(s.nombre)}<span class="cov-parent"> de ${esc(room.nombre)}</span></span><span class="pills">${roomPills(s)}</span></span>
     <i class="ti ti-chevron-right room-chev"></i>
   </button>`).join('')}`;
 }
@@ -3100,10 +3100,13 @@ function toggleCovHighlight() { covHighlightPend = !covHighlightPend; render(); 
 function renderCoverage() {
   const svc = state.modoActual;
   const all = state.espacios;
-  const total = all.length;
+  const total = all.length; // incluye subcuartos; se usa para el math de pendientes (no cambiar)
   const stateOf = (r) => (r.estados[svc] || {}).estado || 'pendiente';
   const pend = all.filter((r) => stateOf(r) === 'pendiente').length;
   const na = all.filter((r) => stateOf(r) === 'no_aplica').length;
+  // Para la etiqueta visible usamos cuartos raíz (sin subcuartos), igual que la lista de landing.
+  const totalRaiz = all.filter((r) => !r.parentId).length;
+  const subCount = total - totalRaiz;
 
   const pisos = state.pisos && state.pisos.length ? state.pisos : [...new Set(all.map((e) => e.piso || 'Sin piso'))];
   const groups = pisos.map((p) => {
@@ -3118,12 +3121,15 @@ function renderCoverage() {
 
   const pendTxt = `<span class="cov-sum-pend">${pend} pendiente${pend === 1 ? '' : 's'}</span>`;
   const naTxt = na ? ` · ${na} no aplica` : '';
+  const totalLbl = subCount
+    ? `${totalRaiz} cuarto${totalRaiz === 1 ? '' : 's'} · ${subCount} subcuarto${subCount === 1 ? '' : 's'}`
+    : `${totalRaiz} cuarto${totalRaiz === 1 ? '' : 's'}`;
   return `<div class="cov-hd">
       <div><h2 class="cov-title">${esc(SERVICE_UI[svc].label)}</h2><p class="cov-sub">Toca un cuarto para marcar su cobertura.</p></div>
       <button class="cov-edit" onclick="abrirSetup()" aria-label="Armar cuartos"><i class="ti ti-home-cog"></i></button>
     </div>
     <button class="cov-sumbar${covHighlightPend ? ' on' : ''}" onclick="toggleCovHighlight()" aria-pressed="${covHighlightPend}">
-      <span>${total} cuarto${total === 1 ? '' : 's'}</span>
+      <span>${totalLbl}</span>
       <span>${pendTxt}${naTxt}</span>
     </button>
     <div class="cov-body${covHighlightPend ? ' hl-pend' : ''}">
