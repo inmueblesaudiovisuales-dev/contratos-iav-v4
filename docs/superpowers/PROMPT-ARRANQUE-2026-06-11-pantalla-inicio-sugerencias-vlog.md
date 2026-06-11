@@ -6,11 +6,40 @@
 
 ## Contexto
 
-Dos repos:
-- **`contratos-iav-v4`** (el checklist). Rama **`main`**. OJO: **push a `main` despliega a producción**
-  (GitHub Actions). NO correr `wrangler deploy` a mano. Pruebas de lógica: `node --test frontend/checklist-logic.test.js`.
-- **`iav-metadata-app`** (la app de bajar material). Rama de trabajo; **merge local a `master`**, sin push
-  salvo que Bruno lo pida. Gate: `npx tsc --noEmit && npx vitest run` (+ `npm run build:app` al tocar UI).
+Se trabaja SIEMPRE en las copias locales del disco (no "en GitHub"). GitHub es solo respaldo/publicación.
+
+Dos repos, con sus rutas EXACTAS:
+- **Checklist:** `/Users/brunogutierrez/contratos-iav-v4` — rama **`main`**. OJO: **push a `main` despliega
+  a producción** (GitHub Actions). NO correr `wrangler deploy` a mano. Pruebas de lógica:
+  `node --test frontend/checklist-logic.test.js`.
+- **App de bajar material:** `/Users/brunogutierrez/iav-metadata-app` — rama de trabajo **`rediseno`**.
+  **Merge local a `master`**, sin push salvo que Bruno lo pida. Gate:
+  `npx tsc --noEmit && npx vitest run` (+ `npm run build:app` al tocar UI).
+
+> CARPETA EQUIVOCADA — NO usar: existe una copia vieja del checklist en
+> `/Users/brunogutierrez/Documents/CLAUDE/contratos-iav-v4` (rama del 5-jun, ~217 commits atrás). NO
+> trabajar ahí. La única copia buena del checklist es `/Users/brunogutierrez/contratos-iav-v4`.
+
+## ANTES DE EMPEZAR — verifica que trabajas en la copia correcta y al día (OBLIGATORIO)
+
+No avances hasta confirmar las cuatro cosas, en CADA repo. Si algo falla, DETENTE y avísale a Bruno; no
+intentes arreglarlo con `pull`/`reset` por tu cuenta.
+
+1. **Carpeta correcta.** Estás en la ruta exacta de arriba (no en `Documents/CLAUDE/...` para el checklist).
+   `pwd` debe coincidir.
+2. **Rama correcta.** Checklist en `main`; app en `rediseno`. `git branch --show-current`.
+3. **Al día con GitHub (no atrasado).** Corre:
+   ```
+   git fetch origin
+   git rev-list --left-right --count origin/<rama>...HEAD
+   ```
+   El resultado es `DETRAS  ADELANTE`. **Si DETRAS > 0, DETENTE** — la copia local NO es la más actual
+   (hay trabajo en GitHub que no tienes). Avísale a Bruno antes de hacer nada. `ADELANTE > 0` está bien
+   (es trabajo local sin subir, p. ej. el spec/plan/prompt).
+4. **Spec y plan presentes.** Confirma que existen en el checklist:
+   `docs/superpowers/specs/2026-06-11-sugerencias-vlog-rangos-design.md` y
+   `docs/superpowers/plans/2026-06-11-pantalla-inicio-sugerencias-vlog-rangos.md`. Si no están, estás en
+   la carpeta o rama equivocada — DETENTE.
 
 ## Qué construir
 
