@@ -2086,9 +2086,11 @@ function renderActiveView() {
   if (activeView === 'edicion') return renderEditView();
   // Bruno dentro de un cuarto: loop existente con regreso a la propiedad. F39 — la
   // sesión de drone trae su propio regreso "‹ Cuartos" en el header, así que aquí no
-  // se duplica el back-prop para ella.
+  // se duplica el back-prop para ella. T6.2 — la sesión de asesor trae su propio
+  // regreso "‹ Captura" (renderAsesorCapture), así que tampoco se duplica aquí.
   const enSesionDrone = state.modoActual === 'drone' && esTargetSesionDrone(activeTarget());
-  const back = (isBruno() && capturaScreen === 'cuarto' && !enSesionDrone)
+  const enSesionAsesor = state.modoActual === 'asesor';
+  const back = (isBruno() && capturaScreen === 'cuarto' && !enSesionDrone && !enSesionAsesor)
     ? `<button class="back-prop" onclick="salirCuarto()"><i class="ti ti-chevron-left"></i> Propiedad</button>` : '';
   return back + renderCaptureView();
 }
