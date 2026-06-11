@@ -3945,9 +3945,9 @@ test('sugerirNombreArchivo: sony usa fecha del folio + prefijo del ejemplo + 000
   assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), '20260611_PIB0001');
 });
 
-test('sugerirNombreArchivo: dji deja hueco para la hora y sufijo _D', () => {
+test('sugerirNombreArchivo: dji incluye fecha y sufijo _D sin hueco de hora', () => {
   const cam = { kind: 'dji' };
-  assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), 'DJI_20260611______0001_D');
+  assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), 'DJI_20260611_0001_D');
 });
 
 test('sugerirNombreArchivo: tascam usa año de 2 digitos sin prefijo', () => {
@@ -3955,9 +3955,9 @@ test('sugerirNombreArchivo: tascam usa año de 2 digitos sin prefijo', () => {
   assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), '260611_0001');
 });
 
-test('sugerirNombreArchivo: insta360 deja hueco de hora, _00_ y 3 digitos', () => {
+test('sugerirNombreArchivo: insta360 incluye fecha, _00_ y 3 digitos sin hueco de hora', () => {
   const cam = { kind: 'insta360' };
-  assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), 'IMG_20260611______00_001');
+  assert.strictEqual(logic.sugerirNombreArchivo(cam, 'IAV-2606.11-A'), 'IMG_20260611_00_001');
 });
 
 test('sugerirNombreArchivo: sin formato conocido devuelve cadena vacia', () => {

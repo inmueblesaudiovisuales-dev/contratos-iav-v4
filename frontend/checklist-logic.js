@@ -4091,8 +4091,7 @@
     return out;
   }
 
-  // Sugerencia del primer nombre de archivo por camara. Parte predecible lista; la hora (que solo
-  // conoce la camara) queda como hueco visible "______". Numero arranca en 0001. La fecha sale del
+  // Sugerencia del primer nombre de archivo por camara. Numero arranca en 0001. La fecha sale del
   // folio (SISTEMA-YYMM.DD-X). Formatos reales: ver docs estructuras-tarjetas.
   // Deriva la fecha del folio (SISTEMA-YYMM.DD-X). Devuelve objeto plano {yy,yyyy,mm,dd} (no un Date),
   // para armar los distintos formatos de nombre por camara. Es la unica fuente de esta logica.
@@ -4115,9 +4114,9 @@
       case 'sony':
         return ymd ? (ymd + '_' + prefijoDesdeEjemplo(camera.counterExample) + '0001') : '';
       case 'dji':
-        return ymd ? ('DJI_' + ymd + '______0001_D') : '';
+        return ymd ? ('DJI_' + ymd + '_0001_D') : '';
       case 'insta360':
-        return ymd ? ('IMG_' + ymd + '______00_001') : '';
+        return ymd ? ('IMG_' + ymd + '_00_001') : '';
       case 'tascam':
         return f ? (f.yy + f.mm + f.dd + '_0001') : '';
       default:
