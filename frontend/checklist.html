@@ -5060,16 +5060,26 @@ function iniciarSecuencia() {
 }
 
 // F66 — sugerencia del nombre de archivo. Para Sony pre-rellena el nombre COMPLETO del primer
-// archivo del rodaje: fecha de hoy + prefijo + numero con relleno ("YYYYMMDD_PIB0001"). Arranca
-// en 1 porque la numeracion se reinicia en cada rodaje; el numero queda seleccionado por si un
-// rodaje no arranco en 1. Para DJI/Osmo: sin sugerencia (string vacio) hasta dejar los archivos
-// consistentes. SONY_DIGITOS = ancho del contador de la Sony (PIB####).
+// archivo del rodaje: fecha + prefijo + numero con relleno ("YYYYMMDD_PIB0001"). Arranca en 1 porque
+// la numeracion se reinicia en cada rodaje; el numero queda seleccionado por si un rodaje no arranco en
+// 1. Para DJI/Osmo: sin sugerencia (string vacio) hasta dejar los archivos consistentes.
+// SONY_DIGITOS = ancho del contador de la Sony (PIB####).
+//   - PREFIJO: sale del ejemplo de la propia camara (camera.counterExample, p. ej. "PIB2818" -> "PIB"),
+//     no de un "PIB" hardcodeado. Asi, si cambias de camara/negocio, la sugerencia usa su prefijo.
+//   - FECHA: se puede pasar `fecha` (fecha de la sesion). Por defecto usa hoy. NOTA: el checklist hoy NO
+//     guarda una fecha de sesion; mientras no exista ese campo, esto cae a hoy. Si trabajas pasada la
+//     medianoche o revisas otro dia, conviene agregar una fecha de sesion al estado y pasarla aqui.
 const SONY_DIGITOS = 4;
-function sugerenciaNombre(camera) {
+function prefijoSony(camera) {
+  const ej = String((camera && camera.counterExample) || '').trim();
+  const m = ej.match(/([A-Za-z]+)\d+\s*$/); // letras justo antes de los digitos finales del ejemplo
+  return (m && m[1]) || 'PIB'; // fallback conservador al prefijo historico
+}
+function sugerenciaNombre(camera, fecha) {
   if (!camera || camera.kind !== 'sony') return '';
-  const d = new Date();
+  const d = fecha instanceof Date ? fecha : new Date();
   const ymd = '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-  return ymd + '_PIB' + String(1).padStart(SONY_DIGITOS, '0');
+  return ymd + '_' + prefijoSony(camera) + String(1).padStart(SONY_DIGITOS, '0');
 }
 
 function aplicarSecuencia(cameraId, filename) {
