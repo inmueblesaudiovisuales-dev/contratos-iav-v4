@@ -5066,18 +5066,23 @@ function iniciarSecuencia() {
 // SONY_DIGITOS = ancho del contador de la Sony (PIB####).
 //   - PREFIJO: sale del ejemplo de la propia camara (camera.counterExample, p. ej. "PIB2818" -> "PIB"),
 //     no de un "PIB" hardcodeado. Asi, si cambias de camara/negocio, la sugerencia usa su prefijo.
-//   - FECHA: se puede pasar `fecha` (fecha de la sesion). Por defecto usa hoy. NOTA: el checklist hoy NO
-//     guarda una fecha de sesion; mientras no exista ese campo, esto cae a hoy. Si trabajas pasada la
-//     medianoche o revisas otro dia, conviene agregar una fecha de sesion al estado y pasarla aqui.
+//   - FECHA: sale del FOLIO (la fecha de la sesion vive ahi: SISTEMA-YYMM.DD-X). Asi la sugerencia usa la
+//     fecha del rodaje, no la de hoy (no falla si capturas pasada la medianoche o revisas otro dia). Si el
+//     folio falta o no parsea, cae a hoy. Se puede pasar `fecha` explicita para sobreescribir.
 const SONY_DIGITOS = 4;
 function prefijoSony(camera) {
   const ej = String((camera && camera.counterExample) || '').trim();
   const m = ej.match(/([A-Za-z]+)\d+\s*$/); // letras justo antes de los digitos finales del ejemplo
   return (m && m[1]) || 'PIB'; // fallback conservador al prefijo historico
 }
+function fechaDeFolio(folio) {
+  const m = String(folio || '').match(/-(\d{2})(\d{2})\.(\d{2})-/); // SISTEMA-YYMM.DD-X
+  if (!m) return null;
+  return new Date(2000 + Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
 function sugerenciaNombre(camera, fecha) {
   if (!camera || camera.kind !== 'sony') return '';
-  const d = fecha instanceof Date ? fecha : new Date();
+  const d = fecha instanceof Date ? fecha : (fechaDeFolio(meta && meta.folio) || new Date());
   const ymd = '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
   return ymd + '_' + prefijoSony(camera) + String(1).padStart(SONY_DIGITOS, '0');
 }
