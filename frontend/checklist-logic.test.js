@@ -4030,3 +4030,20 @@ test('FX30: si asesor inicia primero, video reusa su segmento', () => {
   assert.strictEqual(s.sequenceSegments.length, 1);
   assert.strictEqual(logic.getCameraSequence(s, 'sony-main').segment.id, logic.getCameraSequence(s, 'sony-asesor').segment.id);
 });
+
+test('FX30: la toma de asesor continua la numeracion del video (mismo contador)', () => {
+  let s = logic.createDefaultState();
+  // sony-main inicia en 10; bumpCameraCounter la deja en 11
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260611_PIB0010.MP4', archivoActual: true });
+  s = logic.bumpCameraCounter(s, 'sony-main', 1); // counterNext pasa a 11
+  // Inicia la camara de audio del asesor para que registerAsesorFile no aborte
+  s = logic.initializeCameraSequence(s, { cameraId: 'tascam-asesor', lastFilename: '260611_0001.WAV', archivoActual: true });
+  // Inicia (reusa) la secuencia Sony del asesor — debe reusar el segmento compartido
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-asesor', lastFilename: '20260611_PIB9999.MP4', archivoActual: true });
+  s.asesorPuntos = [{ id: 'p1', nombre: 'Punto 1', tipo: 'normal', estado: 'pendiente', ordenLista: 1 }];
+  s = logic.registerAsesorFile(s, { puntoId: 'p1' });
+  const sonyFile = s.mediaFiles.find((f) => f.cameraId === 'sony-asesor');
+  assert.ok(sonyFile, 'mediaFile de asesor con cameraId sony-asesor');
+  // El numero del token debe ser el continuo (11), NO 1 ni 9999
+  assert.match(sonyFile.fileToken, /0011/);
+});
