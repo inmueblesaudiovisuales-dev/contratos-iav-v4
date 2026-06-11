@@ -1123,10 +1123,16 @@
     .rango-nota { font-weight: 400; color: var(--ink-2); }
     .rango-input { min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--tint-line);
       border-radius: var(--radius-sm, 8px); background: var(--bg, #fff); color: var(--ink-1); font-size: var(--ts-base); }
+    .rango-guardar { min-height: 44px; padding: 0 var(--sp-4); border: 1px solid var(--gold);
+      background: var(--gold-soft); color: var(--ink-1); font-weight: 600; font-size: var(--ts-cap);
+      border-radius: var(--radius-sm, 8px); cursor: pointer; display: inline-flex; align-items: center;
+      justify-content: center; gap: 6px; }
+    .rango-guardar.ok { border-color: var(--green); background: var(--green-soft); color: var(--green); }
     @media (min-width: 560px) {
       .rango-fila { flex-direction: row; align-items: center; }
       .rango-cam { flex: 0 0 130px; }
       .rango-input { flex: 1 1 auto; }
+      .rango-guardar { flex: 0 0 auto; }
     }
 
     /* F70 — Dictado: pantalla de importar (sheet a pantalla completa) */
@@ -5206,13 +5212,14 @@ function sugerenciaNombre(camera, fecha) {
   const folio = meta && meta.folio;
   const base = logic.sugerirNombreArchivo(camera, folio);
   if (base) return base;
-  // Respaldo: sony sin folio valido usa la fecha de hoy (comportamiento previo).
-  if (camera.kind === 'sony') {
-    const d = fecha instanceof Date ? fecha : new Date();
-    const ymd = '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-    return ymd + '_' + prefijoSony(camera) + String(1).padStart(SONY_DIGITOS, '0');
-  }
-  return '';
+  // Respaldo: si el folio no trae fecha parseable, usar la fecha de hoy via un folio
+  // sintetico, reutilizando la MISMA logica de formato (no duplicar formatos por camara).
+  // Aplica a toda camara (Sony, Insta360, DJI, audio), no solo Sony.
+  const d = fecha instanceof Date ? fecha : new Date();
+  const yy = String(d.getFullYear()).slice(2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return logic.sugerirNombreArchivo(camera, 'IAV-' + yy + mm + '.' + dd + '-A');
 }
 
 function aplicarSecuencia(cameraId, filename) {
@@ -5613,6 +5620,45 @@ function setRangoManual(cameraId, campo, valor) {
   scheduleSave();
 }
 
+// Borrador en memoria por campo (id|campo) — conserva lo tecleado pero NO guardado entre
+// re-renders, para que tocar otra cosa (marcar un cuarto) no borre el texto en curso.
+let rangoDraft = {};
+
+// El usuario edita: guarda el borrador y marca el renglon como "sin guardar" (sin re-render,
+// para no perder el foco ni el texto de OTROS renglones).
+function rangoInput(id, campo, value) {
+  rangoDraft[id + '|' + campo] = value;
+  const btn = document.getElementById('rg-' + id);
+  if (btn && btn.classList.contains('ok')) {
+    btn.classList.remove('ok');
+    btn.textContent = 'Guardar';
+  }
+}
+
+// Guardar SOLO este dispositivo: escribe unicamente state.rangosManuales[id] (no toca otros
+// dispositivos) y confirma en el propio renglon. Sin re-render global: preserva lo de los demas.
+function guardarRango(id) {
+  const p = document.getElementById('ri-' + id + '-primer');
+  const u = document.getElementById('ri-' + id + '-ultimo');
+  setRangoManual(id, 'primer', p ? p.value : '');
+  setRangoManual(id, 'ultimo', u ? u.value : '');
+  const ok = !!(state.rangosManuales && state.rangosManuales[id]);
+  const btn = document.getElementById('rg-' + id);
+  if (btn) {
+    btn.classList.toggle('ok', ok);
+    btn.innerHTML = ok ? '<i class="ti ti-check"></i> Guardado' : 'Guardar';
+  }
+}
+
+// Al enfocar, selecciona los digitos finales para cambiar el numero de un teclazo.
+function selNumeroRango(input) {
+  setTimeout(() => {
+    const v = input.value;
+    const m = v.match(/\d+$/);
+    if (m) input.setSelectionRange(v.length - m[0].length, v.length);
+  }, 0);
+}
+
 function renderRangosManuales(soloSvc) {
   let cams = camarasRangoManual();
   if (soloSvc) {
@@ -5629,14 +5675,21 @@ function renderRangosManuales(soloSvc) {
     ${cams.map((c) => {
       const r = (state.rangosManuales || {})[c.id] || {};
       // Sugerencia de nombre por camara (con hueco para la hora donde aplique); el operador
-      // ajusta el numero/hora en vez de teclear todo. Solo como valor inicial si esta vacio.
+      // ajusta el numero/hora en vez de teclear todo. Ambos campos arrancan con la plantilla.
       const sug = sugerenciaNombre({ kind: c.kind, counterExample: c.counterExample });
-      return `<div class="rango-fila">
+      // Borrador local: conserva el texto sin guardar entre re-renders (no se pierde al tocar otra cosa).
+      const dP = rangoDraft[c.id + '|primer'];
+      const dU = rangoDraft[c.id + '|ultimo'];
+      const valP = dP != null ? dP : (r.primer || sug);
+      const valU = dU != null ? dU : (r.ultimo || sug);
+      const guardado = !!(r.primer || r.ultimo);
+      return `<div class="rango-fila" data-cam="${esc(c.id)}">
         <span class="rango-cam">${esc(c.label || c.id)}${c.redSeguridad ? '<span class="rango-nota"> · red de seguridad</span>' : ''}</span>
-        <input type="text" class="rango-input" placeholder="${esc(sug || 'primer archivo')}" value="${esc(r.primer || sug)}"
-          onchange="setRangoManual('${c.id}', 'primer', this.value)">
-        <input type="text" class="rango-input" placeholder="último archivo" value="${esc(r.ultimo || '')}"
-          onchange="setRangoManual('${c.id}', 'ultimo', this.value)">
+        <input type="text" class="rango-input" id="ri-${esc(c.id)}-primer" placeholder="${esc(sug || 'primer archivo')}" value="${esc(valP)}"
+          oninput="rangoInput('${esc(c.id)}','primer',this.value)" onfocus="selNumeroRango(this)">
+        <input type="text" class="rango-input" id="ri-${esc(c.id)}-ultimo" placeholder="${esc(sug || 'último archivo')}" value="${esc(valU)}"
+          oninput="rangoInput('${esc(c.id)}','ultimo',this.value)" onfocus="selNumeroRango(this)">
+        <button type="button" class="rango-guardar${guardado ? ' ok' : ''}" id="rg-${esc(c.id)}" onclick="guardarRango('${esc(c.id)}')">${guardado ? '<i class="ti ti-check"></i> Guardado' : 'Guardar'}</button>
       </div>`;
     }).join('')}
   </div>`;
