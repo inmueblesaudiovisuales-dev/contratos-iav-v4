@@ -2537,6 +2537,7 @@
       tombstones: [],
       rangosManuales: {},
       guide: { tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false },
+      vlogOsmoAction: false,
     };
   }
 
@@ -2934,6 +2935,7 @@
     if (data && (data.version === 2 || data.version === 3)) {
       const normalized = Object.assign(createDefaultState(), clone(data));
       normalized.servicios = Object.assign(clone(SERVICES_DEFAULT), normalized.servicios || {});
+      normalized.vlogOsmoAction = normalized.vlogOsmoAction === true;
       normalized.guide = Object.assign({ tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false }, normalized.guide || {});
       // F35 — migracion del default incluirDrone: el campo es nuevo. Si el estado
       // entrante NO lo trae pero tiene rastro de drone (algun espacio kind:'drone' o
@@ -4026,6 +4028,7 @@
       resumenGuia,
       guionEdicion,
       grabaciones,
+      vlogOsmoAction: state.vlogOsmoAction === true,
     };
     if (meta.entrega) out.entrega = meta.entrega;
     if (meta.logo) out.logo = meta.logo;
@@ -4065,6 +4068,10 @@
       default:
         return '';
     }
+  }
+
+  function setVlogOsmoAction(state, value) {
+    return Object.assign({}, state, { vlogOsmoAction: value === true });
   }
 
   return {
@@ -4187,5 +4194,6 @@
     filterLog,
     buildExport,
     sugerirNombreArchivo,
+    setVlogOsmoAction,
   };
 });

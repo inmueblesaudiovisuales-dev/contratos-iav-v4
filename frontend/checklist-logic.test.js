@@ -3959,3 +3959,26 @@ test('sugerirNombreArchivo: folio que no parsea cae a fecha vacia pero no truena
 test('sugerirNombreArchivo: sony sin counterExample usa el prefijo PIB por defecto', () => {
   assert.strictEqual(logic.sugerirNombreArchivo({ kind: 'sony' }, 'IAV-2606.11-A'), '20260611_PIB0001');
 });
+
+// ─── vlogOsmoAction ───────────────────────────────────────────────────────────
+
+test('buildExport emite vlogOsmoAction false por defecto', () => {
+  const state = logic.createInitialState ? logic.createInitialState() : null;
+  const s = state || { mediaFiles: [], espacios: [], cameras: [], sequenceSegments: [], servicios: {}, rangosManuales: {}, guide: {} };
+  const out = logic.buildExport(s, { folio: 'IAV-2606.11-A' });
+  assert.strictEqual(out.vlogOsmoAction, false);
+  assert.strictEqual(out.version, 2); // no se sube la version
+});
+
+test('buildExport refleja vlogOsmoAction true del estado', () => {
+  const s = { mediaFiles: [], espacios: [], cameras: [], sequenceSegments: [], servicios: {}, rangosManuales: {}, guide: {}, vlogOsmoAction: true };
+  const out = logic.buildExport(s, { folio: 'IAV-2606.11-A' });
+  assert.strictEqual(out.vlogOsmoAction, true);
+});
+
+test('setVlogOsmoAction cambia el flag sin mutar el original', () => {
+  const s = { vlogOsmoAction: false };
+  const next = logic.setVlogOsmoAction(s, true);
+  assert.strictEqual(next.vlogOsmoAction, true);
+  assert.strictEqual(s.vlogOsmoAction, false);
+});
