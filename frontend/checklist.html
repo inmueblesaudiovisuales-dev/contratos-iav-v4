@@ -1835,8 +1835,8 @@ function saltarConfiguracion() {
 // eligió rol, el flujo cae al selector de rol existente (renderRoleSelect).
 function empezarTrabajo() {
   state = logic.setConfigurado(state, true);
-  render();
   scheduleSave();
+  render();
 }
 
 // Reabre la pantalla de inicio del trabajo más tarde: vuelve configurado a
