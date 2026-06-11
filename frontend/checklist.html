@@ -1141,7 +1141,6 @@
       border-top: 1px solid var(--line); padding-top: var(--sp-3); }
     .rango-fila:first-of-type { border-top: none; padding-top: 0; }
     .rango-cam { font-size: var(--ts-base); font-weight: 600; color: var(--ink-1); }
-    .rango-nota { font-weight: 400; color: var(--ink-2); }
     .rango-ayuda { font-size: var(--ts-cap); color: var(--ink-2); line-height: 1.4; }
     .rango-campo { display: flex; flex-direction: column; gap: var(--sp-1); }
     .rango-campo-lbl { font-size: var(--ts-cap); font-weight: 600; color: var(--ink-1); }
@@ -1411,7 +1410,7 @@ function setRole(role) {
 }
 
 const SERVICE_UI = {
-  foto: { label: 'Foto normal', short: 'Foto', verb: 'foto', help: 'Marca cobertura fotografica.' },
+  foto: { label: 'Fotografía', short: 'Foto', verb: 'foto', help: 'Marca cobertura fotografica.' },
   t360: { label: 'Recorrido 360', short: '360', verb: 'recorrido 360', help: 'Marca recorridos por espacio.' },
   video: { label: 'Video', short: 'Video', verb: 'video', help: 'Registra el orden real de tomas.' },
   drone: { label: 'Drone', short: 'Drone', verb: 'toma drone', help: 'Registra secuencia aerea.' },
@@ -3078,7 +3077,7 @@ function abrirSecuenciaAsesor(cameraId) {
   abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-body">
       <div class="sequence-alert">Escribe el archivo actual de la cámara: el que vas a grabar ahora. La secuencia arranca en ese número.</div>
-      <input class="field" id="last-filename-asesor" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'tascam' ? '20260520_0001' : camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : camera.kind === 'insta360' ? 'IMG_20260520______00_001' : '20260520_PIB2818'}" autocomplete="off">
+      <input class="field" id="last-filename-asesor" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'tascam' ? '20260520_0001' : camera.kind === 'dji' ? 'DJI_20260520_0245_D' : camera.kind === 'insta360' ? 'IMG_20260520_00_001' : '20260520_PIB2818'}" autocomplete="off">
       <button class="primary block" style="width:100%" onclick="iniciarSecuenciaAsesor('${cameraId}')">Iniciar</button>
     </div>`);
   setTimeout(() => { const i = document.getElementById('last-filename-asesor'); if (i) { i.focus(); const v = i.value; const m = v.match(/\d+$/); if (m) i.setSelectionRange(v.length - m[0].length, v.length); else i.setSelectionRange(v.length, v.length); } }, 50);
@@ -5277,7 +5276,7 @@ function abrirSecuencia() {
   abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-body">
       <div class="sequence-alert">Escribe el archivo actual de la cámara: el que vas a grabar ahora. La secuencia arranca en ese número.</div>
-      <input class="field" id="last-filename" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : camera.kind === 'insta360' ? 'IMG_20260520______00_001' : camera.kind === 'tascam' ? '20260520_0001' : '20260520_PIB2818'}" autocomplete="off">
+      <input class="field" id="last-filename" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'dji' ? 'DJI_20260520_0245_D' : camera.kind === 'insta360' ? 'IMG_20260520_00_001' : camera.kind === 'tascam' ? '20260520_0001' : '20260520_PIB2818'}" autocomplete="off">
       <button class="primary" onclick="iniciarSecuencia()">Iniciar nuevo tramo</button>
     </div>`);
   setTimeout(() => { const i = document.getElementById('last-filename'); if (i) { i.focus(); const v = i.value; const m = v.match(/\d+$/); if (m) i.setSelectionRange(v.length - m[0].length, v.length); else i.setSelectionRange(v.length, v.length); } }, 50);
@@ -5721,8 +5720,8 @@ function camarasRangoManual() {
 }
 
 // Parte fija + numero de la sugerencia de nombre. La app empareja por los DIGITOS FINALES del
-// nombre, asi que pedimos solo el numero: el prefijo (fecha + lo predecible, incluido el hueco de
-// hora "______" donde aplique) se muestra como contexto fijo y NO se edita.
+// nombre, asi que pedimos solo el numero: el prefijo (fecha + lo predecible) se muestra como
+// contexto fijo y NO se edita.
 // Devuelve { prefijo, sufijo, ancho } o null si no hay sugerencia.
 function partesRangoManual(camera) {
   const base = sugerenciaNombre(camera);

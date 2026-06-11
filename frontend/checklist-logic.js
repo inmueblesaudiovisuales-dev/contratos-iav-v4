@@ -4090,6 +4090,9 @@
         conteo: ordenados.length,
       });
     });
+    // Etiquetas legibles para ids sintéticos de foto/360 que camById no puede resolver
+    // (no viven en state.cameras). camaraId no cambia — la app de metadatos lo usa para emparejado.
+    const LABEL_SINTETICO = { 'foto-sony': 'Fotos Sony', 'insta360': 'Insta360' };
     Object.keys(state.rangosManuales || {}).forEach((cameraId) => {
       if (porCamara.has(cameraId)) return; // ya cubierta por tomas logueadas
       const r = state.rangosManuales[cameraId] || {};
@@ -4097,7 +4100,7 @@
       const cam = camById(cameraId);
       grabaciones.push({
         camaraId: cameraId,
-        camara: cam.label || cameraId,
+        camara: cam.label || LABEL_SINTETICO[cameraId] || cameraId,
         primerArchivo: r.primer || null,
         ultimoArchivo: r.ultimo || null,
         conteo: null,

@@ -3920,6 +3920,21 @@ test('buildExport incluye rangos manuales para camaras sin tomas logueadas', () 
   assert.equal(g.primerArchivo, 'DSC00101');
   assert.equal(g.ultimoArchivo, 'DSC00260');
   assert.equal(g.conteo, null);
+  // camaraId intacto; camara usa la etiqueta legible del sintético, no el id crudo
+  assert.equal(g.camaraId, 'foto-sony');
+  assert.equal(g.camara, 'Fotos Sony');
+});
+
+test('buildExport usa etiqueta legible para rango manual de insta360', () => {
+  const state = logic.normalizeChecklistData({
+    version: 3, espacios: [], mediaFiles: [],
+    rangosManuales: { 'insta360': { primer: 'IMG_20260520_00_001', ultimo: 'IMG_20260520_00_090' } },
+  });
+  const out = logic.buildExport(state, { folio: 'F', nombreCliente: 'C' });
+  const g = out.grabaciones.find((x) => x.camaraId === 'insta360');
+  assert.equal(g.camaraId, 'insta360');
+  assert.equal(g.camara, 'Insta360');
+  assert.equal(g.primerArchivo, 'IMG_20260520_00_001');
 });
 
 test('grabaciones: primer/ultimo salen de archivos con fileToken aunque haya omitted sin token', () => {
