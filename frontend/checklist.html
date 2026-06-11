@@ -1116,6 +1116,7 @@
     .rangos-copy span { display: block; font-size: var(--ts-cap); color: var(--ink-2); margin-top: var(--sp-1); line-height: 1.4; }
     .rango-fila { display: flex; flex-direction: column; gap: var(--sp-2); }
     .rango-cam { font-size: var(--ts-cap); font-weight: 600; color: var(--ink-1); }
+    .rango-nota { font-weight: 400; color: var(--ink-2); }
     .rango-input { min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--tint-line);
       border-radius: var(--radius-sm, 8px); background: var(--bg, #fff); color: var(--ink-1); font-size: var(--ts-base); }
     @media (min-width: 560px) {
@@ -5466,6 +5467,10 @@ function camarasRangoManual() {
   if (svc.foto) cat.push({ id: 'foto-sony', label: 'Fotos Sony' });
   if (svc.t360) cat.push({ id: 'insta360', label: 'Insta360' });
   if (svc.t360 && svc.drone) cat.push({ id: 'drone-360', label: 'Drone 360' });
+  if (svc.video) cat.push({ id: 'sony-main', label: 'Sony principal (video)', redSeguridad: true });
+  if (svc.video) cat.push({ id: 'osmo-pocket-3', label: 'Osmo Pocket 3', redSeguridad: true });
+  if (svc.drone) cat.push({ id: 'drone-dji', label: 'DJI Air 3 (drone)', redSeguridad: true });
+  if (svc.drone) cat.push({ id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', redSeguridad: true });
   return cat;
 }
 
@@ -5485,11 +5490,11 @@ function renderRangosManuales() {
   const cams = camarasRangoManual();
   if (!cams.length) return '';
   return `<div class="rangos-bar">
-    <div class="rangos-copy"><strong>Rangos de archivo (foto y 360)</strong><span>Opcional. Primer y último archivo de cada dispositivo que no se registra toma por toma.</span></div>
+    <div class="rangos-copy"><strong>Rangos de archivo</strong><span>Opcional. Primer y último archivo de cada dispositivo. Para foto y 360 delimita la sesión; para video y drone es una red de seguridad que solo aplica si no se registraron tomas en vivo.</span></div>
     ${cams.map((c) => {
       const r = (state.rangosManuales || {})[c.id] || {};
       return `<div class="rango-fila">
-        <span class="rango-cam">${esc(c.label || c.id)}</span>
+        <span class="rango-cam">${esc(c.label || c.id)}${c.redSeguridad ? '<span class="rango-nota"> · red de seguridad</span>' : ''}</span>
         <input type="text" class="rango-input" placeholder="primer archivo" value="${esc(r.primer || '')}"
           onchange="setRangoManual('${c.id}', 'primer', this.value)">
         <input type="text" class="rango-input" placeholder="último archivo" value="${esc(r.ultimo || '')}"
