@@ -2539,7 +2539,7 @@
       mediaFiles: [],
       tombstones: [],
       rangosManuales: {},
-      guide: { tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false },
+      guide: { tipoPropiedad: null, descripcion: '', proposal: null },
       vlogOsmoAction: false,
       configurado: false,
     };
@@ -2941,28 +2941,41 @@
       normalized.servicios = Object.assign(clone(SERVICES_DEFAULT), normalized.servicios || {});
       normalized.vlogOsmoAction = normalized.vlogOsmoAction === true;
       normalized.configurado = normalized.configurado === true;
-      normalized.guide = Object.assign({ tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false }, normalized.guide || {});
-      // F35 — migracion del default incluirDrone: el campo es nuevo. Si el estado
-      // entrante NO lo trae pero tiene rastro de drone (algun espacio kind:'drone' o
-      // algun mediaFile de camara drone), se normaliza a true; si no, queda false.
-      // Si ya viene el campo, se respeta. (El motor no conoce el rol; la UI lo
-      // enciende — pero un estado viejo con tomas de drone debe verse en la lane.)
-      const _guideEntrante = (data && typeof data.guide === 'object' && data.guide) ? data.guide : {};
-      if (!Object.prototype.hasOwnProperty.call(_guideEntrante, 'incluirDrone')) {
-        const _espaciosEntrantes = Array.isArray(data && data.espacios) ? data.espacios : [];
-        const _droneItemsEntrantes = Array.isArray(data && data.droneItems) ? data.droneItems : [];
-        const _camsEntrantes = Array.isArray(data && data.cameras) ? data.cameras : [];
-        const _droneCamIds = new Set(
-          _camsEntrantes.filter((c) => c && c.mode === 'drone').map((c) => c.id)
-          // los drones por defecto tambien cuentan como camara drone aunque no esten en data.cameras
-          .concat(['drone-dji', 'drone-mini-4-pro'])
-        );
-        const _filesEntrantes = Array.isArray(data && data.mediaFiles) ? data.mediaFiles : [];
-        const _hayRastroDrone =
-          _espaciosEntrantes.some((esp) => esp && (esp.kind === 'drone' || isDronePiso(esp.piso)))
-          || _droneItemsEntrantes.length > 0
-          || _filesEntrantes.some((f) => f && f.cameraId && _droneCamIds.has(f.cameraId));
-        normalized.guide.incluirDrone = !!_hayRastroDrone;
+      normalized.guide = Object.assign({ tipoPropiedad: null, descripcion: '', proposal: null }, normalized.guide || {});
+      // Task 2.1 — servicios.drone es la unica fuente de verdad para "este trabajo tiene drone".
+      // Migracion: si el estado entrante tenia guide.incluirDrone=true (campo legacy F35), se
+      // eleva a servicios.drone=true. La F35 tambien inferia drone por rastro de tomas/espacios
+      // cuando el campo no existia — esa inferencia se mantiene aqui para no perder datos.
+      {
+        const _guideEntrante = (data && typeof data.guide === 'object' && data.guide) ? data.guide : {};
+        const _incluyeDroneLegacy = _guideEntrante.incluirDrone === true;
+        // Si no habia servicios.drone:true explicito Y habia guide.incluirDrone=true, elevar.
+        // Ademas: si ni servicios.drone ni guide.incluirDrone existian pero hay rastro de drone
+        // (estados anteriores a F35), tambien activar servicios.drone.
+        const _serviciosEntrantes = (data && typeof data.servicios === 'object' && data.servicios) ? data.servicios : {};
+        const _dronePorServicio = _serviciosEntrantes.drone === true;
+        if (!_dronePorServicio) {
+          if (_incluyeDroneLegacy) {
+            normalized.servicios.drone = true;
+          } else if (!Object.prototype.hasOwnProperty.call(_guideEntrante, 'incluirDrone')) {
+            // Inferencia de rastro para estados anteriores a F35 (sin ninguno de los dos campos).
+            const _espaciosEntrantes = Array.isArray(data && data.espacios) ? data.espacios : [];
+            const _droneItemsEntrantes = Array.isArray(data && data.droneItems) ? data.droneItems : [];
+            const _camsEntrantes = Array.isArray(data && data.cameras) ? data.cameras : [];
+            const _droneCamIds = new Set(
+              _camsEntrantes.filter((c) => c && c.mode === 'drone').map((c) => c.id)
+              .concat(['drone-dji', 'drone-mini-4-pro'])
+            );
+            const _filesEntrantes = Array.isArray(data && data.mediaFiles) ? data.mediaFiles : [];
+            const _hayRastroDrone =
+              _espaciosEntrantes.some((esp) => esp && (esp.kind === 'drone' || isDronePiso(esp.piso)))
+              || _droneItemsEntrantes.length > 0
+              || _filesEntrantes.some((f) => f && f.cameraId && _droneCamIds.has(f.cameraId));
+            if (_hayRastroDrone) normalized.servicios.drone = true;
+          }
+        }
+        // Eliminar el campo legacy para que no salga en el estado normalizado.
+        delete normalized.guide.incluirDrone;
       }
       normalized.espacios = (normalized.espacios || []).map((space, index) => ({
         id: space.id || makeId('esp'),

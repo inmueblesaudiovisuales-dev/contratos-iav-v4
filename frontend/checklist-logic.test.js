@@ -2734,11 +2734,12 @@ test('F34: version es 2 (archivos[] de buildExport intacto)', () => {
   assert.equal(exp.version, 2);
 });
 
-// ─── F35 — derivar targets de drone de espacios reales + incluirDrone + migracion ─
+// ─── F35 — derivar targets de drone de espacios reales + migracion ──────────
 
-test('F35: createDefaultState trae guide.incluirDrone en false', () => {
+test('F35: createDefaultState no expone guide.incluirDrone (campo migrado a servicios.drone)', () => {
   const state = logic.createDefaultState();
-  assert.equal(state.guide.incluirDrone, false, 'default false (la UI lo enciende)');
+  assert.strictEqual(state.guide.incluirDrone, undefined, 'guide.incluirDrone ya no existe en el default');
+  assert.strictEqual(state.servicios.drone, true, 'servicios.drone es la fuente de verdad (default true)');
 });
 
 test('F35: droneFeatureTargets deriva "Alberca aérea" y "Jardín aérea" cuando existen', () => {
@@ -2854,7 +2855,7 @@ test('F35: camerasForEspacio NO mete drone en interiores ni en exteriores/roof/a
   assert.ok(droneCams.every((c) => c.mode === 'drone'));
 });
 
-test('F35: incluirDrone se infiere true al cargar estado viejo con drone (espacio kind:drone)', () => {
+test('F35: servicios.drone se infiere true al cargar estado viejo con drone (espacio kind:drone)', () => {
   const viejo = {
     version: 3,
     espacios: [{ id: 'd1', nombre: 'Fachada aerea', kind: 'drone', zona: 'exterior', piso: 'Drone', estados: {} }],
@@ -2863,10 +2864,11 @@ test('F35: incluirDrone se infiere true al cargar estado viejo con drone (espaci
     sequenceSegments: [],
   };
   const norm = logic.normalizeChecklistData(viejo);
-  assert.equal(norm.guide.incluirDrone, true, 'se infiere true por espacio kind:drone');
+  assert.equal(norm.servicios.drone, true, 'se infiere true por espacio kind:drone');
+  assert.strictEqual(norm.guide.incluirDrone, undefined, 'guide.incluirDrone ya no existe');
 });
 
-test('F35: incluirDrone se infiere true al cargar estado viejo con mediaFile de camara drone', () => {
+test('F35: servicios.drone se infiere true al cargar estado viejo con mediaFile de camara drone', () => {
   const viejo = {
     version: 3,
     espacios: [{ id: 'e1', nombre: 'Fachada', zona: 'exterior', piso: 'Exterior', estados: {} }],
@@ -2875,29 +2877,36 @@ test('F35: incluirDrone se infiere true al cargar estado viejo con mediaFile de 
     sequenceSegments: [],
   };
   const norm = logic.normalizeChecklistData(viejo);
-  assert.equal(norm.guide.incluirDrone, true, 'se infiere true por mediaFile de camara drone');
+  assert.equal(norm.servicios.drone, true, 'se infiere true por mediaFile de camara drone');
+  assert.strictEqual(norm.guide.incluirDrone, undefined, 'guide.incluirDrone ya no existe');
 });
 
-test('F35: incluirDrone se infiere false sin rastro de drone, y se respeta si ya viene', () => {
+test('F35: sin rastro de drone servicios.drone queda segun SERVICES_DEFAULT; guide.incluirDrone legacy=false se respeta como drone=false', () => {
   const sinDrone = {
     version: 3,
     espacios: [{ id: 'e1', nombre: 'Sala', zona: 'interior', piso: 'Piso 1', estados: {} }],
     mediaFiles: [],
     cameras: [],
     sequenceSegments: [],
+    servicios: { drone: false },
   };
-  assert.equal(logic.normalizeChecklistData(sinDrone).guide.incluirDrone, false, 'sin rastro -> false');
+  const norm1 = logic.normalizeChecklistData(sinDrone);
+  assert.equal(norm1.servicios.drone, false, 'sin rastro y servicios.drone:false -> false');
+  assert.strictEqual(norm1.guide.incluirDrone, undefined, 'guide.incluirDrone ya no existe');
 
-  // Si ya trae el campo, se respeta aunque haya rastro.
-  const conCampo = {
+  // Si ya venia guide.incluirDrone=false (campo legacy) y servicios.drone no era true, se respeta como false.
+  const conCampoFalse = {
     version: 3,
     guide: { tipoPropiedad: null, descripcion: '', proposal: null, incluirDrone: false },
     espacios: [{ id: 'd1', nombre: 'Aerea', kind: 'drone', zona: 'exterior', estados: {} }],
     mediaFiles: [],
     cameras: [],
     sequenceSegments: [],
+    servicios: { drone: false },
   };
-  assert.equal(logic.normalizeChecklistData(conCampo).guide.incluirDrone, false, 'campo presente se respeta');
+  const norm2 = logic.normalizeChecklistData(conCampoFalse);
+  assert.equal(norm2.servicios.drone, false, 'incluirDrone:false legacy + servicios.drone:false -> drone false');
+  assert.strictEqual(norm2.guide.incluirDrone, undefined, 'guide.incluirDrone removido');
 });
 
 test('F35 MIGRACION: estado viejo drone-piso + 1 toma -> la toma NO queda omitted y su target es alcanzable', () => {
@@ -2925,8 +2934,9 @@ test('F35 MIGRACION: estado viejo drone-piso + 1 toma -> la toma NO queda omitte
   // (b) el target sigue siendo alcanzable via targetsForMode('drone').
   const alcanzable = logic.targetsForMode(norm, 'drone').some((t) => t.id === 'drone-old');
   assert.ok(alcanzable, 'el target viejo es alcanzable en la lane de drone');
-  // y se enciende incluirDrone para que la lane lo muestre.
-  assert.equal(norm.guide.incluirDrone, true, 'incluirDrone inferido true');
+  // y servicios.drone queda en true para que la lane lo muestre.
+  assert.equal(norm.servicios.drone, true, 'servicios.drone inferido true por rastro de drone');
+  assert.strictEqual(norm.guide.incluirDrone, undefined, 'guide.incluirDrone ya no existe');
 });
 
 test('F35: el sujeto terreno expone las 14 tomas y version:1 intacto', () => {
@@ -3071,7 +3081,8 @@ test('F38 MIGRACION: estado viejo drone-piso + 1 toma -> NO omitted, conserva ta
   const targets = logic.targetsForMode(norm, 'drone');
   assert.ok(targets.some((t) => t.id === 'drone-session'), 'incluye el target de sesion');
   assert.ok(targets.some((t) => t.id === 'drone-old'), 'el target viejo kind:drone es alcanzable (compat)');
-  assert.equal(norm.guide.incluirDrone, true, 'incluirDrone inferido true');
+  assert.equal(norm.servicios.drone, true, 'servicios.drone inferido true por rastro de drone');
+  assert.strictEqual(norm.guide.incluirDrone, undefined, 'guide.incluirDrone ya no existe');
 });
 
 test('F38: version:1 intacto', () => {
@@ -3081,7 +3092,8 @@ test('F38: version:1 intacto', () => {
 
 test('F38 curacion: las tomas de espacio (derivable) y situacional NO salen como fijas; los features solo por derivacion', () => {
   const s = logic.createDefaultState();
-  s.guide = Object.assign({}, s.guide, { tipoPropiedad: 'casa', incluirDrone: true });
+  s.guide = Object.assign({}, s.guide, { tipoPropiedad: 'casa' });
+  s.servicios = Object.assign({}, s.servicios, { drone: true });
   s.espacios = [
     { id: 'e1', nombre: 'Recibidor', zona: 'interior', estados: {} },
     { id: 'e2', nombre: 'Jardin', zona: 'exterior', estados: {} },
@@ -4076,4 +4088,19 @@ test('adoptarSegmentoFx30: no-op para una camara que no es FX30 (Tascam)', () =>
   s = logic.adoptarSegmentoFx30(s, 'tascam-asesor');
   assert.strictEqual(s, antes, 'la Tascam no comparte la secuencia de la FX30');
   assert.strictEqual(logic.getCameraSequence(s, 'tascam-asesor').segment, undefined);
+});
+
+// ─── Task 2.1 — servicios.drone como fuente unica de verdad para drone ──────
+
+test('normalize: estado viejo con guide.incluirDrone=true conserva servicios.drone=true', () => {
+  const s = logic.normalizeChecklistData({ version: 2, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [], servicios: { drone: false }, guide: { incluirDrone: true } });
+  assert.strictEqual(s.servicios.drone, true);
+});
+test('normalize: ya no expone guide.incluirDrone', () => {
+  const s = logic.normalizeChecklistData({ version: 2, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [], servicios: { drone: true }, guide: {} });
+  assert.strictEqual(s.guide.incluirDrone, undefined);
+});
+test('normalize: servicios.drone true se conserva aunque no haya incluirDrone', () => {
+  const s = logic.normalizeChecklistData({ version: 2, espacios: [], mediaFiles: [], cameras: [], sequenceSegments: [], servicios: { drone: true }, guide: {} });
+  assert.strictEqual(s.servicios.drone, true);
 });
