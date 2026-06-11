@@ -2899,7 +2899,7 @@ function abrirSecuenciaAsesor(cameraId) {
   abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-body">
       <div class="sequence-alert">Escribe el archivo actual de la cámara: el que vas a grabar ahora. La secuencia arranca en ese número.</div>
-      <input class="field" id="last-filename-asesor" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'tascam' ? '20260520_0001' : camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
+      <input class="field" id="last-filename-asesor" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'tascam' ? '20260520_0001' : camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : camera.kind === 'insta360' ? 'IMG_20260520______00_001' : '20260520_PIB2818'}" autocomplete="off">
       <button class="primary block" style="width:100%" onclick="iniciarSecuenciaAsesor('${cameraId}')">Iniciar</button>
     </div>`);
   setTimeout(() => { const i = document.getElementById('last-filename-asesor'); if (i) { i.focus(); const v = i.value; const m = v.match(/\d+$/); if (m) i.setSelectionRange(v.length - m[0].length, v.length); else i.setSelectionRange(v.length, v.length); } }, 50);
@@ -5037,7 +5037,7 @@ function abrirSecuencia() {
   abrirModal(`<div class="sheet-head"><h2>${esc(camera.label)}</h2><button class="icon-btn" onclick="cerrarModal()"><i class="ti ti-x"></i></button></div>
     <div class="sheet-body">
       <div class="sequence-alert">Escribe el archivo actual de la cámara: el que vas a grabar ahora. La secuencia arranca en ese número.</div>
-      <input class="field" id="last-filename" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : '20260520_PIB2818'}" autocomplete="off">
+      <input class="field" id="last-filename" type="text" value="${sugerenciaNombre(camera)}" placeholder="${camera.kind === 'dji' ? 'DJI_20260517111742_0245_D' : camera.kind === 'insta360' ? 'IMG_20260520______00_001' : camera.kind === 'tascam' ? '20260520_0001' : '20260520_PIB2818'}" autocomplete="off">
       <button class="primary" onclick="iniciarSecuencia()">Iniciar nuevo tramo</button>
     </div>`);
   setTimeout(() => { const i = document.getElementById('last-filename'); if (i) { i.focus(); const v = i.value; const m = v.match(/\d+$/); if (m) i.setSelectionRange(v.length - m[0].length, v.length); else i.setSelectionRange(v.length, v.length); } }, 50);
@@ -5081,10 +5081,17 @@ function fechaDeFolio(folio) {
   return new Date(2000 + Number(m[1]), Number(m[2]) - 1, Number(m[3]));
 }
 function sugerenciaNombre(camera, fecha) {
-  if (!camera || camera.kind !== 'sony') return '';
-  const d = fecha instanceof Date ? fecha : (fechaDeFolio(meta && meta.folio) || new Date());
-  const ymd = '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-  return ymd + '_' + prefijoSony(camera) + String(1).padStart(SONY_DIGITOS, '0');
+  if (!camera) return '';
+  const folio = meta && meta.folio;
+  const base = logic.sugerirNombreArchivo(camera, folio);
+  if (base) return base;
+  // Respaldo: sony sin folio valido usa la fecha de hoy (comportamiento previo).
+  if (camera.kind === 'sony') {
+    const d = fecha instanceof Date ? fecha : new Date();
+    const ymd = '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    return ymd + '_' + prefijoSony(camera) + String(1).padStart(SONY_DIGITOS, '0');
+  }
+  return '';
 }
 
 function aplicarSecuencia(cameraId, filename) {
