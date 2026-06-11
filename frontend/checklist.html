@@ -1809,7 +1809,7 @@ function renderInicio() {
       </button>
     </div>
 
-    <button class="primary block" onclick="empezarTrabajo()">${cur ? 'Empezar' : 'Elige quién eres para empezar'}</button>
+    <button class="primary block" onclick="empezarTrabajo()"${tipo ? '' : ' disabled'}>${!tipo ? 'Elige el tipo de propiedad' : (cur ? 'Empezar' : 'Elige quién eres para empezar')}</button>
     <div class="action-stack" style="margin-top:14px">
       <button class="btn ghost" onclick="saltarConfiguracion()">Saltar configuración y entrar</button>
     </div>
@@ -1842,6 +1842,9 @@ function saltarConfiguracion() {
 // "Empezar": marca configurado y entra a la vista de captura. Si aún no se
 // eligió rol, el flujo cae al selector de rol existente (renderRoleSelect).
 function empezarTrabajo() {
+  // El tipo de propiedad se elige en inicio y garantiza catálogo en "Armar
+  // cuartos"; sin él no se debe poder entrar (el botón ya va deshabilitado).
+  if (!state.guide || !state.guide.tipoPropiedad) return;
   state = logic.setConfigurado(state, true);
   scheduleSave();
   render();
@@ -2063,12 +2066,10 @@ const TIPO_LABEL = { casa: 'Casa', departamento: 'Departamento', terreno: 'Terre
 // steppers operan en vivo sobre state.espacios; nada nuevo se persiste fuera de
 // state.espacios/state.pisos (setupVisible es solo UI).
 function renderSetup() {
-  const tipoSeg = `<div class="setup-block">
-      <label class="setup-lbl">Tipo de propiedad</label>
-      <div class="seg">${['casa', 'departamento', 'terreno', 'quinta'].map((t) => `<button class="seg-btn${setupTipo === t ? ' active' : ''}" onclick="setSetupTipo('${t}')">${TIPO_LABEL[t]}</button>`).join('')}</div>
-    </div>`;
+  // El tipo de propiedad se elige en la pantalla de inicio; aquí ya no se muestra
+  // (setupTipo viene sembrado por abrirSetup desde state.guide.tipoPropiedad).
   // F20 — Terreno: un solo sujeto, no se arman cuartos. Vive en su propia vista.
-  if (setupTipo === 'terreno') return renderSetupTerreno(tipoSeg);
+  if (setupTipo === 'terreno') return renderSetupTerreno();
 
   // Plantas mostradas: las de state.pisos (sin las de drone) o 'Planta baja' por
   // defecto si no hay ninguna (no se obliga a crear piso).
@@ -2103,7 +2104,6 @@ function renderSetup() {
   const tieneEspacios = state.espacios.some((e) => !e.parentId);
   return `<section class="setup">
     <div class="setup-hd"><h2>Armar cuartos</h2><p>Arma toda la casa aquí: sube los números por piso, luego ajustas en captura.</p></div>
-    ${tipoSeg}
     ${pisoStepper}
     <div class="setup-block">${floorBlocks}${exterior}${amenidades}</div>
     <div class="setup-foot">
@@ -2487,7 +2487,7 @@ function setupPickerCustom(key, nombre, zonaHint, categoriaHint) {
 }
 
 // F20 — Vista Terreno: sujeto unico "El terreno" con sus tomas sugeridas.
-function renderSetupTerreno(tipoSeg) {
+function renderSetupTerreno() {
   const t = logic.terrenoSingleSubject(state);
   // Tomas sugeridas del terreno = los sujetos aereos sesgados a terreno
   // (Terreno completo, Perímetro/colindancias, Acceso/calle, Vista que vende,
@@ -2495,7 +2495,6 @@ function renderSetupTerreno(tipoSeg) {
   const shots = (logic.suggestedAerialSubjects(state, 'terreno') || []).map((s) => s.label).filter(Boolean);
   return `<section class="setup">
     <div class="setup-hd"><h2>Armar cuartos</h2><p>Para un terreno no se arman cuartos: es un solo sujeto y los puntos son tomas sugeridas.</p></div>
-    ${tipoSeg}
     <div class="setup-block">
       <div class="setup-single"><div class="single-name">${esc(t.subject.nombre)}</div><div class="single-desc">Un solo sujeto · cámara drone + piso</div></div>
     </div>
