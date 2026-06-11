@@ -490,11 +490,14 @@
     .role-hd .role-hint { color: var(--ink-3); font-size: 12.5px; margin-top: 10px; }
     .role-opts { display: grid; gap: 10px; margin-top: 22px; }
     .role-opt { display: flex; align-items: center; gap: 13px; width: 100%; padding: 13px 14px; text-align: left;
-      border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); cursor: pointer; }
+      border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); cursor: pointer;
+      transition: border-color .12s ease, background .12s ease, transform .06s ease, box-shadow .12s ease; }
+    .role-opt:hover { border-color: var(--tint-line); box-shadow: var(--shadow); transform: translateY(-1px); }
+    .role-opt:active { transform: translateY(0) scale(.992); }
+    .role-opt.sel { border-color: var(--tint-line); background: var(--tint); color: var(--ink-1); box-shadow: inset 0 0 0 1px var(--tint-line); }
     .role-opt-copy { flex: 1; min-width: 0; }
     .role-opt-copy strong { display: block; font-size: 16px; font-weight: 600; }
     .role-opt-copy span { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
-    .role-opt-chev { font-size: 20px; color: var(--ink-3); flex: none; }
 
     /* ===== Captura overview: lista de cuartos por piso (F5) — sistema R1 =====
        Tokens --sp-*/--ts-*/--el-*; tarjeta con elevación (no borde plano);
@@ -1735,10 +1738,9 @@ function renderRoleSelect() {
     </div>
     <div class="role-opts">${ROLE_ORDER.map((r) => {
       const d = ROLE_DEF[r];
-      return `<button class="role-opt" onclick="setRole('${r}')">
+      return `<button class="role-opt${role === r ? ' sel' : ''}" onclick="setRole('${r}')">
         <span class="rc-avatar lg">${esc(d.initials)}</span>
         <span class="role-opt-copy"><strong>${esc(d.label)}</strong><span>${esc(d.sub)}</span></span>
-        <i class="ti ti-chevron-right role-opt-chev"></i>
       </button>`;
     }).join('')}</div>
   </div>`;
@@ -1773,10 +1775,9 @@ function renderInicio() {
     <label class="setup-lbl" style="margin-top:22px">¿Quién eres?</label>
     <div class="role-opts" style="margin-top:10px">${ROLE_ORDER.map((r) => {
       const d = ROLE_DEF[r];
-      return `<button class="role-opt" onclick="setRole('${r}')">
+      return `<button class="role-opt${cur === r ? ' sel' : ''}" onclick="setRole('${r}')">
         <span class="rc-avatar lg">${esc(d.initials)}</span>
         <span class="role-opt-copy"><strong>${esc(workLabelForRole(r))}</strong><span>${esc(d.label)}</span></span>
-        <i class="ti ti-chevron-right role-opt-chev"></i>
       </button>`;
     }).join('')}</div>
 
