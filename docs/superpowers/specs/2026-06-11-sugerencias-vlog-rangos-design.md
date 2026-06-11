@@ -14,7 +14,10 @@ de abajo están verificados contra ese documento.
 
 Regla de diseño visual transversal: **toda UI nueva debe verse y comportarse igual que el resto de
 `checklist.html`** (su mismo lenguaje visual, componentes y CSS; mobile-first). No inventar un estilo
-nuevo.
+nuevo. En concreto: **colores y tipografía deben ser los mismos** — reusar las variables CSS de color
+ya definidas (`--ink-*`, `--gold*`, `--card`, `--line`, etc.) y las fuentes existentes
+(`--font-mono`, la display serif, etc.). Prohibido introducir colores o tipografías nuevos; los
+valores hex de los bocetos del visor eran solo para ilustrar estructura.
 
 ---
 
