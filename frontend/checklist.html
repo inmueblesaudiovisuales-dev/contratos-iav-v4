@@ -684,6 +684,18 @@
     .setup-toggle .st-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 999px; background: var(--card); box-shadow: var(--el-1); transition: transform .15s ease; }
     .setup-toggle.on .st-sw::after { transform: translateX(18px); }
 
+    /* Acordeón de configuración del inicio: una sola tarjeta con cabecera
+       clicable y panel contenido (contenido visualmente DENTRO de la tarjeta). */
+    .setup-accordion { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--el-1); overflow: hidden; }
+    .acc-head { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 56px; padding: var(--sp-3) var(--sp-4); background: transparent; border: 0; text-align: left; }
+    .acc-head .st-icon { font-size: 22px; color: var(--ink-3); flex: none; }
+    .acc-head .st-copy { flex: 1; min-width: 0; }
+    .acc-head .st-title { font-size: var(--ts-body); font-weight: 600; color: var(--ink-1); }
+    .acc-head .st-sub { font-size: var(--ts-cap); color: var(--ink-2); margin-top: 2px; line-height: 1.4; }
+    .acc-head .acc-chev { color: var(--ink-3); font-size: 20px; flex: none; }
+    .setup-accordion .acc-panel { border-top: 1px solid var(--line); background: var(--muted); padding: var(--sp-2) var(--sp-4) var(--sp-4); }
+    .setup-accordion .acc-panel .setup-block:first-child { margin-top: var(--sp-3); }
+
     /* F48 — Footer del setup: CTA "Listo, a capturar" a todo lo ancho. */
     .setup-foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-5); }
     .setup-foot .primary { flex: none; min-height: 50px; padding: 0 18px; margin: 0; border-radius: var(--radius); font-size: 15px; }
@@ -1805,10 +1817,12 @@ function renderInicio() {
   const tipo = state.guide ? state.guide.tipoPropiedad : null;
   const servicios = ['video', 'foto', 't360', 'drone', 'asesor'];
   const expanded = inicioConfigExpanded();
-  const configBody = `
+  // Contenido del panel del acordeón: tipo + servicios + vlog. NO incluye el
+  // botón "Empezar" (ese va fuera del acordeón para estar siempre visible).
+  const configPanel = `
       <div class="setup-block">
         <label class="setup-lbl">Tipo de propiedad</label>
-        <div class="seg">${['casa', 'departamento', 'terreno', 'quinta'].map((t) => `<button class="seg-btn${tipo === t ? ' active' : ''}" onclick="setSetupTipo('${t}')">${TIPO_LABEL[t]}</button>`).join('')}</div>
+        <div class="seg" role="radiogroup" aria-label="Tipo de propiedad">${['casa', 'departamento', 'terreno', 'quinta'].map((t) => `<button class="seg-btn${tipo === t ? ' active' : ''}" role="radio" aria-checked="${tipo === t ? 'true' : 'false'}" onclick="setSetupTipo('${t}')">${TIPO_LABEL[t]}</button>`).join('')}</div>
       </div>
 
       <div class="setup-block">
@@ -1825,9 +1839,12 @@ function renderInicio() {
           </span>
           <span class="st-sw" aria-hidden="true"></span>
         </button>
-      </div>
-
-      <button class="primary block" onclick="empezarTrabajo()"${tipo ? '' : ' disabled'}>${!tipo ? 'Elige el tipo de propiedad' : (cur ? 'Empezar' : 'Elige quién eres para empezar')}</button>`;
+      </div>`;
+  // Título del acordeón: refleja el estado REAL (no el expandido/plegado).
+  const accTitle = state.configurado ? 'Trabajo configurado — toca para ajustar' : 'Configuración del trabajo';
+  // Botón "Empezar": habilitado solo con tipo Y rol. Etiqueta según lo que falte.
+  const empezarDisabled = !tipo || !cur;
+  const empezarLabel = !tipo ? 'Elige el tipo de propiedad' : (!cur ? 'Elige quién eres' : 'Empezar');
   return `<div class="role-select">
     <div class="role-hd">
       <span class="lane-brand"><span class="ob-logo">IAV</span>bitácora</span>
@@ -1844,17 +1861,19 @@ function renderInicio() {
       </button>`;
     }).join('')}</div>
 
-    <div class="setup-block" style="margin-top:18px">
-      <button class="setup-toggle" aria-expanded="${expanded ? 'true' : 'false'}" onclick="toggleInicioConfig()">
+    <div class="setup-accordion" style="margin-top:18px">
+      <button class="acc-head" aria-expanded="${expanded ? 'true' : 'false'}" onclick="toggleInicioConfig()">
         <i class="ti ti-adjustments st-icon"></i>
         <span class="st-copy">
-          <span class="st-title">${expanded ? 'Configuración del trabajo' : 'Ya configurado — toca para ajustar'}</span>
+          <span class="st-title">${accTitle}</span>
           <span class="st-sub">Tipo de propiedad, servicios y vlog.</span>
         </span>
-        <i class="ti ti-chevron-${expanded ? 'up' : 'down'}" aria-hidden="true"></i>
+        <i class="ti ti-chevron-${expanded ? 'up' : 'down'} acc-chev" aria-hidden="true"></i>
       </button>
+      ${expanded ? `<div class="acc-panel">${configPanel}</div>` : ''}
     </div>
-    ${expanded ? configBody : ''}
+
+    <button class="primary block" style="margin-top:var(--sp-4)" onclick="empezarTrabajo()"${empezarDisabled ? ' disabled' : ''}>${empezarLabel}</button>
   </div>`;
 }
 
@@ -1877,10 +1896,14 @@ function inicioToggleVlog() {
 // "Empezar": marca configurado y entra a la vista de captura. Si aún no se
 // eligió rol, el flujo se queda en renderInicio hasta que se elija uno.
 function empezarTrabajo() {
-  // El tipo de propiedad se elige en inicio y garantiza catálogo en "Armar
-  // cuartos"; sin él no se debe poder entrar (el botón ya va deshabilitado).
+  // El tipo de propiedad garantiza catálogo en "Armar cuartos" y el rol define
+  // quién está capturando; sin ambos no se entra (el botón ya va deshabilitado,
+  // pero el guard evita marcar configurado sin rol).
   if (!state.guide || !state.guide.tipoPropiedad) return;
+  if (!getRole()) return;
   state = logic.setConfigurado(state, true);
+  // Vuelve el acordeón al default por estado para el próximo trabajo.
+  inicioConfigOpen = null;
   scheduleSave();
   render();
 }
