@@ -4090,6 +4090,24 @@ test('adoptarSegmentoFx30: no-op para una camara que no es FX30 (Tascam)', () =>
   assert.strictEqual(logic.getCameraSequence(s, 'tascam-asesor').segment, undefined);
 });
 
+test('CAMERA_DEFAULTS: sony-main y sony-asesor tienen el mismo label (Sony principal)', () => {
+  const mainCam = logic.CAMERA_DEFAULTS.find((c) => c.id === 'sony-main');
+  const asesorCam = logic.CAMERA_DEFAULTS.find((c) => c.id === 'sony-asesor');
+  assert.strictEqual(mainCam.label, 'Sony principal');
+  assert.strictEqual(asesorCam.label, 'Sony principal', 'el label del asesor debe coincidir con el de video (misma camara fisica)');
+});
+
+test('getCameraSequence asesor: cuando sony-main ya tiene secuencia, adoptarSegmentoFx30 expone el mismo nextToken', () => {
+  let s = logic.createDefaultState();
+  s = logic.initializeCameraSequence(s, { cameraId: 'sony-main', lastFilename: '20260611_PIB0010.MP4', archivoActual: true });
+  assert.strictEqual(logic.getCameraSequence(s, 'sony-asesor').nextToken, '', 'sin adoptar: asesor aun sin token');
+  const adoptedForRender = logic.adoptarSegmentoFx30(s, 'sony-asesor');
+  const seqAsesor = logic.getCameraSequence(adoptedForRender, 'sony-asesor');
+  assert.strictEqual(seqAsesor.nextToken, 'PIB0010', 'con adoptarSegmentoFx30 local el render ve el token continuo');
+  assert.strictEqual(s, s, 'el estado global NO fue mutado (adoptedForRender es copia local)');
+  assert.strictEqual(logic.getCameraSequence(s, 'sony-asesor').segment, undefined, 'el estado original sigue sin segmento adoptado');
+});
+
 // ─── Task 2.1 — servicios.drone como fuente unica de verdad para drone ──────
 
 test('normalize: estado viejo con guide.incluirDrone=true conserva servicios.drone=true', () => {

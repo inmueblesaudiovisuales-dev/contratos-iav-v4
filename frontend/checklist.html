@@ -2836,7 +2836,10 @@ function renderAsesorCapture() {
   }
   const punto = activeTarget();
   const esVoz = punto.tipo === 'voz';
-  const sony = logic.getCameraSequence(state, 'sony-asesor');
+  // FX30: para el render, leer la secuencia a traves del segmento compartido SIN persistir.
+  // adoptarSegmentoFx30 devuelve un nuevo estado local; nunca se asigna a la variable global.
+  const adoptedForRender = logic.adoptarSegmentoFx30(state, 'sony-asesor');
+  const sony = logic.getCameraSequence(adoptedForRender, 'sony-asesor');
   const tascam = logic.getCameraSequence(state, 'tascam-asesor');
   const files = asesorFilesForPunto(punto.id);
   const pairsMap = {};
@@ -2856,7 +2859,7 @@ function renderAsesorCapture() {
     </div>
   </section>
   <div class="cap-cam asesor-cam">
-    ${esVoz ? '' : asesorCamRow('Sony FX30', 'video', sony, 'sony-asesor')}
+    ${esVoz ? '' : asesorCamRow(sony.camera ? sony.camera.label : 'Sony principal', 'video', sony, 'sony-asesor')}
     ${asesorCamRow('Tascam (DJI Mic)', 'audio', tascam, 'tascam-asesor')}
   </div>
   ${renderCapNav('punto', 'abrirCambiarPunto()')}

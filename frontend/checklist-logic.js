@@ -13,7 +13,7 @@
     // estado viejo, contadores y la camara drone activa por defecto.
     { id: 'drone-dji', label: 'DJI Air 3', mode: 'drone', kind: 'dji' },
     { id: 'drone-mini-4-pro', label: 'DJI Mini 4 Pro', mode: 'drone', kind: 'dji' },
-    { id: 'sony-asesor', label: 'Sony FX30', mode: 'asesor', kind: 'sony', role: 'video' },
+    { id: 'sony-asesor', label: 'Sony principal', mode: 'asesor', kind: 'sony', role: 'video' },
     // F75 (revision) — la Tascam es una camara mas, con su propia secuencia (kind:'tascam').
     // Reemplaza a osmo-asesor como dispositivo de audio del asesor. osmo-asesor se conserva
     // solo por retro-compat de estados viejos; registerAsesorFile NO lo usa.
