@@ -434,6 +434,13 @@
     .cap-toma-sub { font-family: var(--font-mono); font-size: var(--ts-cap); font-weight: 600; color: rgba(33,30,24,.72); }
     .cap-btn-no { min-height: 64px; border: 1.5px solid var(--red); border-radius: 14px; background: var(--card); color: var(--red); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: var(--ts-body); font-weight: 600; }
     .cap-btn-no i { font-size: 21px; }
+    /* T6.1 — confirmacion breve en el boton (sin overlay) + deshacer inline */
+    .cap-btn-toma.cap-toma-confirmed { background: var(--green-soft); box-shadow: inset 0 0 0 1.5px var(--green); color: var(--green); }
+    .cap-btn-toma.cap-toma-confirmed .cap-toma-lbl { color: var(--green); display: inline-flex; align-items: center; gap: 6px; }
+    .cap-confirm-row { display: flex; flex-direction: column; gap: var(--sp-2); }
+    .primary-action.cap-confirmed { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .cap-undo { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; height: 32px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink-2); font-size: var(--ts-cap); font-weight: 600; }
+    .cap-undo i { font-size: 16px; }
     /* selector de cuarto por piso */
     .cuarto-list { display: flex; flex-direction: column; gap: 2px; }
     .cuarto-piso { font-size: 12px; font-weight: 600; color: var(--gold); margin: 12px 2px 4px; }
@@ -1301,6 +1308,37 @@ let dictadoText = '';
 let dictadoParsed = null;
 let dictadoAsignaciones = {};
 let dictadoReemplazar = false;
+// T6.1 — confirmacion en boton + deshacer en lista (toast solo para errores).
+// Tras registrar una toma exitosa, marcamos el target/sesion con un estado breve
+// "registrada" en el propio boton (sin overlay) y guardamos el handler de deshacer
+// para ofrecerlo inline en la lista de tomas.
+let confirmTargetId = null;     // id del target con confirmacion breve en su boton (modo tarjetas)
+let confirmAsesor = false;      // confirmacion breve en el boton Toma del asesor
+let confirmTimer = null;        // timer que limpia la confirmacion del boton y re-renderiza
+let undoUltimaToma = null;      // handler de deshacer de la ultima toma registrada
+let undoTargetId = null;        // target al que pertenece la ultima toma (null = sesion asesor)
+// Marca una toma recien registrada: confirmacion breve en el boton (sin overlay) y
+// "deshacer" inline en la lista usando el mismo handler que antes iba en el toast.
+// El parpadeo del boton dura ~1.1s; el "deshacer" inline persiste hasta la siguiente accion.
+function marcarTomaRegistrada(undoFn, targetId) {
+  undoUltimaToma = undoFn;
+  undoTargetId = targetId || null;
+  confirmTargetId = targetId || null;
+  confirmAsesor = !targetId;
+  clearTimeout(confirmTimer);
+  render();
+  confirmTimer = setTimeout(() => {
+    confirmTargetId = null; confirmAsesor = false;
+    render();
+  }, 1100);
+}
+function deshacerUltimaToma() {
+  if (!undoUltimaToma) return;
+  const fn = undoUltimaToma;
+  undoUltimaToma = null; undoTargetId = null; confirmTargetId = null; confirmAsesor = false;
+  clearTimeout(confirmTimer);
+  fn();
+}
 let capturaScreen = 'lista';
 
 // ===== Rol por celular (F5) =====
@@ -2825,7 +2863,9 @@ function renderAsesorCapture() {
     ${pairList.length ? renderAsesorPairs(pairList) : `<p class="cap-empty">Aún no registras nada aquí. Da Toma cuando graben.</p>`}
   </section>
   <div class="cap-thumb">
-    <button class="cap-btn-toma" onclick="registrarAsesor('${punto.id}','take')"><span class="cap-toma-lbl">Toma</span><span class="cap-toma-sub">${esc(nextLabel)}</span></button>
+    ${confirmAsesor
+      ? `<button class="cap-btn-toma cap-toma-confirmed" disabled><span class="cap-toma-lbl"><i class="ti ti-check"></i> Registrada</span></button>`
+      : `<button class="cap-btn-toma" onclick="registrarAsesor('${punto.id}','take')"><span class="cap-toma-lbl">Toma</span><span class="cap-toma-sub">${esc(nextLabel)}</span></button>`}
     <button class="cap-btn-no" onclick="registrarAsesor('${punto.id}','discard')"><i class="ti ti-circle-x"></i><span>No sirve</span></button>
   </div>`;
 }
@@ -2852,9 +2892,13 @@ function renderAsesorPairs(pairList) {
       : good ? `<span class="cap-badge good"><i class="ti ti-star-filled"></i>buena</span>`
              : `<button class="cap-mark" onclick="toggleBuena('${target.id}')"><i class="ti ti-star"></i>Marcar buena</button>`;
     const note = pair.map((f) => f.note).filter(Boolean)[0];
+    // T6.1 — deshacer inline en la toma recien registrada (la mas reciente), en vez del toast.
+    const undo = (i === 0 && !isDiscard && undoUltimaToma && undoTargetId === null)
+      ? `<button class="cap-undo" onclick="deshacerUltimaToma()"><i class="ti ti-arrow-back-up"></i> Deshacer</button>`
+      : '';
     return `<div class="cap-take${i === 0 ? ' latest' : ''}">
       <button class="cap-take-main" onclick="agregarNotaArchivo('${target.id}')"><span class="cap-tok asesor-tok">${tokens}</span><span class="cap-take-meta">${sony ? 'Sony + Tascam' : 'Solo audio'}${pair[0].author ? ' · ' + esc(pair[0].author) : ''}${note ? ' · ' + esc(note) : ''}</span></button>
-      ${right}</div>`;
+      ${undo}${right}</div>`;
   }).join('');
 }
 
@@ -2877,7 +2921,8 @@ function registrarAsesor(puntoId, kind) {
   if (kind === 'discard') {
     showToast('Fallida registrada', () => abrirMotivoDescarte(last.id), '¿qué fue?');
   } else {
-    showToast('Toma registrada', () => { state = prev; render(); scheduleSave(); }, 'Deshacer');
+    // T6.1 — sin toast en exito: confirmacion breve en el boton Toma + deshacer en la lista.
+    marcarTomaRegistrada(() => { state = prev; render(); scheduleSave(); });
   }
 }
 
@@ -5018,7 +5063,9 @@ function renderSpaceCard(space) {
       <button class="icon-btn" aria-label="Opciones de ${esc(space.nombre)}" onclick="abrirAcciones('space','${space.id}')">...</button>
     </div>
     <div class="state-list">${['foto', 't360', 'video'].filter((key) => state.servicios[key]).map((key) => renderStateToken(key, space.estados[key])).join('')}</div>
-    <button class="primary-action ${managing || noAplica ? 'manage' : ''}" onclick="${noAplica ? `reactivarTarget('space','${space.id}','${state.modoActual}')` : `capturar('${space.id}')`}">${noAplica ? `Reactivar ${SERVICE_UI[state.modoActual].short}` : captureActionLabel(state.modoActual, space.id, managing)}</button>
+    ${noAplica
+      ? `<button class="primary-action manage" onclick="reactivarTarget('space','${space.id}','${state.modoActual}')">Reactivar ${SERVICE_UI[state.modoActual].short}</button>`
+      : renderCaptureAction('space', space.id, managing)}
   </article>`;
 }
 
@@ -5031,7 +5078,7 @@ function renderDroneCard(item) {
       <button class="icon-btn" aria-label="Opciones de ${esc(item.nombre)}" onclick="abrirAcciones('drone','${item.id}')">...</button>
     </div>
     <div class="state-list"><span class="state ${item.estado === 'hecho' ? 'done drone' : item.noAplica ? 'na' : ''}">${item.estado === 'hecho' ? 'Drone ' + String(item.ultimoOrden || '').padStart(2, '0') : item.noAplica ? 'No aplica' : 'Drone pendiente'}</span></div>
-    <button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${item.id}')">${captureActionLabel('drone', item.id, managing)}</button>
+    ${renderCaptureAction('drone', item.id, managing)}
   </article>`;
 }
 
@@ -5104,6 +5151,22 @@ function captureActionLabel(tipo, targetId, managing) {
   if (tipo === 'foto') return 'Foto registrada · opciones';
   if (tipo === 'drone') return 'Drone registrado · opciones';
   return `${SERVICE_UI[tipo].label} registrado · opciones`;
+}
+
+// T6.1 — boton de captura para tarjetas (video/foto/360/drone). En el momento justo
+// despues de registrar muestra una confirmacion breve en el propio boton (sin overlay)
+// y ofrece "deshacer" inline al lado, usando el mismo handler que antes iba en el toast.
+function renderCaptureAction(type, targetId, managing) {
+  const tipo = type === 'drone' ? 'drone' : state.modoActual;
+  // Boton: parpadeo breve "Registrada" mientras confirmTargetId apunta a este target;
+  // luego vuelve al boton normal. El "deshacer" inline persiste mientras undoTargetId coincida.
+  const btn = confirmTargetId === targetId
+    ? `<button class="primary-action manage cap-confirmed" disabled><i class="ti ti-check"></i> Registrada</button>`
+    : `<button class="primary-action ${managing ? 'manage' : ''}" onclick="capturar('${targetId}')">${captureActionLabel(tipo, targetId, managing)}</button>`;
+  const undo = (undoTargetId === targetId && undoUltimaToma)
+    ? `<button class="cap-undo cap-undo-inline" onclick="deshacerUltimaToma()"><i class="ti ti-arrow-back-up"></i> Deshacer última toma</button>`
+    : '';
+  return undo ? `<div class="cap-confirm-row">${btn}${undo}</div>` : btn;
 }
 
 function renderStateToken(key, stateValue) {
@@ -5388,11 +5451,12 @@ function registrarCaptura(targetId, intencion) {
   scheduleSave();
   const latest = state.bitacora[state.bitacora.length - 1];
   if (latest && previous !== state) {
-    showToast(`${SERVICE_UI[latest.tipo].short}${latest.orden ? ' ' + String(latest.orden).padStart(2, '0') : ''} registrado`, () => {
+    // T6.1 — sin toast en exito: confirmacion breve en el boton + deshacer en la lista.
+    marcarTomaRegistrada(() => {
       state = previous;
       render();
       scheduleSave();
-    });
+    }, targetId);
   }
 }
 
