@@ -249,3 +249,21 @@ test('normalize: ya no expone guide.incluirDrone', () => {
 - App: arreglar en `rediseno` (local, sin push) si el dry-run lo exige.
 - Despliegue: commits locales, sin push.
 - Voz en off: acceso visible (sin switch-en-caliente por ahora).
+
+---
+
+## Ejecutado — 2026-06-11 (rama main, local)
+
+Las 6 fases + la ronda de auditoría (15 hallazgos) se ejecutaron con subagent-driven-development y verificación
+visual headless + dry-run cruzado con la app. `node --test frontend/checklist-logic.test.js`: 314 verde.
+Estado viejo verificado sin pérdida de datos (drone migrado, asesor preservado, segmentos Sony intactos).
+
+Commits clave (rama main): `da82305` FX30 una secuencia · `07c7fa0`/`1a7a535` asesor continuo · `b467367`/`10c2a0f`
+drone unificado · `b61b756` asesor default off · `669595a`/`c3c22e3` inicio (tipo obligatorio + acordeón v1) ·
+`7c58446` rangos por número v1 · `018cd54`/`6277056`/`eaf9cf5` toast/regreso/voz · Auditoría: `d947315` quitar `______` ·
+`26d1c06` orden subcuartos · `f5907cb` asesor render FX30 · `f5b6326` video/drone deshacer · `2e521af` acordeón final ·
+`78e90c1` rangos layout · `7c5ef07`/`4762213` limpieza/subtexto/conteos · `bb7c64d` seleccionado dorado.
+
+App (`iav-metadata-app`, rama `rediseno`, sin push): `6c851c1` fix de binning del asesor con carpeta FX30 compartida.
+
+Ver RONDAS.md R128.

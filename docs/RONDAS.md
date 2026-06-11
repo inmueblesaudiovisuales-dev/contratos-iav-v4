@@ -8,6 +8,39 @@
 
 ---
 
+### R128 — Sony unificada, redundancias, rangos por número, pulido + auditoría (2026-06-11 15:29:00 CST)
+
+Sesión grande sobre `frontend/checklist.html` y `frontend/checklist-logic.js` (rama `main`). Spec/plan/arranque en
+`docs/superpowers/{specs,plans}/2026-06-11-checklist-redundancias-sony-rangos*` y
+`docs/superpowers/PROMPT-ARRANQUE-2026-06-11-checklist-redundancias-sony-rangos.md`. Ejecutada con
+subagent-driven-development, verificación visual headless (Playwright) y dry-run cruzado con la app de metadatos.
+Tests `node --test frontend/checklist-logic.test.js`: 314 verde. **JSON sigue `version: 2`; compatible con la app.**
+
+Pieza central — **Sony FX30 = una sola cámara**: `sony-main` y `sony-asesor` comparten UNA secuencia/contador
+(`initializeCameraSequence` reusa el segmento de la cámara hermana FX30; `adoptarSegmentoFx30` para adoptar/render).
+El asesor numera continuo con el video; el `camaraId 'sony-asesor'` se conserva (la app lo necesita para el bin
+"Asesor" de Premiere) y el token sigue siendo el nombre real. Verificado end-to-end con el dry-run.
+
+Resto del plan (6 fases): drone unificado a `servicios.drone` (se quitó `guide.incluirDrone`, con migración sin
+pérdida); asesor arranca apagado; pantalla de inicio reescrita con acordeón real (rol arriba, config adentro,
+"Empezar" siempre visible y deshabilitado sin tipo+rol, tipo obligatorio); rangos solo foto/360, **por número**
+(prefijo+fecha como contexto fijo), guardado por dispositivo con confirmación e integridad; toast de éxito →
+confirmación en el botón + "Deshacer" en la lista (toast grande solo para errores), también en video/drone;
+un solo regreso en la sesión de asesor; voz en off accesible directo.
+
+Auditoría posterior (15 hallazgos) corregida: acordeón bien armado, orden de subcuartos (siempre tras su cuarto
+padre en cobertura/recorrido/export), `______` eliminado en la fuente (`sugerirNombreArchivo`) — limpia captura,
+contexto de rangos y JSON; conteos consistentes; copy "Fotografía"; CSS muerto; y el **estado seleccionado en
+dorado** (borde+fondo `--gold`/`--gold-soft`) para distinguirlo del fondo.
+
+**App de metadatos (`iav-metadata-app`, rama `rediseno`, sin push):** fix en `premiereService.ts` (`planPremiereClips`)
+para que una sola carpeta de la FX30 asignada a `sony-main` y `sony-asesor` rutee bien los clips del asesor al bin
+"Asesor" (antes la deduplicación por ruta los mis-bineaba). 426 tests verde.
+
+NO se tocó el adapter. Despliegue: push a `main` (GitHub Actions).
+
+---
+
 ### R127 — Asesor con Tascam como cámara (F75–F77): documentación (2026-06-09 18:43:43 CST)
 
 **Rama `checklist-asesor-tascam-2026-06-09`, NO integrada a main/producción.** Cierre documental (F77) de la
