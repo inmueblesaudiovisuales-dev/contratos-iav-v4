@@ -8,6 +8,17 @@
 
 ---
 
+### R129 — Correcciones de entrega "El Estreno" (2026-06-11 22:10:28 CST)
+
+Corregidos los cinco bugs documentados de la entrega: guardar o limpiar la liga 360 ahora sincroniza
+`tiene_recorrido`; el título del Estreno usa la dirección y deja vacío el subtítulo; Stream intenta extraer el
+`customer-code` de todas las URLs disponibles, registra cuando sigue pendiente y muestra un mensaje claro si no
+puede reproducir; la migración desde Drive rechaza respuestas HTML/no-imagen; y el botón de video abre la página
+`/watch` de Stream con fallback a Drive. `STREAM_CUSTOMER_CODE` permanece pendiente de llenar manualmente en
+`worker/wrangler.toml`.
+
+---
+
 ### R128 — Sony unificada, redundancias, rangos por número, pulido + auditoría (2026-06-11 15:29:00 CST)
 
 Sesión grande sobre `frontend/checklist.html` y `frontend/checklist-logic.js` (rama `main`). Spec/plan/arranque en

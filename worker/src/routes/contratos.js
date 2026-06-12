@@ -2,7 +2,7 @@ import { query, queryOne, run, batch, uuid, now } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter, callAdapterSync } from '../google.js';
 import { generarFolio, asignarFolio } from '../folios.js';
-import { esFotoWeb, hashDeVariante } from '../entrega-media.js';
+import { esFotoWeb, esImagenDrive, extraerStreamCustomer, hashDeVariante } from '../entrega-media.js';
 import { payloadEntrega } from './portal.js';
 
 // Sube un Blob a Cloudflare Images. Devuelve { id, hash } o null.
@@ -460,8 +460,8 @@ export async function handleContratos(request, env, ctx, action) {
         destacadoId: '',
         imagesHash: man.imagesHash || '',
         streamCustomer: man.streamCustomer || '',
-        propiedadNombre: c.nombre_cliente || '',
-        propiedadUbicacion: prop.direccion || ''
+        propiedadNombre: prop.direccion || c.nombre_cliente || '',
+        propiedadUbicacion: ''
       };
       await run(db,
         `UPDATE contratos SET entrega_manifiesto_json=?, entrega_media_estado='migrando',
@@ -479,9 +479,12 @@ export async function handleContratos(request, env, ctx, action) {
     for (const f of lote) {
       try {
         const r = await fetch(`https://drive.google.com/uc?export=download&id=${f.id}`);
-        if (r.ok) {
+        const contentType = r.headers.get('content-type') || '';
+        if (r.ok && esImagenDrive(contentType)) {
           const sub = await subirImagenCF(env, await r.blob(), f.nombre);
           if (sub) { man.fotos.push({ id: sub.id, nombre: f.nombre }); if (!man.imagesHash) man.imagesHash = sub.hash; }
+        } else if (r.ok) {
+          console.error('Drive devolvió contenido no compatible para', f.id, 'content-type:', contentType);
         }
       } catch (e) { console.error('migrar foto falló', f.id, e.message); }
     }
@@ -501,8 +504,13 @@ export async function handleContratos(request, env, ctx, action) {
         const j = await resp.json();
         if (j && j.success && j.result && j.result.uid) {
           videoProveedor = 'stream'; videoId = j.result.uid;
-          const mm = String(j.result.preview || j.result.thumbnail || '').match(/(customer-[^.]+)\./);
-          if (mm) man.streamCustomer = mm[1];
+          const streamCustomer = extraerStreamCustomer(j.result);
+          if (streamCustomer) {
+            man.streamCustomer = streamCustomer;
+            delete man.streamCustomerPendiente;
+          } else {
+            man.streamCustomerPendiente = true;
+          }
         }
       } catch (e) { console.error('subir video a Stream falló', e.message); }
     }
@@ -529,8 +537,10 @@ export async function handleContratos(request, env, ctx, action) {
       `UPDATE contratos SET entrega_manifiesto_json=?, entrega_textos_json=?,
          entrega_video_proveedor=COALESCE(NULLIF(?, ''), entrega_video_proveedor),
          entrega_video_id=COALESCE(NULLIF(?, ''), entrega_video_id),
-         recorrido_url=COALESCE(NULLIF(?, ''), recorrido_url) WHERE token=?`,
-      [JSON.stringify(man), JSON.stringify(textos || {}), videoProveedor || '', videoId || '', tour360Url || '', token]);
+         recorrido_url=NULLIF(?, ''),
+         tiene_recorrido=CASE WHEN ? != '' THEN 1 ELSE 0 END WHERE token=?`,
+      [JSON.stringify(man), JSON.stringify(textos || {}), videoProveedor || '', videoId || '',
+       tour360Url || '', tour360Url || '', token]);
     return ok({ ok: true });
   }
 
@@ -587,9 +597,17 @@ export async function handleContratos(request, env, ctx, action) {
       const g = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/${uid}`,
         { headers: { 'Authorization': `Bearer ${env.CF_MEDIA_TOKEN}` } });
       const gj = await g.json();
-      const mm = String((gj.result && gj.result.preview) || '').match(/(customer-[^.]+)\./);
-      if (mm) man.streamCustomer = mm[1];
-    } catch (e) { console.error('confirmarVideo getStream falló', e.message); }
+      const streamCustomer = extraerStreamCustomer(gj && gj.result);
+      if (streamCustomer) {
+        man.streamCustomer = streamCustomer;
+        delete man.streamCustomerPendiente;
+      } else {
+        man.streamCustomerPendiente = true;
+      }
+    } catch (e) {
+      man.streamCustomerPendiente = true;
+      console.error('confirmarVideo getStream falló', e.message);
+    }
     await run(db,
       `UPDATE contratos SET entrega_video_proveedor='stream', entrega_video_id=?, entrega_manifiesto_json=? WHERE token=?`,
       [uid, JSON.stringify(man), token]);

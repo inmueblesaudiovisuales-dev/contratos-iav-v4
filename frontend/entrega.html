@@ -340,8 +340,15 @@
     // Video: si no hay, ocultar el botón de play y el badge
     var hayVideo = (D.videoProveedor === 'stream' || D.videoProveedor === 'youtube') && D.videoId;
     if(!hayVideo){ document.getElementById('playBtn').style.display = 'none'; document.getElementById('heroBadge').style.display = 'none'; }
-    document.getElementById('btnVideo').style.display = hayVideo ? '' : 'none';
-    document.getElementById('btnVideo').href = D.driveLink || '#';
+    var videoDownloadHref = '';
+    if(hayVideo && D.videoProveedor === 'stream' && D.streamCustomer && D.videoId){
+      videoDownloadHref = 'https://' + D.streamCustomer + '.cloudflarestream.com/' + D.videoId + '/watch';
+    } else if(D.driveLink){
+      videoDownloadHref = D.driveLink;
+    }
+    var btnVideo = document.getElementById('btnVideo');
+    btnVideo.style.display = (hayVideo && videoDownloadHref) ? '' : 'none';
+    btnVideo.href = videoDownloadHref || '#';
 
     // Fotos
     if(fotos.length){
@@ -404,7 +411,8 @@
 
   function playVideo(){
     var src = '';
-    if(D.videoProveedor === 'stream' && D.videoId && D.streamCustomer){
+    if(D.videoProveedor === 'stream' && D.videoId){
+      if(!D.streamCustomer){ return toast('Video no disponible en este momento'); }
       src = 'https://' + D.streamCustomer + '.cloudflarestream.com/' + D.videoId + '/iframe?autoplay=true&muted=true';
     } else if(D.videoProveedor === 'youtube' && D.videoId){
       src = 'https://www.youtube.com/embed/' + D.videoId + '?autoplay=1';

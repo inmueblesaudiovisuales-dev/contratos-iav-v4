@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { esFotoWeb, esVideoWeb, hashDeVariante } from './entrega-media.js';
+import { esFotoWeb, esImagenDrive, esVideoWeb, extraerStreamCustomer, hashDeVariante } from './entrega-media.js';
 
 test('esFotoWeb acepta formatos que el navegador muestra', () => {
   assert.equal(esFotoWeb({ mimeType: 'image/jpeg' }), true);
@@ -22,4 +22,28 @@ test('hashDeVariante extrae el account hash de la URL de Images', () => {
   assert.equal(hashDeVariante('https://imagedelivery.net/Zx-9/otra/public'), 'Zx-9');
   assert.equal(hashDeVariante(''), '');
   assert.equal(hashDeVariante(null), '');
+});
+
+test('esImagenDrive rechaza HTML aunque Drive responda 200', () => {
+  assert.equal(esImagenDrive('image/jpeg'), true);
+  assert.equal(esImagenDrive('image/png; charset=binary'), true);
+  assert.equal(esImagenDrive('IMAGE/WEBP'), true);
+  assert.equal(esImagenDrive('text/html; charset=utf-8'), false);
+  assert.equal(esImagenDrive(''), false);
+});
+
+test('extraerStreamCustomer prueba las URLs disponibles de Stream', () => {
+  assert.equal(extraerStreamCustomer({
+    preview: 'https://customer-preview.cloudflarestream.com/uid/watch'
+  }), 'customer-preview');
+  assert.equal(extraerStreamCustomer({
+    preview: null,
+    thumbnail: 'https://customer-thumb.cloudflarestream.com/uid/thumbnails/thumbnail.jpg'
+  }), 'customer-thumb');
+  assert.equal(extraerStreamCustomer({
+    playback: {
+      hls: 'https://customer-playback.cloudflarestream.com/uid/manifest/video.m3u8'
+    }
+  }), 'customer-playback');
+  assert.equal(extraerStreamCustomer({ preview: null, thumbnail: null }), '');
 });

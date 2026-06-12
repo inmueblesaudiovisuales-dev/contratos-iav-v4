@@ -5,8 +5,27 @@ export function esFotoWeb(file) {
   return m === 'image/jpeg' || m === 'image/png' || m === 'image/webp';
 }
 
+export function esImagenDrive(contentType) {
+  const m = String(contentType || '').toLowerCase();
+  return m.includes('image/jpeg') || m.includes('image/png') || m.includes('image/webp');
+}
+
 export function esVideoWeb(nombre) {
   return /_web\.[a-z0-9]+$/i.test(nombre || '');
+}
+
+export function extraerStreamCustomer(datos) {
+  const pendientes = [datos];
+  while (pendientes.length) {
+    const valor = pendientes.shift();
+    if (typeof valor === 'string') {
+      const m = valor.match(/(customer-[^.]+)\./);
+      if (m) return m[1];
+    } else if (valor && typeof valor === 'object') {
+      pendientes.push(...Object.values(valor));
+    }
+  }
+  return '';
 }
 
 // Extrae el "account hash" de Cloudflare Images de una URL de variante que
