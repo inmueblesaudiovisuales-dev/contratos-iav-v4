@@ -24,6 +24,10 @@ const WA_BASE = 'https://wa.me/5218127174207';
 // TODAS las entregas, viejas y nuevas, al instante: ya no hay nada quemado.
 const LLAVE_MARCA = 'sistema/marca-agua.png';
 const OPACIDAD_MARCA = 0.6;   // calibrada por Bruno sobre una foto real
+// repeat tilea el PNG a su tamaño NATIVO, que en una foto de 1000px deja el texto
+// gigante. width es una fraccion del ancho de la foto: el tile trae el texto mas su
+// separacion, asi que 0.5 deja el texto ocupando ~25% del ancho.
+const ANCHO_MARCA = 0.5;
 
 // El sistema acepta su propia llave si esta configurada, y ademas la del admin para
 // que funcione desde el dia uno sin tener que crear un secreto nuevo. Falla cerrado:
@@ -412,7 +416,10 @@ export async function handleEntregas(request, env, ctx, action) {
       if (!limpia) {
         const marca = await env.ENTREGAS_ORIGINALES.get(LLAVE_MARCA);
         if (marca) {
-          pipe = pipe.draw(marca.body, { repeat: true, opacity: OPACIDAD_MARCA });
+          // ?m= permite probar otra escala sin redesplegar; sin el va la calibrada.
+          const w = Number(url.searchParams.get('m')) || ANCHO_MARCA;
+          pipe = pipe.draw(marca.body,
+            { repeat: true, opacity: OPACIDAD_MARCA, width: Math.min(1, Math.max(0.1, w)) });
         } else {
           // Sin marca de agua NO se sirve la foto: es preferible fallar visible a
           // entregar el material limpio por accidente.
