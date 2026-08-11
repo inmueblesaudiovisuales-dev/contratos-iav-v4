@@ -131,6 +131,31 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .item .lab span{font-size:12px;color:var(--ink-3);font-family:var(--font-mono)}
 .urlrow{display:flex;gap:var(--s2);margin-top:var(--s3);margin-left:38px}
 .urlrow input{height:36px}
+
+/* Subida */
+.zona{margin:var(--s3) 0 0 38px;border:1.5px dashed var(--line-2);border-radius:var(--r);
+  background:var(--paper-0);padding:var(--s4);text-align:center;color:var(--ink-3);
+  font-size:12.5px;cursor:pointer;transition:border-color .16s,background .16s}
+.zona:hover{border-color:var(--gold);color:var(--ink-2)}
+.zona.over{border-color:var(--gold);background:var(--gold-glow);color:var(--ink-1)}
+.zona b{display:block;color:var(--ink-2);font-size:13px;font-weight:600;margin-bottom:2px}
+.prog{margin:var(--s3) 0 0 38px;background:var(--paper-2);border-radius:var(--r-pill);height:6px;
+  overflow:hidden}
+.prog i{display:block;height:100%;background:var(--gold-leaf);width:0;transition:width .2s}
+.progtxt{margin:6px 0 0 38px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums}
+.files{display:flex;flex-wrap:wrap;gap:7px;margin:var(--s3) 0 0 38px}
+.f{position:relative;width:74px}
+.f .im{width:74px;height:56px;border-radius:7px;background:var(--paper-2) center/cover;display:block;
+  border:1px solid var(--line)}
+.f .nm{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-3);margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f .x{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
+  background:var(--paper-1);border:1px solid var(--line-2);color:var(--danger);cursor:pointer;
+  font-size:13px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+.f .x:hover{background:var(--danger-bg);border-color:var(--danger)}
+.f.vid .im{display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+.destacada{outline:2px solid var(--gold-leaf);outline-offset:1px}
 .linkbox{background:var(--paper-0);border:1px solid var(--line);border-radius:var(--r-sm);
   padding:9px var(--s3);font-family:var(--font-mono);font-size:11px;color:var(--ink-2);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -399,6 +424,33 @@ function pintarDetalle(){
         '<input type="url" id="lk-' + i.id + '" value="' + esc(i.valor || '') + '" placeholder="https://…">' +
         '<button class="btn btn-ghost btn-sm" onclick="guardarEnlace(\'' + i.id + '\')">Guardar</button>' +
         '</div>';
+    } else {
+      // Archivos ya subidos. La miniatura la sirve el propio Worker desde R2; la
+      // llave va en la URL porque una <img> no puede mandar cabeceras.
+      if(arch.length){
+        h += '<div class="files">' + arch.map(function(a){
+          var esVid = /^video\//.test(a.mime || '');
+          var im = esVid
+            ? '<span class="im vid"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></span>'
+            : '<span class="im' + (a.destacado ? ' destacada' : '') + '" style="background-image:url(\'' +
+              '/api/e/foto?a=' + a.id + '&w=160&k=' + encodeURIComponent(KEY) + '\')"></span>';
+          return '<div class="f' + (esVid ? ' vid' : '') + '">' + im +
+            '<div class="nm" title="' + esc(a.nombre) + '">' + esc(a.nombre) + '</div>' +
+            '<button class="x" title="Quitar" onclick="borrarArchivo(\'' + a.id + '\')">×</button></div>';
+        }).join('') + '</div>';
+      }
+      var acepta = i.tipo === 'video' ? 'video/*' : 'image/*';
+      var multi = i.tipo === 'video' ? '' : ' multiple';
+      h += '<input type="file" id="in-' + i.id + '" accept="' + acepta + '"' + multi +
+           ' hidden onchange="elegidos(\'' + i.id + '\',\'' + i.tipo + '\',this.files)">' +
+        '<div class="zona" id="z-' + i.id + '" onclick="document.getElementById(\'in-' + i.id + '\').click()">' +
+          '<b>' + (i.tipo === 'video' ? 'Arrastra el video' : 'Arrastra las fotos') + '</b>' +
+          (i.tipo === 'video'
+            ? 'Se sube en trozos y Stream le pone la marca al codificar'
+            : 'Se sube el original limpio; la marca se dibuja al mostrarla') +
+        '</div>' +
+        '<div class="prog" id="p-' + i.id + '" style="display:none"><i></i></div>' +
+        '<div class="progtxt" id="pt-' + i.id + '"></div>';
     }
     return h + '</div>';
   }).join('');
@@ -457,8 +509,6 @@ function pintarDetalle(){
         '<button class="btn btn-ghost btn-sm" onclick="abrirAgregar()">Agregar</button></div>' +
         (items || '<div class="card-pad hint">Sin entregables. Agrega al menos uno.</div>') +
       '</div>' +
-      '<div class="card card-pad"><div class="hint" style="text-align:center;padding:8px 0">' +
-        'La subida de fotos y video entra en la siguiente fase (F3).</div></div>' +
     '</div><aside class="side">' +
       '<div class="card"><div class="card-hd"><b>Pago</b></div><div class="card-pad">' + pago + '</div></div>' +
       '<div class="card"><div class="card-hd"><b>Liga del cliente</b></div><div class="card-pad">' +
@@ -471,6 +521,136 @@ function pintarDetalle(){
       '<div class="card"><div class="card-hd"><b>Bitácora</b></div><div class="card-pad">' +
         '<div class="log">' + bitacora + '</div></div></div>' +
     '</aside></div>';
+
+  zonasArrastre();
+}
+
+// ── Subida ───────────────────────────────────────────────────────────────────
+// Debe coincidir con TAMANO_PARTE del Worker: el cuerpo de una peticion topa en
+// ~100 MB, asi que un video de 1 GB se manda en trozos que si caben.
+var TAM_PARTE = 90 * 1024 * 1024;
+var subiendo = false;
+
+function zonasArrastre(){
+  document.querySelectorAll('.zona').forEach(function(z){
+    var id = z.id.slice(2);
+    var inp = document.getElementById('in-' + id);
+    if(!inp) return;
+    var tipo = inp.accept.indexOf('video') === 0 ? 'video' : 'fotos';
+    z.addEventListener('dragover', function(e){ e.preventDefault(); z.classList.add('over'); });
+    z.addEventListener('dragleave', function(){ z.classList.remove('over'); });
+    z.addEventListener('drop', function(e){
+      e.preventDefault(); z.classList.remove('over');
+      if(e.dataTransfer.files.length) elegidos(id, tipo, e.dataTransfer.files);
+    });
+  });
+}
+
+function progreso(id, pct, txt){
+  var p = document.getElementById('p-' + id), t = document.getElementById('pt-' + id);
+  if(p){ p.style.display = pct == null ? 'none' : 'block'; if(pct != null) p.firstChild.style.width = pct + '%'; }
+  if(t) t.textContent = txt || '';
+}
+
+function elegidos(entregableId, tipo, files){
+  if(!files || !files.length) return;
+  if(subiendo) return toast('Espera a que termine la subida en curso', true);
+  if(tipo === 'video') subirVideo(entregableId, files[0]);
+  else subirFotos(entregableId, files);
+}
+
+// Las fotos van de una en una, no en paralelo: 38 peticiones simultaneas de 15 MB
+// saturan la subida y hacen que fallen a la mitad sin decir cual.
+async function subirFotos(entregableId, files){
+  subiendo = true;
+  var lista = Array.prototype.slice.call(files);
+  var ok = 0, fallos = [];
+  for(var i = 0; i < lista.length; i++){
+    var f = lista[i];
+    progreso(entregableId, Math.round(i / lista.length * 100),
+             'Subiendo ' + (i+1) + ' de ' + lista.length + ' · ' + f.name);
+    try {
+      var fd = new FormData();
+      fd.append('entregableId', entregableId);
+      fd.append('nombre', f.name);
+      fd.append('original', f, f.name);
+      var r = await fetch('/api/e/subirFoto', {
+        method: 'POST', headers: { 'X-Entregas-Key': KEY }, body: fd });
+      var j = await r.json();
+      if(!r.ok) throw new Error((j && j.error) || ('Error ' + r.status));
+      ok++;
+    } catch(e){ fallos.push(f.name + ': ' + e.message); }
+  }
+  progreso(entregableId, null);
+  subiendo = false;
+  if(fallos.length){
+    toast(ok + ' subidas, ' + fallos.length + ' fallaron', true);
+    console.error('fallos de subida:', fallos);
+  } else {
+    toast(ok + (ok === 1 ? ' foto subida' : ' fotos subidas'));
+  }
+  await abrir(ACT.entrega.id);
+}
+
+// Stream elige perfil de marca de agua segun la orientacion, asi que hay que
+// medir el video antes de subirlo. Si no se puede, va 0 y cae al perfil horizontal.
+function medirVideo(file){
+  return new Promise(function(res){
+    try {
+      var v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = function(){
+        var d = { ancho: v.videoWidth || 0, alto: v.videoHeight || 0 };
+        URL.revokeObjectURL(v.src); res(d);
+      };
+      v.onerror = function(){ res({ ancho: 0, alto: 0 }); };
+      v.src = URL.createObjectURL(file);
+    } catch(e){ res({ ancho: 0, alto: 0 }); }
+  });
+}
+
+async function subirVideo(entregableId, file){
+  subiendo = true;
+  try {
+    progreso(entregableId, 0, 'Preparando ' + file.name + '…');
+    var dim = await medirVideo(file);
+    var ini = await api('videoIniciar', { body: {
+      entregableId: entregableId, nombre: file.name,
+      mime: file.type || 'video/mp4', bytes: file.size } });
+
+    var partes = [], n = 1, subido = 0;
+    for(var off = 0; off < file.size; off += TAM_PARTE){
+      var trozo = file.slice(off, Math.min(off + TAM_PARTE, file.size));
+      var qs = 'key=' + encodeURIComponent(ini.key) +
+               '&uploadId=' + encodeURIComponent(ini.uploadId) + '&parte=' + n;
+      var r = await fetch('/api/e/videoParte?' + qs, {
+        method: 'POST', headers: { 'X-Entregas-Key': KEY }, body: trozo });
+      var j = await r.json();
+      if(!r.ok) throw new Error((j && j.error) || ('Falló la parte ' + n));
+      partes.push({ parte: j.parte, etag: j.etag });
+      subido += trozo.size; n++;
+      progreso(entregableId, Math.round(subido / file.size * 92),
+               'Subiendo · ' + Math.round(subido/1048576) + ' de ' + Math.round(file.size/1048576) + ' MB');
+    }
+
+    progreso(entregableId, 96, 'Mandando a Stream para ponerle la marca…');
+    var fin = await api('videoTerminar', { body: {
+      archivoId: ini.archivoId, key: ini.key, uploadId: ini.uploadId,
+      partes: partes, ancho: dim.ancho, alto: dim.alto } });
+    progreso(entregableId, null);
+    toast(fin.conMarca ? 'Video subido y marcándose' : 'Video subido (Stream no respondió)',
+          !fin.conMarca);
+  } catch(e){
+    progreso(entregableId, null);
+    toast('Falló la subida: ' + e.message, true);
+  }
+  subiendo = false;
+  await abrir(ACT.entrega.id);
+}
+
+function borrarArchivo(archivoId){
+  if(!confirm('¿Quitar este archivo?')) return;
+  accion('borrarArchivo', { archivoId: archivoId }, 'Archivo quitado');
 }
 
 // ── Acciones ─────────────────────────────────────────────────────────────────

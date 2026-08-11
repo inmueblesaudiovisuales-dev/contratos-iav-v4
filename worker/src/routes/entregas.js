@@ -395,8 +395,11 @@ export async function handleEntregas(request, env, ctx, action) {
     if (!a || !a.r2_key) return err('Foto no encontrada', 404);
     const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [a.e_entrega_id]);
     if (!e) return err('Entrega no encontrada', 404);
-    // Solo se ve lo publicado o liberado. Borrador y pausada no muestran nada.
-    if (e.estado !== 'publicada' && e.estado !== 'liberada') return err('No disponible', 403);
+    // Al cliente solo se le sirve lo publicado o liberado. Bruno si necesita ver
+    // los borradores: es como comprueba lo que acaba de subir antes de publicar.
+    if (e.estado !== 'publicada' && e.estado !== 'liberada') {
+      if (requireEntregas(request, env)) return err('No disponible', 403);
+    }
 
     const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key);
     if (!obj) return err('Foto no encontrada', 404);
