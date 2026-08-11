@@ -25,11 +25,23 @@ const WA_BASE = 'https://wa.me/5218127174207';
 const LLAVE_MARCA = 'sistema/marca-agua.png';
 const OPACIDAD_MARCA = 0.6;   // calibrada por Bruno sobre una foto real
 // repeat tilea el PNG a su tamaño NATIVO, que en una foto de 1000px deja el texto
-// gigante. width es una fraccion del ancho de la foto: el tile trae el texto mas su
-// separacion, asi que 0.5 deja el texto ocupando ~25% del ancho.
+// gigante. width es una fraccion del ancho de la foto.
 // 0.45 reproduce de cerca lo que Bruno calibro (texto grande, separacion 2.0x).
-// 0.30 da un mosaico mas denso y discreto. Se compara en vivo con ?m=.
+// Se compara en vivo con ?m=.
 const ANCHO_MARCA = 0.45;
+// Ancho de pantalla de referencia al que esa fraccion se ve bien.
+const ANCHO_REF = 375;
+
+// Una fraccion fija se ve bien en el hero y se vuelve ruido ilegible en una
+// miniatura: el 45% de una celda de 160px es texto de 70px. Lo que tiene que
+// quedar constante es el tamaño FISICO del texto en pantalla, no su proporcion.
+// Por eso el cliente manda el ancho real de despliegue (d) y aqui se compensa.
+export function fraccionMarca(anchoDespliegue, base) {
+  const b = base || ANCHO_MARCA;
+  const d = Number(anchoDespliegue);
+  if (!Number.isFinite(d) || d <= 0) return b;
+  return Math.min(1.2, Math.max(0.25, b * (ANCHO_REF / d)));
+}
 
 // El sistema acepta su propia llave si esta configurada, y ademas la del admin para
 // que funcione desde el dia uno sin tener que crear un secreto nuevo. Falla cerrado:
@@ -418,10 +430,11 @@ export async function handleEntregas(request, env, ctx, action) {
       if (!limpia) {
         const marca = await env.ENTREGAS_ORIGINALES.get(LLAVE_MARCA);
         if (marca) {
-          // ?m= permite probar otra escala sin redesplegar; sin el va la calibrada.
-          const w = Number(url.searchParams.get('m')) || ANCHO_MARCA;
-          pipe = pipe.draw(marca.body,
-            { repeat: true, opacity: OPACIDAD_MARCA, width: Math.min(1, Math.max(0.1, w)) });
+          // d = ancho real en pantalla, para que el texto salga del mismo tamaño
+          // fisico en el hero y en una miniatura. ?m= fuerza la base sin redesplegar.
+          const base = Number(url.searchParams.get('m')) || ANCHO_MARCA;
+          const w = fraccionMarca(url.searchParams.get('d'), base);
+          pipe = pipe.draw(marca.body, { repeat: true, opacity: OPACIDAD_MARCA, width: w });
         } else {
           // Sin marca de agua NO se sirve la foto: es preferible fallar visible a
           // entregar el material limpio por accidente.

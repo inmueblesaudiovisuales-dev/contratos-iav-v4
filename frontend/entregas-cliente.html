@@ -230,13 +230,17 @@ function toast(m){var t=document.getElementById('toast');t.textContent=m;t.class
 // misma foto sale con el mosaico grande en el hero y diminuto en las miniaturas.
 // Por eso todo se pide al doble del tamaño real en pantalla: asi la densidad del
 // mosaico se ve igual en todos lados.
+// Se manda el ancho real de despliegue (d) para que el servidor ajuste la escala
+// del mosaico: una fraccion fija se ve bien en el hero y se vuelve ruido en una
+// miniatura. Y el ancho servido (w) va al doble, por pantallas retina.
 var ANCHO_DEVICE = Math.min(480, window.innerWidth || 375);
-function anchoServido(fraccionDePantalla){
-  return Math.round(ANCHO_DEVICE * fraccionDePantalla * 2);
-}
-function fotoUrl(f, w){
+var PAD = 18 * 2, GAP = 6;
+var ANCHO_CELDA = Math.round((ANCHO_DEVICE - PAD - GAP) / 2);
+
+function fotoUrl(f, display){
   if(!f || !f.id) return '';
-  return '/api/e/foto?a=' + encodeURIComponent(f.id) + '&w=' + w;
+  var d = Math.round(display);
+  return '/api/e/foto?a=' + encodeURIComponent(f.id) + '&w=' + (d * 2) + '&d=' + d;
 }
 
 function estado(titulo, texto, extra){
@@ -291,7 +295,7 @@ function render(){
   var fotos = D.fotos || [];
   var portada = fotos.filter(function(f){ return f.destacado; })[0] || fotos[0];
   if(portada) document.getElementById('hero').style.backgroundImage =
-    "url('" + fotoUrl(portada, anchoServido(1)) + "')";
+    "url('" + fotoUrl(portada, ANCHO_DEVICE) + "')";
 
   var hayVideo = D.video && D.video.uid && D.streamCustomer;
   document.getElementById('playBtn').style.display = hayVideo ? '' : 'none';
@@ -315,8 +319,8 @@ function render(){
   var galeria = resto.length ? resto : fotos;
   if(galeria.length){
     var g = document.getElementById('grid');
-    var anchoCelda = anchoServido(0.5);
-    var anchoGrande = anchoServido(1);
+    var anchoCelda = ANCHO_CELDA;
+    var anchoGrande = ANCHO_DEVICE;
     var pinta = function(lista){
       g.innerHTML = '';
       lista.forEach(function(f){
@@ -367,7 +371,7 @@ function render(){
     document.getElementById('url360').textContent = D.tourUrl;
     var fondo360 = resto.length ? resto[resto.length - 1] : portada;
     if(fondo360) document.getElementById('t360').style.backgroundImage =
-      "url('" + fotoUrl(fondo360, anchoServido(1)) + "')";
+      "url('" + fotoUrl(fondo360, ANCHO_DEVICE) + "')";
   }
 
   document.getElementById('btnWa').href = D.waLink || '#';
