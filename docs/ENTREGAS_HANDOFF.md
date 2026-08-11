@@ -35,10 +35,10 @@ sin pisarse; el corte se decidirá aparte.
 | F4 — Portal del cliente | ✅ en producción |
 | F5 — Liberación, reloj, descargas | ✅ en producción, **con ZIP** (§18) |
 | F6 — Expiración y limpieza | ✅ cron activo |
-| F7 — Liga en el evento de Calendar | ⬜ **no empezada** — requiere publicar el adapter a mano |
+| F7 — Liga en el evento de Calendar | ❌ **descartada por Bruno** (11 ago 2026) |
 
-**Limitación abierta:** Stream no puede leer nuestra URL de origen, así que un video
-subido desde el navegador queda en R2 pero sin marca de agua. Ver §12b.
+**Bloqueante abierto:** el `CF_MEDIA_TOKEN` no tiene permisos de Stream (error 9106),
+así que ninguna operación de video funciona hoy. Se arregla con un token nuevo. Ver §12b.
 
 **Verificación:** 81 pruebas unitarias + verificación end-to-end contra producción,
 incluido un ZIP de 476 MB extraído y comparado archivo por archivo. Ver §18.6.
@@ -396,38 +396,63 @@ tomara el secreto nuevo. Antes del deploy seguía dando "Authentication error".
 > **Rotar pendiente.** El token en uso se pegó en el chat, así que conviene cambiarlo
 > por uno limpio cuando el sistema esté estable.
 
-## 12b. Limitación abierta: Stream no puede leer nuestro origen
+## 12b. RESUELTO el 11 ago 2026: era el token, no nuestro origen
 
-El diseño original era: el video se sube una sola vez a R2 y Stream lo copia desde
-`/api/e/origen`, una URL firmada que sirve el propio Worker. **Eso no funciona.**
-Stream responde `Authentication failed (status: 400)`.
+> **El diagnóstico anterior de esta sección era equivocado y estuvo escrito aquí
+> varias sesiones.** Se conserva la corrección completa porque el error de método
+> vale más que la conclusión.
 
-Lo que sí está comprobado:
+**Lo que decía:** que Stream no podía leer `/api/e/origen`, probablemente por el WAF.
+Se propusieron tres rodeos, todos caros y ninguno necesario.
 
-- La URL de origen **responde 200** y sirve el `video/mp4` correctamente al pedirla a
-  mano, con los primeros bytes en 0.47 s.
-- Stream **sí puede** copiar de una URL de Google Drive con el mismo token y el mismo
-  perfil de marca de agua.
+**Lo que es:** el `CF_MEDIA_TOKEN` **no tiene permisos de Stream**. La API contesta
+`9106: Authentication failed (status: 400)` a **cualquier** llamada de Stream —
+incluso a una simple *lectura* del estado de un video.
 
-Es decir: el token está bien, el perfil está bien y nuestro endpoint está bien.
-Lo que falla es el fetch de Stream **contra nuestro propio dominio**. La hipótesis
-más probable es que la protección de bots o el WAF de la zona esté bloqueando al
-fetcher de Stream, pero **no está confirmado**.
+### Cómo se comprobó
 
-**Rodeo actual:** copiar directo desde Drive (`importarDrive` + copia manual a
-Stream). Sirve para material que ya vive en Drive, que es el caso de hoy.
+1. Se subió un video real de 985 MB por la ruta multiparte y se disparó la copia.
+   Falló igual.
+2. Se dejó `wrangler tail` corriendo durante el intento: llegó **únicamente** el
+   `POST` a `procesarVideo`. **Ninguna petición a `/api/e/origen`.** O sea, Stream
+   nunca llegó a pedirnos el archivo: el rechazo pasa antes, en la API de Cloudflare.
+3. Se consultó el estado del video ya existente de Mireya — una operación de solo
+   lectura, sin ninguna URL nuestra de por medio. **También falla, con el mismo
+   9106.**
 
-**Qué falta para cerrarlo**, en orden de preferencia:
+### Por qué se diagnosticó mal
 
-1. Confirmar si es el WAF y, de serlo, agregar una regla que deje pasar al fetcher de
-   Stream sobre `/api/e/origen`.
-2. Si no, generar URLs prefirmadas de R2 (requiere credenciales S3 de R2, que el OAuth
-   de wrangler no incluye) para que Stream lea del bucket sin pasar por el Worker.
-3. Como último recurso, subir el video dos veces desde el navegador: a R2 y a Stream
-   por `direct_upload`. Funciona seguro, pero manda 1 GB dos veces.
+Dos cosas se juntaron:
 
-**Mientras tanto, subir un video arrastrándolo al portal deja el archivo bien en R2
-pero sin marca de agua en Stream.**
+- **El mensaje de Stream engaña.** "Authentication failed" al copiar una URL se lee
+  como "no pude autenticarme *contra esa URL*", cuando significa "tu token no está
+  autorizado".
+- **`estadoVideo` se tragaba el error**: devolvía `null` sin decir por qué, así que no
+  había forma de distinguir "el video no existe" de "el token no sirve". Ya arreglado:
+  ahora devuelve el código y el mensaje de Cloudflare.
+
+La lección de método: **antes de culpar a la pieza nueva y complicada (nuestro origen
+firmado), hay que probar la operación más simple posible** (una lectura). Si esa
+también falla, el problema nunca estuvo donde se buscaba.
+
+### Lo que falta
+
+Bruno tiene que generar un API token con **Account → Stream → Edit** y aplicarlo:
+
+```bash
+npx wrangler secret put CF_MEDIA_TOKEN
+```
+
+Y **después un deploy**, porque `wrangler secret put` solo no lo aplica (§14).
+Ese mismo token necesita también **Account → Cloudflare Images → Edit** si se quiere
+conservar el borrado de Images heredado.
+
+Con eso queda cerrado A2, y A3 (la copia limpia al liberar) se puede ejercer por fin:
+depende de la misma llamada.
+
+**Mientras tanto**, subir un video arrastrándolo deja el archivo bien en R2 pero sin
+marca de agua en Stream. El rodeo sigue siendo copiar desde Drive — que funcionaba
+porque se hizo cuando el token todavía servía.
 
 ---
 
@@ -761,3 +786,17 @@ fotos.
 - Visor navegado en producción: avanza, retrocede, da la vuelta, oculta flechas con
   un solo elemento.
 - Entregas de prueba creadas y **borradas**; las 4 reales quedaron intactas.
+
+### 18.7 A2 resuelto y B4 probado (madrugada del 12 ago)
+
+- **B4 — subida multiparte con un video real: FUNCIONA.** Se subió el MP4 de 985 MB en
+  11 partes de 90 MB; todas confirmaron etag y R2 ensambló el archivo. Era la ruta que
+  nunca se había ejercido.
+- **A2 diagnosticado de verdad** — ver §12b. No era nuestro origen: es el token. Se
+  corrigió el diagnóstico equivocado que llevaba varias sesiones escrito aquí.
+- **F7 (liga en el Calendar) descartada por Bruno.** No se hará; el adapter no se toca.
+- La entrega de prueba con el video se borró: no quedan 985 MB colgados en R2.
+
+**Siguiente al retomar:** token nuevo con permiso de Stream → cierra A2 y desbloquea
+A3 (la copia limpia al liberar, que nunca ha corrido). Después, rediseño del **portal
+de control** para hacerlo más fácil de usar — pedido por Bruno el 11 ago.
