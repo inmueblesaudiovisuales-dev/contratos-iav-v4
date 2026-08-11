@@ -37,8 +37,8 @@ sin pisarse; el corte se decidirá aparte.
 | F6 — Expiración y limpieza | ✅ cron activo |
 | F7 — Liga en el evento de Calendar | ⬜ **no empezada** — requiere publicar el adapter a mano |
 
-**Bloqueo activo:** `CF_MEDIA_TOKEN` no tiene permiso de Stream, así que el video no
-puede recibir la marca de agua. Ver §12.
+**Limitación abierta:** Stream no puede leer nuestra URL de origen, así que un video
+subido desde el navegador queda en R2 pero sin marca de agua. Ver §12b.
 
 **Verificación:** 63 pruebas unitarias + 52 verificaciones end-to-end contra la D1 de
 producción, más prueba de humo sin regresiones en los endpoints y páginas existentes.
@@ -294,19 +294,29 @@ verdad, traído de Drive:
 | Video cinemático | 1 archivo, **986 MB, importado en 43 segundos** |
 | Tour 360 | `app.cloudpano.com/tours/0ubb5K1KZ` |
 
-Está en **borrador**: nada expuesto. Ruta:
+El video resultó ser **2160×3840, vertical 4K, 113 segundos**, y Stream le aplicó el
+perfil vertical correctamente. Eso confirma que crear el segundo perfil era necesario:
+con la escala horizontal habría salido ilegible.
+
+**Publicada** y verificada en el navegador: la galería carga, la marca de agua se ve
+del mismo tamaño físico en el hero y en las miniaturas, y el payload público **no
+contiene ninguna liga de descarga**. Ruta:
 `https://entregas.inmueblesaudiovisuales.com/IAV-2607.17-A-7bbkvv7wxa`
 
-**Usar material real fue lo que encontró el bug más grave** (§11 #14). Con imágenes
-de prueba generadas nunca habría salido.
+**Usar material real encontró los dos bugs más graves** (§11 #14 y #22). Con imágenes
+de prueba generadas ninguno habría salido.
 
 ### Lo que NO se ha probado
 
-- La marca de agua **en el video** (bloqueada por el token, §12).
 - La subida de un video grande **desde el navegador** por la ruta multiparte. El
-  código está desplegado, pero el video de esta prueba entró por Drive, no arrastrado.
-- El comportamiento del portal del cliente **en un teléfono real** (solo emulado).
+  código está desplegado, pero el video de esta prueba entró por Drive.
+- **La marca de agua del video en el flujo normal**, por §12b. La de esta prueba se
+  aplicó copiando directo desde Drive.
+- La **liberación** de esta entrega: sigue con saldo de $4,500, así que la descarga
+  y la copia limpia del video no se han ejercido con material real.
+- El portal del cliente **en un teléfono real** (solo emulado a 375 px).
 - La expiración real a los 14 días (se probó forzando vigencias cortas).
+- La **reproducción del video** en el portal del cliente.
 
 ---
 
@@ -337,6 +347,13 @@ documento.
 | 18 | `ligasDescarga` quedó detrás de la llave de admin, que el cliente no tiene | Las ligas firmadas se metieron al payload público, con el gate en un solo lugar |
 | 19 | **CAÍDA DE PRODUCCIÓN**: `contratos.*` dejó de resolver | Ver §11b |
 | 20 | El título de la entrega repetía el nombre del cliente | Cae al folio cuando la propiedad no tiene dirección |
+| 21 | **Stream no puede leer nuestra URL de origen.** Copiar de R2 vía el endpoint `origen` falla con "Authentication failed (status: 400)", aunque la URL responde 200 y sirve el video correctamente al probarla a mano | **Sin resolver.** Rodeo: copiar directo desde Drive, que sí funciona. Ver §12b |
+| 22 | **La galería salía vacía con fotos reales.** Transformar el JPEG original (10 MB, 4000×6000) en cada vista revienta los límites de recursos del Worker: Cloudflare responde **1102** y las 7 peticiones simultáneas de la cuadrícula fallan todas | Copia reducida de ~2000px generada una sola vez al subir (migración r131). La galería transforma esa. Más caché con el estado en la llave |
+
+> **El #22 solo apareció con material real.** Las pruebas usaban imágenes generadas de
+> 27 KB. Y con `curl` tampoco salía: 8 peticiones paralelas desde una máquina no caen
+> en el mismo isolate; el navegador sí las manda todas al mismo. **Hay que probar en
+> el navegador, con fotos de verdad.**
 
 ### 11b. Post-mortem de la caída
 
@@ -362,22 +379,51 @@ verificaron después de la caída y estaban intactos.
 
 ---
 
-## 12. Bloqueo activo: `CF_MEDIA_TOKEN`
+## 12. `CF_MEDIA_TOKEN` — resuelto
 
-Stream rechaza con **"Authentication error"**. El secreto existe en el Worker, pero
-al parecer se creó solo con permiso de Images, no de Stream. Eso explica por qué
-`STREAM_CUSTOMER_CODE` estaba vacío: **ningún video pasó nunca por el Worker**, ni en
-R123.
+El token que estaba puesto no tenía permiso de Stream (probablemente se creó solo con
+Images). Eso explica por qué `STREAM_CUSTOMER_CODE` llevaba vacío desde siempre:
+**ningún video pasó nunca por el Worker**, ni en R123.
 
-**Para desbloquear:** crear un token con **Cloudflare Stream: Edit** y **Cloudflare
-Images: Edit** (nivel Account) y ponerlo con:
+Se reemplazó por uno con **Stream: Edit** e **Images: Edit**. Detalle importante:
+`wrangler secret put` no bastó — hizo falta **un deploy después** para que el Worker
+tomara el secreto nuevo. Antes del deploy seguía dando "Authentication error".
 
-```bash
-cd worker && wrangler secret put CF_MEDIA_TOKEN
-```
+> **Rotar pendiente.** El token en uso se pegó en el chat, así que conviene cambiarlo
+> por uno limpio cuando el sistema esté estable.
 
-Hasta entonces el video no recibe marca de agua y la copia limpia al liberar tampoco
-se genera. Todo lo demás funciona.
+## 12b. Limitación abierta: Stream no puede leer nuestro origen
+
+El diseño original era: el video se sube una sola vez a R2 y Stream lo copia desde
+`/api/e/origen`, una URL firmada que sirve el propio Worker. **Eso no funciona.**
+Stream responde `Authentication failed (status: 400)`.
+
+Lo que sí está comprobado:
+
+- La URL de origen **responde 200** y sirve el `video/mp4` correctamente al pedirla a
+  mano, con los primeros bytes en 0.47 s.
+- Stream **sí puede** copiar de una URL de Google Drive con el mismo token y el mismo
+  perfil de marca de agua.
+
+Es decir: el token está bien, el perfil está bien y nuestro endpoint está bien.
+Lo que falla es el fetch de Stream **contra nuestro propio dominio**. La hipótesis
+más probable es que la protección de bots o el WAF de la zona esté bloqueando al
+fetcher de Stream, pero **no está confirmado**.
+
+**Rodeo actual:** copiar directo desde Drive (`importarDrive` + copia manual a
+Stream). Sirve para material que ya vive en Drive, que es el caso de hoy.
+
+**Qué falta para cerrarlo**, en orden de preferencia:
+
+1. Confirmar si es el WAF y, de serlo, agregar una regla que deje pasar al fetcher de
+   Stream sobre `/api/e/origen`.
+2. Si no, generar URLs prefirmadas de R2 (requiere credenciales S3 de R2, que el OAuth
+   de wrangler no incluye) para que Stream lea del bucket sin pasar por el Worker.
+3. Como último recurso, subir el video dos veces desde el navegador: a R2 y a Stream
+   por `direct_upload`. Funciona seguro, pero manda 1 GB dos veces.
+
+**Mientras tanto, subir un video arrastrándolo al portal deja el archivo bien en R2
+pero sin marca de agua en Stream.**
 
 ---
 
