@@ -1,5 +1,32 @@
 # Plan — Sistema de Entregas (R129+)
 
+> ## Estado al 2026-08-11 — EN PRODUCCIÓN, parcial
+>
+> | Fase | Estado |
+> |---|---|
+> | F1 — Cimientos, migración y hooks | ✅ desplegada y verificada |
+> | F2 — Portal de control | ✅ desplegado (sin la zona de subida) |
+> | F3 — Subida y marca de agua | ⚠️ **API escrita y desplegada; SIN interfaz y SIN probar con archivos reales** |
+> | F4 — Portal del cliente | ✅ desplegado, los 5 estados |
+> | F5 — Liberación, reloj y descargas | ✅ desplegado (falta ZIP, ver abajo) |
+> | F6 — Expiración y limpieza | ✅ cron activo; aviso previo en portal, no por correo |
+> | F7 — Liga en Calendar | ⬜ **no empezada** (requiere publicar el adapter a mano) |
+>
+> **URLs vivas:** `https://entregas.inmueblesaudiovisuales.com` (control) y
+> `…/IAV-YYMM.DD-X-<codigo>` (cliente). El sistema R123 sigue intacto en `/entrega`.
+>
+> **Verificación:** 60 pruebas unitarias + 52 end-to-end contra la D1 de producción,
+> más prueba de humo sin regresiones en los endpoints y páginas existentes.
+>
+> **Lo que falta para poder entregar de verdad:** F3 no tiene interfaz, así que hoy no
+> se pueden subir fotos ni video desde el portal. Es el siguiente paso obligado.
+>
+> **Divergencia git/producción:** los commits `0986f68` y `7f3cef1` están **solo en
+> local**; el push necesita autenticación interactiva de GitHub. Producción se desplegó
+> con `wrangler deploy` directo. **Hay que hacer push**: si alguien despliega desde
+> `main` sin estos commits, revierte todo lo de R129.
+
+
 > Sistema independiente para entregar material a clientes: galería con marca de agua antes de
 > pagar, descarga liberada al liquidar, y 14 días de vigencia. Reemplaza la entrega R123
 > ("El Estreno"), que queda congelada.
@@ -289,6 +316,42 @@ abre la entrega correcta. Repetir tras un reagendamiento.
 > `adapter/AdapterScript4_v1.js` en script.google.com y publica versión nueva.
 
 ---
+
+## 7b. Bugs encontrados al revisar el plan, y cómo quedaron
+
+Los ocho de la revisión previa más dos que salieron al construir.
+
+| # | Bug | Resolución |
+|---|---|---|
+| 1 | El watermark de Stream no se lee en **video vertical** — el PNG es 11.7:1 y el formato nativo de IAV es vertical | Segundo perfil `08ab04bc…` con `scale 0.85`. `perfilWatermark()` elige por orientación. |
+| 2 | El canvas del navegador puede **alterar el color** al generar la preview | ⚠️ **Sin resolver.** Hay que probarlo con una foto real cuando se construya la interfaz de F3. |
+| 3 | `eliminarContrato` dejaría **entregas huérfanas** | `borrarEntregasDeContrato()` corre antes de la cascada existente, blindado. |
+| 4 | Liberar una entrega **aún no publicada** si el cliente paga antes | `debeLiberarAlPagar()` exige `estado='publicada'`; `publicar` detecta pago previo y libera ahí. Con test. |
+| 5 | Los 14 días se calculaban en **UTC**, no en hora local | Todo el reloj usa UTC-6 fijo y corta al **final del día en Monterrey**. 11 tests. |
+| 6 | **Slugs repetidos** entre clientes | Código aleatorio de 10 caracteres (~49 bits). El folio en la URL es decorativo. |
+| 7 | Los **contratos que ya existen** nacían sin entrega | Endpoint `e/sembrar` (uno o `todos:true`), idempotente. Verificado contra contratos reales. |
+| 8 | **Convivencia con R123** | El sistema nuevo usa archivo y rutas propias. `entrega.html` no se tocó. |
+| 9 | `reagendarPropiedad` **regenera el folio** de la propiedad 1 → rompería enlaces ya enviados | La búsqueda va por código, nunca por folio. Con test explícito. |
+| 10 | `ASSETS.fetch('/x.html')` devuelve **307**, no el contenido | Se piden las rutas sin extensión. Lo cazó la prueba de humo. |
+
+### Dos hallazgos fuera del plan
+
+- **`STREAM_CUSTOMER_CODE` estaba vacío** en `wrangler.toml`. Sin él, `playVideo()` de
+  `entrega.html` no puede armar la URL del iframe: **el video de la entrega R123 nunca
+  pudo reproducirse**. Ya está lleno (`customer-cl73mgx0feu2w8io`).
+- La tabla **`prospectos` ya no existe** en producción, al contrario de lo que dice
+  `ARQUITECTURA.md:78`. Sí existe **`whatsapp_sesiones`**, que no está documentada.
+
+## 7c. Desviaciones respecto al mockup
+
+- **Después de liberar, la galería sigue mostrando la marca de agua.** Images guarda
+  solo la copia marcada; lo limpio vive en R2 y se entrega por descarga. Mostrar la
+  versión limpia en pantalla exigiría una segunda copia en Images y duplicar ese costo.
+  El mockup prometía "sin agua" en pantalla: **decisión pendiente de Bruno.**
+- **No hay ZIP.** Las fotos se bajan una por una en cascada desde el navegador. El ZIP
+  en streaming desde el Worker sigue pendiente.
+- **El aviso previo al borrado es in-app**, no por correo: mandarlo por correo obliga a
+  tocar el adapter y publicarlo a mano.
 
 ## 8. Riesgos
 
