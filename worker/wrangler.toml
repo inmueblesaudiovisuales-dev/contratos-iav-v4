@@ -56,9 +56,12 @@ STREAM_WATERMARK_UID_VERTICAL = "08ab04bc1cc268a0ff86d910e5b7f179"
 [triggers]
 crons = ["0 * * * *"]
 
+# R130 — Pasa de route a custom_domain para que Cloudflare sea dueño del registro
+# DNS y lo mantenga. Como route, el DNS vivia aparte y quedo huerfano al agregar el
+# custom domain de entregas: el hostname dejo de resolver y el admin se cayo.
 [[routes]]
-pattern = "contratos.inmueblesaudiovisuales.com/*"
-zone_name = "inmueblesaudiovisuales.com"
+pattern = "contratos.inmueblesaudiovisuales.com"
+custom_domain = true
 
 # R129 — Subdominio del sistema de entregas. custom_domain hace que wrangler cree
 # el registro DNS y el certificado SSL solo; no hay que tocar el panel.
