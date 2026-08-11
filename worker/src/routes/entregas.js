@@ -576,11 +576,15 @@ export async function handleEntregas(request, env, ctx, action) {
   if (action === 'zip') {
     const entregaId = url.searchParams.get('e') || '';
     const firma = url.searchParams.get('f') || '';
-    if (!await verificarFirma(env, 'zip:' + entregaId, firma)) {
+    // Bruno tambien puede bajarlo, en cualquier estado y con su llave: es su
+    // material y lo va a querer para respaldar. El cliente pasa por la firma.
+    const esBruno = !requireEntregas(request, env);
+    if (!esBruno && !await verificarFirma(env, 'zip:' + entregaId, firma)) {
       return err('Enlace de descarga vencido. Vuelve a entrar a tu galería.', 403);
     }
     const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [entregaId]);
-    if (!e || e.estado !== 'liberada' || estaVencida(e.fecha_expira, now())) {
+    if (!e) return err('Entrega no encontrada', 404);
+    if (!esBruno && (e.estado !== 'liberada' || estaVencida(e.fecha_expira, now()))) {
       return err('Este material ya no está disponible.', 403);
     }
     const { results } = await query(db,
@@ -608,7 +612,9 @@ export async function handleEntregas(request, env, ctx, action) {
 
     const folio = await folioDeEntrega(db, e);
     const nombre = nombreDescarga((folio || e.titulo || 'entrega') + '-fotos.zip', 'fotos.zip');
-    ctx.waitUntil(evento(db, e.id, 'descarga', `${entradas.length} fotos (zip)`));
+    // Solo se anota en la bitacora lo que baja el CLIENTE. Que Bruno saque una
+    // copia no es un evento de la entrega.
+    if (!esBruno) ctx.waitUntil(evento(db, e.id, 'descarga', `${entradas.length} fotos (zip)`));
 
     const cuerpo = armarZip(entradas, async en => {
       const obj = await env.ENTREGAS_ORIGINALES.get(en.llave);
