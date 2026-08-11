@@ -583,17 +583,28 @@ export async function handleEntregas(request, env, ctx, action) {
     const ent = await queryOne(db, 'SELECT * FROM e_entregables WHERE id=?', [entregableId]);
     if (!ent) return err('Entregable no encontrado', 404);
 
-    const origen = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(driveId)}`;
-    let r;
-    try {
-      r = await fetch(origen, { redirect: 'follow' });
-    } catch (ex) {
-      return err('No se pudo alcanzar Drive: ' + ex.message, 502);
+    // drive.google.com/uc sirve archivos chicos, pero arriba de ~100 MB devuelve la
+    // pagina de "no se pudo analizar en busca de virus" en vez del binario. El host
+    // usercontent con confirm=t entrega el archivo directo sin importar el tamaño,
+    // asi que va primero y el otro queda de respaldo.
+    const urls = [
+      `https://drive.usercontent.google.com/download?id=${encodeURIComponent(driveId)}&export=download&confirm=t`,
+      `https://drive.google.com/uc?export=download&id=${encodeURIComponent(driveId)}`
+    ];
+    let r = null, mime = '';
+    for (const origen of urls) {
+      try {
+        const intento = await fetch(origen, { redirect: 'follow' });
+        if (!intento.ok) continue;
+        const t = intento.headers.get('content-type') || '';
+        if (/text\/html/i.test(t)) { try { await intento.body?.cancel(); } catch (e) {} continue; }
+        r = intento; mime = t; break;
+      } catch (ex) {
+        console.error('importarDrive fetch falló', ex.message);
+      }
     }
-    if (!r.ok) return err('Drive respondió ' + r.status, 502);
-    const mime = r.headers.get('content-type') || '';
-    if (/text\/html/i.test(mime)) {
-      return err('Drive devolvió una página, no el archivo. Revisa que la carpeta esté compartida por enlace.', 502);
+    if (!r) {
+      return err('Drive no entregó el archivo. Revisa que esté compartido por enlace.', 502);
     }
     const bytes = Number(r.headers.get('content-length')) || 0;
 
