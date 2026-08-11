@@ -15,3 +15,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: worker
+          # R129 — Fijar la version es obligatorio. La que trae la accion por
+          # defecto no entiende el binding [images] y lo DESCARTA EN SILENCIO:
+          # el deploy sale verde y la galeria del cliente se cae con
+          # "Cannot read properties of undefined (reading 'input')".
+          wranglerVersion: '4.120.1'

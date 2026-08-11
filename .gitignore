@@ -10,3 +10,6 @@ node_modules/
 
 __pycache__/
 *.pyc
+
+# salida de wrangler deploy --dry-run
+worker/.dryrun/
