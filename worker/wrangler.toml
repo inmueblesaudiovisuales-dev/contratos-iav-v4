@@ -53,3 +53,9 @@ crons = ["0 * * * *"]
 [[routes]]
 pattern = "contratos.inmueblesaudiovisuales.com/*"
 zone_name = "inmueblesaudiovisuales.com"
+
+# R129 — Subdominio del sistema de entregas. custom_domain hace que wrangler cree
+# el registro DNS y el certificado SSL solo; no hay que tocar el panel.
+[[routes]]
+pattern = "entregas.inmueblesaudiovisuales.com"
+custom_domain = true
