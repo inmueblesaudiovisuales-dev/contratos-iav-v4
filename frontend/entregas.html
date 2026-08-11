@@ -495,7 +495,6 @@ function pintarDetalle(){
       (e.estado === 'pausada' ? 'false' : 'true') + ')">' +
       (e.estado === 'pausada' ? 'Reanudar acceso' : 'Pausar acceso') + '</button>';
   }
-  acciones += '<button class="btn btn-danger btn-block" onclick="borrarEntrega()">Borrar entrega</button>';
 
   var pago = '';
   if(e.contrato_token){
@@ -504,10 +503,13 @@ function pintarDetalle(){
         money(e.saldo) + '</span></div>' +
       '<p class="hint">Se lee del contrato en vivo.</p>';
   } else {
+    // Fantasma a proposito: el boton dorado de la tarjeta de abajo es la accion del
+    // momento. Dos primarios en la misma pantalla se compiten y ninguno guia.
     pago = '<label class="f">Entrega suelta, sin contrato</label>' +
-      '<button class="btn ' + (e.pagado_manual ? 'btn-ghost' : 'btn-primary') + ' btn-block" onclick="marcarPagada(' +
+      '<button class="btn btn-ghost btn-block" onclick="marcarPagada(' +
         (e.pagado_manual ? 'false' : 'true') + ')">' +
-        (e.pagado_manual ? 'Quitar marca de pagada' : 'Marcar como pagada') + '</button>';
+        (e.pagado_manual ? 'Quitar marca de pagada' : 'Marcar como pagada') + '</button>' +
+      (e.pagado_manual ? '<p class="hint">Marcada como pagada.</p>' : '');
   }
 
   var bitacora = ACT.eventos.map(function(v){
@@ -541,6 +543,10 @@ function pintarDetalle(){
         '<button class="btn btn-ghost btn-sm" onclick="copiar(\'' + esc(e.rutaPublica) + '\')">Copiar liga</button>' +
         '<button class="btn btn-ghost btn-sm" onclick="copiarWa()">Copiar mensaje de WhatsApp</button>' +
         '<p class="hint">El mensaje ya va escrito con la liga adentro.</p>' +
+        // Borrar va hasta el final y separado: es irreversible y no tiene por que
+        // estar en el camino de lo que se hace a diario.
+        '<div style="height:1px;background:var(--line);margin:6px 0"></div>' +
+        '<button class="btn btn-danger btn-block btn-sm" onclick="borrarEntrega()">Borrar entrega</button>' +
       '</div></div>' +
       '<div class="card"><div class="card-hd"><b>Bitácora</b></div><div class="card-pad">' +
         '<div class="log">' + bitacora + '</div></div></div>' +
