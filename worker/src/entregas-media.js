@@ -156,6 +156,9 @@ export async function borrarMediaDeEntrega(env, archivos) {
   const r = { r2: 0, images: 0, stream: 0, fallos: 0 };
   for (const a of (archivos || [])) {
     if (a.r2_key)     { (await borrarDeR2(env, a.r2_key))         ? r.r2++     : r.fallos++; }
+    // La copia reducida de la galeria tambien se va: si no, se queda pagandose en R2
+    // despues de que la entrega expiro.
+    if (a.r2_key_web) { (await borrarDeR2(env, a.r2_key_web))     ? r.r2++     : r.fallos++; }
     if (a.images_id)  { (await borrarDeImages(env, a.images_id))  ? r.images++ : r.fallos++; }
     if (a.stream_uid) { (await borrarDeStream(env, a.stream_uid)) ? r.stream++ : r.fallos++; }
     // La copia limpia que se genera al liberar tambien se va: si se quedara,

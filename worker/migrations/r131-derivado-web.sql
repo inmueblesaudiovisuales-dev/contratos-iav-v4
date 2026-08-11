@@ -1,0 +1,15 @@
+-- R131 — Copia reducida para la galeria.
+--
+-- Por que hace falta: el original es un JPEG de 10 MB (4000x6000 o mas). Transformarlo
+-- en CADA vista —decodificar, redimensionar, dibujar el mosaico— revienta los limites
+-- de recursos del Worker en cuanto la cuadricula pide varias a la vez. Cloudflare
+-- responde 1102 y el cliente ve la galeria vacia. Con fotos de prueba chicas no pasa;
+-- con las reales, siempre.
+--
+-- Entonces al subir se genera UNA vez una copia reducida (~2000px de lado largo,
+-- ~400 KB) y la galeria transforma esa. El mosaico se sigue dibujando al servir, asi
+-- que la marca de agua sigue sin estar quemada y sigue siendo ajustable.
+--
+-- El original limpio no se toca: es lo que se descarga al liberar.
+-- Cuesta ~400 KB extra por foto en R2, o sea nada frente a los 10 MB del original.
+ALTER TABLE e_archivos ADD COLUMN r2_key_web TEXT NOT NULL DEFAULT '';

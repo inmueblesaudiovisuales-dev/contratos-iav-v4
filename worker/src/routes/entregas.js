@@ -135,6 +135,29 @@ async function refrescarEntregable(db, entregableId) {
   }
 }
 
+// Genera (una sola vez) la copia reducida que usa la galeria. Ver r131 para el porque.
+// Es idempotente y silenciosa: si falla, la galeria cae al original y solo va lenta.
+const ANCHO_WEB = 2000;
+async function generarDerivado(env, db, archivo) {
+  if (!archivo || !archivo.r2_key || archivo.r2_key_web) return null;
+  if (esVideo(archivo.mime)) return null;
+  try {
+    const obj = await env.ENTREGAS_ORIGINALES.get(archivo.r2_key);
+    if (!obj) return null;
+    const out = await env.IMAGES.input(obj.body)
+      .transform({ width: ANCHO_WEB, fit: 'scale-down' })
+      .output({ format: 'image/jpeg', quality: 86 });
+    const key = archivo.r2_key + '.web.jpg';
+    await env.ENTREGAS_ORIGINALES.put(key, out.response().body,
+      { httpMetadata: { contentType: 'image/jpeg' } });
+    await run(db, 'UPDATE e_archivos SET r2_key_web=? WHERE id=?', [key, archivo.id]);
+    return key;
+  } catch (ex) {
+    console.error('generarDerivado falló', archivo.id, ex.message);
+    return null;
+  }
+}
+
 async function entregablesDe(db, entregaId) {
   const { results } = await query(db,
     `SELECT e.*, (SELECT COUNT(*) FROM e_archivos a WHERE a.e_entregable_id = e.id) AS num_archivos
@@ -441,8 +464,14 @@ export async function handleEntregas(request, env, ctx, action) {
     const cacheada = await cache.match(llaveCache);
     if (cacheada) return cacheada;
 
-    const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key);
+    // Se transforma la copia REDUCIDA, no el original de 10 MB: esa es la diferencia
+    // entre servir la galeria y que el Worker reviente su limite de recursos.
+    // Si el derivado aun no existe se cae al original y se manda a generar en segundo
+    // plano, para que la proxima vista ya vaya por el camino barato.
+    const llaveLectura = a.r2_key_web || a.r2_key;
+    const obj = await env.ENTREGAS_ORIGINALES.get(llaveLectura);
     if (!obj) return err('Foto no encontrada', 404);
+    if (!a.r2_key_web) ctx.waitUntil(generarDerivado(env, db, a));
 
     try {
       let pipe = env.IMAGES.input(obj.body).transform({ width: ancho, fit: 'scale-down' });
@@ -1077,6 +1106,25 @@ export async function handleEntregas(request, env, ctx, action) {
       }
     }
     return ok({ ok: true, creadas, contratos, revisados: tokens.length, fallos });
+  }
+
+  // Genera las copias reducidas que falten. Va de a pocas por peticion para no
+  // reventar los limites del Worker; el portal la llama en bucle hasta que no quedan.
+  if (action === 'derivados') {
+    const { entregaId, lote } = await request.json();
+    const n = Math.min(4, Math.max(1, Number(lote) || 3));
+    const { results } = await query(db,
+      `SELECT * FROM e_archivos WHERE r2_key_web='' AND r2_key<>'' AND mime NOT LIKE 'video/%'
+       ${entregaId ? 'AND e_entrega_id=?' : ''} LIMIT ?`,
+      entregaId ? [entregaId, n] : [n]);
+    let hechos = 0;
+    for (const a of (results || [])) {
+      if (await generarDerivado(env, db, a)) hechos++;
+    }
+    const pend = await queryOne(db,
+      `SELECT COUNT(*) AS n FROM e_archivos WHERE r2_key_web='' AND r2_key<>'' AND mime NOT LIKE 'video/%'
+       ${entregaId ? 'AND e_entrega_id=?' : ''}`, entregaId ? [entregaId] : []);
+    return ok({ ok: true, hechos, pendientes: (pend && pend.n) || 0 });
   }
 
   // Lo que se borra en los proximos dias. El portal lo muestra como aviso: no hay
