@@ -16,6 +16,7 @@ Guia rapida para encontrar specs, planes, handoffs y reportes del repo. Si algun
 
 | Documento | Para que sirve |
 |---|---|
+| `docs/ENTREGAS_HANDOFF.md` | Handoff vivo del **sistema de entregas** (R129-R130): decisiones, arquitectura, API, todo lo que se probó, el catálogo de fallas encontradas y lo que falta. Retomar el feature desde aquí. |
 | `docs/MODO_GUIADO_HANDOFF.md` | Handoff vivo del **modo guiado de tomas** (checklist): qué es, dónde vive cada pieza, estado y pendientes. Retomar el feature desde aquí. |
 | `docs/EXPORT_METADATA_HANDOFF.md` | Contrato del programa local que tomara el JSON exportado por checklist y escribira metadatos compatibles con Premiere via exiftool. |
 | `docs/CHAT_PRODUCCION.md` | Guia para convertir `frontend/chat.html` de mockup a chat productivo: seguridad, modelo de datos, webhooks y endurecimiento. |
