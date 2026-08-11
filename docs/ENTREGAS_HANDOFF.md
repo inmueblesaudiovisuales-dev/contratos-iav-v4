@@ -481,23 +481,35 @@ que ya se juntó, para no volver a investigarlo desde cero.
 
 ### A. Roto ahora mismo
 
-**A1 — El derivado no se genera al subir. El 1102 sigue vivo para entregas nuevas.**
+**A1 — El derivado no se generaba al subir. ~~El 1102 sigue vivo para entregas nuevas.~~
+CERRADO el 11 ago 2026 (commit `5c80900`).**
 
-Es el mismo bug de §11 #22, **cerrado a medias**. `generarDerivado()` existe y
-funciona, pero hoy solo lo llaman:
+Era el mismo bug de §11 #22, **cerrado a medias**. `generarDerivado()` existía y
+funcionaba, pero solo lo llamaban `foto` —de forma perezosa y *después* de haber
+servido, o sea que la primera vista todavía transformaba el original de 10 MB— y el
+endpoint `derivados`, que había que llamar a mano.
 
-- `foto`, de forma perezosa y **después** de haber servido (`ctx.waitUntil`), o sea
-  que la primera vista todavía transforma el original de 10 MB.
-- El endpoint `derivados`, que hay que llamar a mano en bucle.
+*Lo que se hizo:*
 
-Verificado: ni `subirFoto` ni `importarDrive` lo invocan. **Consecuencia: una entrega
-nueva con 40 fotos vuelve a dar galería vacía la primera vez que el cliente entre.**
-Las 45 de Mireya ya tienen derivado porque se corrió el bucle a mano.
+- `subirFoto` e `importarDrive` encolan el derivado con `ctx.waitUntil` al terminar.
+- El portal tiene `completarDerivados()`: pregunta al endpoint `derivados` en bucle
+  hasta que no quedan pendientes. Se llama en dos puntos — al terminar de subir, y
+  **otra vez antes de publicar**, que es el último momento en que se puede evitar que
+  el cliente sea quien descubra la galería en blanco. Si no logra terminarlas, pide
+  confirmación explícita antes de publicar en vez de fallar callado.
+- Corta el bucle si un lote no avanza (`hechos === 0`), para no girar en vacío cuando
+  el que falla es el servidor.
 
-*Qué hacer:* llamar `generarDerivado` con `ctx.waitUntil` al final de `subirFoto` y de
-`importarDrive`, y que el portal llame `derivados` en bucle al terminar de subir,
-mostrando el avance. Verificar abriendo la galería **en el navegador** con al menos 20
-fotos reales — con `curl` no se reproduce (ver §14).
+*Verificado en producción:* se creó una entrega de prueba, se subió una foto por
+`subirFoto` y **`r2_key_web` quedó lleno solo** a los pocos segundos, sin llamar nada
+más; `derivados` reportó `pendientes: 0`; la entrega de prueba se borró. Las 45 de
+Mireya siguen en 45/45.
+
+*Lo que NO se verificó:* la galería completa **en el navegador** con 20+ fotos reales
+recién subidas. El derivado se probó con un JPEG de 356 KB, no de 10 MB — aunque
+`generarDerivado` sí se había ejercido antes con los 45 originales de 10 MB. Con
+`curl` no se reproduce el 1102 (ver §14), así que esa prueba sigue pendiente y es la
+única forma de declarar el 1102 muerto del todo.
 
 **A2 — Stream no puede leer nuestro origen** (§12b). Un video arrastrado al portal
 queda bien en R2 pero **sin marca de agua**, y la copia limpia al liberar fallará por
@@ -561,8 +573,14 @@ qué pasa con las entregas viejas que apuntan a Drive.
 
 ### D. Deuda técnica y cabos sueltos
 
-- **`ENTREGAS_KEY` no está configurada.** El portal acepta la `ADMIN_KEY`, así que hoy
-  quien entra a entregas puede entrar al admin. Ponerla separa los accesos.
+- ~~**`ENTREGAS_KEY` no está configurada.**~~ **HECHO el 11 ago 2026.** Sin ella el
+  portal de entregas exigía teclear la `ADMIN_KEY` —o sea que para entregar fotos
+  había que andar cargando la llave del sistema de contratos— y además `secretoFirma()`
+  caía a `ADMIN_KEY` como secreto HMAC. Ya está puesta como secret y aplicada con un
+  deploy (`wrangler secret put` solo no basta, ver §14). Verificado: la llave nueva
+  responde 200 y una inventada 401. La `ADMIN_KEY` **sigue siendo aceptada a
+  propósito**, para no quedarse fuera si se pierde la otra. Bruno la teclea una vez y
+  queda en `localStorage`.
 - **Rotar `CF_MEDIA_TOKEN`**: el que está en uso se pegó en el chat.
 - **El parámetro `?m=`** sigue expuesto en producción. Es inofensivo (solo cambia la
   escala del mosaico) pero es andamio de depuración.
