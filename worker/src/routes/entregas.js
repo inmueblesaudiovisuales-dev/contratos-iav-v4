@@ -27,7 +27,9 @@ const OPACIDAD_MARCA = 0.6;   // calibrada por Bruno sobre una foto real
 // repeat tilea el PNG a su tamaño NATIVO, que en una foto de 1000px deja el texto
 // gigante. width es una fraccion del ancho de la foto: el tile trae el texto mas su
 // separacion, asi que 0.5 deja el texto ocupando ~25% del ancho.
-const ANCHO_MARCA = 0.5;
+// 0.45 reproduce de cerca lo que Bruno calibro (texto grande, separacion 2.0x).
+// 0.30 da un mosaico mas denso y discreto. Se compara en vivo con ?m=.
+const ANCHO_MARCA = 0.45;
 
 // El sistema acepta su propia llave si esta configurada, y ademas la del admin para
 // que funcione desde el dia uno sin tener que crear un secreto nuevo. Falla cerrado:
