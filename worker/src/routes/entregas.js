@@ -685,11 +685,27 @@ export async function handleEntregas(request, env, ctx, action) {
     if (!await verificarFirma(env, 'origen:' + archivoId, firma)) return err('Firma inválida', 403);
     const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
     if (!a || !a.r2_key) return err('Archivo no encontrado', 404);
-    const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key);
+    // Stream necesita saber cuanto pesa y poder pedirlo por pedazos: asi es como
+    // descarga un archivo de 1 GB. Sin Content-Length ni Accept-Ranges rechaza la
+    // copia con "Authentication failed", que es un mensaje enganoso — no es el
+    // token, es que no pudo LEER la URL. Ver §12b del handoff.
+    const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key, { range: request.headers });
     if (!obj) return err('Archivo no encontrado', 404);
-    return new Response(obj.body, {
-      headers: { 'Content-Type': a.mime || 'video/mp4', 'Cache-Control': 'private, no-store' }
+
+    const pidioRango = !!request.headers.get('Range');
+    const c = cabecerasRango(pidioRango ? obj.range : null, obj.size);
+    const h = new Headers({
+      'Content-Type': a.mime || 'video/mp4',
+      'Content-Length': String(c.contentLength),
+      'Accept-Ranges': 'bytes',
+      'ETag': obj.httpEtag,
+      'Cache-Control': 'private, no-store'
     });
+    if (c.contentRange) h.set('Content-Range', c.contentRange);
+    // A un HEAD hay que contestarle las mismas cabeceras pero sin cuerpo: es lo
+    // primero que hace Stream para saber con que se va a topar.
+    if (request.method === 'HEAD') return new Response(null, { status: 200, headers: h });
+    return new Response(obj.body, { status: c.status, headers: h });
   }
 
   // ---- De aqui en adelante, todo pide llave ----
