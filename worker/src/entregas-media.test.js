@@ -3,7 +3,8 @@ import assert from 'node:assert';
 import {
   firmar, verificarFirma, secretoFirma, llaveR2,
   esImagen, esVideo, nombreDescarga,
-  numeroDePartes, requiereMultiparte, TAMANO_PARTE, perfilWatermark
+  numeroDePartes, requiereMultiparte, TAMANO_PARTE, perfilWatermark,
+  cabecerasRango
 } from './entregas-media.js';
 
 const ENV = { ENTREGAS_KEY: 'secreto-de-prueba' };
@@ -130,4 +131,57 @@ test('un video vertical usa el perfil vertical cuando existe', () => {
 test('sin perfil vertical configurado se cae al horizontal, no a vacio', () => {
   const env = { STREAM_WATERMARK_UID: 'horiz' };
   assert.equal(perfilWatermark(env, 1080, 1920), 'horiz');
+});
+
+// ── Descargas parciales ───────────────────────────────────────────────────────
+// Un video de IAV pesa ~1 GB. Si estas cabeceras mienten, el navegador se queda
+// esperando bytes que no llegan y la descarga muere sin decir por que.
+
+const GB = 986 * 1024 * 1024;
+
+test('sin rango se anuncia el archivo completo', () => {
+  const c = cabecerasRango(null, GB);
+  assert.equal(c.status, 200);
+  assert.equal(c.contentLength, GB);
+  assert.equal(c.contentRange, '');
+});
+
+test('un rango normal contesta 206 y dice exactamente que pedazo va', () => {
+  const c = cabecerasRango({ offset: 0, length: 1000 }, GB);
+  assert.equal(c.status, 206);
+  assert.equal(c.contentLength, 1000);
+  assert.equal(c.contentRange, `bytes 0-999/${GB}`);
+});
+
+test('retomar a media descarga pide de un punto al final', () => {
+  // Es el caso real: se cayo el internet a los 800 MB y el navegador retoma.
+  const desde = 800 * 1024 * 1024;
+  const c = cabecerasRango({ offset: desde }, GB);
+  assert.equal(c.status, 206);
+  assert.equal(c.contentLength, GB - desde);
+  assert.equal(c.contentRange, `bytes ${desde}-${GB - 1}/${GB}`);
+});
+
+test('el sufijo pide los ultimos bytes, no los primeros', () => {
+  const c = cabecerasRango({ suffix: 500 }, GB);
+  assert.equal(c.contentLength, 500);
+  assert.equal(c.contentRange, `bytes ${GB - 500}-${GB - 1}/${GB}`);
+});
+
+test('un sufijo mas grande que el archivo no genera un inicio negativo', () => {
+  const c = cabecerasRango({ suffix: 5000 }, 1000);
+  assert.equal(c.contentLength, 1000);
+  assert.equal(c.contentRange, 'bytes 0-999/1000');
+});
+
+test('un rango que se pasa del final se recorta en vez de mentir', () => {
+  // Sin el recorte, Content-Length prometeria mas bytes de los que existen.
+  const c = cabecerasRango({ offset: 900, length: 5000 }, 1000);
+  assert.equal(c.contentLength, 100);
+  assert.equal(c.contentRange, 'bytes 900-999/1000');
+});
+
+test('un offset fuera del archivo no produce un largo negativo', () => {
+  const c = cabecerasRango({ offset: 5000, length: 10 }, 1000);
+  assert.equal(c.contentLength, 0);
 });

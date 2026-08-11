@@ -170,6 +170,39 @@ export async function borrarMediaDeEntrega(env, archivos) {
   return r;
 }
 
+// ── Descargas parciales ───────────────────────────────────────────────────────
+// Sin esto, una descarga de 1 GB no se puede pausar ni retomar, y el navegador no
+// sabe cuanto pesa: enseña una barra que no avanza. Las dos cosas se arreglan
+// anunciando el tamano y contestando 206 cuando piden un pedazo.
+//
+// `rango` es lo que devuelve R2 en obj.range. Puede traer offset+length, solo
+// offset (de aqui al final) o solo suffix (los ultimos N bytes) — R2 normaliza,
+// pero no siempre rellena las tres, asi que hay que cerrar el hueco aqui.
+export function cabecerasRango(rango, size) {
+  const total = Number(size) || 0;
+  if (!rango) return { status: 200, contentLength: total, contentRange: '' };
+
+  let inicio, largo;
+  if (typeof rango.suffix === 'number') {
+    largo = Math.min(rango.suffix, total);
+    inicio = total - largo;
+  } else {
+    inicio = Number(rango.offset) || 0;
+    largo = typeof rango.length === 'number' ? rango.length : total - inicio;
+  }
+  // Un rango que se sale del archivo devolveria cabeceras mentirosas y el
+  // navegador se quedaria esperando bytes que nunca llegan.
+  inicio = Math.max(0, Math.min(inicio, total));
+  largo = Math.max(0, Math.min(largo, total - inicio));
+  const fin = inicio + largo - 1;
+
+  return {
+    status: 206,
+    contentLength: largo,
+    contentRange: `bytes ${inicio}-${largo ? fin : inicio}/${total}`
+  };
+}
+
 // ── Utilidades ────────────────────────────────────────────────────────────────
 export function esImagen(mime) {
   return /^image\/(jpeg|png|webp|avif)$/i.test(String(mime || ''));

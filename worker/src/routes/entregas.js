@@ -15,7 +15,8 @@ import {
 } from '../entregas-core.js';
 import {
   llaveR2, guardarEnR2, copiarAStream, perfilWatermark, streamListo,
-  borrarMediaDeEntrega, firmar, verificarFirma, esImagen, esVideo, nombreDescarga
+  borrarMediaDeEntrega, firmar, verificarFirma, esImagen, esVideo, nombreDescarga,
+  cabecerasRango
 } from '../entregas-media.js';
 
 const WA_BASE = 'https://wa.me/5218127174207';
@@ -526,16 +527,28 @@ export async function handleEntregas(request, env, ctx, action) {
     if (!e || e.estado !== 'liberada' || estaVencida(e.fecha_expira, now())) {
       return err('Este material ya no está disponible.', 403);
     }
-    const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key);
+    // Se le pasan las cabeceras tal cual: R2 entiende Range e If-Range y devuelve
+    // solo el pedazo pedido. Es lo que permite pausar y retomar un video de 1 GB.
+    const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key, { range: request.headers });
     if (!obj) return err('Archivo no encontrado', 404);
-    ctx.waitUntil(evento(db, e.id, 'descarga', a.nombre || ''));
-    return new Response(obj.body, {
-      headers: {
-        'Content-Type': a.mime || 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${nombreDescarga(a.nombre, 'archivo')}"`,
-        'Cache-Control': 'private, no-store'
-      }
+
+    const c = cabecerasRango(obj.range, obj.size);
+    const h = new Headers({
+      'Content-Type': a.mime || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${nombreDescarga(a.nombre, 'archivo')}"`,
+      // Anunciar el tamano es lo que hace que la barra del navegador avance en vez
+      // de girar sin decir nada.
+      'Content-Length': String(c.contentLength),
+      'Accept-Ranges': 'bytes',
+      'ETag': obj.httpEtag,
+      'Cache-Control': 'private, no-store'
     });
+    if (c.contentRange) h.set('Content-Range', c.contentRange);
+
+    // Solo cuenta como descarga la que empieza desde cero: al retomar, el navegador
+    // pide otro pedazo del MISMO archivo y contarlo otra vez inflaria la bitacora.
+    if (!obj.range) ctx.waitUntil(evento(db, e.id, 'descarga', a.nombre || ''));
+    return new Response(obj.body, { status: c.status, headers: h });
   }
 
   // Origen temporal para que Stream copie el video desde R2 sin exponer el bucket.
