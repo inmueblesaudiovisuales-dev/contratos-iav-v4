@@ -643,17 +643,17 @@ export async function handleEntregas(request, env, ctx, action) {
     // copia no es un evento de la entrega.
     if (!esBruno) ctx.waitUntil(evento(db, e.id, 'descarga', `${entradas.length} fotos (zip)`));
 
+    // El total se le pasa a armarZip para que use FixedLengthStream: ese es el que
+    // mueve los bytes sin quemar CPU y el que pone el Content-Length solo.
+    const total = tamanoZip(entradas);
     const cuerpo = armarZip(entradas, async en => {
       const obj = await env.ENTREGAS_ORIGINALES.get(en.llave);
       return obj ? obj.body : null;
-    });
+    }, undefined, total);
     return new Response(cuerpo, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${nombre}"`,
-        // Se sabe de antemano porque no hay compresion. Esto es lo que hace que la
-        // barra del navegador avance.
-        'Content-Length': String(tamanoZip(entradas)),
         'Cache-Control': 'private, no-store'
       }
     });

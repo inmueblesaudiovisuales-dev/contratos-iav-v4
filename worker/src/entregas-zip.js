@@ -170,9 +170,17 @@ export function cierre(n, tamCentral, offCentral) {
 // Cada entrada TRAE su crc y sus bytes ya calculados. Gracias a eso los datos se
 // pasan con pipeTo, que copia dentro del runtime sin que JavaScript vea un solo
 // byte. Leerlos aqui es exactamente lo que reventaba el limite de CPU.
-export function armarZip(entradas, abrir, fecha) {
+// `total` es el tamano exacto (tamanoZip). Cuando se pasa y estamos en Workers se
+// usa FixedLengthStream, que ademas de mover los bytes sin pasarlos por JavaScript
+// hace que la respuesta lleve Content-Length — o sea, barra de progreso de verdad.
+// Un TransformStream normal copia byte por byte en JS: medido en produccion, el
+// ZIP moria por CPU a los 69 MB de 476.
+export function armarZip(entradas, abrir, fecha, total) {
   const dos = fechaDos(fecha);
-  const { readable, writable } = new TransformStream();
+  const { readable, writable } =
+    (total && typeof FixedLengthStream !== 'undefined') ? new FixedLengthStream(total)
+    : (typeof IdentityTransformStream !== 'undefined') ? new IdentityTransformStream()
+    : new TransformStream();
 
   // Se escribe tomando el writer solo para las cabeceras y soltandolo para que el
   // stream de R2 se conecte directo al destino.
