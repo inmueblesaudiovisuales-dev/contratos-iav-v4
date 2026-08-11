@@ -59,8 +59,18 @@ main{max-width:1180px;margin:0 auto;padding:var(--s6)}
 .btn-danger{background:transparent;border-color:var(--danger);color:var(--danger)}
 .btn-danger:hover{background:var(--danger-bg)}
 .btn-sm{height:32px;padding:0 var(--s3);font-size:12.5px;border-radius:var(--r-sm)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
+/* Deshabilitado tiene que LEERSE deshabilitado: bajarle la opacidad al dorado
+   dejaba un boton que seguia pareciendo activo. Se le quita el color. */
+.btn:disabled{cursor:not-allowed;background:var(--paper-2);color:var(--ink-4);
+  border-color:var(--line);box-shadow:none;filter:none}
+.btn:disabled:hover{background:var(--paper-2)}
 .btn-block{width:100%}
+/* Accion destructiva y poco frecuente: no debe competir con la zona de subida.
+   Aparece al pasar el cursor, y siempre visible con teclado. */
+.quitar{opacity:0;transition:opacity .15s;background:none;border:none;cursor:pointer;
+  color:var(--ink-4);font-size:12px;padding:4px 6px;font-family:inherit}
+.item:hover .quitar,.quitar:focus-visible{opacity:1}
+.quitar:hover{color:var(--danger)}
 
 input[type=text],input[type=tel],input[type=email],input[type=url],input[type=number],input[type=password],select{
   width:100%;height:40px;padding:0 var(--s3);background:var(--paper-1);border:1.5px solid var(--line-2);
@@ -91,7 +101,10 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .chip .dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--ink-4);flex:0 0 auto}
 .chip.done{border-color:rgba(47,125,85,.35);background:var(--ok-bg);color:var(--ok)}
 .chip.done .dot{background:var(--ok);border-color:var(--ok)}
-.tail{display:flex;align-items:center;gap:var(--s4);justify-content:flex-end;flex-wrap:wrap}
+.tail{display:flex;align-items:center;gap:var(--s3);justify-content:flex-end;flex-wrap:wrap}
+/* La fila entera abre la entrega, pero nada lo insinuaba. El chevron lo dice. */
+.tail .chev{color:var(--ink-4);flex:0 0 auto;transition:transform .16s,color .16s}
+.row:hover .tail .chev{color:var(--gold);transform:translateX(2px)}
 .count{font-family:var(--font-mono);font-size:12px;color:var(--ink-3);white-space:nowrap;
   font-variant-numeric:tabular-nums}
 .count b{color:var(--ink-1);font-weight:500}
@@ -156,9 +169,11 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .f .x:hover{background:var(--danger-bg);border-color:var(--danger)}
 .f.vid .im{display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
 .destacada{outline:2px solid var(--gold-leaf);outline-offset:1px}
+/* La liga se muestra COMPLETA. Truncarla la volvia inservible: se mira justo para
+   verificar que apunta a donde debe. */
 .linkbox{background:var(--paper-0);border:1px solid var(--line);border-radius:var(--r-sm);
   padding:9px var(--s3);font-family:var(--font-mono);font-size:11px;color:var(--ink-2);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  line-height:1.5;word-break:break-all}
 .money{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3)}
 .money .k{font-size:12.5px;color:var(--ink-2)}
 .money .v{font-family:var(--font-display);font-weight:500;font-size:20px;font-variant-numeric:tabular-nums}
@@ -367,7 +382,9 @@ function fila(e){
       '<div class="meta">' + esc(e.folio || 'sin folio') +
       (e.fechaSesion ? ' · sesión ' + esc(e.fechaSesion) : '') + '</div></div>' +
     '<div class="deliv">' + chips + '</div>' +
-    '<div class="tail">' + derecha + '</div>' +
+    '<div class="tail">' + derecha +
+      '<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>' +
+    '</div>' +
   '</div>';
 }
 
@@ -417,7 +434,7 @@ function pintarDetalle(){
         (i.completo ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
       '</span>' +
       '<span class="lab"><b>' + esc(i.nombre) + '</b><span>' + det + '</span></span>' +
-      '<button class="btn btn-ghost btn-sm" onclick="borrarEntregable(\'' + i.id + '\')">Quitar</button>' +
+      '<button class="quitar" title="Quitar este entregable" onclick="borrarEntregable(\'' + i.id + '\')">Quitar</button>' +
       '</div>';
     if(i.tipo === 'enlace'){
       h += '<div class="urlrow">' +
@@ -445,9 +462,7 @@ function pintarDetalle(){
            ' hidden onchange="elegidos(\'' + i.id + '\',\'' + i.tipo + '\',this.files)">' +
         '<div class="zona" id="z-' + i.id + '" onclick="document.getElementById(\'in-' + i.id + '\').click()">' +
           '<b>' + (i.tipo === 'video' ? 'Arrastra el video' : 'Arrastra las fotos') + '</b>' +
-          (i.tipo === 'video'
-            ? 'Se sube en trozos y Stream le pone la marca al codificar'
-            : 'Se sube el original limpio; la marca se dibuja al mostrarla') +
+          'o haz clic para elegirlas' +
         '</div>' +
         '<div class="prog" id="p-' + i.id + '" style="display:none"><i></i></div>' +
         '<div class="progtxt" id="pt-' + i.id + '"></div>';
@@ -457,9 +472,15 @@ function pintarDetalle(){
 
   var acciones = '';
   if(e.estado === 'borrador'){
+    // Con todo vacio, listar los tres renglones no dice nada nuevo: ya se ven vacios
+    // arriba. El detalle sirve cuando falta poco.
+    var razon = ACT.completa ? ''
+      : (ACT.faltan.length >= ACT.entregables.length
+          ? 'Sube el material para poder publicar'
+          : 'Falta ' + esc(ACT.faltan.join(', ')));
     acciones = '<button class="btn btn-primary btn-block" ' + (ACT.completa ? '' : 'disabled') +
       ' onclick="publicar()">Publicar</button>' +
-      (ACT.completa ? '' : '<p class="hint" style="text-align:center">Falta ' + esc(ACT.faltan.join(', ')) + '</p>');
+      (razon ? '<p class="hint" style="text-align:center">' + razon + '</p>' : '');
   } else if(e.estado === 'publicada'){
     acciones = '<button class="btn btn-primary btn-block" onclick="liberar()">Liberar ahora</button>' +
       '<p class="hint">Se libera sola cuando el saldo llegue a cero.</p>';
@@ -511,13 +532,16 @@ function pintarDetalle(){
       '</div>' +
     '</div><aside class="side">' +
       '<div class="card"><div class="card-hd"><b>Pago</b></div><div class="card-pad">' + pago + '</div></div>' +
-      '<div class="card"><div class="card-hd"><b>Liga del cliente</b></div><div class="card-pad">' +
+      // Liga y acciones son lo mismo —lo que haces con la entrega— asi que van en una
+      // sola tarjeta: primero la accion del momento, luego como mandarla.
+      '<div class="card"><div class="card-hd"><b>La entrega</b></div><div class="card-pad">' +
+        acciones +
+        '<div style="height:1px;background:var(--line);margin:2px 0"></div>' +
         '<div class="linkbox">' + esc(e.rutaPublica) + '</div>' +
         '<button class="btn btn-ghost btn-sm" onclick="copiar(\'' + esc(e.rutaPublica) + '\')">Copiar liga</button>' +
         '<button class="btn btn-ghost btn-sm" onclick="copiarWa()">Copiar mensaje de WhatsApp</button>' +
         '<p class="hint">El mensaje ya va escrito con la liga adentro.</p>' +
       '</div></div>' +
-      '<div class="card"><div class="card-hd"><b>Acciones</b></div><div class="card-pad">' + acciones + '</div></div>' +
       '<div class="card"><div class="card-hd"><b>Bitácora</b></div><div class="card-pad">' +
         '<div class="log">' + bitacora + '</div></div></div>' +
     '</aside></div>';

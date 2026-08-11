@@ -66,10 +66,12 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 .banner p{font-size:12px;color:var(--ink-2);line-height:1.5}
 .banner .amt{font-family:var(--font-display);font-weight:500}
 
+/* Celdas uniformes: la portada ya se lleva el hero, asi que la cuadricula no
+   necesita una celda destacada — y con celdas iguales no queda una huerfana
+   cuando el numero de fotos es impar. */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:22px}
 .grid .ph{aspect-ratio:4/3;border-radius:9px;overflow:hidden;position:relative;
   background:#b5aa96 center/cover;cursor:zoom-in;border:none;padding:0;display:block;width:100%}
-.grid .ph:first-child{grid-column:1/3;aspect-ratio:16/10}
 .more{font-family:var(--font-mono);font-size:11px;color:var(--gold);text-align:center;
   margin:-12px 0 22px;background:none;border:none;cursor:pointer;width:100%}
 
@@ -147,7 +149,6 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
     </div>
 
     <div class="body">
-      <p class="kick">Tu producción</p>
       <h1 class="h">Todo tu material, en un solo lugar</h1>
       <p class="sub" id="sub"></p>
 
@@ -223,6 +224,16 @@ function toast(m){var t=document.getElementById('toast');t.textContent=m;t.class
 // La foto la sirve el propio Worker desde R2. El mosaico lo dibuja el servidor
 // segun el estado de la entrega, asi que aqui no hay nada que decidir ni ninguna
 // URL que apunte al original limpio.
+//
+// OJO con el ancho: la marca de agua se dibuja como fraccion del ancho SERVIDO, y
+// luego el navegador reescala al ancho de DESPLIEGUE. Si se pide un numero fijo, la
+// misma foto sale con el mosaico grande en el hero y diminuto en las miniaturas.
+// Por eso todo se pide al doble del tamaño real en pantalla: asi la densidad del
+// mosaico se ve igual en todos lados.
+var ANCHO_DEVICE = Math.min(480, window.innerWidth || 375);
+function anchoServido(fraccionDePantalla){
+  return Math.round(ANCHO_DEVICE * fraccionDePantalla * 2);
+}
 function fotoUrl(f, w){
   if(!f || !f.id) return '';
   return '/api/e/foto?a=' + encodeURIComponent(f.id) + '&w=' + w;
@@ -279,7 +290,8 @@ function render(){
 
   var fotos = D.fotos || [];
   var portada = fotos.filter(function(f){ return f.destacado; })[0] || fotos[0];
-  if(portada) document.getElementById('hero').style.backgroundImage = "url('" + fotoUrl(portada, 900) + "')";
+  if(portada) document.getElementById('hero').style.backgroundImage =
+    "url('" + fotoUrl(portada, anchoServido(1)) + "')";
 
   var hayVideo = D.video && D.video.uid && D.streamCustomer;
   document.getElementById('playBtn').style.display = hayVideo ? '' : 'none';
@@ -297,35 +309,32 @@ function render(){
       '<div><b>Descarga bloqueada</b><p>Al liquidar se libera todo y tienes 14 días para descargarlo.</p></div>';
   }
 
-  // Fotos
-  if(fotos.length){
-    var orden = portada ? [portada].concat(fotos.filter(function(f){ return f !== portada; })) : fotos;
+  // Fotos. La portada NO se repite en la cuadricula: ya se lleva el hero completo.
+  // Si solo hay una foto, esa unica va tambien abajo para que la seccion no salga vacia.
+  var resto = fotos.filter(function(f){ return f !== portada; });
+  var galeria = resto.length ? resto : fotos;
+  if(galeria.length){
     var g = document.getElementById('grid');
-    g.innerHTML = '';
-    orden.slice(0, 7).forEach(function(f){
-      var el = document.createElement('button');
-      el.className = 'ph';
-      el.style.backgroundImage = "url('" + fotoUrl(f, 640) + "')";
-      el.setAttribute('aria-label', 'Ver ' + (f.nombre || 'foto'));
-      el.onclick = function(){ verFoto(fotoUrl(f, 1600)); };
-      g.appendChild(el);
-    });
+    var anchoCelda = anchoServido(0.5);
+    var anchoGrande = anchoServido(1);
+    var pinta = function(lista){
+      g.innerHTML = '';
+      lista.forEach(function(f){
+        var el = document.createElement('button');
+        el.className = 'ph';
+        el.style.backgroundImage = "url('" + fotoUrl(f, anchoCelda) + "')";
+        el.setAttribute('aria-label', 'Ver ' + (f.nombre || 'foto'));
+        el.onclick = function(){ verFoto(fotoUrl(f, anchoGrande)); };
+        g.appendChild(el);
+      });
+    };
+    pinta(galeria.slice(0, 6));
     document.getElementById('secFotos').style.display = '';
-    if(orden.length > 7){
+    if(galeria.length > 6){
       var vt = document.getElementById('verTodas');
       vt.style.display = '';
-      vt.textContent = 'Ver las ' + orden.length + ' fotos →';
-      vt.onclick = function(){
-        g.innerHTML = '';
-        orden.forEach(function(f){
-          var el = document.createElement('button');
-          el.className = 'ph';
-          el.style.backgroundImage = "url('" + fotoUrl(f, 640) + "')";
-          el.onclick = function(){ verFoto(fotoUrl(f, 1600)); };
-          g.appendChild(el);
-        });
-        vt.style.display = 'none';
-      };
+      vt.textContent = 'Ver las ' + fotos.length + ' fotos →';
+      vt.onclick = function(){ pinta(galeria); vt.style.display = 'none'; };
     }
   }
 
@@ -351,11 +360,14 @@ function render(){
     }
   }
 
-  // Tour 360
+  // Tour 360. De fondo va una foto DISTINTA a la portada: con la misma, la imagen
+  // aparecia tres veces seguidas en la misma pantalla.
   if(D.tourUrl){
     document.getElementById('sec360').style.display = '';
     document.getElementById('url360').textContent = D.tourUrl;
-    if(portada) document.getElementById('t360').style.backgroundImage = "url('" + fotoUrl(portada, 700) + "')";
+    var fondo360 = resto.length ? resto[resto.length - 1] : portada;
+    if(fondo360) document.getElementById('t360').style.backgroundImage =
+      "url('" + fotoUrl(fondo360, anchoServido(1)) + "')";
   }
 
   document.getElementById('btnWa').href = D.waLink || '#';
