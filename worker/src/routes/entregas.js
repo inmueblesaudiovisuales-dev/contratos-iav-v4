@@ -20,6 +20,11 @@ import {
 
 const WA_BASE = 'https://wa.me/5218127174207';
 
+// La marca de agua vive en R2 y se dibuja al servir. Cambiar este archivo cambia
+// TODAS las entregas, viejas y nuevas, al instante: ya no hay nada quemado.
+const LLAVE_MARCA = 'sistema/marca-agua.png';
+const OPACIDAD_MARCA = 0.6;   // calibrada por Bruno sobre una foto real
+
 // El sistema acepta su propia llave si esta configurada, y ademas la del admin para
 // que funcione desde el dia uno sin tener que crear un secreto nuevo. Falla cerrado:
 // si ninguna coincide, 401.
@@ -330,6 +335,53 @@ export async function handleEntregas(request, env, ctx, action) {
     return ok(await payloadPublico(db, env, e));
   }
 
+  // ---- Foto de la galeria: se transforma AL SERVIR ----
+  // Esta es la pieza que hace que solo exista UNA copia de cada foto. El original
+  // limpio vive en R2; el mosaico se dibuja aqui, al vuelo, con el binding de Images.
+  // Consecuencias:
+  //   - una sola subida por foto
+  //   - la marca de agua deja de ser irreversible: es un parametro, no un archivo
+  //   - al liberar, la MISMA foto se sirve sin mosaico, sin guardar una segunda copia
+  if (action === 'foto') {
+    const archivoId = url.searchParams.get('a') || '';
+    const ancho = Math.min(2400, Math.max(120, Number(url.searchParams.get('w')) || 800));
+    const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
+    if (!a || !a.r2_key) return err('Foto no encontrada', 404);
+    const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [a.e_entrega_id]);
+    if (!e) return err('Entrega no encontrada', 404);
+    // Solo se ve lo publicado o liberado. Borrador y pausada no muestran nada.
+    if (e.estado !== 'publicada' && e.estado !== 'liberada') return err('No disponible', 403);
+
+    const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key);
+    if (!obj) return err('Foto no encontrada', 404);
+
+    // El mosaico se quita SOLO si esta liberada y vigente. Esa es la unica condicion.
+    const limpia = e.estado === 'liberada' && !estaVencida(e.fecha_expira, now());
+
+    try {
+      let pipe = env.IMAGES.input(obj.body).transform({ width: ancho, fit: 'scale-down' });
+      if (!limpia) {
+        const marca = await env.ENTREGAS_ORIGINALES.get(LLAVE_MARCA);
+        if (marca) {
+          pipe = pipe.draw(marca.body, { repeat: true, opacity: OPACIDAD_MARCA });
+        } else {
+          // Sin marca de agua NO se sirve la foto: es preferible fallar visible a
+          // entregar el material limpio por accidente.
+          console.error('falta la marca de agua en R2:', LLAVE_MARCA);
+          return err('Marca de agua no configurada', 503);
+        }
+      }
+      const out = await pipe.output({ format: 'image/jpeg', quality: 82 });
+      const r = out.response();
+      const h = new Headers(r.headers);
+      h.set('Cache-Control', limpia ? 'private, max-age=300' : 'private, max-age=3600');
+      return new Response(r.body, { status: r.status, headers: h });
+    } catch (ex) {
+      console.error('transformación de imagen falló', ex.message);
+      return err('No se pudo procesar la imagen: ' + ex.message, 500);
+    }
+  }
+
   // ---- Descarga del cliente: no lleva llave, lleva firma ----
   // La firma es por archivo y caduca en minutos, asi que una URL copiada no sirve
   // para compartir ni para raspar el material despues.
@@ -375,6 +427,35 @@ export async function handleEntregas(request, env, ctx, action) {
   // ---- De aqui en adelante, todo pide llave ----
   const deny = requireEntregas(request, env);
   if (deny) return deny;
+
+  // Sube el PNG de la marca de agua a R2. Es la unica forma de meterlo al bucket:
+  // el OAuth de wrangler no incluye permisos de R2, pero el Worker si tiene binding.
+  // Cambiarlo aqui cambia todas las galerias al instante.
+  if (action === 'subirMarca') {
+    const form = await request.formData();
+    const png = form.get('archivo');
+    if (!png) return err('Falta el archivo');
+    await env.ENTREGAS_ORIGINALES.put(LLAVE_MARCA, png.stream(),
+      { httpMetadata: { contentType: 'image/png' } });
+    const check = await env.ENTREGAS_ORIGINALES.head(LLAVE_MARCA);
+    return ok({ ok: true, llave: LLAVE_MARCA, bytes: check ? check.size : 0 });
+  }
+
+  // Prueba de vida del binding de Images: toma la marca de agua, la reduce y la
+  // devuelve. Si esto responde una imagen, la transformacion al vuelo funciona.
+  if (action === 'probarImages') {
+    const marca = await env.ENTREGAS_ORIGINALES.get(LLAVE_MARCA);
+    if (!marca) return err('Sube primero la marca de agua', 400);
+    try {
+      const out = await env.IMAGES.input(marca.body)
+        .transform({ width: 400 })
+        .output({ format: 'image/jpeg', quality: 80 });
+      const r = out.response();
+      return new Response(r.body, { status: 200, headers: { 'Content-Type': 'image/jpeg' } });
+    } catch (ex) {
+      return err('IMAGES no disponible: ' + ex.message, 501);
+    }
+  }
 
   // ---- Subida (F3) ----
   // Foto: llega YA marcada por el navegador (la preview) mas el original limpio.

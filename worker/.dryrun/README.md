@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "contratos-iav-v4" generated at 2026-08-11T15:37:21.485Z.

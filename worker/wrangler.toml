@@ -22,6 +22,12 @@ bucket_name = "iav-checklist-backups"
 binding = "ENTREGAS_ORIGINALES"
 bucket_name = "iav-entregas-originales"
 
+# R129 — Transformacion de imagenes en el Worker. Permite leer el original limpio
+# de R2 y dibujarle el mosaico AL SERVIR, en vez de quemarlo al subir. Con esto la
+# marca de agua deja de ser irreversible y basta con guardar una sola copia.
+[images]
+binding = "IMAGES"
+
 [vars]
 ADMIN_KEY = "framedock"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwv6J6Mh-y31LYGdLBasL0bFDOloosEaiaLJDXH-TIF2-A_VpFUbh14I9zHt43LEfY/exec"
