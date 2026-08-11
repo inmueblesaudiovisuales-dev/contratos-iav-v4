@@ -4,7 +4,7 @@
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
 >
 > Última actualización: 2026-08-11
-> Rango de commits: `9994f46..294c96b` (17 commits, +4795 líneas)
+> Rango de commits: `9994f46..HEAD` (22 commits)
 
 ---
 
@@ -458,33 +458,130 @@ siempre. Por eso el gate de F6 es innegociable.
    `.github/workflows/`. Se amplía con `gh auth refresh -s workflow`.
 7. **Cloudflare lee `width ≤ 1` como fracción y `> 1` como píxeles.** Vale para todas
    las opciones de transformación, no solo `draw`.
+8. **`wrangler secret put` no basta: hace falta un deploy después** para que el Worker
+   tome el secreto nuevo. Sin él sigue usando el viejo y el síntoma es un error de
+   autenticación que parece del token nuevo.
+9. **Probar con `curl` no reproduce los límites de recursos del Worker.** Ocho
+   peticiones paralelas desde una máquina no caen en el mismo isolate; el navegador sí
+   las manda todas al mismo. **Los problemas de carga hay que verlos en el navegador**,
+   con `read_network_requests` o la pestaña de red.
+10. **Probar con imágenes generadas chicas esconde bugs reales.** El 1102 y el tope de
+    la fracción de marca solo aparecieron con JPEG de 10 MB de verdad.
+11. **Drive sirve archivos >100 MB solo por `drive.usercontent.google.com` con
+    `confirm=t`.** `drive.google.com/uc` devuelve una página de aviso de antivirus.
+12. **Un `custom_domain` nuevo puede borrar el registro DNS de un hostname que estaba
+    como `[[routes]]`.** Ver §11b.
 
 ---
 
-## 15. Lo que falta
+## 15. Lo que falta para terminarlo
 
-### Bloqueante para usarlo de verdad
+Ordenado por lo que rompe si no se atiende. Cada punto trae el contexto de diagnóstico
+que ya se juntó, para no volver a investigarlo desde cero.
 
-- **`CF_MEDIA_TOKEN` con permiso de Stream** (§12).
+### A. Roto ahora mismo
 
-### Siguiente en la fila
+**A1 — El derivado no se genera al subir. El 1102 sigue vivo para entregas nuevas.**
 
-- **F7 — la liga de la entrega en el evento de Calendar.** Requiere modificar
-  `adapter/AdapterScript4_v1.js` y **publicarlo a mano** en script.google.com. Son
-  **tres** constructores de descripción los que hay que dejar iguales: `procesarFirma`,
-  `crearEventoReservado` y `reagendarPropiedad`. Si uno se queda atrás habrá eventos
-  con liga y sin ella sin patrón claro.
-- **ZIP para bajar todas las fotos de un jalón.** Hoy se bajan en cascada, una por
-  una, desde el navegador. El ZIP en streaming desde el Worker está pendiente.
-- **Probar la subida de un video grande arrastrándolo**, no importándolo de Drive.
+Es el mismo bug de §11 #22, **cerrado a medias**. `generarDerivado()` existe y
+funciona, pero hoy solo lo llaman:
 
-### Mejoras identificadas, sin urgencia
+- `foto`, de forma perezosa y **después** de haber servido (`ctx.waitUntil`), o sea
+  que la primera vista todavía transforma el original de 10 MB.
+- El endpoint `derivados`, que hay que llamar a mano en bucle.
 
-- Aviso al cliente por WhatsApp el día 11 (hoy solo lo ve si entra al portal).
-- `www.inmueblesaudiovisuales.com` da 404; el ápice sí responde. Preexistente.
-- No hay registro **DMARC** en el dominio. Hay SPF. Preexistente.
-- Backfill masivo de entregas para los contratos viejos: `sembrar` con `todos:true`
-  ya existe, falta decidir si se corre.
+Verificado: ni `subirFoto` ni `importarDrive` lo invocan. **Consecuencia: una entrega
+nueva con 40 fotos vuelve a dar galería vacía la primera vez que el cliente entre.**
+Las 45 de Mireya ya tienen derivado porque se corrió el bucle a mano.
+
+*Qué hacer:* llamar `generarDerivado` con `ctx.waitUntil` al final de `subirFoto` y de
+`importarDrive`, y que el portal llame `derivados` en bucle al terminar de subir,
+mostrando el avance. Verificar abriendo la galería **en el navegador** con al menos 20
+fotos reales — con `curl` no se reproduce (ver §14).
+
+**A2 — Stream no puede leer nuestro origen** (§12b). Un video arrastrado al portal
+queda bien en R2 pero **sin marca de agua**, y la copia limpia al liberar fallará por
+lo mismo.
+
+**A3 — La copia limpia del video al liberar no se ha ejercido nunca.** Depende de A2.
+Cuando A2 se resuelva, hay que liberar una entrega con video y confirmar que
+`streamListo` detecta el cambio y que el portal cambia de uid.
+
+### B. Falta para que el ciclo esté completo
+
+**B1 — F7: la liga en el evento de Calendar.** Requiere modificar
+`adapter/AdapterScript4_v1.js` y **publicarlo a mano** en script.google.com. Son
+**tres** constructores de descripción que hay que dejar iguales: `procesarFirma`,
+`crearEventoReservado` y `reagendarPropiedad`. Si uno se queda atrás habrá eventos con
+liga y sin ella sin patrón claro. Actualizar el header `// Ultima modificacion:` con
+hora de Monterrey y registrar en `docs/RONDAS.md`.
+
+**B2 — El ZIP.** Hoy "descargar todo" dispara las fotos en cascada, una por una, con
+400 ms de separación. Funciona pero se ve pobre y el navegador puede bloquear
+descargas múltiples. Falta el ZIP en streaming (sin compresión, tipo *store*) desde el
+Worker. Riesgo conocido: puede toparse con los límites de CPU — si truena, degradar a
+descarga por bloques y **decirlo**, no fallar callado.
+
+**B3 — Probar la liberación con material real.** La entrega de Mireya sigue con saldo
+de $4,500. Nunca se ha ejercido con material de verdad: la descarga de un original de
+10 MB, la de un video de 986 MB, ni el cambio de la galería a sin mosaico.
+
+**B4 — Probar la subida de un video grande arrastrándolo**, no importándolo de Drive.
+La ruta multiparte (`videoIniciar`/`videoParte`/`videoTerminar`) está desplegada y
+nunca ha corrido con un archivo real.
+
+**B5 — Probar en un teléfono de verdad.** Todo se validó a 375 px emulados.
+
+**B6 — Probar la expiración real.** Solo se probó forzando vigencias cortas, nunca
+dejando pasar los 14 días con el cron corriendo.
+
+### C. Decisiones que quedaron pendientes de Bruno
+
+**C1 — Las 5 variantes `-1-1` a `-1-5`** de la entrega de Mireya traen la marca
+"default" en Drive y parecen versiones alternas de la foto 1. Se importaron todas
+porque no le tocaba al sistema decidir qué se entrega. Si son descartes, quitarlas.
+
+**C2 — La portada** quedó en la primera foto subida (`IAV-2607.17-A-1.jpg`), no en la
+mejor. No hay forma de cambiarla desde el portal: el campo `destacado` existe en
+`e_archivos` pero **la interfaz no lo expone**. Falta un botón.
+
+**C3 — La entrega de Mireya está publicada** con material real de una clienta que
+sigue debiendo. El enlace es inadivinable y no se envió nada, pero conviene decidir si
+se pausa o se le manda.
+
+**C4 — La densidad del mosaico.** Quedó en `ANCHO_MARCA = 0.45`, que reproduce la
+calibración original. `0.30` da un mosaico más denso y discreto. Se compara en vivo
+con `?m=` sobre una foto real.
+
+**C5 — El corte con R123.** Sigue vivo en `/entrega`. Falta decidir cuándo se apaga y
+qué pasa con las entregas viejas que apuntan a Drive.
+
+**C6 — Backfill de entregas** para los contratos que ya existían. `sembrar` con
+`todos:true` ya existe y es idempotente; falta decidir si se corre.
+
+### D. Deuda técnica y cabos sueltos
+
+- **`ENTREGAS_KEY` no está configurada.** El portal acepta la `ADMIN_KEY`, así que hoy
+  quien entra a entregas puede entrar al admin. Ponerla separa los accesos.
+- **Rotar `CF_MEDIA_TOKEN`**: el que está en uso se pegó en el chat.
+- **El parámetro `?m=`** sigue expuesto en producción. Es inofensivo (solo cambia la
+  escala del mosaico) pero es andamio de depuración.
+- **El error de `procesarVideo` devuelve una URL de origen firmada** para poder
+  probarla. Solo lo ve quien tenga la llave, pero es información de más.
+- **Columnas muertas:** `images_id` e `images_hash` en `e_archivos` ya no se escriben
+  desde que la marca se dibuja al servir. `borrarDeImages` se conserva por si quedaran
+  registros viejos. Se pueden limpiar.
+- **La interfaz no expone** `procesarVideo`, `estadoVideo`, `derivados` ni `sembrar`.
+  Todos se llaman a mano por API.
+- **No hay reintento** si `generarDerivado` falla: queda en el original y solo se ve
+  lento. Debería reportarse en el portal.
+- **Las descargas de fotos no tienen indicador de avance** en el portal del cliente.
+
+### E. Preexistente, no causado por este trabajo
+
+- `www.inmueblesaudiovisuales.com` da 404; el ápice sí responde 200.
+- No hay registro **DMARC** en el dominio. Sí hay SPF.
+- El repositorio es público con credenciales en texto plano (ver abajo).
 
 ### Riesgo conocido, no atendido por decisión de Bruno
 
