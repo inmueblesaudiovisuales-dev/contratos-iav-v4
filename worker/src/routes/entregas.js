@@ -532,7 +532,11 @@ export async function handleEntregas(request, env, ctx, action) {
     const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key, { range: request.headers });
     if (!obj) return err('Archivo no encontrado', 404);
 
-    const c = cabecerasRango(obj.range, obj.size);
+    // Quien manda es la PETICION, no R2: R2 rellena obj.range aunque nadie haya
+    // pedido un pedazo, y fiarse de el hace que hasta una descarga normal conteste
+    // 206 (y que no se registre en la bitacora). Medido en produccion.
+    const pidioRango = !!request.headers.get('Range');
+    const c = cabecerasRango(pidioRango ? obj.range : null, obj.size);
     const h = new Headers({
       'Content-Type': a.mime || 'application/octet-stream',
       'Content-Disposition': `attachment; filename="${nombreDescarga(a.nombre, 'archivo')}"`,
@@ -547,7 +551,7 @@ export async function handleEntregas(request, env, ctx, action) {
 
     // Solo cuenta como descarga la que empieza desde cero: al retomar, el navegador
     // pide otro pedazo del MISMO archivo y contarlo otra vez inflaria la bitacora.
-    if (!obj.range) ctx.waitUntil(evento(db, e.id, 'descarga', a.nombre || ''));
+    if (!pidioRango) ctx.waitUntil(evento(db, e.id, 'descarga', a.nombre || ''));
     return new Response(obj.body, { status: c.status, headers: h });
   }
 
