@@ -943,12 +943,16 @@ export async function handleEntregas(request, env, ctx, action) {
           { headers: { Authorization: `Bearer ${env.CF_MEDIA_TOKEN}` } });
         const j = await r.json();
         const res = j && j.result;
+        // Si Stream no contesta un resultado hay que decir POR QUE. Devolver null a
+        // secas hacia imposible distinguir "el video no existe" de "el token no
+        // tiene permisos", y esa confusion costo un diagnostico entero (§12b).
         salida[campo] = res ? {
           listo: !!res.readyToStream,
           estado: (res.status && res.status.state) || '',
           avance: (res.status && res.status.pctComplete) || '',
           duracion: res.duration, ancho: res.input && res.input.width, alto: res.input && res.input.height
-        } : null;
+        } : { error: (j && j.errors && j.errors.map(e => `${e.code}: ${e.message}`).join('; ')) ||
+                     `Stream contestó ${r.status} sin resultado` };
       } catch (ex) { salida[campo] = { error: ex.message }; }
     }
     return ok(salida);
