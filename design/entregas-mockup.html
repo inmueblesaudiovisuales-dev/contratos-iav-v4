@@ -1,0 +1,897 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entregas IAV — Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<style>
+:root{
+  --paper-0:#F7F4EC; --paper-1:#FFFDF8; --paper-2:#EFEADF;
+  --line:#E2DBCB; --line-2:#D2C9B3;
+  --onyx:#1C1C1E; --onyx-soft:#2A2A2D;
+  --gold:#B08D2E; --gold-leaf:#C9A84C; --gold-leaf-hi:#D4B65C;
+  --gold-pale:#F3EAD0; --gold-glow:rgba(176,141,46,.14);
+  --ink-1:#211E18; --ink-2:#5C564A; --ink-3:#918975; --ink-4:#B8B0A0;
+  --ok:#2F7D55; --ok-bg:#E7F1EA;
+  --warn:#B0560E; --warn-bg:#FBEEE2;
+  --danger:#B23A2B; --danger-bg:#F8E7E4;
+  --info:#3F6FA8; --info-bg:#E8EFF6;
+  --page:#EDE8DC;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s12:48px;
+  --r-sm:8px; --r:10px; --r-lg:14px; --r-pill:999px;
+  --shadow-1:0 1px 2px rgba(33,30,24,.04), 0 2px 8px rgba(33,30,24,.05);
+  --shadow-2:0 2px 6px rgba(33,30,24,.06), 0 12px 32px rgba(33,30,24,.10);
+  --font-ui:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --font-mono:'Spline Sans Mono',ui-monospace,'Cascadia Mono','Consolas',monospace;
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper-0:#1A1813; --paper-1:#221F19; --paper-2:#2B2721;
+    --line:#38332B; --line-2:#484036;
+    --onyx:#0E0D0B; --onyx-soft:#1A1813;
+    --gold:#D4B65C; --gold-leaf:#C9A84C; --gold-leaf-hi:#DCC77A;
+    --gold-pale:#3A3122; --gold-glow:rgba(212,182,92,.18);
+    --ink-1:#F2EDE1; --ink-2:#C3BAA6; --ink-3:#8F8776; --ink-4:#6A6355;
+    --ok:#5FBE8B; --ok-bg:#1D3227;
+    --warn:#E08A3C; --warn-bg:#332415;
+    --danger:#E0705E; --danger-bg:#36211D;
+    --info:#7FA9D8; --info-bg:#1C2733;
+    --page:#131109;
+    --shadow-1:0 1px 2px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.28);
+    --shadow-2:0 2px 6px rgba(0,0,0,.34), 0 12px 32px rgba(0,0,0,.44);
+  }
+}
+:root[data-theme="dark"]{
+  --paper-0:#1A1813; --paper-1:#221F19; --paper-2:#2B2721;
+  --line:#38332B; --line-2:#484036;
+  --onyx:#0E0D0B; --onyx-soft:#1A1813;
+  --gold:#D4B65C; --gold-leaf:#C9A84C; --gold-leaf-hi:#DCC77A;
+  --gold-pale:#3A3122; --gold-glow:rgba(212,182,92,.18);
+  --ink-1:#F2EDE1; --ink-2:#C3BAA6; --ink-3:#8F8776; --ink-4:#6A6355;
+  --ok:#5FBE8B; --ok-bg:#1D3227;
+  --warn:#E08A3C; --warn-bg:#332415;
+  --danger:#E0705E; --danger-bg:#36211D;
+  --info:#7FA9D8; --info-bg:#1C2733;
+  --page:#131109;
+  --shadow-1:0 1px 2px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.28);
+  --shadow-2:0 2px 6px rgba(0,0,0,.34), 0 12px 32px rgba(0,0,0,.44);
+}
+:root[data-theme="light"]{
+  --paper-0:#F7F4EC; --paper-1:#FFFDF8; --paper-2:#EFEADF;
+  --line:#E2DBCB; --line-2:#D2C9B3;
+  --onyx:#1C1C1E; --onyx-soft:#2A2A2D;
+  --gold:#B08D2E; --gold-leaf:#C9A84C; --gold-leaf-hi:#D4B65C;
+  --gold-pale:#F3EAD0; --gold-glow:rgba(176,141,46,.14);
+  --ink-1:#211E18; --ink-2:#5C564A; --ink-3:#918975; --ink-4:#B8B0A0;
+  --ok:#2F7D55; --ok-bg:#E7F1EA;
+  --warn:#B0560E; --warn-bg:#FBEEE2;
+  --danger:#B23A2B; --danger-bg:#F8E7E4;
+  --info:#3F6FA8; --info-bg:#E8EFF6;
+  --page:#EDE8DC;
+  --shadow-1:0 1px 2px rgba(33,30,24,.04), 0 2px 8px rgba(33,30,24,.05);
+  --shadow-2:0 2px 6px rgba(33,30,24,.06), 0 12px 32px rgba(33,30,24,.10);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font-ui); font-size:14px; line-height:1.5;
+  color:var(--ink-1); background:var(--page);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+:focus-visible{outline:2px solid var(--gold); outline-offset:2px; border-radius:4px}
+@media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important}}
+
+.wrap{max-width:1180px; margin:0 auto; padding:var(--s12) var(--s6) 96px}
+
+/* ── Cabecera del documento ── */
+.doc-head{margin-bottom:var(--s12); padding-bottom:var(--s6); border-bottom:1px solid var(--line-2)}
+.doc-eyebrow{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.14em; color:var(--gold); margin-bottom:var(--s3)}
+.doc-head h1{font-family:var(--font-display); font-weight:500; font-size:clamp(30px,4.4vw,46px);
+  letter-spacing:-.02em; line-height:1.08; text-wrap:balance; margin-bottom:var(--s4)}
+.doc-head p{color:var(--ink-2); max-width:62ch; font-size:15px; line-height:1.65}
+.doc-note{margin-top:var(--s5); font-family:var(--font-mono); font-size:12px; color:var(--ink-3); line-height:1.6}
+
+/* ── Secciones ── */
+section{margin-top:var(--s12)}
+.sec-head{display:flex; align-items:baseline; gap:var(--s4); margin-bottom:var(--s3)}
+.sec-num{font-family:var(--font-mono); font-size:12px; color:var(--gold); letter-spacing:.1em; flex:0 0 auto}
+.sec-head h2{font-family:var(--font-display); font-weight:500; font-size:26px; letter-spacing:-.015em}
+.sec-desc{color:var(--ink-2); max-width:64ch; margin-bottom:var(--s6); line-height:1.65}
+.rule{height:1px; background:var(--line-2); margin-bottom:var(--s6)}
+
+/* ── Chrome de navegador (portal de control) ── */
+.browser{background:var(--paper-1); border:1px solid var(--line-2); border-radius:var(--r-lg);
+  box-shadow:var(--shadow-2); overflow:hidden}
+.browser-bar{display:flex; align-items:center; gap:var(--s3); padding:10px var(--s4);
+  background:var(--paper-2); border-bottom:1px solid var(--line)}
+.dots{display:flex; gap:6px; flex:0 0 auto}
+.dots i{width:10px; height:10px; border-radius:50%; background:var(--line-2); display:block}
+.urlbar{flex:1; background:var(--paper-1); border:1px solid var(--line); border-radius:var(--r-pill);
+  padding:5px var(--s3); font-family:var(--font-mono); font-size:11.5px; color:var(--ink-3);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.urlbar b{color:var(--ink-1); font-weight:500}
+
+/* ── App: portal de control ── */
+.app-head{display:flex; align-items:center; justify-content:space-between; gap:var(--s4);
+  padding:var(--s5) var(--s6); border-bottom:1px solid var(--line); flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:var(--s3)}
+.brand .mark{width:30px; height:30px; border-radius:7px; background:var(--onyx); color:var(--gold-leaf);
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-display);
+  font-size:15px; font-weight:500; flex:0 0 auto}
+.brand b{font-family:var(--font-display); font-weight:500; font-size:19px; letter-spacing:-.01em}
+.brand span{font-family:var(--font-mono); font-size:11px; color:var(--ink-3); letter-spacing:.06em}
+
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:var(--s2);
+  height:38px; padding:0 var(--s4); border:1.5px solid transparent; border-radius:var(--r);
+  font-family:var(--font-ui); font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap;
+  transition:background 160ms, border-color 160ms, color 160ms}
+.btn-primary{background:var(--gold-leaf); color:#1C1C1E; box-shadow:0 1px 0 var(--gold)}
+.btn-primary:hover{background:var(--gold-leaf-hi)}
+.btn-onyx{background:var(--onyx); color:var(--paper-0)}
+.btn-onyx:hover{background:var(--onyx-soft)}
+.btn-ghost{background:var(--paper-1); border-color:var(--line-2); color:var(--ink-1)}
+.btn-ghost:hover{border-color:var(--gold); background:var(--paper-2)}
+.btn-sm{height:32px; padding:0 var(--s3); font-size:12.5px; border-radius:var(--r-sm)}
+.btn:disabled{opacity:.42; cursor:not-allowed}
+
+.tabs{display:flex; gap:var(--s5); padding:0 var(--s6); border-bottom:1px solid var(--line);
+  overflow-x:auto}
+.tab{padding:var(--s3) 0 11px; font-size:13.5px; font-weight:600; color:var(--ink-3);
+  border-bottom:2px solid transparent; white-space:nowrap; cursor:pointer; background:none; border-top:none;
+  border-left:none; border-right:none; font-family:var(--font-ui)}
+.tab.on{color:var(--ink-1); border-bottom-color:var(--gold-leaf)}
+.tab .n{font-family:var(--font-mono); font-size:11px; color:var(--ink-3); margin-left:5px}
+
+.app-body{padding:var(--s6); background:var(--paper-0)}
+.group-label{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.1em; color:var(--ink-3);
+  display:flex; align-items:center; gap:var(--s3); margin:0 0 var(--s4)}
+.group-label::after{content:''; flex:1; height:1px; background:var(--line)}
+.group-label + .group-label{margin-top:var(--s8)}
+.rows{display:flex; flex-direction:column; gap:var(--s2); margin-bottom:var(--s8)}
+.rows:last-child{margin-bottom:0}
+
+.row{background:var(--paper-1); border:1px solid var(--line); border-radius:var(--r);
+  padding:var(--s4) var(--s5); display:grid; gap:var(--s4) var(--s5);
+  grid-template-columns:minmax(0,1.5fr) minmax(0,1.35fr) auto; align-items:center;
+  transition:border-color 160ms, box-shadow 160ms}
+.row:hover{border-color:var(--line-2); box-shadow:var(--shadow-1)}
+.row.focus{border-color:var(--gold-leaf); box-shadow:0 0 0 3px var(--gold-glow)}
+.row .who b{display:block; font-size:14.5px; font-weight:600; letter-spacing:-.005em; margin-bottom:2px}
+.row .who span{font-size:12.5px; color:var(--ink-2)}
+.row .meta{font-family:var(--font-mono); font-size:11px; color:var(--ink-3); margin-top:4px;
+  font-variant-numeric:tabular-nums}
+
+.deliv{display:flex; flex-wrap:wrap; gap:6px}
+.chip{display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px 0 8px;
+  border-radius:var(--r-pill); font-size:12px; font-weight:600; border:1px solid var(--line-2);
+  background:var(--paper-1); color:var(--ink-3)}
+.chip .dot{width:9px; height:9px; border-radius:50%; border:1.5px solid var(--ink-4); flex:0 0 auto}
+.chip.done{border-color:rgba(47,125,85,.35); background:var(--ok-bg); color:var(--ok)}
+.chip.done .dot{background:var(--ok); border-color:var(--ok)}
+.chip.add{border-style:dashed; color:var(--ink-4); font-weight:500}
+
+.tail{display:flex; align-items:center; gap:var(--s4); justify-content:flex-end}
+.count{font-family:var(--font-mono); font-size:12px; color:var(--ink-3); font-variant-numeric:tabular-nums;
+  white-space:nowrap}
+.count b{color:var(--ink-1); font-weight:500}
+.pill{display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px;
+  border-radius:var(--r-pill); font-size:11.5px; font-weight:600; white-space:nowrap}
+.pill.ok{background:var(--ok-bg); color:var(--ok)}
+.pill.warn{background:var(--warn-bg); color:var(--warn)}
+.pill.info{background:var(--info-bg); color:var(--info)}
+.pill.mute{background:var(--paper-2); color:var(--ink-3)}
+
+/* ── Detalle de una entrega ── */
+.detail{display:grid; grid-template-columns:minmax(0,1fr) 316px; gap:var(--s6); align-items:start}
+@media (max-width:900px){.detail{grid-template-columns:1fr}}
+.back{font-family:var(--font-mono); font-size:11.5px; color:var(--ink-3); margin-bottom:var(--s4);
+  display:block; background:none; border:none; cursor:pointer; padding:0}
+.dtitle{display:flex; align-items:flex-start; justify-content:space-between; gap:var(--s4);
+  margin-bottom:var(--s6); flex-wrap:wrap}
+.dtitle h3{font-family:var(--font-display); font-weight:500; font-size:25px; letter-spacing:-.015em;
+  margin-bottom:5px}
+.dtitle .sub{font-size:13px; color:var(--ink-2)}
+.dtitle .sub em{font-style:normal; font-family:var(--font-mono); font-size:11.5px; color:var(--ink-3)}
+
+.card{background:var(--paper-1); border:1px solid var(--line); border-radius:var(--r-lg);
+  box-shadow:var(--shadow-1)}
+.card-hd{padding:var(--s4) var(--s5); border-bottom:1px solid var(--line); display:flex;
+  align-items:center; justify-content:space-between; gap:var(--s3)}
+.card-hd b{font-size:14px; font-weight:600}
+.card-pad{padding:var(--s5)}
+
+.item{padding:var(--s4) var(--s5); border-bottom:1px solid var(--line); display:flex;
+  align-items:center; gap:var(--s4)}
+.item:last-child{border-bottom:none}
+.tick{width:22px; height:22px; border-radius:50%; border:1.5px solid var(--ink-4); flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center}
+.tick.on{background:var(--ok); border-color:var(--ok)}
+.tick svg{display:block}
+.item .lab{flex:1; min-width:0}
+.item .lab b{display:block; font-size:13.5px; font-weight:600}
+.item .lab span{font-size:12px; color:var(--ink-3); font-family:var(--font-mono);
+  font-variant-numeric:tabular-nums}
+.thumbs{display:flex; gap:5px; flex:0 0 auto}
+.thumbs i{width:34px; height:26px; border-radius:5px; display:block;
+  background:linear-gradient(160deg,#C9BFA8,#8E8471)}
+.thumbs i:nth-child(2){background:linear-gradient(160deg,#B9C3C0,#7E8A88)}
+.thumbs i:nth-child(3){background:linear-gradient(160deg,#D3C4AE,#9C8A72)}
+.thumbs span{display:flex; align-items:center; font-family:var(--font-mono); font-size:11px;
+  color:var(--ink-3); padding-left:3px}
+
+.drop{border:1.5px dashed var(--line-2); border-radius:var(--r); background:var(--paper-0);
+  padding:var(--s5); text-align:center; color:var(--ink-3); font-size:12.5px}
+.drop b{display:block; color:var(--ink-2); font-size:13px; font-weight:600; margin-bottom:3px}
+.urlfield{display:flex; gap:var(--s2); align-items:center; background:var(--paper-0);
+  border:1.5px solid var(--line-2); border-radius:var(--r); padding:0 6px 0 var(--s3); height:38px}
+.urlfield .u{flex:1; font-family:var(--font-mono); font-size:11.5px; color:var(--ink-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+.side{display:flex; flex-direction:column; gap:var(--s4)}
+.side .card-pad{display:flex; flex-direction:column; gap:var(--s3)}
+.side-t{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; color:var(--ink-3)}
+.money{display:flex; align-items:baseline; justify-content:space-between; gap:var(--s3)}
+.money .k{font-size:12.5px; color:var(--ink-2)}
+.money .v{font-family:var(--font-display); font-weight:500; font-size:20px;
+  font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.money .v.due{color:var(--warn)}
+.hint{font-size:12px; color:var(--ink-3); line-height:1.55}
+.linkbox{background:var(--paper-0); border:1px solid var(--line); border-radius:var(--r-sm);
+  padding:9px var(--s3); font-family:var(--font-mono); font-size:11px; color:var(--ink-2);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.log{display:flex; flex-direction:column; gap:9px}
+.log div{display:flex; gap:var(--s3); font-size:12px; color:var(--ink-2); align-items:baseline}
+.log time{font-family:var(--font-mono); font-size:10.5px; color:var(--ink-4); flex:0 0 66px;
+  font-variant-numeric:tabular-nums}
+
+/* ── Teléfono (portal del cliente) ── */
+.phones{display:flex; gap:var(--s8); flex-wrap:wrap; justify-content:center; align-items:flex-start}
+.phone-col{flex:0 1 360px; min-width:296px}
+.phone-cap{text-align:center; margin-bottom:var(--s4)}
+.phone-cap b{display:block; font-family:var(--font-display); font-weight:500; font-size:18px;
+  letter-spacing:-.01em; margin-bottom:3px}
+.phone-cap span{font-size:12.5px; color:var(--ink-2)}
+.phone{background:#0E0D0B; border-radius:34px; padding:9px; box-shadow:var(--shadow-2);
+  border:1px solid var(--line-2)}
+.screen{background:var(--paper-0); border-radius:26px; overflow:hidden; height:648px;
+  overflow-y:auto; position:relative; scrollbar-width:thin}
+.screen::-webkit-scrollbar{width:5px}
+.screen::-webkit-scrollbar-thumb{background:var(--line-2); border-radius:9px}
+
+.c-head{background:var(--onyx); padding:13px var(--s5); display:flex; align-items:center;
+  justify-content:center; position:sticky; top:0; z-index:5}
+.c-logo{font-family:var(--font-display); font-size:13px; color:var(--paper-0); letter-spacing:.03em}
+.c-logo em{font-style:normal; color:var(--gold-leaf)}
+.hair{height:1px; background:var(--gold-leaf); opacity:.55}
+
+.hero{position:relative; height:214px; overflow:hidden;
+  background:linear-gradient(168deg,#8FA0A6 0%,#6E7C82 42%,#4A5257 100%)}
+.hero.b{background:linear-gradient(168deg,#C8B79B 0%,#A28F72 46%,#6E5F49 100%)}
+.hero::after{content:''; position:absolute; inset:0;
+  background:linear-gradient(to top,rgba(20,16,10,.82),rgba(20,16,10,.04) 60%)}
+.hero .ov{position:absolute; inset:0; z-index:3; display:flex; flex-direction:column;
+  justify-content:flex-end; padding:var(--s4)}
+.hero .ey{font-family:var(--font-mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--gold-leaf-hi); margin-bottom:4px}
+.hero .ti{font-family:var(--font-display); font-weight:500; color:#fff; font-size:21px;
+  letter-spacing:-.01em; line-height:1.12}
+.play{width:52px; height:52px; border-radius:50%; background:rgba(255,253,248,.94);
+  display:flex; align-items:center; justify-content:center; position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%); z-index:4; box-shadow:0 8px 26px rgba(0,0,0,.42)}
+
+/* marca de agua en mosaico */
+.wm{position:relative; overflow:hidden}
+.wm::before{content:''; position:absolute; inset:-45%; z-index:2; transform:rotate(-24deg);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='78'%3E%3Ctext x='4' y='26' font-family='Georgia,serif' font-size='11' letter-spacing='1.4' fill='%23ffffff' fill-opacity='0.46'%3EInmuebles Audiovisuales%3C/text%3E%3Ctext x='108' y='64' font-family='Georgia,serif' font-size='11' letter-spacing='1.4' fill='%23ffffff' fill-opacity='0.46'%3EInmuebles Audiovisuales%3C/text%3E%3C/svg%3E");
+  pointer-events:none}
+
+.c-body{padding:var(--s5) var(--s4) var(--s8)}
+.kick{font-family:var(--font-mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:5px}
+.c-h{font-family:var(--font-display); font-weight:500; font-size:19px; letter-spacing:-.015em;
+  line-height:1.2; margin-bottom:5px}
+.c-sub{font-size:12.5px; color:var(--ink-2); line-height:1.55; margin-bottom:var(--s5)}
+.sect{font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  display:flex; align-items:center; gap:9px; margin:0 0 11px; color:var(--ink-1)}
+.sect::after{content:''; flex:1; height:1px; background:var(--line-2)}
+
+.banner{border-radius:var(--r); padding:13px var(--s4); margin-bottom:var(--s5); display:flex;
+  gap:11px; align-items:flex-start}
+.banner.lock{background:var(--paper-2); border:1px solid var(--line-2)}
+.banner.live{background:var(--ok-bg); border:1px solid rgba(47,125,85,.3)}
+.banner .ic{flex:0 0 auto; margin-top:1px; color:var(--ink-3)}
+.banner.live .ic{color:var(--ok)}
+.banner b{display:block; font-size:13px; font-weight:600; margin-bottom:2px}
+.banner.live b{color:var(--ok)}
+.banner p{font-size:11.5px; color:var(--ink-2); line-height:1.5}
+.banner .amt{font-family:var(--font-display); font-variant-numeric:tabular-nums; font-weight:500}
+
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:var(--s5)}
+.grid .ph{aspect-ratio:4/3; border-radius:8px; overflow:hidden; position:relative;
+  background:linear-gradient(155deg,#BFB6A0,#8A8070)}
+.grid .ph:first-child{grid-column:1/3; aspect-ratio:16/10}
+.grid .ph:nth-child(2){background:linear-gradient(155deg,#A9B6B8,#727E82)}
+.grid .ph:nth-child(3){background:linear-gradient(155deg,#CBB99C,#93816A)}
+.grid .ph:nth-child(4){background:linear-gradient(155deg,#B3AEA4,#7C7669)}
+.grid .ph:nth-child(5){background:linear-gradient(155deg,#C6B49D,#8D7C68)}
+.dl-one{position:absolute; right:6px; bottom:6px; z-index:4; width:26px; height:26px;
+  border-radius:50%; background:rgba(255,253,248,.94); display:flex; align-items:center;
+  justify-content:center; color:var(--ink-1)}
+
+.t360{position:relative; height:118px; border-radius:10px 10px 0 0; overflow:hidden;
+  background:linear-gradient(155deg,#9AA6A2,#5F6A68)}
+.t360::after{content:''; position:absolute; inset:0; background:rgba(20,16,10,.4); z-index:2}
+.t360 .c{position:absolute; inset:0; z-index:3; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:7px; color:#fff}
+.t360 .ring{width:40px; height:40px; border-radius:50%; border:1.5px solid #fff; display:flex;
+  align-items:center; justify-content:center}
+.t360 .lab{font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.copyrow{display:flex; align-items:center; gap:var(--s2); background:var(--paper-1);
+  border:1px solid var(--line); border-top:none; border-radius:0 0 10px 10px; padding:9px 11px;
+  margin-bottom:var(--s5)}
+.copyrow .u{flex:1; font-family:var(--font-mono); font-size:10.5px; color:var(--ink-3);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.mini{display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 10px;
+  border-radius:var(--r-sm); font-size:11.5px; font-weight:600; border:1px solid var(--line-2);
+  background:var(--paper-2); color:var(--ink-1); flex:0 0 auto}
+
+.dls{display:flex; flex-direction:column; gap:8px; margin-bottom:var(--s5)}
+.dl{display:flex; align-items:center; gap:11px; background:var(--paper-1); border:1px solid var(--line);
+  border-radius:var(--r); padding:12px var(--s4)}
+.dl .ic{width:32px; height:32px; border-radius:8px; background:var(--gold-glow); color:var(--gold);
+  display:flex; align-items:center; justify-content:center; flex:0 0 auto}
+.dl .tx{flex:1}
+.dl .tx b{display:block; font-size:13px; font-weight:600}
+.dl .tx span{font-size:11px; color:var(--ink-3); font-family:var(--font-mono);
+  font-variant-numeric:tabular-nums}
+.dl-all{background:var(--onyx); color:var(--paper-0); border:none; border-radius:var(--r);
+  padding:14px; width:100%; font-family:var(--font-ui); font-weight:600; font-size:13.5px;
+  display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:var(--s5)}
+.days{display:flex; align-items:center; justify-content:center; gap:7px; font-family:var(--font-mono);
+  font-size:11px; color:var(--ink-3); letter-spacing:.04em}
+
+.foot{text-align:center; margin-top:var(--s6); font-family:var(--font-mono); font-size:9.5px;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3)}
+.foot b{color:var(--gold); font-weight:500}
+
+/* ── Notas al margen ── */
+.notes{margin-top:var(--s6); display:grid; grid-template-columns:repeat(auto-fit,minmax(248px,1fr));
+  gap:var(--s4)}
+.note{background:var(--paper-1); border:1px solid var(--line); border-left:2px solid var(--gold-leaf);
+  border-radius:0 var(--r) var(--r) 0; padding:var(--s4) var(--s5)}
+.note b{display:block; font-size:13px; font-weight:600; margin-bottom:5px}
+.note p{font-size:12.5px; color:var(--ink-2); line-height:1.6}
+
+table{width:100%; border-collapse:collapse; font-size:13.5px}
+.tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r-lg);
+  background:var(--paper-1)}
+th,td{text-align:left; padding:11px var(--s4); border-bottom:1px solid var(--line)}
+th{font-size:11.5px; font-weight:600; color:var(--ink-3); font-family:var(--font-mono);
+  letter-spacing:.06em}
+tr:last-child td{border-bottom:none}
+td b{font-weight:600}
+</style>
+
+<div class="wrap">
+
+  <header class="doc-head">
+    <div class="doc-eyebrow">Sistema de entregas · mockup de diseño</div>
+    <h1>Entregas IAV</h1>
+    <p>Dos pantallas: el portal donde tú controlas cada entrega, y lo que ve el cliente cuando abre su liga. Construido con el sistema visual Dossier que ya usa admin y portal —papel cálido, onyx, dorado discreto, sin mayúsculas en labels, sin emojis.</p>
+    <p class="doc-note">Tipografías reales del sistema: Fraunces para display, Inter para interfaz, Spline Sans Mono para datos. Requiere conexión para cargarlas desde Google Fonts.</p>
+  </header>
+
+  <!-- ══ 1. PORTAL DE CONTROL — LISTA ══ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">Pantalla 1</span>
+      <h2>Tu portal — la lista</h2>
+    </div>
+    <p class="sec-desc">Lo primero que ves al entrar. Cada renglón es una entrega, con sus entregables como palomitas. Solo sale el botón de publicar cuando están todos completos.</p>
+    <div class="rule"></div>
+
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="urlbar">entregas.inmueblesaudiovisuales.com<b>/</b></span>
+      </div>
+
+      <div class="app-head">
+        <div class="brand">
+          <span class="mark">IA</span>
+          <div><b>Entregas</b> <span>Inmuebles Audiovisuales</span></div>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button class="btn btn-ghost btn-sm">Limpiar sin pagar</button>
+          <button class="btn btn-primary btn-sm">Nueva entrega</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab on">Activas <span class="n">7</span></button>
+        <button class="tab">Historial <span class="n">143</span></button>
+        <button class="tab">Clientes <span class="n">38</span></button>
+      </div>
+
+      <div class="app-body">
+
+        <p class="group-label">Pendientes</p>
+        <div class="rows">
+
+          <div class="row focus">
+            <div class="who">
+              <b>Casa Valle Alto</b>
+              <span>Grupo Lomas Desarrollos</span>
+              <div class="meta">IAV-2608.08-A · sesión 8 ago</div>
+            </div>
+            <div class="deliv">
+              <span class="chip"><i class="dot"></i>Fotos</span>
+              <span class="chip"><i class="dot"></i>Video</span>
+              <span class="chip"><i class="dot"></i>Tour 360</span>
+            </div>
+            <div class="tail">
+              <span class="count"><b>0</b> de 3</span>
+              <button class="btn btn-ghost btn-sm">Abrir</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="who">
+              <b>Casa Cumbres Elite</b>
+              <span>Inmobiliaria Sur</span>
+              <div class="meta">IAV-2608.06-A · sesión 6 ago</div>
+            </div>
+            <div class="deliv">
+              <span class="chip done"><i class="dot"></i>Fotos</span>
+              <span class="chip done"><i class="dot"></i>Video</span>
+              <span class="chip"><i class="dot"></i>Tour 360</span>
+            </div>
+            <div class="tail">
+              <span class="count"><b>2</b> de 3</span>
+              <button class="btn btn-ghost btn-sm">Abrir</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="who">
+              <b>Terreno Santiago</b>
+              <span>Grupo Lomas Desarrollos</span>
+              <div class="meta">IAV-2608.05-B · sesión 5 ago</div>
+            </div>
+            <div class="deliv">
+              <span class="chip done"><i class="dot"></i>Fotos</span>
+              <span class="chip done"><i class="dot"></i>Video</span>
+              <span class="chip add">Agregar</span>
+            </div>
+            <div class="tail">
+              <span class="pill ok">Completa</span>
+              <button class="btn btn-primary btn-sm">Publicar</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="group-label">Con el cliente</p>
+        <div class="rows">
+          <div class="row">
+            <div class="who">
+              <b>Casa Del Valle</b>
+              <span>Ana Martínez</span>
+              <div class="meta">IAV-2607.29-A · publicada hace 3 días</div>
+            </div>
+            <div class="deliv">
+              <span class="chip done"><i class="dot"></i>Fotos</span>
+              <span class="chip done"><i class="dot"></i>Video</span>
+              <span class="chip done"><i class="dot"></i>Tour 360</span>
+            </div>
+            <div class="tail">
+              <span class="pill warn">Saldo $2,250</span>
+              <button class="btn btn-ghost btn-sm">Abrir</button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="who">
+              <b>Depto San Pedro 402</b>
+              <span>Grupo Lomas Desarrollos</span>
+              <div class="meta">IAV-2607.22-A · publicada hace 9 días</div>
+            </div>
+            <div class="deliv">
+              <span class="chip done"><i class="dot"></i>Fotos</span>
+              <span class="chip done"><i class="dot"></i>Video</span>
+            </div>
+            <div class="tail">
+              <span class="pill warn">Saldo $4,500</span>
+              <button class="btn btn-ghost btn-sm">Abrir</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="group-label">Liberadas</p>
+        <div class="rows">
+          <div class="row">
+            <div class="who">
+              <b>Casa Anáhuac</b>
+              <span>Roberto Cantú</span>
+              <div class="meta">IAV-2607.30-A · liberada 1 ago</div>
+            </div>
+            <div class="deliv">
+              <span class="pill info">Descargó fotos y video</span>
+            </div>
+            <div class="tail">
+              <span class="pill warn">Quedan 4 días</span>
+              <button class="btn btn-ghost btn-sm">Extender</button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="who">
+              <b>Casa Contry Sol</b>
+              <span>Inmobiliaria Sur</span>
+              <div class="meta">IAV-2608.02-A · liberada 4 ago</div>
+            </div>
+            <div class="deliv">
+              <span class="pill mute">Aún no descarga</span>
+            </div>
+            <div class="tail">
+              <span class="pill ok">Quedan 11 días</span>
+              <button class="btn btn-ghost btn-sm">Extender</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <b>Los entregables se llenan solos</b>
+        <p>Como la entrega nace del contrato, el sistema ya sabe qué vendiste. El Terreno tiene dos renglones porque no lleva 360, y puedes agregar uno a mano si hizo falta.</p>
+      </div>
+      <div class="note">
+        <b>El estado se lee sin contar</b>
+        <p>Palomita verde, círculo vacío. El botón de publicar solo aparece cuando ya está todo, así nada se te va a medias.</p>
+      </div>
+      <div class="note">
+        <b>El semáforo de los días</b>
+        <p>Verde arriba de una semana, ámbar cuando se está acabando. Las que están por vencer suben solas al principio de su grupo.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 2. PORTAL DE CONTROL — DETALLE ══ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">Pantalla 2</span>
+      <h2>Tu portal — una entrega abierta</h2>
+    </div>
+    <p class="sec-desc">Aquí caes cuando abres el enlace desde el evento del calendario. Sin buscar nada: llegas directo al material que acabas de grabar.</p>
+    <div class="rule"></div>
+
+    <div class="browser">
+      <div class="browser-bar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="urlbar">entregas.inmueblesaudiovisuales.com<b>/e/casa-valle-alto</b></span>
+      </div>
+
+      <div class="app-body">
+        <button class="back">← Todas las entregas</button>
+
+        <div class="dtitle">
+          <div>
+            <h3>Casa Valle Alto</h3>
+            <p class="sub">Grupo Lomas Desarrollos · <em>IAV-2608.08-A · sesión 8 ago</em></p>
+          </div>
+          <span class="pill mute">Borrador</span>
+        </div>
+
+        <div class="detail">
+          <div style="display:flex; flex-direction:column; gap:16px">
+
+            <div class="card">
+              <div class="card-hd">
+                <b>Entregables</b>
+                <button class="btn btn-ghost btn-sm">Agregar</button>
+              </div>
+
+              <div class="item">
+                <span class="tick on"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="lab"><b>Fotografías</b><span>38 archivos · 412 MB</span></span>
+                <span class="thumbs"><i></i><i></i><i></i><span>+35</span></span>
+              </div>
+
+              <div class="item">
+                <span class="tick on"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="lab"><b>Video cinemático</b><span>casa-valle-alto-final.mp4 · 1.1 GB</span></span>
+                <span class="pill ok">Procesado</span>
+              </div>
+
+              <div class="item" style="display:block">
+                <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px">
+                  <span class="tick"></span>
+                  <span class="lab"><b>Tour 360</b><span>pega la liga de CloudPano</span></span>
+                </div>
+                <div class="urlfield" style="margin-left:38px">
+                  <span class="u" style="color:var(--ink-4)">https://app.cloudpano.com/tours/…</span>
+                  <span class="mini">Pegar</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="drop">
+                <b>Arrastra aquí fotos o video</b>
+                Se sube el original y se genera la copia con marca de agua
+              </div>
+            </div>
+
+          </div>
+
+          <aside class="side">
+
+            <div class="card">
+              <div class="card-hd"><b>Pago</b></div>
+              <div class="card-pad">
+                <div class="money"><span class="k">Total</span><span class="v">$4,500</span></div>
+                <div class="money"><span class="k">Saldo</span><span class="v due">$2,250</span></div>
+                <p class="hint">Se libera solo cuando el saldo llegue a cero en admin.</p>
+                <button class="btn btn-ghost btn-sm">Liberar ahora</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-hd"><b>Liga del cliente</b></div>
+              <div class="card-pad">
+                <div class="linkbox">entregas.inmueblesaudiovisuales.com/casa-valle-alto</div>
+                <button class="btn btn-ghost btn-sm">Copiar liga</button>
+                <button class="btn btn-ghost btn-sm">Copiar mensaje de WhatsApp</button>
+                <p class="hint">El mensaje va escrito y con la liga adentro. Solo lo pegas.</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-hd"><b>Bitácora</b></div>
+              <div class="card-pad">
+                <div class="log">
+                  <div><time>8 ago</time><span>38 fotos subidas</span></div>
+                  <div><time>8 ago</time><span>Video procesado</span></div>
+                  <div><time>7 ago</time><span>Entrega creada del contrato</span></div>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" disabled style="width:100%">Publicar</button>
+            <p class="hint" style="text-align:center">Falta el tour 360</p>
+
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <b>Una sola subida</b>
+        <p>Arrastras el archivo y el sistema hace lo demás: guarda el original en el casillero y genera la copia con marca de agua para el aparador.</p>
+      </div>
+      <div class="note">
+        <b>El pago se ve sin salir</b>
+        <p>Lee el saldo del contrato en vivo. Cuando llega a cero se libera sola, pero tienes el botón por si cobraste en efectivo.</p>
+      </div>
+      <div class="note">
+        <b>Publicar dice por qué no</b>
+        <p>El botón deshabilitado no basta. Debajo dice exactamente qué falta, para que no te quedes adivinando.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 3. PORTAL DEL CLIENTE ══ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">Pantalla 3</span>
+      <h2>El portal del cliente</h2>
+    </div>
+    <p class="sec-desc">La misma liga, dos momentos. A la izquierda antes de liquidar: ve todo su material completo, con tu marca de agua, sin poder descargar nada. A la derecha después del pago: sin agua, con las descargas abiertas y el reloj corriendo.</p>
+    <div class="rule"></div>
+
+    <div class="phones">
+
+      <!-- ANTES DE PAGAR -->
+      <div class="phone-col">
+        <div class="phone-cap">
+          <b>Antes de liquidar</b>
+          <span>Ve todo. No se lleva nada.</span>
+        </div>
+        <div class="phone"><div class="screen">
+          <div class="c-head"><span class="c-logo">Inmuebles <em>Audiovisuales</em></span></div>
+          <div class="hair"></div>
+
+          <div class="hero wm">
+            <div class="ov">
+              <div class="ey">Tu producción está lista</div>
+              <div class="ti">Casa Valle Alto</div>
+            </div>
+            <span class="play"><svg width="17" height="17" viewBox="0 0 24 24" fill="#211E18"><path d="M8 5v14l11-7z"/></svg></span>
+          </div>
+
+          <div class="c-body">
+            <p class="kick">Tu producción</p>
+            <h3 class="c-h">Todo tu material, en un solo lugar</h3>
+            <p class="c-sub">Míralo con calma. En cuanto liquidemos, se abre la descarga en alta y sin marca de agua.</p>
+
+            <div class="banner lock">
+              <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+              <div>
+                <b>Descarga bloqueada</b>
+                <p>Queda un saldo de <span class="amt">$2,250</span>. Al liquidar se libera todo y tienes 14 días para descargarlo.</p>
+              </div>
+            </div>
+
+            <p class="sect">Fotografías</p>
+            <div class="grid">
+              <span class="ph wm"></span>
+              <span class="ph wm"></span>
+              <span class="ph wm"></span>
+              <span class="ph wm"></span>
+              <span class="ph wm"></span>
+            </div>
+
+            <p class="sect">Recorrido 360°</p>
+            <div class="t360">
+              <div class="c">
+                <span class="ring"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></span>
+                <span class="lab">Abrir recorrido</span>
+              </div>
+            </div>
+            <div class="copyrow">
+              <span class="u">app.cloudpano.com/tours/casa-valle-alto</span>
+              <span class="mini"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar</span>
+            </div>
+
+            <div class="foot">Una producción de <b>Inmuebles Audiovisuales</b></div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- LIBERADO -->
+      <div class="phone-col">
+        <div class="phone-cap">
+          <b>Ya liquidado</b>
+          <span>Sin agua, con el reloj corriendo.</span>
+        </div>
+        <div class="phone"><div class="screen">
+          <div class="c-head"><span class="c-logo">Inmuebles <em>Audiovisuales</em></span></div>
+          <div class="hair"></div>
+
+          <div class="hero b">
+            <div class="ov">
+              <div class="ey">Listo para descargar</div>
+              <div class="ti">Casa Valle Alto</div>
+            </div>
+            <span class="play"><svg width="17" height="17" viewBox="0 0 24 24" fill="#211E18"><path d="M8 5v14l11-7z"/></svg></span>
+          </div>
+
+          <div class="c-body">
+            <div class="banner live">
+              <span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 11h16v10H4z"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg></span>
+              <div>
+                <b>Tu material está liberado</b>
+                <p>Descárgalo todo antes del <b style="display:inline; font-weight:600">22 de agosto</b>. Después de esa fecha el material se retira.</p>
+              </div>
+            </div>
+
+            <p class="sect">Descarga</p>
+            <div class="dls">
+              <div class="dl">
+                <span class="ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+                <span class="tx"><b>Fotografías</b><span>38 archivos · 412 MB</span></span>
+                <span class="mini">Bajar</span>
+              </div>
+              <div class="dl">
+                <span class="ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></span>
+                <span class="tx"><b>Video cinemático</b><span>1.1 GB · MP4 4K</span></span>
+                <span class="mini">Bajar</span>
+              </div>
+            </div>
+            <button class="dl-all">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Descargar todo
+            </button>
+            <p class="days">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              Te quedan 12 días
+            </p>
+
+            <p class="sect" style="margin-top:24px">Fotografías</p>
+            <div class="grid">
+              <span class="ph"><span class="dl-one"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span></span>
+              <span class="ph"><span class="dl-one"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span></span>
+              <span class="ph"><span class="dl-one"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span></span>
+              <span class="ph"><span class="dl-one"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span></span>
+              <span class="ph"><span class="dl-one"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span></span>
+            </div>
+
+            <div class="foot">Una producción de <b>Inmuebles Audiovisuales</b></div>
+          </div>
+        </div></div>
+      </div>
+
+    </div>
+
+    <div class="notes">
+      <div class="note">
+        <b>La marca de agua es mosaico, no esquina</b>
+        <p>Repetida y tenue por toda la foto. Se aprecia la calidad del trabajo, pero recortarla es imposible sin destruir la imagen. En el video solo puede ir en una esquina —Stream no sabe hacer mosaico— y ahí lo compensa que el archivo está partido en pedazos.</p>
+      </div>
+      <div class="note">
+        <b>Nunca dice "no"</b>
+        <p>El bloqueo no regaña. Dice cuánto falta y qué pasa al pagar. Es un cobro, no un castigo, y el cliente ya está viendo su material completo.</p>
+      </div>
+      <div class="note">
+        <b>Tres formas de descargar</b>
+        <p>El paquete completo, cada bloque por separado y foto por foto. La mitad de tus clientes abre esto en el celular y 2 GB de un jalón no es opción para ellos.</p>
+      </div>
+      <div class="note">
+        <b>La fecha, no la cuenta</b>
+        <p>"Antes del 22 de agosto" pesa más que "quedan 12 días". La cuenta va abajo, chiquita, como refuerzo.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ 4. ESTADOS ══ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">Referencia</span>
+      <h2>Los estados de una entrega</h2>
+    </div>
+    <div class="rule"></div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Estado</th><th>Qué ve el cliente</th><th>Qué puedes hacer</th><th>Reloj</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Borrador</b></td>
+            <td>Nada. La liga aún no sirve.</td>
+            <td>Subir material, editar entregables</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><b>Publicada</b></td>
+            <td>Todo, con marca de agua. Sin descarga.</td>
+            <td>Reemplazar archivos, liberar a mano, pausar</td>
+            <td>Detenido</td>
+          </tr>
+          <tr>
+            <td><b>Liberada</b></td>
+            <td>Todo limpio, con descarga abierta.</td>
+            <td>Extender días, pausar</td>
+            <td><b>14 días</b></td>
+          </tr>
+          <tr>
+            <td><b>Pausada</b></td>
+            <td>"Acceso en pausa" y tu WhatsApp.</td>
+            <td>Reanudar</td>
+            <td>Detenido</td>
+          </tr>
+          <tr>
+            <td><b>Expirada</b></td>
+            <td>El portal ya no abre.</td>
+            <td>Volver a subir desde tu respaldo</td>
+            <td>Material borrado</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

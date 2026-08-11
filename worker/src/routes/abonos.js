@@ -1,6 +1,7 @@
 import { query, queryOne, run, uuid, now } from '../db.js';
 import { requireAdmin, ok, err } from '../auth.js';
 import { callAdapter } from '../google.js';
+import { liberarPorPago } from './entregas.js';
 
 export async function handleAbonos(request, env, ctx, action) {
   const db = env.DB;
@@ -65,6 +66,18 @@ export async function handleAbonos(request, env, ctx, action) {
       'UPDATE contratos SET saldo_pendiente = ?, precio_total = ?, estatus = ?, fecha_ultimo_abono = ? WHERE token = ?',
       [nuevoSaldo, nuevoPrecioTotal, nuevoEstatus, now(), token]
     );
+
+    // R129 — Al quedar el saldo en cero se libera sola la entrega, pero SOLO si ya
+    // estaba publicada: liberar un borrador le abriria al cliente una galeria vacia.
+    // Si se publica despues, publicar detecta que ya esta pagada y libera ahi.
+    // BLINDADO: un fallo del sistema de entregas jamas debe tumbar el registro del pago.
+    if (nuevoSaldo === 0) {
+      try {
+        await liberarPorPago(db, token);
+      } catch (e) {
+        console.error('R129 liberarPorPago falló (abono registrado igual):', e.message);
+      }
+    }
 
     // Sync status to trabajos
     const trabajoAbono = await queryOne(db,

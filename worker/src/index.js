@@ -11,13 +11,15 @@ import { handleClientes } from './routes/clientes.js';
 import { handleTrabajos } from './routes/trabajos.js';
 import { handleActividades } from './routes/actividades.js';
 import { handleConfig } from './routes/config.js';
+import { handleEntregas, expirarEntregas } from './routes/entregas.js';
+import { codigoDeRuta } from './entregas-core.js';
 import { syncToSheets, backupChecklistToR2 } from './cron.js';
 import { err } from './auth.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key'
+  'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Key, X-Entregas-Key'
 };
 
 const RUTAS_CONTRATOS = [
@@ -53,6 +55,31 @@ export default {
     const path = url.pathname;
 
     if (!path.startsWith('/api/')) {
+      // Sistema de entregas (R129). Solo se activa en el subdominio propio o bajo /ver/,
+      // asi que el comportamiento de contratos.inmueblesaudiovisuales.com no cambia.
+      // OJO: sin la extension .html. Cloudflare Assets responde 307 a *.html para
+      // mandarte a la ruta corta, asi que pedir el .html aqui devuelve el redirect
+      // en vez del contenido.
+      const esHostEntregas = url.hostname.startsWith('entregas.');
+      let servir = null;
+      if (esHostEntregas && (path === '/' || path === '/e' || path.startsWith('/e/'))) {
+        servir = '/entregas';                            // portal de control
+      } else if (path.startsWith('/ver/') || esHostEntregas) {
+        // Enlace del cliente. El codigo es el ultimo segmento tras el ultimo guion;
+        // el folio que va delante es decorativo y puede cambiar sin romper el enlace.
+        // Archivo propio, NO entrega.html: esa sigue sirviendo al sistema R123 hasta
+        // que Bruno decida el corte. Los dos conviven sin pisarse.
+        const ruta = path.startsWith('/ver/') ? path.slice(4) : path;
+        if (codigoDeRuta(ruta)) servir = '/entregas-cliente';
+      }
+      if (servir) {
+        const assetRes = await env.ASSETS.fetch(new Request(new URL(servir, url), request));
+        const headers = new Headers(assetRes.headers);
+        headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        headers.set('Pragma', 'no-cache');
+        return new Response(assetRes.body, { status: assetRes.status, headers });
+      }
+
       const assetRes = await env.ASSETS.fetch(request);
       const isHtml = path.endsWith('.html') || path === '/' || !path.includes('.');
       if (!isHtml) return assetRes;
@@ -65,7 +92,11 @@ export default {
     const action = path.replace('/api/', '');
     let response;
 
-    if (RUTAS_CONTRATOS.includes(action)) {
+    if (action.startsWith('e/')) {
+      // Namespace propio del sistema de entregas. No puede chocar con las acciones
+      // existentes (publicarEntrega, obtenerEntrega, revocarEntrega... son de R123).
+      response = await handleEntregas(request, env, ctx, action.slice(2));
+    } else if (RUTAS_CONTRATOS.includes(action)) {
       response = await handleContratos(request, env, ctx, action);
     } else if (RUTAS_PORTAL.includes(action)) {
       response = await handlePortal(request, env, ctx, action);
@@ -103,5 +134,10 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(syncToSheets(env));
     ctx.waitUntil(backupChecklistToR2(env));
+    // R129 — Vacia el material de las entregas vencidas. Si esto deja de correr,
+    // R2 crece para siempre y la promesa de los 14 días deja de cumplirse.
+    ctx.waitUntil(
+      expirarEntregas(env).catch(e => console.error('R129 expirarEntregas falló:', e.message))
+    );
   }
 };

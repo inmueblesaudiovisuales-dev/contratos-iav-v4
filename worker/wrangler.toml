@@ -16,15 +16,36 @@ database_id = "84ae26a8-5bbc-4cdc-ad39-ead4c6bc7500"
 binding = "CHECKLIST_BACKUP"
 bucket_name = "iav-checklist-backups"
 
+# R129 — Originales limpios del sistema de entregas. Casillero temporal:
+# se vacia solo cuando expira cada entrega, por eso el costo no se acumula.
+[[r2_buckets]]
+binding = "ENTREGAS_ORIGINALES"
+bucket_name = "iav-entregas-originales"
+
 [vars]
 ADMIN_KEY = "framedock"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwv6J6Mh-y31LYGdLBasL0bFDOloosEaiaLJDXH-TIF2-A_VpFUbh14I9zHt43LEfY/exec"
 CF_ACCOUNT_ID = "0d0d6aaf107ae092f9fb5da06ddb338c"
-# Subdominio de Stream para los embeds (ej. "customer-xxxx"). Llenar tras activar Stream (bundle).
-STREAM_CUSTOMER_CODE = ""
+# Subdominio de Stream para los embeds. Estaba vacio: sin esto, playVideo() de
+# entrega.html no puede armar la URL del iframe y el video nunca reproduce (R129).
+STREAM_CUSTOMER_CODE = "customer-cl73mgx0feu2w8io"
 # CF_MEDIA_TOKEN es secret: wrangler secret put CF_MEDIA_TOKEN
 #   (API token con permisos Cloudflare Stream:Edit + Cloudflare Images:Edit).
 #   Lo usa el Worker para subir fotos a Cloudflare Images y el video a Stream.
+#
+# R129 — Sistema de entregas
+ENTREGAS_BASE_URL = "https://entregas.inmueblesaudiovisuales.com"
+# Perfiles de marca de agua de Stream. El PNG mide 2622x225 (11.7:1), asi que la
+# misma escala no sirve para las dos orientaciones: en vertical —el formato nativo
+# de IAV— queda ilegible. Se elige perfil segun la forma del video.
+#   horizontal: position=center, opacity=0.30, scale=0.45
+#   vertical  : position=center, opacity=0.30, scale=0.85
+# NINGUNO se puede editar: cambiarlos obliga a resubir los videos ya subidos.
+STREAM_WATERMARK_UID = "d537462dcedc9c326ff9e3c517b31e34"
+STREAM_WATERMARK_UID_VERTICAL = "08ab04bc1cc268a0ff86d910e5b7f179"
+# ENTREGAS_KEY es opcional y va como secret (wrangler secret put ENTREGAS_KEY).
+#   Si no esta puesta, el portal de entregas acepta la ADMIN_KEY. Ponerla permite
+#   dar acceso a las entregas sin abrir el admin completo.
 
 [triggers]
 crons = ["0 * * * *"]

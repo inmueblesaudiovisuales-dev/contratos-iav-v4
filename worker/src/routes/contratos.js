@@ -4,6 +4,7 @@ import { callAdapter, callAdapterSync } from '../google.js';
 import { generarFolio, asignarFolio } from '../folios.js';
 import { esFotoWeb, hashDeVariante } from '../entrega-media.js';
 import { payloadEntrega } from './portal.js';
+import { sembrarEntregasDeContrato, borrarEntregasDeContrato } from './entregas.js';
 
 // Sube un Blob a Cloudflare Images. Devuelve { id, hash } o null.
 async function subirImagenCF(env, blob, nombre) {
@@ -218,6 +219,31 @@ export async function handleContratos(request, env, ctx, action) {
     );
 
     await batch(db, statements);
+
+    // R129 — Siembra una entrega en borrador por propiedad, con sus entregables
+    // derivados del paquete. BLINDADO A PROPOSITO: si el sistema de entregas falla,
+    // el contrato tiene que crearse igual. Nunca propagar el error hacia arriba.
+    try {
+      await sembrarEntregasDeContrato(
+        db,
+        {
+          token,
+          folio,
+          cliente_id: clienteIdFinal,
+          nombre_cliente: nombreCliente,
+          adicionales_json: adicionalesJSON,
+          paquete_base: paqueteBaseFinal
+        },
+        propsData.map((p, i) => ({
+          num_propiedad: i + 1,
+          direccion: p.direccion || '',
+          fecha_sesion: p.fechaSesion || '',
+          paquete: p.paquete || paqueteBaseFinal
+        }))
+      );
+    } catch (e) {
+      console.error('R129 sembrarEntregas falló (contrato creado igual):', e.message);
+    }
 
     // Create Drive folders synchronously so they exist before any file upload
     const { results: paquetesNombres } = await query(db, 'SELECT clave, nombre FROM paquetes');
@@ -714,6 +740,14 @@ export async function handleContratos(request, env, ctx, action) {
 
   if (action === 'eliminarContrato') {
     const { token } = await request.json();
+    // R129 — Las entregas van ANTES que el contrato: si no, quedan registros
+    // huerfanos apuntando a un contrato que ya no existe. Blindado: un fallo aqui
+    // no debe impedir borrar el contrato.
+    try {
+      await borrarEntregasDeContrato(db, token);
+    } catch (e) {
+      console.error('R129 borrarEntregasDeContrato falló:', e.message);
+    }
     // D1 no respeta FOREIGN KEYS — cascada manual en orden correcto
     const ts = now();
     await batch(db, [

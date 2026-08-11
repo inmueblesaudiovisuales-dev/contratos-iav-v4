@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Tu producción — Inmuebles Audiovisuales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper-0:#F7F4EC; --paper-1:#FFFDF8; --paper-2:#EFEADF;
+  --line:#E2DBCB; --line-2:#D2C9B3;
+  --onyx:#1C1C1E; --gold:#B08D2E; --gold-leaf:#C9A84C; --gold-hi:#D4B65C;
+  --ink-1:#211E18; --ink-2:#5C564A; --ink-3:#918975; --ink-4:#B8B0A0;
+  --ok:#2F7D55; --ok-bg:#E7F1EA; --wa:#25D366;
+  --font-ui:'Inter',system-ui,sans-serif;
+  --font-display:'Fraunces',Georgia,serif;
+  --font-mono:'Spline Sans Mono',ui-monospace,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%}
+body{font-family:var(--font-ui);background:#0e0d0b;color:var(--ink-1);-webkit-font-smoothing:antialiased}
+.device{position:relative;width:100%;max-width:480px;min-height:100vh;margin:0 auto;
+  background:var(--paper-0);overflow:hidden}
+@media(min-width:520px){.device{box-shadow:0 30px 80px rgba(0,0,0,.5)}}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
+  justify-content:center;position:sticky;top:0;z-index:20}
+.logo{font-family:var(--font-display);font-size:14px;color:var(--paper-0);letter-spacing:.03em}
+.logo em{font-style:normal;color:var(--gold-leaf)}
+.hair{height:1px;background:var(--gold-leaf);opacity:.55}
+
+.hero{position:relative;height:300px;overflow:hidden;background:#3a3630 center/cover}
+.hero::after{content:'';position:absolute;inset:0;z-index:1;
+  background:linear-gradient(to top,rgba(20,16,10,.82),rgba(20,16,10,.04) 60%)}
+.hero .ov{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;
+  justify-content:flex-end;padding:18px}
+.hero .ey{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold-hi);margin-bottom:5px}
+.hero .ti{font-family:var(--font-display);font-weight:500;color:#fff;font-size:24px;line-height:1.12}
+.play{width:58px;height:58px;border-radius:50%;background:rgba(255,253,248,.94);display:flex;
+  align-items:center;justify-content:center;position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);z-index:4;box-shadow:0 8px 28px rgba(0,0,0,.42);
+  border:none;cursor:pointer}
+.hero.playing::after,.hero.playing .ov,.hero.playing .play{display:none}
+.hero iframe{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:5}
+
+.body{padding:22px 18px 40px}
+.kick{font-family:var(--font-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:5px}
+.h{font-family:var(--font-display);font-weight:500;font-size:21px;line-height:1.2;margin-bottom:6px}
+.sub{font-size:13px;color:var(--ink-2);line-height:1.55;margin-bottom:22px}
+.sect{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  display:flex;align-items:center;gap:9px;margin:0 0 12px}
+.sect::after{content:'';flex:1;height:1px;background:var(--line-2)}
+
+.banner{border-radius:11px;padding:14px 16px;margin-bottom:22px;display:flex;gap:12px;align-items:flex-start}
+.banner.lock{background:var(--paper-2);border:1px solid var(--line-2)}
+.banner.live{background:var(--ok-bg);border:1px solid rgba(47,125,85,.3)}
+.banner .ic{flex:0 0 auto;margin-top:1px;color:var(--ink-3)}
+.banner.live .ic{color:var(--ok)}
+.banner b{display:block;font-size:13.5px;font-weight:600;margin-bottom:3px}
+.banner.live b{color:var(--ok)}
+.banner p{font-size:12px;color:var(--ink-2);line-height:1.5}
+.banner .amt{font-family:var(--font-display);font-weight:500}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:22px}
+.grid .ph{aspect-ratio:4/3;border-radius:9px;overflow:hidden;position:relative;
+  background:#b5aa96 center/cover;cursor:zoom-in;border:none;padding:0;display:block;width:100%}
+.grid .ph:first-child{grid-column:1/3;aspect-ratio:16/10}
+.more{font-family:var(--font-mono);font-size:11px;color:var(--gold);text-align:center;
+  margin:-12px 0 22px;background:none;border:none;cursor:pointer;width:100%}
+
+.t360{position:relative;height:130px;border-radius:11px 11px 0 0;overflow:hidden;
+  background:#5f6a68 center/cover;border:none;padding:0;width:100%;cursor:pointer;display:block}
+.t360::after{content:'';position:absolute;inset:0;background:rgba(20,16,10,.42);z-index:2}
+.t360 .c{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;color:#fff}
+.t360 .ring{width:42px;height:42px;border-radius:50%;border:1.5px solid #fff;
+  display:flex;align-items:center;justify-content:center}
+.t360 .lab{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.copyrow{display:flex;align-items:center;gap:9px;background:var(--paper-1);border:1px solid var(--line);
+  border-top:none;border-radius:0 0 11px 11px;padding:10px 12px;margin-bottom:10px}
+.copyrow .u{flex:1;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nota360{font-size:11.5px;color:var(--ink-3);line-height:1.5;margin-bottom:22px}
+
+.mini{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:8px;
+  font-size:11.5px;font-weight:600;border:1px solid var(--line-2);background:var(--paper-2);
+  color:var(--ink-1);flex:0 0 auto;cursor:pointer;font-family:inherit}
+.dls{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.dl{display:flex;align-items:center;gap:12px;background:var(--paper-1);border:1px solid var(--line);
+  border-radius:11px;padding:13px 16px;text-decoration:none;color:inherit}
+.dl .ic{width:34px;height:34px;border-radius:9px;background:rgba(176,141,46,.14);color:var(--gold);
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.dl .tx{flex:1;min-width:0}
+.dl .tx b{display:block;font-size:13px;font-weight:600}
+.dl .tx span{font-size:11px;color:var(--ink-3);font-family:var(--font-mono)}
+.dias{display:flex;align-items:center;justify-content:center;gap:7px;font-family:var(--font-mono);
+  font-size:11px;color:var(--ink-3);letter-spacing:.04em;margin-bottom:24px}
+.wa{margin-top:16px;border:1px solid var(--wa);color:var(--ok);border-radius:11px;padding:14px;
+  width:100%;background:none;font-family:inherit;font-weight:600;font-size:13px;display:flex;
+  align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.foot{text-align:center;margin-top:26px;font-family:var(--font-mono);font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.foot b{color:var(--gold);font-weight:500}
+
+#lightbox{display:none;position:fixed;inset:0;z-index:90;background:#000 center/contain no-repeat;cursor:zoom-out}
+#estado{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:40px 28px;gap:14px;background:var(--paper-0)}
+#estado h2{font-family:var(--font-display);font-weight:500;font-size:21px}
+#estado p{font-size:13px;color:var(--ink-2);line-height:1.6;max-width:300px}
+#estado .marca{font-family:var(--font-display);font-size:15px;color:var(--ink-1);margin-bottom:6px}
+#estado .marca em{font-style:normal;color:var(--gold)}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--onyx);color:#fff;padding:11px 18px;border-radius:999px;font-size:12.5px;
+  font-weight:600;z-index:95;opacity:0;transition:.25s;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="device">
+
+  <div id="estado">
+    <div class="marca">Inmuebles <em>Audiovisuales</em></div>
+    <h2 id="eTitulo"></h2>
+    <p id="eTexto"></p>
+    <div id="eExtra"></div>
+    <a class="wa" id="eWa" href="#" target="_blank" rel="noopener" style="max-width:280px">
+      ¿Dudas? Escríbenos por WhatsApp</a>
+  </div>
+
+  <div id="contenido" style="display:none">
+    <header><span class="logo">Inmuebles <em>Audiovisuales</em></span></header>
+    <div class="hair"></div>
+
+    <div class="hero" id="hero">
+      <div class="ov">
+        <div class="ey" id="heroEy">Tu producción está lista</div>
+        <div class="ti" id="heroTi"></div>
+      </div>
+      <button class="play" id="playBtn" onclick="playVideo()" aria-label="Reproducir video">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="#211E18"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+    </div>
+
+    <div class="body">
+      <p class="kick">Tu producción</p>
+      <h1 class="h">Todo tu material, en un solo lugar</h1>
+      <p class="sub" id="sub"></p>
+
+      <div id="banner"></div>
+
+      <div id="secFotos" style="display:none">
+        <p class="sect">Fotografías</p>
+        <div class="grid" id="grid"></div>
+        <button class="more" id="verTodas" style="display:none">Ver todas las fotos →</button>
+      </div>
+
+      <div id="secDescargas" style="display:none">
+        <p class="sect">Descarga</p>
+        <div class="dls" id="dls"></div>
+        <p class="dias" id="dias"></p>
+      </div>
+
+      <div id="sec360" style="display:none">
+        <p class="sect">Recorrido 360°</p>
+        <button class="t360" id="t360" onclick="abrir360()">
+          <span class="c">
+            <span class="ring"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/></svg></span>
+            <span class="lab">Abrir recorrido</span>
+          </span>
+        </button>
+        <div class="copyrow">
+          <span class="u" id="url360"></span>
+          <button class="mini" onclick="copiar360()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copiar
+          </button>
+        </div>
+        <p class="nota360">El recorrido vive en línea y <b>no expira</b>: puedes usarlo en tus anuncios
+          cuando quieras. Guarda esta liga.</p>
+      </div>
+
+      <a class="wa" id="btnWa" href="#" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        ¿Dudas? Escríbenos por WhatsApp
+      </a>
+      <div class="foot">Una producción de <b>Inmuebles Audiovisuales</b></div>
+    </div>
+  </div>
+
+  <div id="lightbox" onclick="this.style.display='none'"></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+var D = null;
+// El codigo es el ultimo segmento tras el ultimo guion. El folio que va delante es
+// decorativo: si cambia (al reagendar), la liga vieja sigue funcionando.
+var CODIGO = (function(){
+  var p = location.pathname.replace(/^\/+|\/+$/g,'');
+  if(p.indexOf('ver/') === 0) p = p.slice(4);
+  var partes = p.split('-');
+  return partes[partes.length - 1] || '';
+})();
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];});}
+function money(n){return '$' + (Number(n)||0).toLocaleString('es-MX');}
+function peso(b){
+  b = Number(b)||0;
+  if(b >= 1073741824) return (b/1073741824).toFixed(1) + ' GB';
+  if(b >= 1048576) return Math.round(b/1048576) + ' MB';
+  return Math.max(1, Math.round(b/1024)) + ' KB';
+}
+var toastT;
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.className='show';
+  clearTimeout(toastT);toastT=setTimeout(function(){t.className='';},1800);}
+
+function fotoUrl(f, w){
+  if(!f || !f.id || !f.hash) return '';
+  return 'https://imagedelivery.net/' + f.hash + '/' + f.id + '/w=' + w + ',quality=82,format=auto';
+}
+
+function estado(titulo, texto, extra){
+  document.getElementById('contenido').style.display = 'none';
+  document.getElementById('eTitulo').textContent = titulo;
+  document.getElementById('eTexto').textContent = texto;
+  document.getElementById('eExtra').innerHTML = extra || '';
+  var wa = document.getElementById('eWa');
+  if(D && D.waLink){ wa.href = D.waLink; } else { wa.style.display = 'none'; }
+  document.getElementById('estado').style.display = 'flex';
+}
+
+async function cargar(){
+  if(!CODIGO) return estado('Enlace inválido',
+    'Este enlace no es válido. Pídele a Inmuebles Audiovisuales tu liga de entrega.');
+  try {
+    var r = await fetch('/api/e/publica?codigo=' + encodeURIComponent(CODIGO));
+    D = await r.json();
+    if(!r.ok) D = null;
+  } catch(e){ D = null; }
+  if(!D || !D.ok) return estado('No disponible',
+    'No pudimos cargar tu entrega. Intenta de nuevo en un momento.');
+
+  if(D.estado === 'borrador')
+    return estado('Estamos preparando tu material',
+      'Te avisamos en cuanto tu producción esté lista.');
+  if(D.estado === 'pausada')
+    return estado('Acceso en pausa',
+      'El acceso a este material está en pausa. Escríbenos y con gusto te ayudamos.');
+  if(D.estado === 'expirada'){
+    var extra = D.tourUrl
+      ? '<p style="font-size:13px;color:var(--ink-2);line-height:1.6;max-width:300px">' +
+        'Tu recorrido 360° sigue disponible:</p>' +
+        '<a class="wa" style="border-color:var(--line-2);color:var(--ink-1);max-width:280px" ' +
+        'href="' + esc(D.tourUrl) + '" target="_blank" rel="noopener">Abrir recorrido 360°</a>'
+      : '';
+    return estado('El periodo de descarga terminó',
+      'Las fotos y el video ya se retiraron. Si necesitas el material otra vez, escríbenos.',
+      extra);
+  }
+  render();
+}
+
+function render(){
+  var liberada = !!D.liberada;
+  document.getElementById('heroTi').textContent = D.titulo || 'Tu propiedad';
+  document.getElementById('heroEy').textContent = liberada ? 'Listo para descargar' : 'Tu producción está lista';
+  document.getElementById('sub').textContent = liberada
+    ? 'Descarga todo tu material en alta calidad, sin marca de agua.'
+    : 'Míralo con calma. En cuanto liquidemos se abre la descarga en alta y sin marca de agua.';
+
+  var fotos = D.fotos || [];
+  var portada = fotos.filter(function(f){ return f.destacado; })[0] || fotos[0];
+  if(portada) document.getElementById('hero').style.backgroundImage = "url('" + fotoUrl(portada, 900) + "')";
+
+  var hayVideo = D.video && D.video.uid && D.streamCustomer;
+  document.getElementById('playBtn').style.display = hayVideo ? '' : 'none';
+
+  // Banner
+  var b = document.getElementById('banner');
+  if(liberada){
+    b.className = 'banner live';
+    b.innerHTML = '<span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 11h16v10H4z"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg></span>' +
+      '<div><b>Tu material está liberado</b><p>Descárgalo todo antes del <b style="display:inline">' +
+      esc(D.fechaLimite || '') + '</b>. Después de esa fecha el material se retira.</p></div>';
+  } else {
+    b.className = 'banner lock';
+    b.innerHTML = '<span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>' +
+      '<div><b>Descarga bloqueada</b><p>Al liquidar se libera todo y tienes 14 días para descargarlo.</p></div>';
+  }
+
+  // Fotos
+  if(fotos.length){
+    var orden = portada ? [portada].concat(fotos.filter(function(f){ return f !== portada; })) : fotos;
+    var g = document.getElementById('grid');
+    g.innerHTML = '';
+    orden.slice(0, 7).forEach(function(f){
+      var el = document.createElement('button');
+      el.className = 'ph';
+      el.style.backgroundImage = "url('" + fotoUrl(f, 640) + "')";
+      el.setAttribute('aria-label', 'Ver ' + (f.nombre || 'foto'));
+      el.onclick = function(){ verFoto(fotoUrl(f, 1600)); };
+      g.appendChild(el);
+    });
+    document.getElementById('secFotos').style.display = '';
+    if(orden.length > 7){
+      var vt = document.getElementById('verTodas');
+      vt.style.display = '';
+      vt.textContent = 'Ver las ' + orden.length + ' fotos →';
+      vt.onclick = function(){
+        g.innerHTML = '';
+        orden.forEach(function(f){
+          var el = document.createElement('button');
+          el.className = 'ph';
+          el.style.backgroundImage = "url('" + fotoUrl(f, 640) + "')";
+          el.onclick = function(){ verFoto(fotoUrl(f, 1600)); };
+          g.appendChild(el);
+        });
+        vt.style.display = 'none';
+      };
+    }
+  }
+
+  // Descargas (solo existen si el backend las mandó, y solo las manda si está liberada)
+  if(liberada && D.descargas && D.descargas.length){
+    var fotosD = D.descargas.filter(function(d){ return d.tipo === 'foto'; });
+    var videosD = D.descargas.filter(function(d){ return d.tipo === 'video'; });
+    var h = '';
+    if(fotosD.length){
+      var bytes = fotosD.reduce(function(s,d){ return s + (d.bytes||0); }, 0);
+      h += item('fotos', 'Fotografías', fotosD.length + ' archivos · ' + peso(bytes),
+                'javascript:void(0)', 'bajarTodas()');
+    }
+    videosD.forEach(function(v){
+      h += item('video', v.nombre || 'Video', peso(v.bytes), v.url, null);
+    });
+    document.getElementById('dls').innerHTML = h;
+    document.getElementById('secDescargas').style.display = '';
+    if(D.diasRestantes != null){
+      document.getElementById('dias').innerHTML =
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' +
+        ' Te ' + (D.diasRestantes === 1 ? 'queda 1 día' : 'quedan ' + D.diasRestantes + ' días');
+    }
+  }
+
+  // Tour 360
+  if(D.tourUrl){
+    document.getElementById('sec360').style.display = '';
+    document.getElementById('url360').textContent = D.tourUrl;
+    if(portada) document.getElementById('t360').style.backgroundImage = "url('" + fotoUrl(portada, 700) + "')";
+  }
+
+  document.getElementById('btnWa').href = D.waLink || '#';
+  document.getElementById('contenido').style.display = '';
+}
+
+function item(tipo, titulo, detalle, href, onclick){
+  var ico = tipo === 'video'
+    ? '<path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/>'
+    : '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>';
+  return '<a class="dl" href="' + esc(href) + '"' + (onclick ? ' onclick="' + onclick + ';return false"' : ' download') + '>' +
+    '<span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">' + ico + '</svg></span>' +
+    '<span class="tx"><b>' + esc(titulo) + '</b><span>' + esc(detalle) + '</span></span>' +
+    '<span class="mini">Bajar</span></a>';
+}
+
+// Las fotos se bajan una por una: no hay ZIP todavia, y un solo archivo gigante
+// desde el celular es peor experiencia que varios chicos.
+function bajarTodas(){
+  var fotos = (D.descargas || []).filter(function(d){ return d.tipo === 'foto'; });
+  if(!fotos.length) return;
+  toast('Bajando ' + fotos.length + ' fotos…');
+  fotos.forEach(function(f, i){
+    setTimeout(function(){
+      var a = document.createElement('a');
+      a.href = f.url; a.download = f.nombre || ('foto-' + (i+1) + '.jpg');
+      document.body.appendChild(a); a.click(); a.remove();
+    }, i * 400);
+  });
+}
+
+function playVideo(){
+  if(!D.video || !D.streamCustomer) return toast('Video no disponible');
+  var hero = document.getElementById('hero');
+  var f = document.createElement('iframe');
+  f.src = 'https://' + D.streamCustomer + '.cloudflarestream.com/' + D.video.uid +
+          '/iframe?autoplay=true&muted=true';
+  f.allow = 'autoplay; fullscreen; picture-in-picture';
+  f.setAttribute('allowfullscreen','');
+  hero.classList.add('playing');
+  hero.appendChild(f);
+}
+
+function verFoto(url){
+  var lb = document.getElementById('lightbox');
+  lb.style.backgroundImage = "url('" + url + "')";
+  lb.style.display = 'block';
+}
+function abrir360(){ if(D.tourUrl) window.open(D.tourUrl, '_blank', 'noopener'); }
+function copiar360(){
+  if(navigator.clipboard && D.tourUrl) navigator.clipboard.writeText(D.tourUrl);
+  toast('Liga copiada');
+}
+
+document.addEventListener('DOMContentLoaded', cargar);
+</script>
+</body>
+</html>
