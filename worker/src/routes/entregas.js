@@ -14,7 +14,7 @@ import {
   datosCliente, grupoDeEntrega, ordenarEntregas
 } from '../entregas-core.js';
 import {
-  llaveR2, guardarEnR2, subirPreviewImages, copiarAStream, perfilWatermark,
+  llaveR2, guardarEnR2, copiarAStream, perfilWatermark, streamListo,
   borrarMediaDeEntrega, firmar, verificarFirma, esImagen, esVideo, nombreDescarga
 } from '../entregas-media.js';
 
@@ -164,25 +164,58 @@ export async function sembrarEntregasDeContrato(db, contrato, propiedades) {
 }
 
 // ── Liberacion ────────────────────────────────────────────────────────────────
-async function liberar(db, entrega, motivo) {
+// Al liberar se manda hacer una SEGUNDA copia del video en Stream, esta sin marca.
+// Las fotos no la necesitan: su mosaico se dibuja al vuelo y basta con dejar de
+// dibujarlo. El video si, porque Stream quema la marca al codificar y no hay forma
+// de quitarla despues.
+//
+// Stream jala el original de R2 del lado del servidor, asi que Bruno no vuelve a
+// subir nada. Y solo pasa cuando ya se pago: lo que nunca se liquida no gasta de mas.
+async function pedirVideoLimpio(db, env, entregaId) {
+  const { results } = await query(db,
+    `SELECT * FROM e_archivos WHERE e_entrega_id=? AND stream_uid<>'' AND stream_uid_limpio=''`,
+    [entregaId]);
+  let pedidos = 0;
+  for (const a of (results || [])) {
+    if (!a.r2_key) continue;
+    try {
+      const f = await firmar(env, 'origen:' + a.id, 1800);
+      const origen = `${baseEntregas(env)}/api/e/origen?a=${a.id}&f=${encodeURIComponent(f)}`;
+      // Sin watermarkUid: esta copia va limpia a proposito.
+      const r = await copiarAStream(env, origen, `limpio-${a.id}`, null);
+      await run(db, 'UPDATE e_archivos SET stream_uid_limpio=? WHERE id=?', [r.uid, a.id]);
+      pedidos++;
+    } catch (ex) {
+      // No es fatal: el cliente sigue viendo la copia con marca y descargando limpio.
+      console.error('copia limpia de video falló', a.id, ex.message);
+    }
+  }
+  return pedidos;
+}
+
+async function liberar(db, env, entrega, motivo) {
   const ts = now();
   const expira = calcularExpiracion(ts, entrega.dias_vigencia || 14);
   await run(db,
     `UPDATE e_entregas SET estado='liberada', fecha_liberada=?, fecha_expira=? WHERE id=?`,
     [ts, expira, entrega.id]);
   await evento(db, entrega.id, 'liberada', motivo || '');
+  if (env) {
+    const n = await pedirVideoLimpio(db, env, entrega.id);
+    if (n) await evento(db, entrega.id, 'video_limpio', `${n} video(s) recodificándose sin marca`);
+  }
   return { fecha_liberada: ts, fecha_expira: expira };
 }
 
 // La llama registrarAbono cuando el saldo llega a cero. Envuelta en try/catch por
 // el llamador: un fallo aqui NUNCA debe impedir que se registre el pago.
-export async function liberarPorPago(db, contratoToken) {
+export async function liberarPorPago(db, contratoToken, env) {
   const { results } = await query(db,
     `SELECT * FROM e_entregas WHERE contrato_token=?`, [contratoToken]);
   let liberadas = 0;
   for (const e of (results || [])) {
     if (!debeLiberarAlPagar(e)) continue;   // solo lo ya publicado
-    await liberar(db, e, 'Saldo liquidado');
+    await liberar(db, env, e, 'Saldo liquidado');
     liberadas++;
   }
   return { liberadas };
@@ -276,15 +309,28 @@ async function payloadPublico(db, env, entrega) {
     entregables: items.map(i => ({ tipo: i.tipo, nombre: i.nombre })),
   };
 
-  // Las previews (con marca de agua) se muestran igual en publicada y en liberada:
-  // Images guarda SOLO la copia marcada. Lo que cambia al liberar es que aparecen
-  // las ligas de descarga del original limpio, que vive en R2.
+  // Las fotos se piden al propio Worker, que las saca de R2 y decide ahi si les
+  // dibuja el mosaico o no segun el estado de la entrega. El cliente nunca recibe
+  // una URL que apunte al original limpio.
   base.fotos = (archivos || [])
-    .filter(a => a.images_id)
-    .map(a => ({ id: a.images_id, hash: a.images_hash, nombre: a.nombre, destacado: !!a.destacado }));
+    .filter(a => a.r2_key && !esVideo(a.mime))
+    .map(a => ({ id: a.id, nombre: a.nombre, destacado: !!a.destacado }));
   const video = (archivos || []).find(a => a.stream_uid);
   if (video) {
-    base.video = { uid: video.stream_uid };
+    // Por defecto va la copia con marca. Solo se cambia a la limpia cuando la
+    // entrega esta liberada Y Stream confirma que ya termino de codificarla:
+    // apuntar antes deja al cliente con un reproductor muerto.
+    let uid = video.stream_uid;
+    if (liberada && !vencida && video.stream_uid_limpio) {
+      if (video.estado === 'limpio_listo') {
+        uid = video.stream_uid_limpio;
+      } else if (await streamListo(env, video.stream_uid_limpio)) {
+        uid = video.stream_uid_limpio;
+        // Se anota para no volver a preguntarle a Stream en cada visita.
+        await run(db, `UPDATE e_archivos SET estado='limpio_listo' WHERE id=?`, [video.id]);
+      }
+    }
+    base.video = { uid, conMarca: uid === video.stream_uid };
     base.streamCustomer = env.STREAM_CUSTOMER_CODE || '';
   }
 
@@ -460,11 +506,13 @@ export async function handleEntregas(request, env, ctx, action) {
   // ---- Subida (F3) ----
   // Foto: llega YA marcada por el navegador (la preview) mas el original limpio.
   // El original nunca toca Images; Images sirve URLs publicas y ahi se caeria el candado.
+  // UNA sola subida y UNA sola copia guardada: el original limpio a R2 y ya.
+  // El mosaico se dibuja al servir en e/foto, asi que no hay copia marcada que
+  // guardar ni canvas en el navegador que pueda alterar el color.
   if (action === 'subirFoto') {
     const form = await request.formData();
     const entregableId = form.get('entregableId');
     const original = form.get('original');
-    const preview = form.get('preview');
     const nombre = String(form.get('nombre') || 'foto.jpg');
     if (!entregableId || !original) return err('Datos incompletos');
 
@@ -476,23 +524,16 @@ export async function handleEntregas(request, env, ctx, action) {
     const key = llaveR2(ent.e_entrega_id, archivoId, nombre);
     await guardarEnR2(env, key, original.stream(), original.type);
 
-    let img = null;
-    if (preview) {
-      try { img = await subirPreviewImages(env, preview, nombre); }
-      catch (e) { console.error('preview a Images falló', e.message); }
-    }
-
     const c = await queryOne(db,
       'SELECT COUNT(*) AS n FROM e_archivos WHERE e_entregable_id=?', [entregableId]);
     await run(db,
       `INSERT INTO e_archivos (id, e_entregable_id, e_entrega_id, nombre, bytes, mime,
-        r2_key, images_id, images_hash, orden, destacado, estado, fecha)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?, 'listo', ?)`,
+        r2_key, orden, destacado, estado, fecha)
+       VALUES (?,?,?,?,?,?,?,?,?, 'listo', ?)`,
       [archivoId, entregableId, ent.e_entrega_id, nombre, original.size || 0, original.type || '',
-       key, (img && img.id) || '', (img && img.hash) || '', (c && c.n) || 0,
-       (c && c.n) === 0 ? 1 : 0, now()]);
+       key, (c && c.n) || 0, (c && c.n) === 0 ? 1 : 0, now()]);
     await refrescarEntregable(db, entregableId);
-    return ok({ ok: true, archivoId, imagesId: (img && img.id) || '' });
+    return ok({ ok: true, archivoId });
   }
 
   // Video: subida multiparte a R2. Cada trozo cabe en el limite del Worker.
@@ -761,7 +802,7 @@ export async function handleEntregas(request, env, ctx, action) {
     const saldo = await saldoDeEntrega(db, e);
     if (debeLiberarAlPublicar(saldo, e.pagado_manual)) {
       const fresca = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [id]);
-      const r = await liberar(db, fresca, 'Ya estaba pagada al publicar');
+      const r = await liberar(db, env, fresca, 'Ya estaba pagada al publicar');
       return ok({ ok: true, estado: 'liberada', ...r });
     }
     return ok({ ok: true, estado: 'publicada' });
@@ -772,7 +813,7 @@ export async function handleEntregas(request, env, ctx, action) {
     const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [id]);
     if (!e) return err('Entrega no encontrada', 404);
     if (e.estado === 'borrador') return err('Publica la entrega antes de liberarla', 400);
-    const r = await liberar(db, e, 'Liberada a mano');
+    const r = await liberar(db, env, e, 'Liberada a mano');
     return ok({ ok: true, estado: 'liberada', ...r });
   }
 
@@ -785,7 +826,7 @@ export async function handleEntregas(request, env, ctx, action) {
     await evento(db, id, 'pago', v ? 'Marcada como pagada' : 'Marca de pago retirada');
     if (v && e.estado === 'publicada') {
       const fresca = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [id]);
-      const r = await liberar(db, fresca, 'Marcada como pagada');
+      const r = await liberar(db, env, fresca, 'Marcada como pagada');
       return ok({ ok: true, estado: 'liberada', ...r });
     }
     return ok({ ok: true });

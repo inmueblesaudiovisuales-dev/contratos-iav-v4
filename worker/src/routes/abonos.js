@@ -73,7 +73,7 @@ export async function handleAbonos(request, env, ctx, action) {
     // BLINDADO: un fallo del sistema de entregas jamas debe tumbar el registro del pago.
     if (nuevoSaldo === 0) {
       try {
-        await liberarPorPago(db, token);
+        await liberarPorPago(db, token, env);
       } catch (e) {
         console.error('R129 liberarPorPago falló (abono registrado igual):', e.message);
       }

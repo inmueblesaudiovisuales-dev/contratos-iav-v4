@@ -1,0 +1,13 @@
+-- R130 — Segunda copia del video en Stream, sin marca de agua.
+--
+-- Por que hace falta una columna aparte: el watermark de Stream se quema AL CODIFICAR
+-- y no se puede quitar despues. Las fotos si se sirven limpias al liberar (el mosaico
+-- se dibuja al vuelo), pero el video no puede: re-codificar en cada reproduccion no es
+-- viable, y servirlo como archivo plano lo volveria descargable, que es justo lo que
+-- el sistema evita.
+--
+-- Entonces al liberar se manda hacer una SEGUNDA copia en Stream, esta sin marca.
+-- Stream la jala de R2 del lado del servidor: Bruno no vuelve a subir nada.
+-- Se crea solo cuando la entrega YA se pago, asi que lo que nunca se liquida no gasta.
+-- Se borra junto con todo lo demas al expirar.
+ALTER TABLE e_archivos ADD COLUMN stream_uid_limpio TEXT NOT NULL DEFAULT '';

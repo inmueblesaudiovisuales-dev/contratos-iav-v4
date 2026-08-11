@@ -67,21 +67,9 @@ export function llaveR2(entregaId, archivoId, nombre) {
 }
 
 // ── Cloudflare Images ─────────────────────────────────────────────────────────
-// Sube SOLO la copia ya marcada por el navegador. El original limpio jamas llega
-// a Images: Images sirve URLs publicas y ahi se caeria el candado entero.
-export async function subirPreviewImages(env, blob, nombre) {
-  const form = new FormData();
-  form.append('file', blob, nombre || 'preview.jpg');
-  const r = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/images/v1`,
-    { method: 'POST', headers: { Authorization: `Bearer ${env.CF_MEDIA_TOKEN}` }, body: form });
-  const j = await r.json();
-  if (!j || !j.success || !j.result) return null;
-  const variante = (j.result.variants && j.result.variants[0]) || '';
-  const m = String(variante).match(/imagedelivery\.net\/([^/]+)\//);
-  return { id: j.result.id, hash: m ? m[1] : '' };
-}
-
+// Ya NO se sube nada a Images. Las fotos viven solo en R2 y el mosaico se dibuja
+// al servir con el binding env.IMAGES (ver e/foto). El borrado se conserva por si
+// quedaran registros de la version anterior, que si guardaba una copia aparte.
 export async function borrarDeImages(env, imagesId) {
   if (!imagesId) return false;
   try {
@@ -112,6 +100,20 @@ export async function copiarAStream(env, urlOrigen, nombre, watermarkUid) {
   const prev = String(j.result.preview || j.result.thumbnail || '');
   const m = prev.match(/(customer-[^.]+)\./);
   return { uid: j.result.uid, customer: m ? m[1] : '' };
+}
+
+// Stream devuelve el uid al instante pero el video no reproduce hasta que termina
+// de codificar. Apuntar a una copia que no esta lista deja al cliente viendo un
+// reproductor muerto, asi que hay que preguntar antes de cambiarle el video.
+export async function streamListo(env, uid) {
+  if (!uid) return false;
+  try {
+    const r = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/${uid}`,
+      { headers: { Authorization: `Bearer ${env.CF_MEDIA_TOKEN}` } });
+    const j = await r.json();
+    return !!(j && j.success && j.result && j.result.readyToStream);
+  } catch (e) { console.error('streamListo', e.message); return false; }
 }
 
 export async function borrarDeStream(env, uid) {
@@ -156,6 +158,11 @@ export async function borrarMediaDeEntrega(env, archivos) {
     if (a.r2_key)     { (await borrarDeR2(env, a.r2_key))         ? r.r2++     : r.fallos++; }
     if (a.images_id)  { (await borrarDeImages(env, a.images_id))  ? r.images++ : r.fallos++; }
     if (a.stream_uid) { (await borrarDeStream(env, a.stream_uid)) ? r.stream++ : r.fallos++; }
+    // La copia limpia que se genera al liberar tambien se va: si se quedara,
+    // seguiria pagandose en Stream despues de que la entrega expiro.
+    if (a.stream_uid_limpio) {
+      (await borrarDeStream(env, a.stream_uid_limpio)) ? r.stream++ : r.fallos++;
+    }
   }
   return r;
 }

@@ -220,9 +220,12 @@ var toastT;
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.className='show';
   clearTimeout(toastT);toastT=setTimeout(function(){t.className='';},1800);}
 
+// La foto la sirve el propio Worker desde R2. El mosaico lo dibuja el servidor
+// segun el estado de la entrega, asi que aqui no hay nada que decidir ni ninguna
+// URL que apunte al original limpio.
 function fotoUrl(f, w){
-  if(!f || !f.id || !f.hash) return '';
-  return 'https://imagedelivery.net/' + f.hash + '/' + f.id + '/w=' + w + ',quality=82,format=auto';
+  if(!f || !f.id) return '';
+  return '/api/e/foto?a=' + encodeURIComponent(f.id) + '&w=' + w;
 }
 
 function estado(titulo, texto, extra){
