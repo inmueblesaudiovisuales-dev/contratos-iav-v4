@@ -615,6 +615,11 @@ export async function handleEntregas(request, env, ctx, action) {
       [archivoId, entregableId, ent.e_entrega_id, nombre, original.size || 0, original.type || '',
        key, (c && c.n) || 0, (c && c.n) === 0 ? 1 : 0, now()]);
     await refrescarEntregable(db, entregableId);
+    // La copia reducida se genera YA, en segundo plano. Si esperara a la primera
+    // vista, esa vista transformaria el original de 10 MB y con una cuadricula
+    // entera encima el Worker revienta su limite (1102) y la galeria sale vacia.
+    ctx.waitUntil(generarDerivado(env, db,
+      { id: archivoId, r2_key: key, r2_key_web: '', mime: original.type || '' }));
     return ok({ ok: true, archivoId });
   }
 
@@ -672,6 +677,9 @@ export async function handleEntregas(request, env, ctx, action) {
        (guardado && guardado.size) || bytes, mime, key,
        (c && c.n) || 0, (c && c.n) === 0 && !esVideoFlag ? 1 : 0, now()]);
     await refrescarEntregable(db, entregableId);
+    // Igual que en subirFoto: la copia reducida se prepara ahora, no en la primera vista.
+    ctx.waitUntil(generarDerivado(env, db,
+      { id: archivoId, r2_key: key, r2_key_web: '', mime }));
     return ok({ ok: true, archivoId, bytes: (guardado && guardado.size) || bytes, mime });
   }
 

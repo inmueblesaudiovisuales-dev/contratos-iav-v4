@@ -619,7 +619,29 @@ async function subirFotos(entregableId, files){
   } else {
     toast(ok + (ok === 1 ? ' foto subida' : ' fotos subidas'));
   }
+  await completarDerivados(entregableId);
   await abrir(ACT.entrega.id);
+}
+
+// Las copias reducidas de la galeria se piden al subir, pero en segundo plano: si
+// alguna no alcanzo a terminar, la primera visita del cliente transformaria el
+// original de 10 MB y la galeria puede salir vacia (1102). Esto cierra el hueco
+// preguntando hasta que no queden pendientes. Va de a pocas por peticion a proposito.
+async function completarDerivados(entregableId, avisar){
+  var vueltas = 0;
+  try {
+    while(vueltas++ < 200){
+      var r = await api('derivados', { body: { entregaId: ACT.entrega.id, lote: 3 } });
+      if(!r || !r.pendientes) return true;
+      if(avisar) toast('Preparando la galería · faltan ' + r.pendientes);
+      else if(entregableId) progreso(entregableId, 100, 'Preparando la galería · faltan ' + r.pendientes);
+      // Si el lote no avanzo, algo esta fallando del lado del servidor y seguir
+      // preguntando solo gira en vacio.
+      if(!r.hechos) return false;
+    }
+  } catch(e){ console.error('derivados', e.message); return false; }
+  finally { if(entregableId) progreso(entregableId, null); }
+  return false;
 }
 
 // Stream elige perfil de marca de agua segun la orientacion, asi que hay que
@@ -692,7 +714,14 @@ async function accion(nombre, body, msg){
     return r;
   } catch(e){ toast(e.message, true); }
 }
-function publicar(){ accion('publicar', { id: ACT.entrega.id }, 'Publicada'); }
+// Red de seguridad: nadie publica una entrega cuya galeria todavia no esta preparada.
+// Es el ultimo momento en que se puede evitar que el cliente sea quien descubra el 1102.
+async function publicar(){
+  if(!await completarDerivados(null, true)){
+    if(!confirm('No se pudo preparar toda la galería. Si publicas ahora, las primeras vistas del cliente pueden salir en blanco. ¿Publicar de todos modos?')) return;
+  }
+  accion('publicar', { id: ACT.entrega.id }, 'Publicada');
+}
 function liberar(){ accion('liberar', { id: ACT.entrega.id }, 'Liberada'); }
 function extender(){ accion('extender', { id: ACT.entrega.id, dias: 14 }, 'Vigencia extendida'); }
 function pausar(v){ accion('pausar', { id: ACT.entrega.id, pausar: v }, v ? 'Acceso pausado' : 'Acceso reanudado'); }
