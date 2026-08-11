@@ -615,11 +615,13 @@ export async function handleEntregas(request, env, ctx, action) {
       [archivoId, entregableId, ent.e_entrega_id, nombre, original.size || 0, original.type || '',
        key, (c && c.n) || 0, (c && c.n) === 0 ? 1 : 0, now()]);
     await refrescarEntregable(db, entregableId);
-    // La copia reducida se genera YA, en segundo plano. Si esperara a la primera
-    // vista, esa vista transformaria el original de 10 MB y con una cuadricula
-    // entera encima el Worker revienta su limite (1102) y la galeria sale vacia.
-    ctx.waitUntil(generarDerivado(env, db,
-      { id: archivoId, r2_key: key, r2_key_web: '', mime: original.type || '' }));
+    // NO se genera aqui la copia reducida, aunque sea tentador. Se intento con
+    // ctx.waitUntil y el resultado fue peor que el problema: transformar un JPEG de
+    // 10 MB mientras siguen entrando subidas agota los recursos del isolate, y a
+    // partir de ahi TODAS las subidas siguientes contestan 503. Medido: de 50 fotos
+    // entraron 10 y 40 murieron en cadena.
+    // La copia se hace despues, desde el endpoint 'derivados', en peticiones
+    // separadas y de a poquitas. Ver completarDerivados() en el portal.
     return ok({ ok: true, archivoId });
   }
 
@@ -677,9 +679,8 @@ export async function handleEntregas(request, env, ctx, action) {
        (guardado && guardado.size) || bytes, mime, key,
        (c && c.n) || 0, (c && c.n) === 0 && !esVideoFlag ? 1 : 0, now()]);
     await refrescarEntregable(db, entregableId);
-    // Igual que en subirFoto: la copia reducida se prepara ahora, no en la primera vista.
-    ctx.waitUntil(generarDerivado(env, db,
-      { id: archivoId, r2_key: key, r2_key_web: '', mime }));
+    // Igual que en subirFoto: la copia reducida NO se genera aqui. Ver el comentario
+    // de alla — hacerlo durante la importacion tumba el isolate y la siguiente falla.
     return ok({ ok: true, archivoId, bytes: (guardado && guardado.size) || bytes, mime });
   }
 
@@ -1120,7 +1121,9 @@ export async function handleEntregas(request, env, ctx, action) {
   // reventar los limites del Worker; el portal la llama en bucle hasta que no quedan.
   if (action === 'derivados') {
     const { entregaId, lote } = await request.json();
-    const n = Math.min(4, Math.max(1, Number(lote) || 3));
+    // Tope de 2: cada una transforma un original de 10 MB y pasarse revienta el
+    // isolate igual que en la subida. Mejor muchas peticiones chicas que una gorda.
+    const n = Math.min(2, Math.max(1, Number(lote) || 1));
     const { results } = await query(db,
       `SELECT * FROM e_archivos WHERE r2_key_web='' AND r2_key<>'' AND mime NOT LIKE 'video/%'
        ${entregaId ? 'AND e_entrega_id=?' : ''} LIMIT ?`,
