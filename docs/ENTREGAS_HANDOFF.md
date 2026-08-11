@@ -4,7 +4,7 @@
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
 >
 > Última actualización: 2026-08-11
-> Rango de commits: `9994f46..HEAD` (22 commits)
+> Rango de commits: `9994f46..HEAD`. La sesión del 11 ago (noche) está en §18.
 
 ---
 
@@ -33,15 +33,15 @@ sin pisarse; el corte se decidirá aparte.
 | F2 — Portal de control | ✅ en producción |
 | F3 — Subida y marca de agua | ✅ en producción |
 | F4 — Portal del cliente | ✅ en producción |
-| F5 — Liberación, reloj, descargas | ✅ en producción (sin ZIP) |
+| F5 — Liberación, reloj, descargas | ✅ en producción, **con ZIP** (§18) |
 | F6 — Expiración y limpieza | ✅ cron activo |
 | F7 — Liga en el evento de Calendar | ⬜ **no empezada** — requiere publicar el adapter a mano |
 
 **Limitación abierta:** Stream no puede leer nuestra URL de origen, así que un video
 subido desde el navegador queda en R2 pero sin marca de agua. Ver §12b.
 
-**Verificación:** 63 pruebas unitarias + 52 verificaciones end-to-end contra la D1 de
-producción, más prueba de humo sin regresiones en los endpoints y páginas existentes.
+**Verificación:** 81 pruebas unitarias + verificación end-to-end contra producción,
+incluido un ZIP de 476 MB extraído y comparado archivo por archivo. Ver §18.6.
 
 ---
 
@@ -135,6 +135,10 @@ liquida no gasta de más. Las tres se borran al expirar.
 | `worker/src/routes/entregas.js` | API bajo `/api/e/*` |
 | `worker/migrations/r129-entregas.sql` | Las 5 tablas |
 | `worker/migrations/r130-video-limpio.sql` | `stream_uid_limpio` |
+| `worker/migrations/r131-derivado-web.sql` | `r2_key_web`: la copia reducida de la galería |
+| `worker/migrations/r132-crc.sql` | `crc32`: sin esto el ZIP no se puede armar sin quemar CPU |
+| `worker/src/entregas-zip.js` | ZIP en streaming, sin compresión |
+| `design/entrega-cliente-v2.html` | Mockup del rediseño del portal del cliente |
 | `design/entregas-mockup.html` | Mockup de referencia del diseño |
 
 **Ganchos en el flujo existente**, todos blindados en `try/catch` para que un fallo
@@ -528,15 +532,25 @@ Cuando A2 se resuelva, hay que liberar una entrega con video y confirmar que
 liga y sin ella sin patrón claro. Actualizar el header `// Ultima modificacion:` con
 hora de Monterrey y registrar en `docs/RONDAS.md`.
 
-**B2 — El ZIP.** Hoy "descargar todo" dispara las fotos en cascada, una por una, con
-400 ms de separación. Funciona pero se ve pobre y el navegador puede bloquear
-descargas múltiples. Falta el ZIP en streaming (sin compresión, tipo *store*) desde el
-Worker. Riesgo conocido: puede toparse con los límites de CPU — si truena, degradar a
-descarga por bloques y **decirlo**, no fallar callado.
+**B2 — ~~El ZIP.~~ HECHO el 11 ago 2026.** Ver §18: costó tres intentos y los tres se
+veían bien con archivos chicos. `worker/src/entregas-zip.js`, 14 tests.
+**Probado con las 50 fotos reales de Felipe: 476 MB en 29 s, extraído con Windows,
+los 50 archivos íntegros byte a byte.** El video NO va en el ZIP a propósito: ya es un
+archivo suelto y meterlo dentro le quita el poder retomarse.
 
-**B3 — Probar la liberación con material real.** La entrega de Mireya sigue con saldo
-de $4,500. Nunca se ha ejercido con material de verdad: la descarga de un original de
-10 MB, la de un video de 986 MB, ni el cambio de la galería a sin mosaico.
+**B3 — ~~Probar la liberación con material real.~~ PARCIALMENTE HECHO el 11 ago 2026.**
+Se ejerció el ciclo completo (publicar → marcar pagada → liberar → descargar) con
+entregas de prueba desechables, ya borradas. Verificado:
+
+- La descarga entrega el **original intacto**: hash idéntico al archivo subido.
+- La **misma foto** servida desde una entrega publicada y desde una liberada da
+  bytes distintos, y la liberada pesa 16 KB menos — o sea, el mosaico sí se quita.
+  Esta es la promesa central del sistema y ahora está comprobada, no supuesta.
+- Aparecen `zip`, `descargas` y la fecha límite solo cuando está liberada.
+
+**Lo que sigue sin probarse: la entrega de Mireya con su material real** (45 fotos de
+10 MB y el video de 986 MB), y sobre todo **la copia limpia del video** — que depende
+de A2 y nunca ha corrido.
 
 **B4 — Probar la subida de un video grande arrastrándolo**, no importándolo de Drive.
 La ruta multiparte (`videoIniciar`/`videoParte`/`videoTerminar`) está desplegada y
@@ -640,3 +654,110 @@ En `E:\CLAUDE\Sistema de entregas\`:
 | `marca-agua.html` | Calibrador del mosaico sobre una foto real. Genera el PNG de Stream |
 | `marca-agua-stream.png` | El PNG que se subió a los perfiles de Stream |
 | `entregas-mockup.html` | Mockup con las tipografías reales (la copia del repo cae a respaldos) |
+
+---
+
+## 18. Sesión del 11 ago 2026 (noche) — descargas, ZIP y rediseño del cliente
+
+Todo lo de esta sección está desplegado y verificado contra producción.
+
+### 18.1 Lo que se cerró
+
+| Qué | Dónde |
+|---|---|
+| Copias reducidas al subir (A1) | `subirFoto`, `importarDrive`, `completarDerivados()` |
+| Llave propia del portal de entregas | secret `ENTREGAS_KEY` |
+| Subir y preparar como **dos pasos** | botón "Preparar galería (N)" |
+| Descargas con tamaño y reanudables | `cabecerasRango()`, r132 |
+| **ZIP de todas las fotos** | `worker/src/entregas-zip.js` |
+| Elegir la portada | endpoint `portada`, clic en la miniatura |
+| **Varios videos** | `base.videos[]` en `payloadPublico` |
+| Rediseño del portal del cliente | `frontend/entregas-cliente.html` |
+
+### 18.2 El 1102 se movió de lugar antes de morir
+
+Llamar `generarDerivado` con `ctx.waitUntil` dentro de `subirFoto` **empeoró el
+problema en vez de arreglarlo**: transformar un JPEG de 10 MB mientras siguen
+entrando subidas agota el isolate, y a partir de ahí *todas* las subidas siguientes
+contestan 503. Medido con material real: **de 50 fotos entraron 10 y 40 murieron en
+cadena**, ninguna por culpa propia.
+
+La lección general, que aplica a cualquier cosa que se agregue después: **el trabajo
+pesado no va durante la subida.** Va después, en peticiones separadas y de a poquitas.
+Por eso existe el paso "Preparar galería".
+
+De paso se descubrió que el portal escondía el error: hacía `r.json()` sobre una
+respuesta que era HTML de Cloudflare, y el fallo de parseo tapaba el código real. Los
+errores de red ahora se leen como texto antes de intentar interpretarlos.
+
+### 18.3 El ZIP: tres intentos, dos límites de CPU
+
+Vale la pena el detalle porque **los tres se veían perfectos con archivos de prueba**.
+
+1. **CRC32 al vuelo.** Muerto a los **32 MB** de 476. `Worker exceeded CPU time limit`
+   (capturado con `wrangler tail`). Calcular el CRC de cada byte en JS es carísimo.
+2. **CRC precalculado (r132), `TransformStream`.** Muerto a los **69 MB**. Seguía
+   siendo CPU: un `TransformStream` normal hace pasar cada byte por JavaScript aunque
+   el código no los toque.
+3. **`FixedLengthStream`.** Completo: 476 MB en 29 s. Mueve los bytes dentro del
+   runtime y **de regalo pone el `Content-Length`** — que era justo lo que faltaba
+   para la barra de progreso; antes Cloudflare respondía `chunked` y descartaba la
+   cabecera que se le ponía a mano.
+
+Decisiones que sostienen esto:
+
+- **Sin compresión** (método *store*). Los JPEG ya vienen comprimidos: comprimir gasta
+  el recurso escaso (CPU) sin ahorrar espacio.
+- Al no comprimir, **el tamaño final se calcula de antemano**. De ahí sale el
+  `Content-Length` exacto: `tamanoZip()`, verificado con un test byte a byte.
+- **El CRC se guarda en la base** (r132), calculado al preparar la galería.
+- Si algo falla a media escritura, el stream **se aborta** en vez de cerrarse: un ZIP
+  truncado que cierra "bien" se ve válido y truena al extraer.
+
+### 18.4 Rediseño del portal del cliente
+
+El anterior hacía difícil justo lo que venía a hacer. El visor **no tenía navegación**
+(45 fotos = abrir y cerrar 45 veces), la cuadrícula recortaba todo a 4:3 y el hero
+hacía de portada y de reproductor a la vez.
+
+Orden nuevo, decidido con Bruno: **portada → descarga → video → fotos → recorrido.**
+La descarga primero porque es a lo que vino el cliente; el video siempre arriba de las
+fotos.
+
+- **Mosaico por columnas**: cada foto conserva su proporción; las verticales dejan de
+  salir mochadas. Todas visibles.
+- **Carga diferida obligatoria.** No es refinamiento: cada miniatura es una
+  transformación del Worker y pedir 45 de golpe es exactamente lo que lo tumba.
+- **Visor** con flechas, teclado, deslizar, contador y descarga individual. El swipe
+  solo cuenta si el gesto fue más horizontal que vertical, para no cambiar de foto al
+  hacer scroll.
+- **Sin fotos, la portada cae al primer cuadro del video.**
+- Al cliente se le muestra **"Video cinemático"**, no `IAV-2607.17-A-v2.mp4`.
+
+### 18.5 Trampas nuevas
+
+- **`obj.range` de R2 viene lleno aunque nadie pida un rango.** Fiarse de él hacía que
+  una descarga normal contestara 206 y —peor— que no se registrara en la bitácora,
+  porque el evento colgaba de esa condición. **Quien manda es la petición.**
+- **Cloudflare descarta el `Content-Length` que pongas a mano** si el cuerpo es un
+  stream normal: responde `chunked`. Solo `FixedLengthStream` lo conserva.
+- **Un `TransformStream` normal cuesta CPU por byte.** Para mover volumen dentro de un
+  Worker hay que usar `FixedLengthStream` o `IdentityTransformStream` y `pipeTo`.
+- **El runner de GitHub falla a veces al clonar** (`server certificate verification
+  failed`). No es el código: `gh run rerun <id>`.
+- **`Expand-Archive` de Windows no valida el CRC.** Un test que dependa de eso da
+  falso verde; el que hay se salta explícitamente en vez de mentir.
+- **Preparar una foto de 10 MB rebota seguido con 503.** En una tanda de 50 hubo hasta
+  **6 fallos seguidos** y aun así terminó completa. Cualquier bucle que se rinda pronto
+  abandona una preparación que iba bien: el umbral está en 12 con espera creciente.
+
+### 18.6 Verificación
+
+- **81 tests** automatizados (43 core + 24 media + 14 zip), 1 saltado a propósito.
+- ZIP de **476 MB** extraído con Windows: 45 JPEG y 5 PNG, **0 corruptos**.
+- Descarga parcial: bajado entero y en dos pedazos → **bytes idénticos**.
+- Original descargado = archivo subido, **hash idéntico**.
+- Misma foto publicada vs liberada → **bytes distintos**: el mosaico sí se quita.
+- Visor navegado en producción: avanza, retrocede, da la vuelta, oculta flechas con
+  un solo elemento.
+- Entregas de prueba creadas y **borradas**; las 4 reales quedaron intactas.

@@ -130,7 +130,9 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 .foot b{color:var(--gold);font-weight:500}
 
 /* Visor: lo que antes no existia. Sin esto, ver 45 fotos son 45 abrir y cerrar. */
-.visor{position:fixed;inset:0;z-index:200;background:rgba(14,12,9,.97);display:none;
+/* Opaco a proposito: con fondo translucido se alcanzaba a ver la cuadricula detras
+   y competia con la foto que se esta mirando. */
+.visor{position:fixed;inset:0;z-index:200;background:#0E0C09;display:none;
   flex-direction:column}
 .visor.on{display:flex}
 .vtop{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;
