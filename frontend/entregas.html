@@ -160,7 +160,8 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .files{display:flex;flex-wrap:wrap;gap:7px;margin:var(--s3) 0 0 38px}
 .f{position:relative;width:74px}
 .f .im{width:74px;height:56px;border-radius:7px;background:var(--paper-2) center/cover;display:block;
-  border:1px solid var(--line)}
+  border:1px solid var(--line);cursor:pointer}
+.f .im:hover{border-color:var(--gold-leaf)}
 .f .nm{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-3);margin-top:3px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .f .x{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
@@ -450,9 +451,12 @@ function pintarDetalle(){
           var im = esVid
             ? '<span class="im vid"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></span>'
             : '<span class="im' + (a.destacado ? ' destacada' : '') + '" style="background-image:url(\'' +
-              '/api/e/foto?a=' + a.id + '&w=160&k=' + encodeURIComponent(KEY) + '\')"></span>';
+              '/api/e/foto?a=' + a.id + '&w=160&k=' + encodeURIComponent(KEY) + '\')"' +
+              ' title="' + (a.destacado ? 'Es la portada' : 'Usar como portada') + '"' +
+              ' onclick="ponerPortada(\'' + a.id + '\')"></span>';
           return '<div class="f' + (esVid ? ' vid' : '') + '">' + im +
-            '<div class="nm" title="' + esc(a.nombre) + '">' + esc(a.nombre) + '</div>' +
+            '<div class="nm" title="' + esc(a.nombre) + '">' +
+              (a.destacado ? 'portada · ' : '') + esc(a.nombre) + '</div>' +
             '<button class="x" title="Quitar" onclick="borrarArchivo(\'' + a.id + '\')">×</button></div>';
         }).join('') + '</div>';
       }
@@ -684,6 +688,12 @@ async function completarDerivados(onAvance){
     await new Promise(function(res){ setTimeout(res, Math.min(8000, 1200 * secos)); });
   }
   return false;
+}
+
+// La portada es la foto grande que el cliente ve al abrir. Se elige con un clic
+// en la miniatura; antes se quedaba para siempre la primera que se subio.
+function ponerPortada(id){
+  accion('portada', { archivoId: id }, 'Portada actualizada');
 }
 
 // Bruno tambien baja el ZIP: es su material y lo va a querer para respaldar.

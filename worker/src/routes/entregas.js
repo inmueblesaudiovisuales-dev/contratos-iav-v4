@@ -383,23 +383,32 @@ async function payloadPublico(db, env, entrega) {
   base.fotos = (archivos || [])
     .filter(a => a.r2_key && !esVideo(a.mime))
     .map(a => ({ id: a.id, nombre: a.nombre, destacado: !!a.destacado }));
-  const video = (archivos || []).find(a => a.stream_uid);
-  if (video) {
+  // TODOS los videos, no solo el primero. Antes se mandaba uno y los demas
+  // quedaban invisibles para el cliente aunque si aparecieran en las descargas:
+  // veia un video y bajaba tres.
+  const vids = (archivos || []).filter(a => a.stream_uid);
+  base.videos = [];
+  for (const v of vids) {
     // Por defecto va la copia con marca. Solo se cambia a la limpia cuando la
     // entrega esta liberada Y Stream confirma que ya termino de codificarla:
     // apuntar antes deja al cliente con un reproductor muerto.
-    let uid = video.stream_uid;
-    if (liberada && !vencida && video.stream_uid_limpio) {
-      if (video.estado === 'limpio_listo') {
-        uid = video.stream_uid_limpio;
-      } else if (await streamListo(env, video.stream_uid_limpio)) {
-        uid = video.stream_uid_limpio;
+    let uid = v.stream_uid;
+    if (liberada && !vencida && v.stream_uid_limpio) {
+      if (v.estado === 'limpio_listo') {
+        uid = v.stream_uid_limpio;
+      } else if (await streamListo(env, v.stream_uid_limpio)) {
+        uid = v.stream_uid_limpio;
         // Se anota para no volver a preguntarle a Stream en cada visita.
-        await run(db, `UPDATE e_archivos SET estado='limpio_listo' WHERE id=?`, [video.id]);
+        await run(db, `UPDATE e_archivos SET estado='limpio_listo' WHERE id=?`, [v.id]);
       }
     }
-    base.video = { uid, conMarca: uid === video.stream_uid };
+    base.videos.push({ id: v.id, uid, nombre: v.nombre || 'Video', conMarca: uid === v.stream_uid });
+  }
+  if (base.videos.length) {
     base.streamCustomer = env.STREAM_CUSTOMER_CODE || '';
+    // Se conserva `video` a secas por si algun navegador quedo con la version
+    // anterior de la pagina en cache.
+    base.video = base.videos[0];
   }
 
   // ESTE es el gate. Las ligas firmadas solo existen si la entrega esta liberada y
@@ -917,6 +926,20 @@ export async function handleEntregas(request, env, ctx, action) {
       } catch (ex) { salida[campo] = { error: ex.message }; }
     }
     return ok(salida);
+  }
+
+  // Cual foto es la portada. Existia la columna y hasta el borde dorado en el
+  // portal, pero no habia forma de cambiarla: se quedaba la primera que se subio.
+  if (action === 'portada') {
+    const { archivoId } = await request.json();
+    const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
+    if (!a) return err('Archivo no encontrado', 404);
+    if (esVideo(a.mime)) return err('La portada tiene que ser una foto', 400);
+    await batch(db, [
+      { sql: 'UPDATE e_archivos SET destacado=0 WHERE e_entrega_id=?', params: [a.e_entrega_id] },
+      { sql: 'UPDATE e_archivos SET destacado=1 WHERE id=?', params: [archivoId] }
+    ]);
+    return ok({ ok: true });
   }
 
   if (action === 'borrarArchivo') {
