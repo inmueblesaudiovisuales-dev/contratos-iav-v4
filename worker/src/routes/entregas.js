@@ -561,6 +561,52 @@ export async function handleEntregas(request, env, ctx, action) {
     return ok({ ok: true, archivoId });
   }
 
+  // Importa UN archivo desde Google Drive directo a R2, del lado del servidor.
+  // Sirve para material que ya vive en Drive: no baja nada a la computadora de
+  // Bruno ni lo vuelve a subir. Va de uno en uno a proposito — 40 fotos de 10 MB
+  // en una sola peticion revientan el limite de tiempo del Worker.
+  //
+  // Requiere que el archivo sea alcanzable por liga (el enlace de "cualquiera con
+  // el enlace"). Si Drive contesta HTML en vez del binario, es que no lo es.
+  if (action === 'importarDrive') {
+    const { entregableId, driveId, nombre, esVideoFlag } = await request.json();
+    if (!entregableId || !driveId) return err('Datos incompletos');
+    const ent = await queryOne(db, 'SELECT * FROM e_entregables WHERE id=?', [entregableId]);
+    if (!ent) return err('Entregable no encontrado', 404);
+
+    const origen = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(driveId)}`;
+    let r;
+    try {
+      r = await fetch(origen, { redirect: 'follow' });
+    } catch (ex) {
+      return err('No se pudo alcanzar Drive: ' + ex.message, 502);
+    }
+    if (!r.ok) return err('Drive respondió ' + r.status, 502);
+    const mime = r.headers.get('content-type') || '';
+    if (/text\/html/i.test(mime)) {
+      return err('Drive devolvió una página, no el archivo. Revisa que la carpeta esté compartida por enlace.', 502);
+    }
+    const bytes = Number(r.headers.get('content-length')) || 0;
+
+    const archivoId = uuid();
+    const key = llaveR2(ent.e_entrega_id, archivoId, nombre || 'archivo');
+    // Se pasa el cuerpo en streaming: nunca se carga el archivo entero en memoria.
+    await env.ENTREGAS_ORIGINALES.put(key, r.body, { httpMetadata: { contentType: mime } });
+    const guardado = await env.ENTREGAS_ORIGINALES.head(key);
+
+    const c = await queryOne(db,
+      'SELECT COUNT(*) AS n FROM e_archivos WHERE e_entregable_id=?', [entregableId]);
+    await run(db,
+      `INSERT INTO e_archivos (id, e_entregable_id, e_entrega_id, nombre, bytes, mime,
+        r2_key, orden, destacado, estado, fecha)
+       VALUES (?,?,?,?,?,?,?,?,?, 'listo', ?)`,
+      [archivoId, entregableId, ent.e_entrega_id, nombre || 'archivo',
+       (guardado && guardado.size) || bytes, mime, key,
+       (c && c.n) || 0, (c && c.n) === 0 && !esVideoFlag ? 1 : 0, now()]);
+    await refrescarEntregable(db, entregableId);
+    return ok({ ok: true, archivoId, bytes: (guardado && guardado.size) || bytes, mime });
+  }
+
   // Video: subida multiparte a R2. Cada trozo cabe en el limite del Worker.
   if (action === 'videoIniciar') {
     const { entregableId, nombre, mime, bytes } = await request.json();
