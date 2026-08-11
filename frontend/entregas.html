@@ -537,6 +537,7 @@ function pintarDetalle(){
       // Liga y acciones son lo mismo —lo que haces con la entrega— asi que van en una
       // sola tarjeta: primero la accion del momento, luego como mandarla.
       '<div class="card"><div class="card-hd"><b>La entrega</b></div><div class="card-pad">' +
+        bloqueGaleria() +
         acciones +
         '<div style="height:1px;background:var(--line);margin:2px 0"></div>' +
         '<div class="linkbox">' + esc(e.rutaPublica) + '</div>' +
@@ -560,6 +561,7 @@ function pintarDetalle(){
 // ~100 MB, asi que un video de 1 GB se manda en trozos que si caben.
 var TAM_PARTE = 90 * 1024 * 1024;
 var subiendo = false;
+var preparando = false;
 
 function zonasArrastre(){
   document.querySelectorAll('.zona').forEach(function(z){
@@ -642,36 +644,76 @@ async function subirFotos(entregableId, files){
   } else {
     toast(ok + (ok === 1 ? ' foto subida' : ' fotos subidas'));
   }
-  await completarDerivados(entregableId);
+  // Subir y preparar son dos pasos distintos a proposito: el material puede venir de
+  // varias carpetas y en varias tandas. Preparar al terminar cada tanda seria
+  // trabajo tirado, y peor, ataria a Bruno a la ventana entre carpeta y carpeta.
   await abrir(ACT.entrega.id);
 }
 
-// Las copias reducidas de la galeria se piden al subir, pero en segundo plano: si
-// alguna no alcanzo a terminar, la primera visita del cliente transformaria el
-// original de 10 MB y la galeria puede salir vacia (1102). Esto cierra el hueco
-// preguntando hasta que no queden pendientes. Va de a pocas por peticion a proposito.
-async function completarDerivados(entregableId, avisar){
+// ── Paso 2: preparar la galeria ───────────────────────────────────────────────
+// Cada foto necesita una copia reducida; sin ella, la primera visita del cliente
+// transforma el original de 10 MB y la galeria se cae (1102). Se hace en peticiones
+// separadas y de a una: hacerlo durante la subida tumba el Worker (ver el
+// comentario en subirFoto del lado del servidor).
+function pendientesGaleria(){
+  return (ACT && ACT.archivos || []).filter(function(a){
+    return /^image\//.test(a.mime || '') && !a.r2_key_web;
+  }).length;
+}
+
+async function completarDerivados(onAvance){
   var vueltas = 0, secos = 0;
-  try {
-    while(vueltas++ < 400){
-      var r = null;
-      try {
-        r = await api('derivados', { body: { entregaId: ACT.entrega.id, lote: 1 } });
-      } catch(e){ r = null; }
-      if(r && !r.pendientes) return true;
-      if(r){
-        var txt = 'Preparando la galería · faltan ' + r.pendientes;
-        if(avisar) toast(txt); else if(entregableId) progreso(entregableId, 100, txt);
-      }
-      // Una vuelta sin avanzar puede ser un 503 pasajero: el Worker se recupera solo.
-      // Solo se rinde si varias seguidas no logran nada.
-      if(r && r.hechos){ secos = 0; continue; }
-      if(++secos >= 5) return false;
-      await new Promise(function(res){ setTimeout(res, 1500); });
-    }
-  } catch(e){ console.error('derivados', e.message); return false; }
-  finally { if(entregableId) progreso(entregableId, null); }
+  while(vueltas++ < 500){
+    var r = null;
+    try {
+      r = await api('derivados', { body: { entregaId: ACT.entrega.id, lote: 1 } });
+    } catch(e){ r = null; }
+    if(r && !r.pendientes) return true;
+    if(r && onAvance) onAvance(r.pendientes);
+    // Una vuelta sin avanzar puede ser un 503 pasajero: el Worker se recupera solo.
+    // Solo se rinde si varias seguidas no logran nada.
+    if(r && r.hechos){ secos = 0; continue; }
+    if(++secos >= 5) return false;
+    await new Promise(function(res){ setTimeout(res, 1500); });
+  }
   return false;
+}
+
+function pintarGaleria(html){
+  var n = document.getElementById('gal');
+  if(n) n.innerHTML = html;
+}
+
+async function prepararGaleria(){
+  if(subiendo) return toast('Espera a que termine la subida', true);
+  var id = ACT.entrega.id;
+  if(await prepararGaleria2()) toast('Galería lista');
+  await abrir(id);
+}
+
+function barraGaleria(faltan, total){
+  var hechas = Math.max(0, total - faltan);
+  return '<div class="prog" style="margin-left:0"><i style="width:' +
+      (total ? Math.round(hechas / total * 100) : 0) + '%"></i></div>' +
+    '<div class="progtxt" style="margin-left:0">Preparando · faltan ' + faltan + ' de ' + total + '</div>' +
+    '<p class="hint" style="color:var(--ink-2)"><b>No cierres esta ventana.</b> ' +
+    'Las fotos ya están guardadas, pero si cierras ahora hay que retomarlo desde aquí.</p>';
+}
+
+// Bloque del paso 2 en el panel lateral. Es lo unico que le dice a Bruno cuando
+// puede irse: sin esto, "ya subio todo" y "ya quedo listo" se ven igual.
+function bloqueGaleria(){
+  var pend = pendientesGaleria();
+  var fotos = (ACT.archivos || []).filter(function(a){ return /^image\//.test(a.mime || ''); }).length;
+  if(!fotos) return '';
+  if(!pend){
+    return '<div id="gal"><p class="hint">Galería lista · ' + fotos +
+      ' foto' + (fotos === 1 ? '' : 's') + '. Puedes cerrar la ventana.</p></div>';
+  }
+  return '<div id="gal">' +
+    '<button class="btn btn-ghost btn-block" onclick="prepararGaleria()">Preparar galería (' + pend + ')</button>' +
+    '<p class="hint">Faltan ' + pend + ' por preparar. Hazlo cuando ya no vayas a subir más fotos: ' +
+    'si las subes en varias tandas, conviene una sola vez al final.</p></div>';
 }
 
 // Stream elige perfil de marca de agua segun la orientacion, asi que hay que
@@ -746,11 +788,30 @@ async function accion(nombre, body, msg){
 }
 // Red de seguridad: nadie publica una entrega cuya galeria todavia no esta preparada.
 // Es el ultimo momento en que se puede evitar que el cliente sea quien descubra el 1102.
+// No lo hace por su cuenta: preparar tarda minutos y quien aprieta Publicar no espera
+// eso. Lo dice y manda al paso 2.
 async function publicar(){
-  if(!await completarDerivados(null, true)){
-    if(!confirm('No se pudo preparar toda la galería. Si publicas ahora, las primeras vistas del cliente pueden salir en blanco. ¿Publicar de todos modos?')) return;
+  var pend = pendientesGaleria();
+  if(pend){
+    if(!confirm('Faltan ' + pend + ' fotos por preparar. Si publicas ahora, las primeras vistas del cliente pueden salir en blanco.\n\nAceptar = preparar la galería primero.\nCancelar = publicar de todos modos.')){
+      return accion('publicar', { id: ACT.entrega.id }, 'Publicada');
+    }
+    if(!await prepararGaleria2()) return;
   }
   accion('publicar', { id: ACT.entrega.id }, 'Publicada');
+}
+
+// Igual que prepararGaleria pero sin refrescar la vista al final: quien la llama
+// va a seguir trabajando sobre ACT y un re-render a media accion la deja coja.
+async function prepararGaleria2(){
+  if(preparando) return false;
+  preparando = true;
+  var total = pendientesGaleria();
+  pintarGaleria(barraGaleria(total, total));
+  var listo = await completarDerivados(function(f){ pintarGaleria(barraGaleria(f, total)); });
+  preparando = false;
+  if(!listo) toast('No se pudieron preparar todas las fotos', true);
+  return listo;
 }
 function liberar(){ accion('liberar', { id: ACT.entrega.id }, 'Liberada'); }
 function extender(){ accion('extender', { id: ACT.entrega.id, dias: 14 }, 'Vigencia extendida'); }
