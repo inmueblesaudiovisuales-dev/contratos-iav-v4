@@ -424,11 +424,25 @@ export async function handleEntregas(request, env, ctx, action) {
       if (requireEntregas(request, env)) return err('No disponible', 403);
     }
 
-    const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key);
-    if (!obj) return err('Foto no encontrada', 404);
-
     // El mosaico se quita SOLO si esta liberada y vigente. Esa es la unica condicion.
     const limpia = e.estado === 'liberada' && !estaVencida(e.fecha_expira, now());
+
+    // CACHE. Sin esto cada peticion vuelve a decodificar un JPEG de 10 MB, redimensionarlo
+    // y dibujarle el mosaico. Una cuadricula dispara varias a la vez y el Worker revienta
+    // su limite de recursos (error 1102 de Cloudflare) — pasa con fotos reales, no con
+    // imagenes de prueba chicas.
+    //
+    // El ESTADO va en la llave: si no, al liberar se seguiria sirviendo la version con
+    // marca que quedo cacheada, y el cliente pagaria para ver lo mismo.
+    const cache = caches.default;
+    const llaveCache = new Request(
+      `${url.origin}/api/e/foto?a=${archivoId}&w=${ancho}&st=${limpia ? 'limpia' : 'marcada'}`,
+      { method: 'GET' });
+    const cacheada = await cache.match(llaveCache);
+    if (cacheada) return cacheada;
+
+    const obj = await env.ENTREGAS_ORIGINALES.get(a.r2_key);
+    if (!obj) return err('Foto no encontrada', 404);
 
     try {
       let pipe = env.IMAGES.input(obj.body).transform({ width: ancho, fit: 'scale-down' });
@@ -454,8 +468,13 @@ export async function handleEntregas(request, env, ctx, action) {
       const out = await pipe.output({ format: 'image/jpeg', quality: 82 });
       const r = out.response();
       const h = new Headers(r.headers);
-      h.set('Cache-Control', limpia ? 'private, max-age=300' : 'private, max-age=3600');
-      return new Response(r.body, { status: r.status, headers: h });
+      // public para que el borde de Cloudflare la guarde: la URL trae un UUID
+      // inadivinable, asi que la foto queda tan protegida como su propia liga.
+      h.set('Cache-Control', 'public, max-age=86400');
+      h.set('Content-Type', 'image/jpeg');
+      const resp = new Response(r.body, { status: 200, headers: h });
+      ctx.waitUntil(cache.put(llaveCache, resp.clone()));
+      return resp;
     } catch (ex) {
       console.error('transformación de imagen falló', ex.message);
       return err('No se pudo procesar la imagen: ' + ex.message, 500);
@@ -707,7 +726,11 @@ export async function handleEntregas(request, env, ctx, action) {
       return ok({ ok: true, streamUid: r.uid, customer: r.customer, perfil,
                   vertical: Number(alto) > Number(ancho), bytes: obj.size });
     } catch (ex) {
-      return err('Stream rechazó el video: ' + ex.message, 502);
+      // Se devuelve el origen para poder probarlo a mano: cuando Stream falla, casi
+      // siempre es que no pudo LEER esa URL, no que el token este mal.
+      const f2 = await firmar(env, 'origen:' + archivoId, 600);
+      return err('Stream rechazó el video: ' + ex.message +
+        ' — origen para probar: ' + `${baseEntregas(env)}/api/e/origen?a=${archivoId}&f=${encodeURIComponent(f2)}`, 502);
     }
   }
 
