@@ -18,6 +18,7 @@ import {
   borrarMediaDeEntrega, firmar, verificarFirma, esImagen, esVideo, nombreDescarga,
   cabecerasRango
 } from '../entregas-media.js';
+import { armarZip, tamanoZip, cabeEnZip, nombreZip } from '../entregas-zip.js';
 
 const WA_BASE = 'https://wa.me/5218127174207';
 
@@ -397,6 +398,20 @@ async function payloadPublico(db, env, entrega) {
       });
     }
     base.descargas = descargas;
+
+    // Un solo archivo con todas las fotos. Es la accion principal de la pagina:
+    // sin esto, "descargar todo" son 45 clics.
+    const fotos = (archivos || []).filter(a => a.r2_key && !esVideo(a.mime));
+    if (fotos.length) {
+      const fz = await firmar(env, 'zip:' + entrega.id, 900);
+      base.zip = {
+        url: `/api/e/zip?e=${entrega.id}&f=${encodeURIComponent(fz)}`,
+        archivos: fotos.length,
+        // Aproximado: es lo que dice la base. Sirve para escribirlo en el boton;
+        // el tamano exacto se mide contra R2 al momento de armarlo.
+        bytes: fotos.reduce((s, a) => s + (Number(a.bytes) || 0), 0)
+      };
+    }
   }
   return base;
 }
@@ -553,6 +568,62 @@ export async function handleEntregas(request, env, ctx, action) {
     // pide otro pedazo del MISMO archivo y contarlo otra vez inflaria la bitacora.
     if (!pidioRango) ctx.waitUntil(evento(db, e.id, 'descarga', a.nombre || ''));
     return new Response(obj.body, { status: c.status, headers: h });
+  }
+
+  // ---- Todas las fotos en un solo archivo ----
+  // El video NO va aqui: ya es un archivo suelto y meterlo en un ZIP es trabajo de
+  // mas sin ganar nada. Se baja por su cuenta, y asi ademas se puede retomar.
+  if (action === 'zip') {
+    const entregaId = url.searchParams.get('e') || '';
+    const firma = url.searchParams.get('f') || '';
+    if (!await verificarFirma(env, 'zip:' + entregaId, firma)) {
+      return err('Enlace de descarga vencido. Vuelve a entrar a tu galería.', 403);
+    }
+    const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [entregaId]);
+    if (!e || e.estado !== 'liberada' || estaVencida(e.fecha_expira, now())) {
+      return err('Este material ya no está disponible.', 403);
+    }
+    const { results } = await query(db,
+      `SELECT * FROM e_archivos WHERE e_entrega_id=? AND r2_key<>'' AND mime NOT LIKE 'video/%'
+       ORDER BY orden, rowid`, [entregaId]);
+    if (!results || !results.length) return err('No hay fotos que descargar', 404);
+
+    // Los tamanos se leen de R2, no de la base: el Content-Length tiene que ser
+    // exacto o el navegador corta la descarga a medias. Van en paralelo porque en
+    // serie serian 45 viajes de ida y vuelta antes de mandar el primer byte.
+    const medidos = await Promise.all(results.map(async a => {
+      try {
+        const h = await env.ENTREGAS_ORIGINALES.head(a.r2_key);
+        return h ? { a, bytes: h.size } : null;
+      } catch (ex) { return null; }
+    }));
+    const usados = new Set();
+    const entradas = medidos.filter(Boolean).map(m => ({
+      nombre: nombreZip(m.a.nombre, usados), bytes: m.bytes, llave: m.a.r2_key
+    }));
+    if (!entradas.length) return err('No se pudo leer el material', 502);
+    if (!cabeEnZip(entradas)) {
+      return err('El material es demasiado grande para un solo archivo. Descárgalo por partes.', 413);
+    }
+
+    const folio = await folioDeEntrega(db, e);
+    const nombre = nombreDescarga((folio || e.titulo || 'entrega') + '-fotos.zip', 'fotos.zip');
+    ctx.waitUntil(evento(db, e.id, 'descarga', `${entradas.length} fotos (zip)`));
+
+    const cuerpo = armarZip(entradas, async en => {
+      const obj = await env.ENTREGAS_ORIGINALES.get(en.llave);
+      return obj ? obj.body : null;
+    });
+    return new Response(cuerpo, {
+      headers: {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${nombre}"`,
+        // Se sabe de antemano porque no hay compresion. Esto es lo que hace que la
+        // barra del navegador avance.
+        'Content-Length': String(tamanoZip(entradas)),
+        'Cache-Control': 'private, no-store'
+      }
+    });
   }
 
   // Origen temporal para que Stream copie el video desde R2 sin exponer el bucket.
