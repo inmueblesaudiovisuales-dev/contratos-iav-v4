@@ -295,3 +295,31 @@ test('ordenarEntregas no muta el arreglo original', () => {
   ordenarEntregas(lista, '2026-08-11T12:00:00.000Z');
   assert.equal(lista[0].titulo, 'b');
 });
+
+// ── Marca de agua: tope de la fraccion ────────────────────────────────────────
+// Vive aqui y no en entregas-media porque fraccionMarca se exporta desde el
+// handler; la regla es lo que importa, no donde este la funcion.
+import { fraccionMarca, TOPE_MARCA } from './routes/entregas.js';
+
+test('la fraccion de marca NUNCA llega a 1', async () => {
+  // Cloudflare lee width <= 1 como fraccion y > 1 como pixeles: con width:1 el
+  // overlay mide un pixel y la foto sale LIMPIA sin marcar error.
+  assert.ok(TOPE_MARCA < 1, 'el tope debe ser menor a 1');
+  for (const d of [1, 10, 50, 100, 166, 200, 375, 800, 4000]) {
+    const f = fraccionMarca(d, 0.45);
+    assert.ok(f < 1, `d=${d} dio ${f}, que Cloudflare leeria como pixeles`);
+    assert.ok(f > 0, `d=${d} dio ${f}`);
+  }
+});
+
+test('la fraccion crece cuando la foto se muestra mas chica', () => {
+  // Asi el texto conserva el mismo tamaño fisico en pantalla.
+  assert.ok(fraccionMarca(166, 0.45) > fraccionMarca(375, 0.45));
+  assert.ok(fraccionMarca(375, 0.45) > fraccionMarca(800, 0.45));
+});
+
+test('sin ancho de despliegue se usa la base, tambien acotada', () => {
+  assert.equal(fraccionMarca(null, 0.45), 0.45);
+  assert.equal(fraccionMarca(0, 0.45), 0.45);
+  assert.ok(fraccionMarca(undefined, 2) < 1);
+});

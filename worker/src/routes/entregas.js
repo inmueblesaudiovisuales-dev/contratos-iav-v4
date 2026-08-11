@@ -36,11 +36,16 @@ const ANCHO_REF = 375;
 // miniatura: el 45% de una celda de 160px es texto de 70px. Lo que tiene que
 // quedar constante es el tamaño FISICO del texto en pantalla, no su proporcion.
 // Por eso el cliente manda el ancho real de despliegue (d) y aqui se compensa.
+// TOPE CRITICO en 0.95, no en 1 ni mas: Cloudflare lee width <= 1 como FRACCION y
+// > 1 como PIXELES. Con width:1 el overlay mide un pixel y la marca de agua
+// desaparece sin error — la imagen sale limpia y nadie se entera. Verificado: a
+// partir de 1.00 la respuesta es identica byte por byte a no dibujar nada.
+export const TOPE_MARCA = 0.95;
 export function fraccionMarca(anchoDespliegue, base) {
   const b = base || ANCHO_MARCA;
   const d = Number(anchoDespliegue);
-  if (!Number.isFinite(d) || d <= 0) return b;
-  return Math.min(1.2, Math.max(0.25, b * (ANCHO_REF / d)));
+  if (!Number.isFinite(d) || d <= 0) return Math.min(TOPE_MARCA, b);
+  return Math.min(TOPE_MARCA, Math.max(0.25, b * (ANCHO_REF / d)));
 }
 
 // El sistema acepta su propia llave si esta configurada, y ademas la del admin para
@@ -434,6 +439,10 @@ export async function handleEntregas(request, env, ctx, action) {
           // fisico en el hero y en una miniatura. ?m= fuerza la base sin redesplegar.
           const base = Number(url.searchParams.get('m')) || ANCHO_MARCA;
           const w = fraccionMarca(url.searchParams.get('d'), base);
+          if (w >= 1) {   // no deberia pasar; si pasa, mejor fallar que servir limpio
+            console.error('fraccion de marca invalida', w);
+            return err('Marca de agua mal configurada', 503);
+          }
           pipe = pipe.draw(marca.body, { repeat: true, opacity: OPACIDAD_MARCA, width: w });
         } else {
           // Sin marca de agua NO se sirve la foto: es preferible fallar visible a
