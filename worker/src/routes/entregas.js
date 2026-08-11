@@ -402,7 +402,14 @@ async function payloadPublico(db, env, entrega) {
         await run(db, `UPDATE e_archivos SET estado='limpio_listo' WHERE id=?`, [v.id]);
       }
     }
-    base.videos.push({ id: v.id, uid, nombre: v.nombre || 'Video', conMarca: uid === v.stream_uid });
+    // Al cliente se le muestra el nombre del ENTREGABLE ("Video cinemático"), no el
+    // del archivo: "IAV-2607.17-A-v2.mp4" no le dice nada a nadie. Si hay varios
+    // videos en el mismo entregable se numeran para poder distinguirlos.
+    const suyo = items.filter(i => i.id === v.e_entregable_id)[0];
+    const hermanos = vids.filter(x => x.e_entregable_id === v.e_entregable_id);
+    let nombre = (suyo && suyo.nombre) || 'Video';
+    if (hermanos.length > 1) nombre += ' ' + (hermanos.indexOf(v) + 1);
+    base.videos.push({ id: v.id, uid, nombre, conMarca: uid === v.stream_uid });
   }
   if (base.videos.length) {
     base.streamCustomer = env.STREAM_CUSTOMER_CODE || '';
@@ -420,8 +427,11 @@ async function payloadPublico(db, env, entrega) {
     for (const a of (archivos || [])) {
       if (!a.r2_key) continue;
       const f = await firmar(env, 'bajar:' + a.id, 900);
+      // El video se lista con el nombre que el cliente ya vio arriba; las fotos
+      // conservan el suyo, que ahi si es util al guardarlas.
+      const vv = esVideo(a.mime) ? base.videos.filter(x => x.id === a.id)[0] : null;
       descargas.push({
-        id: a.id, nombre: a.nombre, bytes: a.bytes, mime: a.mime,
+        id: a.id, nombre: (vv && vv.nombre) || a.nombre, bytes: a.bytes, mime: a.mime,
         tipo: esVideo(a.mime) ? 'video' : 'foto',
         url: `/api/e/bajar?a=${a.id}&f=${encodeURIComponent(f)}`
       });
