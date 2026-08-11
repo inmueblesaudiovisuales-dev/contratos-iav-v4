@@ -672,6 +672,60 @@ export async function handleEntregas(request, env, ctx, action) {
     return ok({ ok: true, streamUid, customer, conMarca: !!streamUid });
   }
 
+  // Manda a Stream un video que YA esta en R2. Va aparte de la subida a proposito:
+  // si Stream falla, se reintenta sin volver a mover el archivo pesado.
+  if (action === 'procesarVideo') {
+    const { archivoId, ancho, alto } = await request.json();
+    const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
+    if (!a) return err('Archivo no encontrado', 404);
+    if (!a.r2_key) return err('Ese archivo no está en R2', 400);
+    const obj = await env.ENTREGAS_ORIGINALES.head(a.r2_key);
+    if (!obj) return err('El archivo ya no está en R2', 404);
+
+    const perfil = perfilWatermark(env, ancho, alto);
+    try {
+      // Stream jala desde una URL firmada que sirve el propio Worker: el bucket
+      // nunca queda expuesto y la firma caduca sola.
+      const f = await firmar(env, 'origen:' + archivoId, 3600);
+      const origen = `${baseEntregas(env)}/api/e/origen?a=${archivoId}&f=${encodeURIComponent(f)}`;
+      const r = await copiarAStream(env, origen, `entrega-${archivoId}`, perfil);
+      await run(db,
+        `UPDATE e_archivos SET stream_uid=?, ancho=?, alto=? WHERE id=?`,
+        [r.uid, Number(ancho) || 0, Number(alto) || 0, archivoId]);
+      await refrescarEntregable(db, a.e_entregable_id);
+      return ok({ ok: true, streamUid: r.uid, customer: r.customer, perfil,
+                  vertical: Number(alto) > Number(ancho), bytes: obj.size });
+    } catch (ex) {
+      return err('Stream rechazó el video: ' + ex.message, 502);
+    }
+  }
+
+  // Estado de un video en Stream: sirve para saber si ya termino de codificar.
+  if (action === 'estadoVideo') {
+    const archivoId = url.searchParams.get('a') || '';
+    const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
+    if (!a) return err('Archivo no encontrado', 404);
+    const salida = { ok: true, nombre: a.nombre, bytes: a.bytes,
+                     streamUid: a.stream_uid, streamUidLimpio: a.stream_uid_limpio };
+    for (const [campo, uid] of [['conMarca', a.stream_uid], ['limpio', a.stream_uid_limpio]]) {
+      if (!uid) { salida[campo] = null; continue; }
+      try {
+        const r = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/${uid}`,
+          { headers: { Authorization: `Bearer ${env.CF_MEDIA_TOKEN}` } });
+        const j = await r.json();
+        const res = j && j.result;
+        salida[campo] = res ? {
+          listo: !!res.readyToStream,
+          estado: (res.status && res.status.state) || '',
+          avance: (res.status && res.status.pctComplete) || '',
+          duracion: res.duration, ancho: res.input && res.input.width, alto: res.input && res.input.height
+        } : null;
+      } catch (ex) { salida[campo] = { error: ex.message }; }
+    }
+    return ok(salida);
+  }
+
   if (action === 'borrarArchivo') {
     const { archivoId } = await request.json();
     const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
