@@ -655,9 +655,13 @@ async function subirFotos(entregableId, files){
 // transforma el original de 10 MB y la galeria se cae (1102). Se hace en peticiones
 // separadas y de a una: hacerlo durante la subida tumba el Worker (ver el
 // comentario en subirFoto del lado del servidor).
+// Falta preparar si le falta la copia reducida (para la galeria) o el CRC (para
+// poder meterlo en el ZIP sin reventar el Worker). El video solo necesita el CRC.
 function pendientesGaleria(){
   return (ACT && ACT.archivos || []).filter(function(a){
-    return /^image\//.test(a.mime || '') && !a.r2_key_web;
+    if(!a.r2_key) return false;
+    var img = /^image\//.test(a.mime || '');
+    return (img && !a.r2_key_web) || Number(a.crc32) < 0;
   }).length;
 }
 
@@ -677,6 +681,11 @@ async function completarDerivados(onAvance){
     await new Promise(function(res){ setTimeout(res, 1500); });
   }
   return false;
+}
+
+// Bruno tambien baja el ZIP: es su material y lo va a querer para respaldar.
+function bajarZip(){
+  window.location.href = '/api/e/zip?e=' + ACT.entrega.id + '&k=' + encodeURIComponent(KEY);
 }
 
 function pintarGaleria(html){
@@ -705,10 +714,11 @@ function barraGaleria(faltan, total){
 function bloqueGaleria(){
   var pend = pendientesGaleria();
   var fotos = (ACT.archivos || []).filter(function(a){ return /^image\//.test(a.mime || ''); }).length;
-  if(!fotos) return '';
+  if(!fotos && !pend) return '';
   if(!pend){
     return '<div id="gal"><p class="hint">Galería lista · ' + fotos +
-      ' foto' + (fotos === 1 ? '' : 's') + '. Puedes cerrar la ventana.</p></div>';
+      ' foto' + (fotos === 1 ? '' : 's') + '. Puedes cerrar la ventana.</p>' +
+      '<button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="bajarZip()">Descargar las fotos (ZIP)</button></div>';
   }
   return '<div id="gal">' +
     '<button class="btn btn-ghost btn-block" onclick="prepararGaleria()">Preparar galería (' + pend + ')</button>' +

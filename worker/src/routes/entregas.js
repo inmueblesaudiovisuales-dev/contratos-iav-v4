@@ -18,7 +18,7 @@ import {
   borrarMediaDeEntrega, firmar, verificarFirma, esImagen, esVideo, nombreDescarga,
   cabecerasRango
 } from '../entregas-media.js';
-import { armarZip, tamanoZip, cabeEnZip, nombreZip } from '../entregas-zip.js';
+import { armarZip, tamanoZip, cabeEnZip, nombreZip, crcDeStream } from '../entregas-zip.js';
 
 const WA_BASE = 'https://wa.me/5218127174207';
 
@@ -157,6 +157,26 @@ async function generarDerivado(env, db, archivo) {
   } catch (ex) {
     console.error('generarDerivado falló', archivo.id, ex.message);
     return null;
+  }
+}
+
+// El CRC32 del original, calculado UNA vez. Sin esto no se puede armar el ZIP sin
+// leer los bytes en JavaScript, y leerlos revienta el limite de CPU del Worker
+// (medido: el archivo se cortaba a los 32 MB de 476).
+async function asegurarCrc(env, db, archivo) {
+  if (!archivo || !archivo.r2_key) return false;
+  if (Number(archivo.crc32) >= 0) return true;
+  try {
+    const obj = await env.ENTREGAS_ORIGINALES.get(archivo.r2_key);
+    if (!obj) return false;
+    const { crc } = await crcDeStream(obj.body);
+    // SQLite guarda enteros con signo; el CRC es de 32 bits sin signo. Se guarda
+    // tal cual y se vuelve a leer con >>> 0 al usarlo.
+    await run(db, 'UPDATE e_archivos SET crc32=? WHERE id=?', [crc, archivo.id]);
+    return true;
+  } catch (ex) {
+    console.error('asegurarCrc falló', archivo.id, ex.message);
+    return false;
   }
 }
 
@@ -601,9 +621,16 @@ export async function handleEntregas(request, env, ctx, action) {
         return h ? { a, bytes: h.size } : null;
       } catch (ex) { return null; }
     }));
+    // El CRC tiene que estar calculado de antemano. Si falta, el ZIP saldria
+    // corrupto o habria que leer los bytes aqui — que es lo que revienta el CPU.
+    const sinCrc = (results || []).filter(a => Number(a.crc32) < 0).length;
+    if (sinCrc) {
+      return err(`Faltan ${sinCrc} fotos por preparar. Prepara la galería y vuelve a intentar.`, 409);
+    }
     const usados = new Set();
     const entradas = medidos.filter(Boolean).map(m => ({
-      nombre: nombreZip(m.a.nombre, usados), bytes: m.bytes, llave: m.a.r2_key
+      nombre: nombreZip(m.a.nombre, usados), bytes: m.bytes,
+      crc: Number(m.a.crc32) >>> 0, llave: m.a.r2_key
     }));
     if (!entradas.length) return err('No se pudo leer el material', 502);
     if (!cabeEnZip(entradas)) {
@@ -1218,16 +1245,23 @@ export async function handleEntregas(request, env, ctx, action) {
     // Tope de 2: cada una transforma un original de 10 MB y pasarse revienta el
     // isolate igual que en la subida. Mejor muchas peticiones chicas que una gorda.
     const n = Math.min(2, Math.max(1, Number(lote) || 1));
+    // Falta preparar si le falta la copia reducida O el CRC. El CRC lo necesitan
+    // tambien los videos: si no, no pueden ir en un ZIP — aunque hoy no van, el
+    // dia que se quiera no habra que recalcular nada.
+    const filtro = `r2_key<>'' AND (crc32 < 0 OR (r2_key_web='' AND mime NOT LIKE 'video/%'))`;
     const { results } = await query(db,
-      `SELECT * FROM e_archivos WHERE r2_key_web='' AND r2_key<>'' AND mime NOT LIKE 'video/%'
+      `SELECT * FROM e_archivos WHERE ${filtro}
        ${entregaId ? 'AND e_entrega_id=?' : ''} LIMIT ?`,
       entregaId ? [entregaId, n] : [n]);
     let hechos = 0;
     for (const a of (results || [])) {
-      if (await generarDerivado(env, db, a)) hechos++;
+      let algo = false;
+      if (!esVideo(a.mime) && !a.r2_key_web) algo = !!(await generarDerivado(env, db, a)) || algo;
+      if (Number(a.crc32) < 0) algo = (await asegurarCrc(env, db, a)) || algo;
+      if (algo) hechos++;
     }
     const pend = await queryOne(db,
-      `SELECT COUNT(*) AS n FROM e_archivos WHERE r2_key_web='' AND r2_key<>'' AND mime NOT LIKE 'video/%'
+      `SELECT COUNT(*) AS n FROM e_archivos WHERE ${filtro}
        ${entregaId ? 'AND e_entrega_id=?' : ''}`, entregaId ? [entregaId] : []);
     return ok({ ok: true, hechos, pendientes: (pend && pend.n) || 0 });
   }

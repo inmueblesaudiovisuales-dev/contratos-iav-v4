@@ -18,33 +18,67 @@
 
 // ── CRC32 ─────────────────────────────────────────────────────────────────────
 // Obligatorio: sin CRC correcto, macOS y Windows declaran el ZIP corrupto.
-let TABLA = null;
-function tabla() {
-  if (TABLA) return TABLA;
-  TABLA = new Uint32Array(256);
+//
+// Va por 4 bytes a la vez (tablas encadenadas) en vez de uno por uno. No es
+// microoptimizacion gratuita: la version byte a byte reventaba el limite de CPU
+// del Worker, y aunque ya no se calcula durante la descarga, sigue costando 10 MB
+// por foto al preparar la galeria.
+let TABLAS = null;
+function tablas() {
+  if (TABLAS) return TABLAS;
+  const t = [];
+  for (let n = 0; n < 4; n++) t.push(new Uint32Array(256));
   for (let i = 0; i < 256; i++) {
     let c = i;
     for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    TABLA[i] = c >>> 0;
+    t[0][i] = c >>> 0;
   }
-  return TABLA;
+  for (let i = 0; i < 256; i++) {
+    for (let n = 1; n < 4; n++) {
+      t[n][i] = ((t[n - 1][i] >>> 8) ^ t[0][t[n - 1][i] & 0xFF]) >>> 0;
+    }
+  }
+  TABLAS = t;
+  return TABLAS;
 }
 
 export function crc32(bytes, previo = 0) {
-  const t = tabla();
+  const [t0, t1, t2, t3] = tablas();
   let c = (previo ^ 0xFFFFFFFF) >>> 0;
-  for (let i = 0; i < bytes.length; i++) c = (t[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8)) >>> 0;
+  let i = 0;
+  const n = bytes.length, tope = n - 3;
+  while (i < tope) {
+    c = (c ^ (bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24))) >>> 0;
+    c = (t3[c & 0xFF] ^ t2[(c >>> 8) & 0xFF] ^ t1[(c >>> 16) & 0xFF] ^ t0[c >>> 24]) >>> 0;
+    i += 4;
+  }
+  for (; i < n; i++) c = (t0[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8)) >>> 0;
   return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+// Lee un stream completo solo para sacarle el CRC. Se usa UNA vez por archivo, al
+// preparar la galeria — nunca durante una descarga.
+export async function crcDeStream(stream) {
+  const lector = stream.getReader();
+  let c = 0, bytes = 0;
+  for (;;) {
+    const { done, value } = await lector.read();
+    if (done) break;
+    c = crc32(value, c);
+    bytes += value.length;
+  }
+  return { crc: c, bytes };
 }
 
 // ── Estructura ────────────────────────────────────────────────────────────────
 const LOCAL = 30;        // cabecera local, sin contar el nombre
-const DESCRIPTOR = 16;   // el bloque que va despues de los datos
 const CENTRAL = 46;      // entrada del indice, sin contar el nombre
 const FIN = 22;          // cierre del indice
-// bit 3 = tamanos al final (streaming); bit 11 = nombres en UTF-8, para que los
-// acentos no salgan rotos en Windows.
-const BANDERAS = 0x0808;
+// bit 11 = nombres en UTF-8, para que los acentos no salgan rotos en Windows.
+// El bit 3 (tamanos al final) ya NO se usa: como el CRC se conoce de antemano, la
+// cabecera va completa y no hace falta el bloque de cierre por archivo. Eso es lo
+// que permite copiar los bytes sin mirarlos.
+const BANDERAS = 0x0800;
 
 export function nombreZip(nombre, usados) {
   // Dentro de un ZIP, dos archivos con el mismo nombre hacen que uno se pierda al
@@ -73,7 +107,7 @@ export function tamanoZip(entradas) {
   let total = FIN;
   for (const e of (entradas || [])) {
     const n = new TextEncoder().encode(e.nombre).length;
-    total += LOCAL + n + Number(e.bytes || 0) + DESCRIPTOR + CENTRAL + n;
+    total += LOCAL + n + Number(e.bytes || 0) + CENTRAL + n;
   }
   return total;
 }
@@ -100,18 +134,14 @@ export function fechaDos(d) {
   return { hora, fecha };
 }
 
-export function cabeceraLocal(nombreBytes, dos) {
+export function cabeceraLocal(nombreBytes, crc, bytes, dos) {
   return new Uint8Array([
     ...u32(0x04034b50), ...u16(20), ...u16(BANDERAS), ...u16(0),
     ...u16(dos.hora), ...u16(dos.fecha),
-    ...u32(0), ...u32(0), ...u32(0),          // crc y tamanos: van en el descriptor
+    ...u32(crc), ...u32(bytes), ...u32(bytes),
     ...u16(nombreBytes.length), ...u16(0),
     ...nombreBytes
   ]);
-}
-
-export function descriptor(crc, bytes) {
-  return new Uint8Array([...u32(0x08074b50), ...u32(crc), ...u32(bytes), ...u32(bytes)]);
 }
 
 export function entradaCentral(nombreBytes, crc, bytes, offset, dos) {
@@ -136,10 +166,20 @@ export function cierre(n, tamCentral, offCentral) {
 // ── El stream ─────────────────────────────────────────────────────────────────
 // `abrir(entrada)` devuelve un ReadableStream con los bytes del archivo. Se pasa
 // como funcion para que este modulo no sepa nada de R2 y se pueda probar solo.
+//
+// Cada entrada TRAE su crc y sus bytes ya calculados. Gracias a eso los datos se
+// pasan con pipeTo, que copia dentro del runtime sin que JavaScript vea un solo
+// byte. Leerlos aqui es exactamente lo que reventaba el limite de CPU.
 export function armarZip(entradas, abrir, fecha) {
   const dos = fechaDos(fecha);
   const { readable, writable } = new TransformStream();
-  const w = writable.getWriter();
+
+  // Se escribe tomando el writer solo para las cabeceras y soltandolo para que el
+  // stream de R2 se conecte directo al destino.
+  const escribir = async trozo => {
+    const w = writable.getWriter();
+    try { await w.write(trozo); } finally { w.releaseLock(); }
+  };
 
   (async () => {
     try {
@@ -148,43 +188,31 @@ export function armarZip(entradas, abrir, fecha) {
 
       for (const e of entradas) {
         const nb = new TextEncoder().encode(e.nombre);
-        const cab = cabeceraLocal(nb, dos);
-        await w.write(cab);
-        const inicio = offset;
-        offset += cab.length;
+        const bytes = Number(e.bytes) || 0;
+        const cab = cabeceraLocal(nb, e.crc >>> 0, bytes, dos);
+        await escribir(cab);
+        central.push(entradaCentral(nb, e.crc >>> 0, bytes, offset, dos));
+        offset += cab.length + bytes;
 
-        let crc = 0, escritos = 0;
         const cuerpo = await abrir(e);
-        if (cuerpo) {
-          const lector = cuerpo.getReader();
-          for (;;) {
-            const { done, value } = await lector.read();
-            if (done) break;
-            crc = crc32(value, crc);
-            escritos += value.length;
-            await w.write(value);
-          }
-        }
-        offset += escritos;
-
-        const d = descriptor(crc, escritos);
-        await w.write(d);
-        offset += d.length;
-
-        central.push(entradaCentral(nb, crc, escritos, inicio, dos));
+        if (!cuerpo) throw new Error('no se pudo leer ' + e.nombre);
+        // pipeTo copia dentro del runtime. Leer aqui con getReader() es
+        // exactamente lo que reventaba el limite de CPU.
+        await cuerpo.pipeTo(writable, { preventClose: true });
       }
 
       const offCentral = offset;
       let tamCentral = 0;
-      for (const c of central) { await w.write(c); tamCentral += c.length; }
-      await w.write(cierre(central.length, tamCentral, offCentral));
+      for (const c of central) { await escribir(c); tamCentral += c.length; }
+      await escribir(cierre(central.length, tamCentral, offCentral));
+      const w = writable.getWriter();
       await w.close();
     } catch (ex) {
       console.error('armarZip', ex && ex.message);
       // Abortar en vez de cerrar: un ZIP truncado que se cierra "bien" se ve
       // valido y falla al extraer. Abortado, el navegador marca la descarga como
       // fallida y el cliente sabe que tiene que reintentar.
-      try { await w.abort(ex); } catch (e2) {}
+      try { await writable.abort(ex); } catch (e2) {}
     }
   })();
 

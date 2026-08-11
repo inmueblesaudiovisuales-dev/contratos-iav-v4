@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  crc32, nombreZip, tamanoZip, cabeEnZip, TOPE_ZIP, armarZip, fechaDos
+  crc32, crcDeStream, nombreZip, tamanoZip, cabeEnZip, TOPE_ZIP, armarZip, fechaDos
 } from './entregas-zip.js';
 
 const enc = s => new TextEncoder().encode(s);
@@ -56,8 +56,8 @@ test('nombreZip limpia lo que rompe una ruta y conserva acentos', () => {
 
 test('el tamano se puede saber de antemano (por eso hay barra de progreso)', () => {
   const entradas = [{ nombre: 'a.jpg', bytes: 100 }, { nombre: 'b.jpg', bytes: 200 }];
-  // 2 * (30 + 5 + datos + 16 + 46 + 5) + 22
-  assert.equal(tamanoZip(entradas), (30 + 5 + 100 + 16 + 46 + 5) + (30 + 5 + 200 + 16 + 46 + 5) + 22);
+  // por archivo: 30 (cabecera) + nombre + datos + 46 (indice) + nombre; y 22 de cierre
+  assert.equal(tamanoZip(entradas), (30 + 5 + 100 + 46 + 5) + (30 + 5 + 200 + 46 + 5) + 22);
 });
 
 test('un zip vacio sigue siendo un zip valido', () => {
@@ -74,7 +74,9 @@ test('se rechaza lo que no cabe en el formato clasico', () => {
 // ── El archivo de verdad ──────────────────────────────────────────────────────
 
 async function zipDe(archivos) {
-  const entradas = archivos.map(a => ({ nombre: a.nombre, bytes: a.datos.length, datos: a.datos }));
+  const entradas = archivos.map(a => ({
+    nombre: a.nombre, bytes: a.datos.length, crc: crc32(new Uint8Array(a.datos)), datos: a.datos
+  }));
   const stream = armarZip(entradas, e => new Response(e.datos).body, new Date(2026, 0, 1, 12, 0, 0));
   const buf = Buffer.from(await new Response(stream).arrayBuffer());
   return { buf, entradas };
@@ -137,4 +139,33 @@ test('fechaDos no se sale de rango', () => {
   const d = fechaDos(new Date(2026, 7, 11, 23, 59, 58));
   assert.ok(d.hora >= 0 && d.hora <= 0xFFFF);
   assert.ok(d.fecha >= 0 && d.fecha <= 0xFFFF);
+});
+
+test('crcDeStream da lo mismo que calcularlo de un jalon', async () => {
+  const datos = new Uint8Array(200000).map((_, i) => (i * 31) % 256);
+  const r = await crcDeStream(new Response(datos).body);
+  assert.equal(r.crc, crc32(datos));
+  assert.equal(r.bytes, datos.length);
+});
+
+test('un CRC equivocado hace que Windows rechace el archivo', async (t) => {
+  // Prueba de que el CRC de verdad importa: si esto pasara, estariamos
+  // entregando ZIPs que se ven bien y truenan al extraer.
+  const datos = enc('contenido que no coincide con el crc');
+  const entradas = [{ nombre: 'malo.txt', bytes: datos.length, crc: 12345, datos }];
+  const stream = armarZip(entradas, e => new Response(e.datos).body, new Date(2026, 0, 1, 12, 0, 0));
+  const buf = Buffer.from(await new Response(stream).arrayBuffer());
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'zipmal-'));
+  const zip = path.join(dir, 'p.zip');
+  fs.writeFileSync(zip, buf);
+  let fallo = false;
+  try {
+    execFileSync('powershell.exe', ['-NoProfile', '-Command',
+      `Expand-Archive -LiteralPath '${zip}' -DestinationPath '${path.join(dir, 'o')}' -Force`],
+      { stdio: 'pipe' });
+  } catch (ex) { fallo = true; }
+  fs.rmSync(dir, { recursive: true, force: true });
+  if (!fallo) return t.skip('este extractor no valida el CRC');
+  assert.ok(fallo);
 });

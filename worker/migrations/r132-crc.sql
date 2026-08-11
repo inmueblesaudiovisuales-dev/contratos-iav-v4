@@ -1,0 +1,14 @@
+-- R132 — CRC32 de cada archivo, calculado una sola vez.
+--
+-- Por que hace falta: el formato ZIP exige el CRC32 de cada archivo. Calcularlo
+-- mientras se arma el ZIP obliga a leer los 476 MB byte por byte en JavaScript, y
+-- eso revienta el limite de CPU del Worker: medido en produccion, el archivo se
+-- cortaba a los 32 MB con "Worker exceeded CPU time limit".
+--
+-- Guardandolo de antemano, armar el ZIP ya no necesita mirar los bytes: los
+-- streams de R2 se copian a la respuesta sin pasar por JavaScript, que es la unica
+-- forma de mover 476 MB dentro de un Worker.
+--
+-- -1 significa "todavia no se ha calculado". Se llena al preparar la galeria,
+-- junto con la copia reducida.
+ALTER TABLE e_archivos ADD COLUMN crc32 INTEGER NOT NULL DEFAULT -1;
