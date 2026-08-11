@@ -674,11 +674,14 @@ async function completarDerivados(onAvance){
     } catch(e){ r = null; }
     if(r && !r.pendientes) return true;
     if(r && onAvance) onAvance(r.pendientes);
-    // Una vuelta sin avanzar puede ser un 503 pasajero: el Worker se recupera solo.
-    // Solo se rinde si varias seguidas no logran nada.
+    // Una vuelta sin avanzar casi siempre es un 503 pasajero: preparar una foto de
+    // 10 MB consume mucho y el Worker rebota hasta recuperarse. Medido en una tanda
+    // de 50 reales: hubo hasta 6 fallos seguidos y aun asi termino completa. Por eso
+    // el umbral es alto y la espera crece — rendirse pronto abandona una preparacion
+    // que iba bien.
     if(r && r.hechos){ secos = 0; continue; }
-    if(++secos >= 5) return false;
-    await new Promise(function(res){ setTimeout(res, 1500); });
+    if(++secos >= 12) return false;
+    await new Promise(function(res){ setTimeout(res, Math.min(8000, 1200 * secos)); });
   }
   return false;
 }
