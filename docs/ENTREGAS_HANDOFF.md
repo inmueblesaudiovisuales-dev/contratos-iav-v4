@@ -3,8 +3,11 @@
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
 >
-> Última actualización: 2026-08-11
-> Rango de commits: `9994f46..HEAD`. La sesión del 11 ago (noche) está en §18.
+> Última actualización: 2026-08-12
+> Rango de commits: `9994f46..HEAD`.
+>
+> **Atajos:** §2 estado · §15 lo que falta · §14 trampas · §18 y §19 las sesiones del
+> 11-12 ago (ZIP, descargas y el rediseño de los dos portales).
 
 ---
 
@@ -37,12 +40,18 @@ sin pisarse; el corte se decidirá aparte.
 | F6 — Expiración y limpieza | ✅ cron activo |
 | F7 — Liga en el evento de Calendar | ❌ **descartada por Bruno** (11 ago 2026) |
 
-**§12b RESUELTO** el 12 ago 2026: el valor guardado en `CF_MEDIA_TOKEN` no era el del
-token con permisos de Stream. Repuesto y verificado: Stream ya copia desde nuestro
-origen. Queda A3 (la copia limpia al liberar) por ejercer.
+**El ciclo completo está probado de punta a punta con material real** (12 ago 2026):
+subir 985 MB por partes → Stream con marca → publicar → liberar → copia limpia → el
+cliente ve la limpia → descargar el original intacto. No queda ningún camino sin
+ejercer. Ver §18.9.
 
-**Verificación:** 81 pruebas unitarias + verificación end-to-end contra producción,
-incluido un ZIP de 476 MB extraído y comparado archivo por archivo. Ver §18.6.
+**Los dos portales están rediseñados**: el del cliente (§18.4) y el de control (§19).
+
+**Verificación:** 84 pruebas unitarias + verificación end-to-end contra producción,
+incluido un ZIP de 476 MB extraído y comparado archivo por archivo (§18.6).
+
+**Lo que falta es de otro tipo** — probarlo en un teléfono real, dejar correr los 14
+días y rotar el token de Cloudflare. Ver §15.
 
 ---
 
@@ -140,6 +149,7 @@ liquida no gasta de más. Las tres se borran al expirar.
 | `worker/migrations/r132-crc.sql` | `crc32`: sin esto el ZIP no se puede armar sin quemar CPU |
 | `worker/src/entregas-zip.js` | ZIP en streaming, sin compresión |
 | `design/entrega-cliente-v2.html` | Mockup del rediseño del portal del cliente |
+| `design/entregas-portal-v2.html` | Mockup del rediseño del portal de control |
 | `design/entregas-mockup.html` | Mockup de referencia del diseño |
 
 **Ganchos en el flujo existente**, todos blindados en `try/catch` para que un fallo
@@ -279,9 +289,11 @@ obliga a resubir todos los videos ya subidos.
 
 ### Automatizado
 
-- **63 pruebas unitarias** (`node --test src/*.test.js`) sobre lógica pura: códigos,
+- **84 pruebas unitarias** (`node --test src/*.test.js`) sobre lógica pura: códigos,
   siembra desde paquetes, reloj de Monterrey, máquina de estados, firmas HMAC,
-  llaves de R2, matemática de multiparte, tope de la fracción de marca.
+  llaves de R2, matemática de multiparte, tope de la fracción de marca, cabeceras de
+  descarga parcial, y el ZIP completo (CRC32 contra zlib, tamaño exacto, nombres
+  repetidos, y extraerlo con Windows comparando byte a byte).
 - **52 verificaciones end-to-end** contra la D1 de producción vía `wrangler dev
   --remote`: ciclo completo, gate de publicación, gate de descarga, firmas
   inválidas, expiración, extensión, cascadas de borrado.
@@ -313,15 +325,17 @@ de prueba generadas ninguno habría salido.
 
 ### Lo que NO se ha probado
 
-- La subida de un video grande **desde el navegador** por la ruta multiparte. El
-  código está desplegado, pero el video de esta prueba entró por Drive.
-- **La marca de agua del video en el flujo normal**, por §12b. La de esta prueba se
-  aplicó copiando directo desde Drive.
-- La **liberación** de esta entrega: sigue con saldo de $4,500, así que la descarga
-  y la copia limpia del video no se han ejercido con material real.
-- El portal del cliente **en un teléfono real** (solo emulado a 375 px).
-- La expiración real a los 14 días (se probó forzando vigencias cortas).
-- La **reproducción del video** en el portal del cliente.
+> Actualizado el 12 ago 2026. Casi todo lo que estaba en esta lista ya se probó:
+> la subida multiparte (§18.7), la marca del video en el flujo normal (§18.8), la
+> liberación y la copia limpia (§18.9). Queda solo lo que no depende del código.
+
+- **Un teléfono real.** Todo se validó en escritorio y a 375 px emulados. El visor
+  del portal del cliente tiene gesto de deslizar y nunca ha tocado una pantalla
+  táctil.
+- **La expiración real a los 14 días.** Solo se probó forzando vigencias cortas.
+- **Liberar la entrega de Mireya con SU material** (45 fotos de 10 MB y un video de
+  986 MB). El ciclo se ejerció con entregas de prueba desechables; con volumen real
+  es donde han aparecido todos los problemas serios de esta semana.
 
 ---
 
@@ -397,7 +411,7 @@ tomara el secreto nuevo. Antes del deploy seguía dando "Authentication error".
 > **Rotar pendiente.** El token en uso se pegó en el chat, así que conviene cambiarlo
 > por uno limpio cuando el sistema esté estable.
 
-## 12b. RESUELTO el 11 ago 2026: era el token, no nuestro origen
+## 12b. RESUELTO: era el token, no nuestro origen
 
 > **El diagnóstico anterior de esta sección era equivocado y estuvo escrito aquí
 > varias sesiones.** Se conserva la corrección completa porque el error de método
@@ -469,6 +483,12 @@ porque se hizo cuando el token todavía servía.
 **El borrado a los 14 días es lo que mantiene plano el costo.** Sin él, R2 crece para
 siempre. Por eso el gate de F6 es innegociable.
 
+**Y no bastaba con el cron.** Hasta el 12 ago, borrar una entrega a mano dejaba su
+material colgado en R2 y en Stream, pagándose para siempre y sin forma de
+encontrarlo. Se habían acumulado **2,074 MB** (§18.9). Ya está arreglado, y el menú
+de configuración tiene un botón para buscar y borrar restos: conviene correrlo de
+vez en cuando, porque cualquier subida que falle a la mitad deja basura.
+
 ---
 
 ## 14. Trampas conocidas — no repetir
@@ -506,134 +526,96 @@ siempre. Por eso el gate de F6 es innegociable.
 
 ## 15. Lo que falta para terminarlo
 
-Ordenado por lo que rompe si no se atiende. Cada punto trae el contexto de diagnóstico
-que ya se juntó, para no volver a investigarlo desde cero.
+> **Actualizado el 12 ago 2026.** El sistema está completo y el ciclo entero se
+> probó de punta a punta con material real. Ya no queda ningún camino sin ejercer.
+> Lo que sigue en esta lista es de otro tipo: cosas que solo Bruno puede hacer,
+> cosas que solo el tiempo puede probar, y deuda menor.
 
-### A. Roto ahora mismo
+### A. Lo que estaba roto — todo cerrado
 
-**A1 — El derivado no se generaba al subir. ~~El 1102 sigue vivo para entregas nuevas.~~
-CERRADO el 11 ago 2026 (commit `5c80900`).**
+| # | Qué era | Estado |
+|---|---|---|
+| A1 | La copia reducida no se generaba al subir; el 1102 seguía vivo | ✅ cerrado (§18.1, §18.2) |
+| A2 | Un video subido desde el navegador se quedaba sin marca de agua | ✅ cerrado (§12b, §18.8) |
+| A3 | La copia limpia del video al liberar nunca había corrido | ✅ cerrado (§18.9) |
 
-Era el mismo bug de §11 #22, **cerrado a medias**. `generarDerivado()` existía y
-funcionaba, pero solo lo llamaban `foto` —de forma perezosa y *después* de haber
-servido, o sea que la primera vista todavía transformaba el original de 10 MB— y el
-endpoint `derivados`, que había que llamar a mano.
+Los tres tardaron más de lo que parecía porque los tres tenían un diagnóstico
+equivocado escrito en este documento. Ver §12b y §18.3.
 
-*Lo que se hizo:*
+### B. El ciclo — completo
 
-- `subirFoto` e `importarDrive` encolan el derivado con `ctx.waitUntil` al terminar.
-- El portal tiene `completarDerivados()`: pregunta al endpoint `derivados` en bucle
-  hasta que no quedan pendientes. Se llama en dos puntos — al terminar de subir, y
-  **otra vez antes de publicar**, que es el último momento en que se puede evitar que
-  el cliente sea quien descubra la galería en blanco. Si no logra terminarlas, pide
-  confirmación explícita antes de publicar en vez de fallar callado.
-- Corta el bucle si un lote no avanza (`hechos === 0`), para no girar en vacío cuando
-  el que falla es el servidor.
+| # | Qué faltaba | Estado |
+|---|---|---|
+| B1 | F7: liga en el evento de Calendar | ❌ **descartada por Bruno** |
+| B2 | Descargar todas las fotos en un ZIP | ✅ hecho y probado con 476 MB (§18.3) |
+| B3 | Ejercer la liberación con material real | ✅ ciclo completo probado (§18.9) |
+| B4 | Subida multiparte de un video grande | ✅ 985 MB en 11 partes (§18.7) |
+| B5 | Probar en un teléfono de verdad | ⬜ **pendiente — solo Bruno** |
+| B6 | Dejar pasar los 14 días reales | ⬜ **pendiente — solo el tiempo** |
 
-*Verificado en producción:* se creó una entrega de prueba, se subió una foto por
-`subirFoto` y **`r2_key_web` quedó lleno solo** a los pocos segundos, sin llamar nada
-más; `derivados` reportó `pendientes: 0`; la entrega de prueba se borró. Las 45 de
-Mireya siguen en 45/45.
+**B5** importa más de lo que parece: todo se validó en escritorio y en ancho de
+celular simulado. El visor del cliente tiene gesto de deslizar y **nunca ha tocado
+una pantalla táctil de verdad**.
 
-*Lo que NO se verificó:* la galería completa **en el navegador** con 20+ fotos reales
-recién subidas. El derivado se probó con un JPEG de 356 KB, no de 10 MB — aunque
-`generarDerivado` sí se había ejercido antes con los 45 originales de 10 MB. Con
-`curl` no se reproduce el 1102 (ver §14), así que esa prueba sigue pendiente y es la
-única forma de declarar el 1102 muerto del todo.
+**B6**: la expiración solo se probó forzando vigencias cortas. El cron corre cada
+hora y borra R2 + Stream; ese camino sí está bien (`expirarEntregas` siempre borró
+el material, ver §18.9), pero un ciclo real de dos semanas no ha ocurrido.
 
-**A2 — Stream no puede leer nuestro origen** (§12b). Un video arrastrado al portal
-queda bien en R2 pero **sin marca de agua**, y la copia limpia al liberar fallará por
-lo mismo.
+### C. Decisiones de Bruno
 
-**A3 — La copia limpia del video al liberar no se ha ejercido nunca.** Depende de A2.
-Cuando A2 se resuelva, hay que liberar una entrega con video y confirmar que
-`streamListo` detecta el cambio y que el portal cambia de uid.
+| # | Qué | Estado |
+|---|---|---|
+| C1 | Las 5 variantes `-1-N` de Mireya | ⬜ abierto |
+| C2 | Poder elegir la portada | ✅ **hecho** (§19) — clic en la miniatura |
+| C3 | Qué pasa con la entrega de Mireya | ⬜ **abierto y con enlace vivo** |
+| C4 | Densidad del mosaico (`ANCHO_MARCA = 0.45`) | ⬜ abierto |
+| C5 | Cuándo se apaga R123 | ⬜ abierto |
+| C6 | Backfill de entregas para contratos viejos | ⬜ abierto |
+| C7 | Registrar pagos desde este portal | ❌ **NO por ahora** |
+| C8 | Los 5 PNG colados en la entrega de Felipe | ⬜ **abierto** |
 
-### B. Falta para que el ciclo esté completo
+**C3 — Mireya.** Publicada desde el 11 ago con material real de una clienta que
+sigue debiendo **$4,500**. El enlace es inadivinable y no se envió nada, pero está
+vivo. Decidir si se pausa o se le manda.
 
-**B1 — F7: la liga en el evento de Calendar.** Requiere modificar
-`adapter/AdapterScript4_v1.js` y **publicarlo a mano** en script.google.com. Son
-**tres** constructores de descripción que hay que dejar iguales: `procesarFirma`,
-`crearEventoReservado` y `reagendarPropiedad`. Si uno se queda atrás habrá eventos con
-liga y sin ella sin patrón claro. Actualizar el header `// Ultima modificacion:` con
-hora de Monterrey y registrar en `docs/RONDAS.md`.
+**C7 — Registrar pagos aquí.** Se planteó el 12 ago. Es factible y usaría el mismo
+motor que admin, con el efecto bonito de que registrar el pago **liberaría la
+entrega sola**. Bruno decidió que no por ahora: rompería el aislamiento — hoy este
+sistema solo lee de los contratos y nunca escribe.
 
-**B2 — ~~El ZIP.~~ HECHO el 11 ago 2026.** Ver §18: costó tres intentos y los tres se
-veían bien con archivos chicos. `worker/src/entregas-zip.js`, 14 tests.
-**Probado con las 50 fotos reales de Felipe: 476 MB en 29 s, extraído con Windows,
-los 50 archivos íntegros byte a byte.** El video NO va en el ZIP a propósito: ya es un
-archivo suelto y meterlo dentro le quita el poder retomarse.
+**C8 — Basura en la entrega de Felipe.** Tiene `marca-agua-stream.png` y cuatro
+`Sequence 01…Still00X.png` que se colaron en una subida. Se quitan con el modo
+nuevo del portal.
 
-**B3 — ~~Probar la liberación con material real.~~ PARCIALMENTE HECHO el 11 ago 2026.**
-Se ejerció el ciclo completo (publicar → marcar pagada → liberar → descargar) con
-entregas de prueba desechables, ya borradas. Verificado:
+### D. Deuda técnica
 
-- La descarga entrega el **original intacto**: hash idéntico al archivo subido.
-- La **misma foto** servida desde una entrega publicada y desde una liberada da
-  bytes distintos, y la liberada pesa 16 KB menos — o sea, el mosaico sí se quita.
-  Esta es la promesa central del sistema y ahora está comprobada, no supuesta.
-- Aparecen `zip`, `descargas` y la fecha límite solo cuando está liberada.
+**Lo que urge más:**
 
-**Lo que sigue sin probarse: la entrega de Mireya con su material real** (45 fotos de
-10 MB y el video de 986 MB), y sobre todo **la copia limpia del video** — que depende
-de A2 y nunca ha corrido.
+- **Rotar `CF_MEDIA_TOKEN`.** Se pegó en el chat **dos veces**, y el 12 ago se
+  recuperó del historial de la sesión para arreglar §12b. Sigue activo. Hace falta
+  uno nuevo con **Stream → Edit** e **Images → Edit**; `wrangler secret put` y
+  **después un deploy** (§14).
 
-**B4 — Probar la subida de un video grande arrastrándolo**, no importándolo de Drive.
-La ruta multiparte (`videoIniciar`/`videoParte`/`videoTerminar`) está desplegada y
-nunca ha corrido con un archivo real.
+**Lo demás:**
 
-**B5 — Probar en un teléfono de verdad.** Todo se validó a 375 px emulados.
-
-**B6 — Probar la expiración real.** Solo se probó forzando vigencias cortas, nunca
-dejando pasar los 14 días con el cron corriendo.
-
-### C. Decisiones que quedaron pendientes de Bruno
-
-**C1 — Las 5 variantes `-1-1` a `-1-5`** de la entrega de Mireya traen la marca
-"default" en Drive y parecen versiones alternas de la foto 1. Se importaron todas
-porque no le tocaba al sistema decidir qué se entrega. Si son descartes, quitarlas.
-
-**C2 — La portada** quedó en la primera foto subida (`IAV-2607.17-A-1.jpg`), no en la
-mejor. No hay forma de cambiarla desde el portal: el campo `destacado` existe en
-`e_archivos` pero **la interfaz no lo expone**. Falta un botón.
-
-**C3 — La entrega de Mireya está publicada** con material real de una clienta que
-sigue debiendo. El enlace es inadivinable y no se envió nada, pero conviene decidir si
-se pausa o se le manda.
-
-**C4 — La densidad del mosaico.** Quedó en `ANCHO_MARCA = 0.45`, que reproduce la
-calibración original. `0.30` da un mosaico más denso y discreto. Se compara en vivo
-con `?m=` sobre una foto real.
-
-**C5 — El corte con R123.** Sigue vivo en `/entrega`. Falta decidir cuándo se apaga y
-qué pasa con las entregas viejas que apuntan a Drive.
-
-**C6 — Backfill de entregas** para los contratos que ya existían. `sembrar` con
-`todos:true` ya existe y es idempotente; falta decidir si se corre.
-
-### D. Deuda técnica y cabos sueltos
-
-- ~~**`ENTREGAS_KEY` no está configurada.**~~ **HECHO el 11 ago 2026.** Sin ella el
-  portal de entregas exigía teclear la `ADMIN_KEY` —o sea que para entregar fotos
-  había que andar cargando la llave del sistema de contratos— y además `secretoFirma()`
-  caía a `ADMIN_KEY` como secreto HMAC. Ya está puesta como secret y aplicada con un
-  deploy (`wrangler secret put` solo no basta, ver §14). Verificado: la llave nueva
-  responde 200 y una inventada 401. La `ADMIN_KEY` **sigue siendo aceptada a
-  propósito**, para no quedarse fuera si se pierde la otra. Bruno la teclea una vez y
-  queda en `localStorage`.
-- **Rotar `CF_MEDIA_TOKEN`**: el que está en uso se pegó en el chat.
-- **El parámetro `?m=`** sigue expuesto en producción. Es inofensivo (solo cambia la
+- ~~`ENTREGAS_KEY` sin configurar~~ ✅ hecho el 11 ago. La `ADMIN_KEY` sigue siendo
+  aceptada a propósito, para no quedarse fuera si se pierde la otra.
+- **El parámetro `?m=`** sigue expuesto en producción. Inofensivo (solo cambia la
   escala del mosaico) pero es andamio de depuración.
 - **El error de `procesarVideo` devuelve una URL de origen firmada** para poder
-  probarla. Solo lo ve quien tenga la llave, pero es información de más.
-- **Columnas muertas:** `images_id` e `images_hash` en `e_archivos` ya no se escriben
-  desde que la marca se dibuja al servir. `borrarDeImages` se conserva por si quedaran
-  registros viejos. Se pueden limpiar.
-- **La interfaz no expone** `procesarVideo`, `estadoVideo`, `derivados` ni `sembrar`.
-  Todos se llaman a mano por API.
-- **No hay reintento** si `generarDerivado` falla: queda en el original y solo se ve
-  lento. Debería reportarse en el portal.
-- **Las descargas de fotos no tienen indicador de avance** en el portal del cliente.
+  probarla a mano. Solo la ve quien tenga la llave, pero es información de más.
+- **Columnas muertas:** `images_id` e `images_hash` en `e_archivos` ya no se
+  escriben. `borrarDeImages` se conserva por si quedaran registros viejos.
+- **Sin interfaz:** `procesarVideo`, `estadoVideo` y `sembrar` se siguen llamando a
+  mano por API. `derivados` y `huerfanos` ya tienen botón.
+- **`generarDerivado` no reintenta** si falla: la foto queda sirviendo del original
+  y solo va lenta. El portal debería reportarlo.
+- **La descarga del cliente no tiene barra propia.** Se apoya en la del navegador,
+  que ahora sí avanza porque se anuncia el tamaño (§18.3). Una barra dentro de la
+  página obligaría a recibir el archivo en memoria antes de guardarlo, y con 1 GB
+  eso truena un celular. Decisión consciente, no olvido.
+- **Correr `huerfanos` de vez en cuando.** Cualquier subida que falle a la mitad
+  deja restos que nadie más va a encontrar. Está en el menú de configuración.
 
 ### E. Preexistente, no causado por este trabajo
 
@@ -648,6 +630,12 @@ El repositorio `contratos-iav-v4` es **público**, no privado como dice
 Apps Script, el `database_id` de D1 y `docs/CREDENCIALES.md`. Con `ADMIN_KEY`
 cualquiera puede llamar la API de admin en producción. Se planteó el 2026-08-11 y
 Bruno decidió no atenderlo por ahora. Queda aquí como registro, no como insistencia.
+
+### Si retomas esto sin contexto, empieza por aquí
+
+1. **Rotar el token** (D). Es lo único que bloquea trabajo de video.
+2. **Abrir una entrega en un teléfono real** (B5).
+3. **Decidir qué pasa con Mireya** (C3) — es la única entrega real con enlace vivo.
 
 ---
 
