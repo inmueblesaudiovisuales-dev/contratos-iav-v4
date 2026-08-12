@@ -157,7 +157,7 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .side{display:flex;flex-direction:column;gap:var(--s4)}
 .side .card-pad{display:flex;flex-direction:column;gap:var(--s3)}
 /* Barra de acción pegada arriba: el siguiente paso siempre visible. */
-.accionbar{position:sticky;top:0;z-index:25;background:var(--paper-1);border:1px solid var(--line);
+.accionbar{position:sticky;top:var(--htop,0px);z-index:25;background:var(--paper-1);border:1px solid var(--line);
   border-radius:var(--r);padding:13px var(--s5);display:flex;align-items:center;
   gap:var(--s4);margin-bottom:var(--s5);flex-wrap:wrap}
 .accionbar .tit{min-width:0;flex:1}
@@ -600,6 +600,15 @@ function barraAccion(e, c, estadoPill){
       '<div class="acc">' + estadoPill + paso + botones + '</div></div>';
 }
 
+// El encabezado tambien es pegajoso, asi que la barra de accion tiene que empezar
+// justo debajo. Se MIDE en vez de adivinarse: su alto cambia con el ancho de la
+// ventana, y un numero fijo la escondia detras del encabezado.
+function ajustarTope(){
+  var h = document.querySelector('header');
+  if(h) document.documentElement.style.setProperty('--htop', h.getBoundingClientRect().height + 'px');
+}
+window.addEventListener('resize', ajustarTope);
+
 function pintarDetalle(){
   var e = ACT.entrega, c = ACT.cliente;
   var estadoPill = {
@@ -765,6 +774,7 @@ function pintarDetalle(){
         '<div class="log">' + bitacora + '</div></div></div>' +
     '</aside></div>';
 
+  ajustarTope();
   zonasArrastre();
 }
 
