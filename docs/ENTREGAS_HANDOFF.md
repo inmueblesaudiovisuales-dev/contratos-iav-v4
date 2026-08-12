@@ -906,3 +906,75 @@ restos que nadie más va a encontrar.
 En §18.7 se dijo que al borrar la entrega de prueba se liberaron "985 MB de R2".
 **Era falso** — por este mismo bug, no se liberó nada. Los 985 MB siguieron ahí hasta
 la limpieza de huérfanos.
+
+---
+
+## 19. Rediseño del portal de control (12 ago 2026)
+
+Mockup en `design/entregas-portal-v2.html`, con las 4 entregas y las 50 fotos
+reales. Implementado en `frontend/entregas.html`.
+
+### Qué estaba mal
+
+- **La lista eran tarjetas gigantes** ordenadas por estado interno. Con 20 entregas,
+  scroll infinito para leer cuatro datos por entrega.
+- **El dato que Bruno viene a buscar no estaba**: "Completa" o "0 de 1", chiquito y
+  abajo a la derecha, no dice qué hay que hacer.
+- **No había buscador.** Con 30 entregas no hay forma de encontrar a nadie.
+- **En el detalle, la acción vivía al final de 50 miniaturas.** Para publicar había
+  que hacer scroll por toda la galería.
+- **Cada miniatura repetía un nombre truncado** (`IAV-2607.17…`) que no distingue
+  nada y duplica el alto de la cuadrícula.
+- **Borrar una foto era una X al pasar el mouse.** Con archivos de 10 MB, un clic
+  accidental cuesta volver a subirlos.
+- **Elegir portada existía pero era invisible**: solo se descubría por accidente.
+
+### Qué se hizo
+
+- Lista agrupada por **qué toca hacer** — *Por hacer / Esperando pago / Entregadas /
+  Se borran pronto* — y dicho en palabras: "Falta subir Fotografías", "Esperando pago
+  · $4,500", "Se borra en 2 días". El **cliente** pasa a ser lo primero de cada fila.
+- **Buscador** por cliente, folio o dirección. Se oculta dentro del detalle.
+- **Barra de acción pegada arriba** con el siguiente paso y sus botones. Se quitaron
+  los duplicados del panel lateral: dos botones que hacen lo mismo en la misma
+  pantalla no guían, compiten.
+- **Cuadrícula densa** sin nombres; el nombre en el tooltip.
+- **Modo quitar explícito**: se entra a propósito, se eligen, y la barra dice cuántos
+  se van antes de confirmar.
+- **La portada se ve**: cinta, estrella llena, estrella hueca al pasar el mouse, y una
+  línea que lo explica. No aparece con una sola foto.
+- **Menú de configuración** (engrane) con limpiar sin pagar, buscar material sin dueño
+  y cambiar contraseña. Lo que borra material deja de estar junto al botón diario.
+- Si se **libera a mano con saldo pendiente**, se dice explícito: *"Liberada a mano. En
+  el contrato siguen debiendo $X"* — antes se leían "Liberada" y "Saldo $4,500" como
+  una contradicción, cuando las dos son ciertas.
+
+### Decisiones de Bruno
+
+- **F7 (liga en el Calendar): descartada.** No se hará.
+- **Registrar pagos desde este portal: NO por ahora.** Se puede —sería el mismo motor
+  que admin y liberaría la entrega sola— pero rompería el aislamiento: hoy este
+  sistema solo lee de los contratos, nunca escribe.
+
+### Cómo se conecta con el admin (respuesta a una pregunta recurrente)
+
+No copia nada, **lee en vivo**. Comparte la base D1. Cada entrega guarda el
+`contrato_token` y con eso lee `saldo_pendiente` de `contratos` en cada consulta. Los
+datos del cliente igual, de `clientes`. Por eso corregir un teléfono en admin se
+refleja aquí solo. Liberar **no toca el contrato**.
+
+### Bugs propios encontrados al probar en producción
+
+1. **"← Todas las entregas" duplicado** al mover el título a la barra de acción.
+2. **Hueco enorme donde iba el buscador**: ocultarlo con `visibility` deja reservada
+   su fila entera, que en pantallas angostas es una franja vacía.
+3. **La barra pegajosa quedaba tapada por el encabezado** — los dos empezaban en
+   cero. Se **mide** el alto del encabezado en vez de fijar un número, porque cambia
+   con el ancho.
+4. Las filas se apilaban ya a 820 px, lo que las hacía el doble de altas sin ganar
+   nada. Ahora solo en celular (560 px).
+
+Verificado en producción: buscador (filtra y da vacío coherente), modo quitar
+(entra, marca, cuenta, cancela sin borrar nada), menú (abre, cierra al hacer clic
+fuera), barra pegajosa (queda justo debajo del encabezado al hacer scroll), y las 50
+miniaturas intactas con su portada marcada.
