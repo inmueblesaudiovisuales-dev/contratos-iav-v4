@@ -37,8 +37,9 @@ sin pisarse; el corte se decidirá aparte.
 | F6 — Expiración y limpieza | ✅ cron activo |
 | F7 — Liga en el evento de Calendar | ❌ **descartada por Bruno** (11 ago 2026) |
 
-**Bloqueante abierto:** el `CF_MEDIA_TOKEN` no tiene permisos de Stream (error 9106),
-así que ninguna operación de video funciona hoy. Se arregla con un token nuevo. Ver §12b.
+**§12b RESUELTO** el 12 ago 2026: el valor guardado en `CF_MEDIA_TOKEN` no era el del
+token con permisos de Stream. Repuesto y verificado: Stream ya copia desde nuestro
+origen. Queda A3 (la copia limpia al liberar) por ejercer.
 
 **Verificación:** 81 pruebas unitarias + verificación end-to-end contra producción,
 incluido un ZIP de 476 MB extraído y comparado archivo por archivo. Ver §18.6.
@@ -800,3 +801,43 @@ fotos.
 **Siguiente al retomar:** token nuevo con permiso de Stream → cierra A2 y desbloquea
 A3 (la copia limpia al liberar, que nunca ha corrido). Después, rediseño del **portal
 de control** para hacerlo más fácil de usar — pedido por Bruno el 11 ago.
+
+### 18.8 A2 CERRADO — el token estaba puesto, pero con el valor equivocado
+
+Segunda corrección del mismo problema en una noche, y la lección es distinta a la de
+§12b.
+
+**Qué pasó:** tras concluir que el token no tenía permisos de Stream, Bruno preguntó
+*"¿no te había dado ya un token con eso?"*. Lo tenía. En el historial estaba el token
+que se generó justamente para esto, y **sigue vivo y funcional**: verificado contra
+`/user/tokens/verify` (`status: active`) y contra `/stream/watermarks` (`success: true`).
+
+El secret `CF_MEDIA_TOKEN` **existía** en el Worker — aparece en `wrangler secret
+list` — pero su **valor** no era el de ese token. En algún punto quedó guardado otro.
+`secret list` solo muestra nombres, nunca valores, así que la lista se veía correcta
+mientras el contenido estaba mal.
+
+**Se repuso y se desplegó.** Verificado en producción:
+
+- `estadoVideo` sobre el video de Mireya: `ready`, 100 %, 2160×3840. Antes: error 9106.
+- **Stream copió un video de 985 MB desde `/api/e/origen`** — la operación que llevaba
+  sesiones declarada imposible. Terminó en `ready` y se borró la copia de prueba.
+
+**Lo que hay que aprender de esto:**
+
+1. **Un secret presente no es un secret correcto.** `wrangler secret list` da falsa
+   tranquilidad: confirma el nombre, no el contenido. La única verificación real es
+   *usarlo*.
+2. **Buscar en el historial antes de pedirle al usuario algo que ya dio.** Estuve a
+   punto de mandar a Bruno a generar un token que ya existía y funcionaba.
+
+**Nota honesta sobre el arreglo de `origen`:** en la misma sesión se le agregó
+`Content-Length`, soporte de `Range` y respuesta a `HEAD` — porque se sospechaba que
+Stream no podía leerlo. Resultó que la causa era el token, así que **no está probado
+que ese cambio fuera necesario**. Se conserva porque es correcto de todos modos: un
+origen que anuncia su tamaño y acepta rangos es lo que cualquier descargador espera de
+un archivo de 1 GB.
+
+**Estado de A2: cerrado.** Un video subido desde el navegador ya puede llegar a Stream
+con su marca de agua. Falta ejercer **A3**: la copia limpia al liberar, que usa la
+misma llamada y ahora debería funcionar.
