@@ -170,9 +170,20 @@ button{font-family:inherit;cursor:pointer}
   background:rgba(255,253,248,.94);border:1px solid var(--line-2);color:var(--danger);
   font-size:11px;line-height:1;display:none;align-items:center;justify-content:center;padding:0}
 .tira:hover .x{display:flex}
+/* La portada se marca con estrella llena y borde dorado. Al pasar el mouse por
+   cualquier otra aparece una estrella hueca: es lo que hace descubrible que se
+   puede cambiar con un clic. Sin eso, la funcion existe pero nadie la encuentra. */
 .tira.port{border:2px solid var(--gold-leaf)}
 .tira .est{position:absolute;bottom:2px;left:2px;color:var(--gold-leaf);
-  filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
+.tira .est.fantasma{display:none;color:#fff;opacity:.9}
+.tira:hover .est.fantasma{display:block}
+.tira .cinta{position:absolute;top:0;left:0;right:0;background:var(--gold-leaf);
+  color:#1a1509;font-family:var(--font-mono);font-size:8px;letter-spacing:.06em;
+  text-transform:uppercase;padding:2px 0;text-align:center}
+.ayuda{font-size:11.5px;color:var(--ink-3);line-height:1.5;margin-top:9px;
+  display:flex;align-items:center;gap:6px}
+.ayuda svg{color:var(--gold-leaf);flex:0 0 auto}
 .zona{border:1px dashed var(--line-2);border-radius:9px;padding:14px;text-align:center;
   color:var(--ink-3);font-size:12.5px;margin-top:10px;background:var(--paper-0);cursor:pointer}
 .zona:hover{border-color:var(--gold-leaf);color:var(--ink-2)}
@@ -376,10 +387,19 @@ function pintarDetalle(){
         return '<button class="tira' + (i===0 && !QUITANDO ? ' port' : '') + (sel ? ' sel' : '') +
           '" title="' + tit + '" onclick="' + (QUITANDO ? 'marcar(' + i + ')' : 'void 0') + '"' +
           ' style="background-image:url(\'' + BASE + '/api/e/foto?a=' + pid + '&w=120&d=60\')">' +
-          (i===0 && !QUITANDO ? '<span class="est"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>' : '') +
+          (i===0 && !QUITANDO
+            ? '<span class="cinta">portada</span><span class="est"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>'
+            : (!QUITANDO ? '<span class="est fantasma"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>' : '')) +
           '<span class="marca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>' +
           '</button>';
       }).join('') + '</div>';
+      // Sin esta linea, elegir portada es una funcion que solo se descubre por
+      // accidente. Se muestra solo cuando hay mas de una foto: con una sola no hay
+      // nada que elegir.
+      if(!QUITANDO && suyas.length > 1){
+        h += '<p class="ayuda"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>' +
+          'La foto con estrella es la portada que ve el cliente. Toca cualquier otra para cambiarla.</p>';
+      }
       if(pendientes) h += '<div class="prog"><i style="width:76%"></i></div>';
     }
     h += '<div class="zona"><b>Arrastra ' + (it.tipo === 'video' ? 'el video' : 'las fotos') + '</b>' +
