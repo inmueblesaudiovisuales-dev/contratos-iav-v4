@@ -57,7 +57,7 @@ STREAM_WATERMARK_UID_VERTICAL = "08ab04bc1cc268a0ff86d910e5b7f179"
 # Cada hora: sincronizacion, respaldo y expiracion de entregas.
 # Cada minuto: preparar la galeria de lo que se acaba de subir, para que Bruno no
 # tenga que dejar la ventana abierta mirando una barra. Procesa de dos en dos.
-crons = ["0 * * * *", "* * * * *"]
+crons = ["0 * * * *", "*/2 * * * *"]
 
 # R130 — Pasa de route a custom_domain para que Cloudflare sea dueño del registro
 # DNS y lo mantenga. Como route, el DNS vivia aparte y quedo huerfano al agregar el

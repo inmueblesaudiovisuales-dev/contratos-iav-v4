@@ -137,7 +137,7 @@ export default {
     // event.cron con la cadena exacta del cron minutero y no se ejecutaba nunca;
     // asi ya no depende de que ese valor llegue como se espera.
     ctx.waitUntil(
-      prepararPendientes(env).catch(e => console.error('R131 prepararPendientes falló:', e.message))
+      prepararPendientes(env, 3).catch(e => console.error('R131 prepararPendientes falló:', e.message))
     );
     // Lo pesado —sincronizacion, respaldo, expiracion— SOLO en el cron horario. Si
     // corriera cada minuto serian 60 sincronizaciones por hora sin ninguna razon.
