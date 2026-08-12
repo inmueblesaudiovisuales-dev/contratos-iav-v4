@@ -255,7 +255,11 @@ function toast(m){var t=document.getElementById('toast');t.textContent=m;t.class
 // mosaico grande en el hero y diminuto en una miniatura.
 function fotoUrl(f, display){
   if(!f || !f.id) return '';
-  var d = Math.round(display);
+  // Piso duro. Un ancho de 0 o negativo pide una foto imposible y el navegador se
+  // queda con el hueco: pasó con la galería entera cuando window.innerWidth valía 0.
+  // Vale más servir una foto de más que ninguna.
+  var d = Math.round(Number(display));
+  if(!isFinite(d) || d < 120) d = 375;
   return '/api/e/foto?a=' + encodeURIComponent(f.id) + '&w=' + Math.min(2400, d * 2) + '&d=' + d;
 }
 function vidThumb(v){
@@ -403,16 +407,13 @@ function bloqueBloqueada(){
 // pantalla.
 function montarMosaico(fs){
   var cont = document.getElementById('mosaico');
-  var cols = window.innerWidth >= 640 ? 3 : 2;
-  var ancho = Math.round(Math.min(760, window.innerWidth - 36) / cols);
-  var obs = new IntersectionObserver(function(entradas, o){
-    entradas.forEach(function(en){
-      if(!en.isIntersecting) return;
-      var img = en.target.querySelector('img');
-      if(!img.src) img.src = img.dataset.src;
-      o.unobserve(en.target);
-    });
-  }, { rootMargin: '700px 0px' });
+  // El ancho se mide del CONTENEDOR, no de la ventana. window.innerWidth vale 0
+  // cuando la pestaña abre en segundo plano o antes de que termine el layout, y
+  // "innerWidth - 36" daba un ancho NEGATIVO: la galería entera se quedaba sin
+  // cargar. Medido en producción. El piso de 200 px es la última red.
+  var caja = cont.clientWidth || document.body.clientWidth || window.innerWidth || 375;
+  var cols = caja >= 620 ? 3 : 2;
+  var ancho = Math.max(200, Math.round(caja / cols));
 
   fs.forEach(function(f, i){
     var b = document.createElement('button');
@@ -420,12 +421,18 @@ function montarMosaico(fs){
     b.setAttribute('aria-label', 'Ver ' + (f.nombre || 'foto'));
     b.onclick = function(){ abrirFoto(i); };
     var img = document.createElement('img');
-    img.dataset.src = fotoUrl(f, ancho);
+    // Carga diferida NATIVA del navegador, en vez de un IntersectionObserver: el
+    // observer no dispara si la pestaña nunca llega a pintarse, y entonces las
+    // fotos se quedan sin src para siempre. Con loading="lazy" el navegador sigue
+    // pidiendo solo lo que se acerca a la pantalla, que es lo que evita tumbar al
+    // Worker con 45 transformaciones de golpe.
+    img.loading = 'lazy';
+    img.decoding = 'async';
     img.alt = f.nombre || '';
     img.onload = function(){ img.className = 'ok'; };
+    img.src = fotoUrl(f, ancho);
     b.appendChild(img);
     cont.appendChild(b);
-    obs.observe(b);
   });
 }
 
@@ -459,7 +466,7 @@ function pintarVisor(){
     mid.appendChild(f);
   } else {
     vi.style.display = '';
-    vi.src = fotoUrl(actual, Math.min(1600, Math.max(window.innerWidth, window.innerHeight)));
+    vi.src = fotoUrl(actual, Math.min(1600, Math.max(window.innerWidth || 0, window.innerHeight || 0, 900)));
   }
   document.getElementById('vname').textContent = actual.nombre || '';
   document.getElementById('vcnt').textContent = (IDX + 1) + ' / ' + LISTA.length;
