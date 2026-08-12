@@ -841,3 +841,68 @@ un archivo de 1 GB.
 **Estado de A2: cerrado.** Un video subido desde el navegador ya puede llegar a Stream
 con su marca de agua. Falta ejercer **A3**: la copia limpia al liberar, que usa la
 misma llamada y ahora debería funcionar.
+
+### 18.9 A3 cerrado, y dos bugs que aparecieron al ejercerlo
+
+**A3 — la copia limpia del video al liberar: FUNCIONA.** Ciclo completo con el MP4
+real de 985 MB: subida multiparte → Stream con marca → publicar → liberar → copia
+limpia → el cliente apunta sola a la limpia (`conMarca: false`). Verificado contra la
+API de Stream: la copia con marca lleva `VistaPreviaIAV-Vertical` (el perfil vertical
+correcto, porque el video es 2160×3840) y **la limpia no lleva ninguna**.
+
+Con eso, **el ciclo completo del sistema está probado de punta a punta con material
+real.** Ya no queda ningún camino sin ejercer.
+
+Pero ejercerlo destapó dos bugs, y los dos habrían pegado en el peor momento.
+
+#### La copia "limpia" habría salido CON marca
+
+`pedirVideoLimpio` pasaba `null` como perfil, y `copiarAStream` hacía
+`watermarkUid || env.STREAM_WATERMARK_UID`. Con `||`, "va limpia a propósito" y "no me
+dijeron nada" se ven **iguales**, y ganaba el default.
+
+O sea: el cliente paga, se genera su copia sin marca… con marca. Pagó para seguir
+viendo lo mismo. Se separó en `uidWatermark()`: `undefined` = usa el de siempre;
+`null` o vacío = ésta va limpia. 3 tests.
+
+**Encontrado leyendo el código antes de ejecutar, no en producción.** Vale la pena
+notarlo: el `||` que colapsa "vacío" con "no especificado" es un error clásico y aquí
+costaba caro.
+
+#### Borrar una entrega dejaba el material colgado, pagándose
+
+`borrarEntregaCascada` borraba **solo los registros de la base**. Y como los registros
+son lo único que sabe dónde vive cada archivo, borrarlos primero convertía todo el
+material en huérfanos imposibles de encontrar después.
+
+Medido: **2,074 MB en R2 y 2 videos en Stream** acumulados de entregas borradas.
+Todo eso se estaba pagando en silencio.
+
+Arreglado: primero el material, después los registros. Si el material falla, los
+registros se borran igual —dejar la entrega a medias sería peor— y lo que no se pudo
+borrar queda en el log. Afecta también a `eliminarContrato`.
+
+`expirarEntregas` **ya lo hacía bien**: ese camino nunca estuvo roto, lo cual explica
+que no se notara antes.
+
+#### Herramienta nueva: `huerfanos`
+
+```
+GET /api/e/huerfanos            lista material sin registro (R2 + Stream)
+GET /api/e/huerfanos?borrar=1   lo borra
+```
+
+Nunca toca `sistema/` (la marca de agua), y en Stream solo considera los videos que
+este sistema creó (`entrega-*`, `limpio-*`): los de R123 no son asunto suyo.
+
+Se corrió: **43 archivos y 2 videos borrados, 0 fallos.** Después: 0 huérfanos.
+Verificado que las 4 entregas reales quedaron intactas y sirviendo.
+
+**Conviene correrlo de vez en cuando**, porque cualquier fallo a media subida deja
+restos que nadie más va a encontrar.
+
+#### Corrección a lo que se reportó antes
+
+En §18.7 se dijo que al borrar la entrega de prueba se liberaron "985 MB de R2".
+**Era falso** — por este mismo bug, no se liberó nada. Los 985 MB siguieron ahí hasta
+la limpieza de huérfanos.
