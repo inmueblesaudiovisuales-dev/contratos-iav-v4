@@ -434,6 +434,24 @@ function montarMosaico(fs){
     b.appendChild(img);
     cont.appendChild(b);
   });
+
+  // Red de seguridad. La carga diferida del navegador decide sola qué está "cerca
+  // de la pantalla", y si la ventana reporta tamaño 0 concluye que nada lo está:
+  // las fotos se quedan sin cargar aunque su URL sea correcta. Si a los 2.5 s no
+  // cargó ninguna, se fuerzan — pero DE A POCAS, porque 45 de golpe es lo que
+  // revienta al Worker.
+  setTimeout(function(){
+    var imgs = cont.querySelectorAll('img');
+    var cargadas = 0;
+    for(var i = 0; i < imgs.length; i++) if(imgs[i].complete && imgs[i].naturalWidth) cargadas++;
+    if(cargadas) return;
+    var n = 0;
+    (function tanda(){
+      var fin = Math.min(n + 6, imgs.length);
+      for(; n < fin; n++) imgs[n].loading = 'eager';
+      if(n < imgs.length) setTimeout(tanda, 700);
+    })();
+  }, 2500);
 }
 
 // ── Visor ───────────────────────────────────────────────────────────────────
