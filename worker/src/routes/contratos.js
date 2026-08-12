@@ -744,7 +744,7 @@ export async function handleContratos(request, env, ctx, action) {
     // huerfanos apuntando a un contrato que ya no existe. Blindado: un fallo aqui
     // no debe impedir borrar el contrato.
     try {
-      await borrarEntregasDeContrato(db, token);
+      await borrarEntregasDeContrato(db, token, env);
     } catch (e) {
       console.error('R129 borrarEntregasDeContrato falló:', e.message);
     }

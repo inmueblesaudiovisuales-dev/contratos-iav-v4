@@ -335,7 +335,24 @@ export async function expirarEntregas(env) {
 }
 
 // Cascada manual: D1 ignora las foreign keys.
-async function borrarEntregaCascada(db, entregaId) {
+// PRIMERO el material, DESPUES los registros. En ese orden y no al reves: los
+// registros son lo unico que sabe donde vive cada archivo, asi que borrarlos antes
+// deja huerfanos en R2 y en Stream que ya nadie puede encontrar — y que se siguen
+// pagando para siempre. Paso exactamente eso hasta el 12 ago 2026.
+//
+// Si el borrado del material falla, los registros se borran igual: dejar la entrega
+// a medias seria peor. Lo que no se pudo borrar se registra en el log.
+async function borrarEntregaCascada(db, env, entregaId) {
+  if (env) {
+    try {
+      const { results: archivos } = await query(db,
+        'SELECT * FROM e_archivos WHERE e_entrega_id=?', [entregaId]);
+      const r = await borrarMediaDeEntrega(env, archivos || []);
+      if (r.fallos) console.error('borrarEntregaCascada: quedaron', r.fallos, 'huérfanos en', entregaId);
+    } catch (ex) {
+      console.error('borrarEntregaCascada media', entregaId, ex.message);
+    }
+  }
   await batch(db, [
     { sql: 'DELETE FROM e_eventos WHERE e_entrega_id=?', params: [entregaId] },
     { sql: 'DELETE FROM e_archivos WHERE e_entrega_id=?', params: [entregaId] },
@@ -346,10 +363,10 @@ async function borrarEntregaCascada(db, entregaId) {
 
 // La llama eliminarContrato para no dejar entregas huerfanas apuntando a un
 // contrato que ya no existe.
-export async function borrarEntregasDeContrato(db, contratoToken) {
+export async function borrarEntregasDeContrato(db, contratoToken, env) {
   const { results } = await query(db,
     'SELECT id FROM e_entregas WHERE contrato_token=?', [contratoToken]);
-  for (const e of (results || [])) await borrarEntregaCascada(db, e.id);
+  for (const e of (results || [])) await borrarEntregaCascada(db, env, e.id);
   return { borradas: (results || []).length };
 }
 
@@ -1249,7 +1266,7 @@ export async function handleEntregas(request, env, ctx, action) {
     const { id } = await request.json();
     const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [id]);
     if (!e) return err('Entrega no encontrada', 404);
-    await borrarEntregaCascada(db, id);
+    await borrarEntregaCascada(db, env, id);
     return ok({ ok: true });
   }
 
