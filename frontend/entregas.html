@@ -118,7 +118,9 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
   grid-template-columns:minmax(0,1fr) auto;align-items:center;
   cursor:pointer;transition:border-color .16s,box-shadow .16s}
 .row:hover{border-color:var(--line-2);box-shadow:var(--shadow-1)}
-@media(max-width:820px){.row{grid-template-columns:1fr}}
+/* Solo se apila en celular: a 800px todavia cabe el "que toca" a la derecha, y
+   apilarlo ahi hacia las filas el doble de altas sin ganar nada. */
+@media(max-width:560px){.row{grid-template-columns:1fr;gap:var(--s2)}}
 .row .who b{display:block;font-size:14.5px;font-weight:600;margin-bottom:2px}
 .row .who span{font-size:12.5px;color:var(--ink-2)}
 .row .meta{font-family:var(--font-mono);font-size:11px;color:var(--ink-3);margin-top:4px;
@@ -434,8 +436,10 @@ function cerrarMenu(){ var p = document.getElementById('mpanel'); if(p) p.classL
 
 // El buscador solo tiene sentido en la lista: dentro de una entrega estorba.
 function verBuscador(v){
+  // display, no visibility: en pantallas angostas el buscador ocupa su propia fila
+  // y dejarla reservada abre un hueco enorme dentro del detalle.
   var b = document.getElementById('buscarBox');
-  if(b) b.style.visibility = v ? '' : 'hidden';
+  if(b) b.style.display = v ? '' : 'none';
 }
 
 async function irLista(){
@@ -733,7 +737,7 @@ function pintarDetalle(){
   }).join('') || '<div class="hint">Sin movimientos.</div>';
 
   document.getElementById('main').innerHTML =
-    '<button class="back" onclick="irLista()">← Todas las entregas</button>' +
+    
     barraAccion(e, c, estadoPill) +
     '<div class="detail"><div style="display:flex;flex-direction:column;gap:16px">' +
       '<div class="card"><div class="card-hd"><b>Entregables</b>' +
