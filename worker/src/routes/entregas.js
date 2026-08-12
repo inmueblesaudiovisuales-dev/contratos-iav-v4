@@ -15,7 +15,8 @@ import {
 } from '../entregas-core.js';
 import {
   llaveR2, guardarEnR2, copiarAStream, perfilWatermark, streamListo,
-  borrarMediaDeEntrega, firmar, verificarFirma, esImagen, esVideo, nombreDescarga,
+  borrarMediaDeEntrega, borrarDeR2, borrarDeStream,
+  firmar, verificarFirma, esImagen, esVideo, nombreDescarga,
   cabecerasRango
 } from '../entregas-media.js';
 import { armarZip, tamanoZip, cabeEnZip, nombreZip, crcDeStream } from '../entregas-zip.js';
@@ -1334,6 +1335,62 @@ export async function handleEntregas(request, env, ctx, action) {
       `SELECT COUNT(*) AS n FROM e_archivos WHERE ${filtro}
        ${entregaId ? 'AND e_entrega_id=?' : ''}`, entregaId ? [entregaId] : []);
     return ok({ ok: true, hechos, pendientes: (pend && pend.n) || 0 });
+  }
+
+  // ---- Huerfanos: material sin registro en la base ----
+  // Existe porque hasta el 12 ago 2026 borrar una entrega dejaba sus archivos en R2
+  // y en Stream. Sirve tambien para cualquier resto que deje un fallo a medias: un
+  // video que se subio y nunca se completo, una copia de Stream que se pidio y
+  // fallo. Todo eso se sigue pagando en silencio.
+  //
+  // Las llaves de sistema (la marca de agua) NUNCA se tocan.
+  if (action === 'huerfanos') {
+    const borrar = url.searchParams.get('borrar') === '1';
+    const vivas = new Set();
+    const { results: archivos } = await query(db, 'SELECT * FROM e_archivos');
+    const uids = new Set();
+    for (const a of (archivos || [])) {
+      if (a.r2_key) vivas.add(a.r2_key);
+      if (a.r2_key_web) vivas.add(a.r2_key_web);
+      if (a.stream_uid) uids.add(a.stream_uid);
+      if (a.stream_uid_limpio) uids.add(a.stream_uid_limpio);
+    }
+
+    const r2 = [];
+    let cursor;
+    do {
+      const l = await env.ENTREGAS_ORIGINALES.list({ limit: 1000, cursor });
+      for (const o of l.objects) {
+        if (o.key.startsWith('sistema/')) continue;   // la marca de agua se queda
+        if (!vivas.has(o.key)) r2.push({ key: o.key, bytes: o.size });
+      }
+      cursor = l.truncated ? l.cursor : null;
+    } while (cursor);
+
+    const stream = [];
+    try {
+      const rs = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream`,
+        { headers: { Authorization: `Bearer ${env.CF_MEDIA_TOKEN}` } });
+      const js = await rs.json();
+      for (const v of ((js && js.result) || [])) {
+        // Solo se consideran los que este sistema creo. Los videos de R123 y
+        // cualquier otro que viva en la cuenta no son asunto nuestro.
+        const nombre = (v.meta && v.meta.name) || '';
+        if (!/^(entrega|limpio)-/.test(nombre)) continue;
+        if (!uids.has(v.uid)) stream.push({ uid: v.uid, nombre });
+      }
+    } catch (ex) { console.error('huerfanos stream', ex.message); }
+
+    let borrados = { r2: 0, stream: 0, fallos: 0 };
+    if (borrar) {
+      for (const o of r2) { (await borrarDeR2(env, o.key)) ? borrados.r2++ : borrados.fallos++; }
+      for (const v of stream) { (await borrarDeStream(env, v.uid)) ? borrados.stream++ : borrados.fallos++; }
+    }
+    return ok({ ok: true, borrar,
+      r2: { n: r2.length, mb: Math.round(r2.reduce((s, o) => s + o.bytes, 0) / 1048576), lista: r2.slice(0, 60) },
+      stream: { n: stream.length, lista: stream.slice(0, 60) },
+      borrados });
   }
 
   // Lo que se borra en los proximos dias. El portal lo muestra como aviso: no hay
