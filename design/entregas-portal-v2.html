@@ -89,6 +89,32 @@ button{font-family:inherit;cursor:pointer}
 .vacio{padding:30px;text-align:center;color:var(--ink-3);font-size:13px;
   border:1px dashed var(--line-2);border-radius:var(--r)}
 
+/* Configuración: lo que se usa dos veces al año no compite con lo de todos los días */
+.menu{position:relative}
+.icb{width:34px;height:34px;border-radius:9px;border:1px solid var(--line-2);
+  background:var(--paper-1);color:var(--ink-2);display:flex;align-items:center;justify-content:center}
+.icb:hover{color:var(--ink-1);border-color:var(--ink-4)}
+.mpanel{display:none;position:absolute;right:0;top:40px;background:var(--paper-1);
+  border:1px solid var(--line-2);border-radius:var(--r);box-shadow:0 12px 32px rgba(33,30,24,.13);
+  min-width:280px;padding:6px;z-index:40}
+.mpanel.on{display:block}
+.mpanel button{display:block;width:100%;text-align:left;background:none;border:none;
+  padding:9px 11px;border-radius:7px;font-size:13px;color:var(--ink-1)}
+.mpanel button:hover{background:var(--paper-2)}
+.mpanel button.rojo{color:var(--danger)}
+.mpanel button.rojo:hover{background:var(--danger-bg)}
+.mpanel hr{border:none;border-top:1px solid var(--line);margin:5px 8px}
+
+/* Modo quitar: borrar deja de ser algo que pasa por acercar el mouse. Hay que
+   entrar a propósito, elegir, y confirmar cuántas. */
+.selbar{display:flex;align-items:center;gap:10px;background:var(--danger-bg);
+  border:1px solid rgba(158,58,47,.25);border-radius:9px;padding:9px 12px;margin-bottom:10px}
+.selbar b{font-size:12.5px;color:var(--danger);flex:1}
+.tira.sel{border:2px solid var(--danger)}
+.tira .marca{position:absolute;inset:0;background:rgba(158,58,47,.42);display:none;
+  align-items:center;justify-content:center;color:#fff}
+.tira.sel .marca{display:flex}
+
 /* ── Detalle ──────────────────────────────────────────────────────────────── */
 .volver{background:none;border:none;font-family:var(--font-mono);font-size:11.5px;
   color:var(--ink-3);padding:0;margin-bottom:var(--s4)}
@@ -191,6 +217,19 @@ button{font-family:inherit;cursor:pointer}
     <input id="q" placeholder="Buscar por cliente, folio o dirección…" oninput="pintar()">
   </div>
   <div class="der">
+    <div class="menu">
+      <button class="icb" onclick="menu()" title="Configuración">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <!-- Lo que borra material vive aqui adentro: se usa dos veces al ano y no
+           tiene por que estar al lado del boton de todos los dias. -->
+      <div class="mpanel" id="mpanel">
+        <button>Cambiar la contraseña</button>
+        <button>Buscar material sin dueño</button>
+        <hr>
+        <button class="rojo">Limpiar material de entregas que nunca pagaron</button>
+      </div>
+    </div>
     <button class="btn btn-primary">Nueva entrega</button>
   </div>
 </div>
@@ -200,6 +239,18 @@ button{font-family:inherit;cursor:pointer}
 <script>
 var D = {"lista":[{"id":"684aef82-80fc-4f56-b5f7-688ed82aedad","titulo":"casita","cliente":"Felipe johnson","folio":"","estado":"borrador","grupo":"pendientes","saldo":null,"fechaSesion":"","entregables":[{"id":"e46fd1ca-1231-40ca-b8df-1239ac59011f","tipo":"fotos","nombre":"Fotografías","completo":true,"numArchivos":50}],"completa":true,"faltan":[],"diasRestantes":null,"ruta":"https://entregas.inmueblesaudiovisuales.com/8du2mgqpjc"},{"id":"620c8b26-d65f-498d-b0aa-7a2e3f07ddcc","titulo":"IAV-2608.04-A","cliente":"Valeria Castillo Ceuz","folio":"IAV-2608.04-A","estado":"borrador","grupo":"pendientes","saldo":3000,"fechaSesion":"2026-08-04","entregables":[{"id":"96fef422-13c5-4de8-8ab1-5e64cedb84a0","tipo":"fotos","nombre":"Fotografías","completo":false,"numArchivos":0}],"completa":false,"faltan":["Fotografías"],"diasRestantes":null,"ruta":"https://entregas.inmueblesaudiovisuales.com/IAV-2608.04-A-dh64m247qw"},{"id":"3ce7676c-9ccc-476a-b727-11ebded4cce6","titulo":"C. 10 Gutiérrez 489, Col Obrera, Sarabia, 64490 Monterrey, N.L.","cliente":"Gustavo Sepulveda Salinas","folio":"IAV-2608.04-B","estado":"borrador","grupo":"pendientes","saldo":2250,"fechaSesion":"2026-08-04","entregables":[{"id":"937627c7-9267-48ee-8138-72ea3bb8b8a6","tipo":"fotos","nombre":"Fotografías","completo":false,"numArchivos":0},{"id":"e642907a-8cd1-4616-b914-3fae5006afb3","tipo":"video","nombre":"Video cinemático","completo":false,"numArchivos":0},{"id":"167fc348-dcbb-4713-bb3e-73984377b6e1","tipo":"enlace","nombre":"Tour 360","completo":false,"numArchivos":0}],"completa":false,"faltan":["Fotografías","Video cinemático","Tour 360"],"diasRestantes":null,"ruta":"https://entregas.inmueblesaudiovisuales.com/IAV-2608.04-B-krv5wbns8c"},{"id":"a234d9ee-6fda-46e7-a21c-8974ccd9548b","titulo":"Av san Jerónimo 1002 depa 4-3","cliente":"Mireya Gómez","folio":"IAV-2607.17-A","estado":"publicada","grupo":"conCliente","saldo":4500,"fechaSesion":"2026-07-17","entregables":[{"id":"fa975937-467d-4ac4-aef6-e5c09f57842e","tipo":"fotos","nombre":"Fotografías","completo":true,"numArchivos":45},{"id":"7b48f392-3fec-4af4-9a21-870034b0d759","tipo":"video","nombre":"Video cinemático","completo":true,"numArchivos":1},{"id":"f69700e2-954f-48af-81a3-6b97547781d8","tipo":"enlace","nombre":"Tour 360","completo":true,"numArchivos":0}],"completa":true,"faltan":[],"diasRestantes":null,"ruta":"https://entregas.inmueblesaudiovisuales.com/IAV-2607.17-A-7bbkvv7wxa"}],"detalle":{"entrega":{"id":"684aef82-80fc-4f56-b5f7-688ed82aedad","e_cliente_id":"35721b40-4c85-4571-b52b-f5eb39835265","contrato_token":null,"num_propiedad":null,"codigo":"8du2mgqpjc","titulo":"casita","direccion":"merlot 111","estado":"borrador","tour_url":"","pagado_manual":0,"dias_vigencia":14,"fecha_sesion":"","fecha_creacion":"2026-08-11T21:28:52.394Z","fecha_publicada":null,"fecha_liberada":null,"fecha_expira":null,"fecha_pausada":null,"fecha_expirada":null,"folio":"","saldo":null,"precioTotal":null,"diasRestantes":null,"fechaLimite":"","rutaPublica":"https://entregas.inmueblesaudiovisuales.com/8du2mgqpjc"},"cliente":{"nombre":"Felipe johnson","telefono":"","correo":"","ligado":false,"e_cliente_id":"35721b40-4c85-4571-b52b-f5eb39835265","cliente_id":""},"entregables":[{"id":"e46fd1ca-1231-40ca-b8df-1239ac59011f","e_entrega_id":"684aef82-80fc-4f56-b5f7-688ed82aedad","tipo":"fotos","nombre":"Fotografías","orden":0,"completo":1,"valor":"","num_archivos":50}],"archivos":[{"id":"748c4ac8-06d5-4e87-94bb-2ebdeb38114b","nombre":"IAV-2607.17-A-1.jpg","mime":"image/jpeg","bytes":10038111,"destacado":1,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"27fba00a-1704-4346-ba1b-3b292b662956","nombre":"IAV-2607.17-A-1-1.jpg","mime":"image/jpeg","bytes":8270085,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"63c38ce6-3c5c-436d-a2cf-5aedf88619ac","nombre":"IAV-2607.17-A-1-2.jpg","mime":"image/jpeg","bytes":9208982,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"37d36095-17b7-4073-8999-0f10b58c1cd0","nombre":"IAV-2607.17-A-1-3.jpg","mime":"image/jpeg","bytes":8584798,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"60d3ec53-57a4-4172-99eb-576a315ee8a1","nombre":"IAV-2607.17-A-1-4.jpg","mime":"image/jpeg","bytes":8426428,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"8c0ba3eb-85e9-4c57-a000-de214244e279","nombre":"IAV-2607.17-A-1-5.jpg","mime":"image/jpeg","bytes":10430008,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"54e1a14b-116e-4e60-aa01-04b43fe08259","nombre":"IAV-2607.17-A-2.jpg","mime":"image/jpeg","bytes":9471882,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"7aafa6c8-4d2e-458f-b5ec-a4c1815f03a4","nombre":"IAV-2607.17-A-3.jpg","mime":"image/jpeg","bytes":9318188,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"0db5a78b-b73a-40ac-bd53-fc6186be1f34","nombre":"IAV-2607.17-A-4.jpg","mime":"image/jpeg","bytes":10279394,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"b91d0fd0-8bee-4bfe-bac9-97432aa81f88","nombre":"IAV-2607.17-A-5.jpg","mime":"image/jpeg","bytes":12954533,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"e888b21d-02f9-499b-80e9-f459ee8245f6","nombre":"IAV-2607.17-A-6.jpg","mime":"image/jpeg","bytes":11565662,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"7a6e6207-eb30-44a6-8594-ccdc4a4771bb","nombre":"IAV-2607.17-A-7.jpg","mime":"image/jpeg","bytes":13579132,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"51eacc55-1466-4dcd-8c19-7af37b74a9f8","nombre":"IAV-2607.17-A-8.jpg","mime":"image/jpeg","bytes":10346148,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"3f6d570b-0917-4ad4-abd7-e540c7b902c3","nombre":"IAV-2607.17-A-9.jpg","mime":"image/jpeg","bytes":11366223,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"52662a5b-1f1f-4c66-9b4d-ca83020efe32","nombre":"IAV-2607.17-A-10.jpg","mime":"image/jpeg","bytes":11052700,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"7b9474db-a3d6-4ced-b527-f772971b1d96","nombre":"IAV-2607.17-A-11.jpg","mime":"image/jpeg","bytes":10310147,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"5c82b5c4-020f-4bf9-a834-00d8be035d2d","nombre":"IAV-2607.17-A-12.jpg","mime":"image/jpeg","bytes":10714147,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"8d947393-1eb6-4dd0-9eac-a3611c9ebeb8","nombre":"IAV-2607.17-A-13.jpg","mime":"image/jpeg","bytes":9547157,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"adc54446-8143-4ad7-a75f-d1c70a0f6fe2","nombre":"IAV-2607.17-A-14.jpg","mime":"image/jpeg","bytes":12000338,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"e7e0738f-bb62-47c4-8baa-b8adfefba2e6","nombre":"IAV-2607.17-A-15.jpg","mime":"image/jpeg","bytes":9551428,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"85dad900-e78e-40ab-89e8-3c0c048a49b2","nombre":"IAV-2607.17-A-16.jpg","mime":"image/jpeg","bytes":8700469,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"8b620ceb-d2e2-447a-8fcf-ba519dcc45cb","nombre":"IAV-2607.17-A-17.jpg","mime":"image/jpeg","bytes":9669083,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"1ae8f650-385f-4135-bfe4-ff9d8dc1852a","nombre":"IAV-2607.17-A-18.jpg","mime":"image/jpeg","bytes":9069072,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"7cd16d76-dfdc-441a-b119-459526426af6","nombre":"IAV-2607.17-A-19.jpg","mime":"image/jpeg","bytes":8791883,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"73817aca-97ca-4fd0-afdc-f0985229e943","nombre":"IAV-2607.17-A-20.jpg","mime":"image/jpeg","bytes":10829753,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"ddb7961f-e6d7-449b-b98b-6dd5a1edd519","nombre":"IAV-2607.17-A-21.jpg","mime":"image/jpeg","bytes":11116382,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"9b0b7978-dc01-4569-949e-33b7d43bcc39","nombre":"IAV-2607.17-A-22.jpg","mime":"image/jpeg","bytes":11502940,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"92d5f877-f66b-4042-a72f-bd33e4b49070","nombre":"IAV-2607.17-A-23.jpg","mime":"image/jpeg","bytes":13056546,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"d2828fcb-9575-41e5-a1f3-d735378f526e","nombre":"IAV-2607.17-A-24.jpg","mime":"image/jpeg","bytes":12205615,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"12c65fd3-6b86-41e1-b0fb-51b46681c969","nombre":"IAV-2607.17-A-25.jpg","mime":"image/jpeg","bytes":11103477,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"102b97ac-4de7-45ed-b08a-b6ef56313a09","nombre":"IAV-2607.17-A-26.jpg","mime":"image/jpeg","bytes":10539484,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"adb45fc7-2155-4530-94c0-fa46461e7fae","nombre":"IAV-2607.17-A-27.jpg","mime":"image/jpeg","bytes":10206722,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"17fdf55d-af5b-46d6-b858-5ece0251ad8d","nombre":"IAV-2607.17-A-28.jpg","mime":"image/jpeg","bytes":9818645,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"d8588cf4-040d-4fb1-a2ac-f8df2a4629c9","nombre":"IAV-2607.17-A-29.jpg","mime":"image/jpeg","bytes":9292618,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"e3b7793a-a91d-4c46-b1a3-172e8c788708","nombre":"IAV-2607.17-A-30.jpg","mime":"image/jpeg","bytes":9422368,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"56364fa6-c3b9-4957-9281-6ec992381599","nombre":"IAV-2607.17-A-31.jpg","mime":"image/jpeg","bytes":9741387,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"bfbadff6-e835-471a-bb3f-832729b0a011","nombre":"IAV-2607.17-A-32.jpg","mime":"image/jpeg","bytes":10538134,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"6cc4ce1e-5ea9-48cf-a84d-8c033e2e6115","nombre":"IAV-2607.17-A-33.jpg","mime":"image/jpeg","bytes":10466229,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"2ff3f034-98a2-4fba-b66d-ae91b7d6d736","nombre":"IAV-2607.17-A-34.jpg","mime":"image/jpeg","bytes":11342479,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"e8c78009-de4a-466a-a808-12dde37a967c","nombre":"IAV-2607.17-A-35.jpg","mime":"image/jpeg","bytes":12968948,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"0eec2ace-d1c5-434e-8f2c-e09909897bad","nombre":"IAV-2607.17-A-36.jpg","mime":"image/jpeg","bytes":13317998,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"c41c3c1e-63ba-4b61-b12f-693fdae7f8b2","nombre":"IAV-2607.17-A-37.jpg","mime":"image/jpeg","bytes":12519325,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"df020134-bcc8-4447-8b32-6b25d873ae0c","nombre":"IAV-2607.17-A-38.jpg","mime":"image/jpeg","bytes":13318476,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"690a4d3c-7395-4dae-8e42-dcef0eabdf90","nombre":"IAV-2607.17-A-39.jpg","mime":"image/jpeg","bytes":11614259,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"b2b66950-9c62-48d3-92ef-f4d1b2081d71","nombre":"IAV-2607.17-A-40.jpg","mime":"image/jpeg","bytes":11113356,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"e1819586-f9a5-4e28-af97-5cbefce12d0e","nombre":"marca-agua-stream.png","mime":"image/png","bytes":63659,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"0100f5cf-faf2-4208-8202-acfa9820b500","nombre":"Sequence 01.00_00_00_00.Still002.png","mime":"image/png","bytes":4965968,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"05bd65ab-e206-4625-b8d9-21d65ea0c22b","nombre":"Sequence 01.00_00_00_01.Still003.png","mime":"image/png","bytes":5044127,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"a52bd729-5e33-4516-b1ff-770ccb2eb7fe","nombre":"Sequence 01.00_00_00_02.Still004.png","mime":"image/png","bytes":4470419,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"},{"id":"ee97d751-3f75-41c6-8f45-bb2a393032f3","nombre":"Sequence 01.00_00_00_03.Still005.png","mime":"image/png","bytes":5087938,"destacado":0,"entregable":"e46fd1ca-1231-40ca-b8df-1239ac59011f"}],"eventos":[{"id":"04458e05-786b-4ca0-bc9f-7f6a5f1a46ff","e_entrega_id":"684aef82-80fc-4f56-b5f7-688ed82aedad","tipo":"creada","detalle":"Entrega suelta","fecha":"2026-08-11T21:28:52.538Z"}],"completa":true,"faltan":[]},"fotosPublicas":["aa213540-50f7-4106-9e2f-7c515fdcc40a","f97c73d3-ca57-403f-9adb-e7017388d7b4","9758cc61-dcb6-4f72-8af8-9a91fa07593d","40c688b1-ad37-4417-84c2-6cfad4c52aab","5e57d0c4-cfd8-4eb6-9ebe-9c3265ab089c","e32af9da-ab55-45dd-a187-b256a0870ad5","00301636-d933-4151-b8ff-10331092b42f","9d542371-4035-4286-9a00-fb66b077b8a6","4ba2d4d9-b7ec-4e7c-91fa-82167f7c8f07","5051631b-3ed4-417f-89c7-bb63e4ea89b7","34a8fc5c-a9c7-4072-8942-454b68fb87a4","641d7f92-bff2-401a-aeb2-be22308e70cf","254191ac-864a-48f5-9dcf-a52c9648e2db","bcf49494-bf8d-454c-963e-4658756e6cf3","bec12690-7d7e-43f0-9704-d94e941b4ba4","69f8d990-2c22-44a9-be54-e7fe6a13d4a4","29f5e1e6-6100-4706-b8ff-450cc8a0ddb4","7f32c1eb-6638-4098-98be-0218d155f946","f41c75c8-1ebb-4242-b744-2c6ce1ceaf9b","ca5cd3f9-d781-436f-9761-a9da8e4c94e0","bf063d0f-63a4-45b7-974f-2f87d328c765","5797ebaf-d488-4efd-8ff6-bed404c464a5","970d5aa8-7c49-4582-b4b2-9628a7fb3ad2","7ff701f4-cea0-42ab-ab3b-de9a710775c5","ecd6421d-6c5c-49f8-abac-dbaab5697996","ff60227d-e544-4050-9ab1-3bad011a5017","ccbeea96-b126-42d1-b2c6-0ff5ced23002","2770677f-8718-4ca2-8559-cd2310c394b6","180c8c34-7bce-4e16-b6d0-d2f19dd881db","da3bf5f0-2b9f-4e8a-81e4-74161c1a01c3","6e083fe8-fa33-4993-b9b9-7c9a2306a8c4","472bc825-b6c0-4102-998c-27e64b3ef302","a2bd29e7-0b64-41ab-9175-e49ee75a4ffd","074890ef-2c59-43e6-9d74-44b1df6995a6","eec38371-e700-4b75-a769-406af89395dd","c4f71a89-b57e-4756-9327-5f9b0550e5a5","ade6506f-623e-4764-8488-6e2decb397c7","bc177517-a91d-4f87-a508-6e206dc56cd5","b3684dcc-d44c-4ab0-95fe-7b1243ee4fd8","740cfcc4-5b06-4cf1-a3ab-7ac039b6f22f","f14e14b9-7c9b-4833-8884-00268ec8d96e","d96a92d3-9696-43f2-9edf-5e052aa87578","2b443514-9e6f-44a0-b869-14c1c9ca24b5","631b769a-80f2-4c0c-93a2-99e582bbac72","60264f01-c027-4675-a429-854cde7f5878"]};
 var VISTA = 'lista', ESTADO = 'borrador';
+var QUITANDO = false, SEL = [];
+
+function menu(){ document.getElementById('mpanel').classList.toggle('on'); }
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.menu')) document.getElementById('mpanel').classList.remove('on');
+});
+function modoQuitar(v){ QUITANDO = v; SEL = []; pintar(); }
+function marcar(i){
+  var p = SEL.indexOf(i);
+  if(p >= 0) SEL.splice(p, 1); else SEL.push(i);
+  pintar();
+}
 var BASE = 'https://entregas.inmueblesaudiovisuales.com';
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
@@ -241,7 +292,7 @@ function pintarLista(){
   var grupos = { urge:[], 'tú':[], esperando:[], entregadas:[] };
   filas.forEach(function(e){ grupos[queToca(e).grupo].push(e); });
 
-  var nombres = { urge:'Se borran pronto', 'tú':'Te toca a ti',
+  var nombres = { urge:'Se borran pronto', 'tú':'Por hacer',
                   esperando:'Esperando pago', entregadas:'Entregadas' };
   var h = '';
   ['urge','tú','esperando','entregadas'].forEach(function(g){
@@ -260,11 +311,6 @@ function pintarLista(){
       }).join('') + '</div>';
   });
   if(!h) h = '<div class="vacio">Nada coincide con “' + esc(q) + '”.</div>';
-
-  // Lo destructivo vive abajo y se ve como lo que es: una excepción, no una acción
-  // del día. Antes competía en tamaño con "Nueva entrega".
-  h += '<div style="margin-top:34px;text-align:center">' +
-    '<button class="btn-peligro">Limpiar material de entregas que nunca pagaron</button></div>';
   return h;
 }
 
@@ -310,16 +356,29 @@ function pintarDetalle(){
         (completo ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
       '</span><span class="lab"><b>' + esc(it.nombre) + '</b><span>' +
       (suyas.length ? suyas.length + ' archivos · 476 MB' : 'sin archivos') + '</span></span>' +
-      '<button class="btn-peligro">Quitar</button></div>';
+      (suyas.length && !QUITANDO
+        ? '<button class="btn btn-ghost btn-sm" onclick="modoQuitar(true)">Quitar fotos</button>' : '') +
+      '</div>';
 
     if(suyas.length){
+      // En modo quitar la barra dice exactamente cuantas se van y como salirse.
+      if(QUITANDO){
+        h += '<div class="selbar"><b>' + (SEL.length ? 'Vas a quitar ' + SEL.length + ' foto' + (SEL.length===1?'':'s') : 'Toca las fotos que quieras quitar') + '</b>' +
+          '<button class="btn btn-ghost btn-sm" onclick="modoQuitar(false)">Cancelar</button>' +
+          (SEL.length ? '<button class="btn btn-sm" style="background:var(--danger);color:#fff" onclick="modoQuitar(false)">Quitar ' + SEL.length + '</button>' : '') +
+          '</div>';
+      }
       h += '<div class="tiras">' + suyas.map(function(a, i){
         var pid = D.fotosPublicas[i % D.fotosPublicas.length];
-        return '<button class="tira' + (i===0 ? ' port' : '') + '" title="' + esc(a.nombre) +
-          (i===0 ? ' — es la portada' : ' — clic para usar como portada') + '"' +
+        var sel = SEL.indexOf(i) >= 0;
+        var tit = QUITANDO ? esc(a.nombre) + ' — tócala para quitarla'
+                : (i===0 ? esc(a.nombre) + ' — es la portada' : esc(a.nombre) + ' — clic para usar como portada');
+        return '<button class="tira' + (i===0 && !QUITANDO ? ' port' : '') + (sel ? ' sel' : '') +
+          '" title="' + tit + '" onclick="' + (QUITANDO ? 'marcar(' + i + ')' : 'void 0') + '"' +
           ' style="background-image:url(\'' + BASE + '/api/e/foto?a=' + pid + '&w=120&d=60\')">' +
-          (i===0 ? '<span class="est"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>' : '') +
-          '<span class="x" title="Quitar">×</span></button>';
+          (i===0 && !QUITANDO ? '<span class="est"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>' : '') +
+          '<span class="marca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+          '</button>';
       }).join('') + '</div>';
       if(pendientes) h += '<div class="prog"><i style="width:76%"></i></div>';
     }
