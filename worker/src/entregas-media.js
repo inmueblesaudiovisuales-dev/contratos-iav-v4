@@ -83,9 +83,20 @@ export async function borrarDeImages(env, imagesId) {
 // ── Cloudflare Stream ─────────────────────────────────────────────────────────
 // El watermark se quema AL CODIFICAR y no se puede cambiar despues. Por eso el
 // perfil se manda siempre en la copia, nunca se aplica "luego".
+// Decide que perfil de marca lleva la copia. La distincion es fina y CARA de
+// equivocar: `undefined` = "no me dijeron, usa el de siempre"; `null` o vacio =
+// "esta copia va limpia A PROPOSITO".
+//
+// Con `||` las dos cosas se veian iguales, y la copia que se genera al liberar
+// —la que el cliente compro justamente para que NO tenga marca— salia marcada.
+export function uidWatermark(env, dado) {
+  if (dado === undefined) return env.STREAM_WATERMARK_UID || '';
+  return dado || '';
+}
+
 export async function copiarAStream(env, urlOrigen, nombre, watermarkUid) {
   const body = { url: urlOrigen, meta: { name: nombre || 'entrega' } };
-  const uid = watermarkUid || env.STREAM_WATERMARK_UID;
+  const uid = uidWatermark(env, watermarkUid);
   if (uid) body.watermark = { uid };
   const r = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/copy`,

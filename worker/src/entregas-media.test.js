@@ -4,7 +4,7 @@ import {
   firmar, verificarFirma, secretoFirma, llaveR2,
   esImagen, esVideo, nombreDescarga,
   numeroDePartes, requiereMultiparte, TAMANO_PARTE, perfilWatermark,
-  cabecerasRango
+  cabecerasRango, uidWatermark
 } from './entregas-media.js';
 
 const ENV = { ENTREGAS_KEY: 'secreto-de-prueba' };
@@ -184,4 +184,25 @@ test('un rango que se pasa del final se recorta en vez de mentir', () => {
 test('un offset fuera del archivo no produce un largo negativo', () => {
   const c = cabecerasRango({ offset: 5000, length: 10 }, 1000);
   assert.equal(c.contentLength, 0);
+});
+
+// ── Marca de agua en las copias de Stream ─────────────────────────────────────
+// La copia que se genera AL LIBERAR es lo que el cliente compro: tiene que ir
+// limpia. Si sale marcada, pago para seguir viendo lo mismo.
+
+test('pedir la copia limpia explicitamente NO cae al perfil por defecto', () => {
+  const env = { STREAM_WATERMARK_UID: 'horiz' };
+  assert.equal(uidWatermark(env, null), '', 'null significa: esta va limpia');
+  assert.equal(uidWatermark(env, ''), '', 'vacio tambien');
+});
+
+test('no decir nada sigue usando el perfil de siempre', () => {
+  const env = { STREAM_WATERMARK_UID: 'horiz' };
+  assert.equal(uidWatermark(env, undefined), 'horiz');
+  assert.equal(uidWatermark({}, undefined), '');
+});
+
+test('un perfil explicito manda sobre el default', () => {
+  const env = { STREAM_WATERMARK_UID: 'horiz' };
+  assert.equal(uidWatermark(env, 'vert'), 'vert');
 });
