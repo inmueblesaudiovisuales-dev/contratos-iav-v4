@@ -79,14 +79,43 @@ input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gol
 label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
 .field{margin-bottom:var(--s4)}
 
+/* ── Buscador y configuración ─────────────────────────────────────────────── */
+.buscar{flex:1;max-width:400px;position:relative;margin:0 var(--s4)}
+.buscar input{width:100%;height:36px;border:1px solid var(--line-2);border-radius:var(--r);
+  background:var(--paper-0);padding:0 12px 0 32px;font-family:inherit;font-size:13px;color:var(--ink-1)}
+.buscar svg{position:absolute;left:10px;top:10px;color:var(--ink-3);pointer-events:none}
+@media(max-width:720px){ .buscar{order:3;flex-basis:100%;max-width:none;margin:var(--s3) 0 0} }
+
+.menu{position:relative}
+.icb{width:36px;height:36px;border-radius:var(--r);border:1.5px solid var(--line-2);
+  background:var(--paper-1);color:var(--ink-2);display:flex;align-items:center;justify-content:center;
+  cursor:pointer}
+.icb:hover{color:var(--ink-1);border-color:var(--ink-4)}
+.mpanel{display:none;position:absolute;right:0;top:42px;background:var(--paper-1);
+  border:1px solid var(--line-2);border-radius:var(--r);box-shadow:0 12px 32px rgba(33,30,24,.14);
+  min-width:290px;padding:6px;z-index:60}
+.mpanel.on{display:block}
+.mpanel button{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+  padding:10px 11px;border-radius:7px;font-family:inherit;font-size:13px;color:var(--ink-1)}
+.mpanel button:hover{background:var(--paper-2)}
+.mpanel button.rojo{color:var(--danger)}
+.mpanel button.rojo:hover{background:var(--danger-bg)}
+.mpanel hr{border:none;border-top:1px solid var(--line);margin:5px 8px}
+
 .group-label{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.1em;color:var(--ink-3);
   display:flex;align-items:center;gap:var(--s3);margin:0 0 var(--s4)}
+.group-label.urge{color:var(--aviso, #8A6A1F)}
+/* Lo que toca hacer, en palabras. Es el dato que Bruno viene a buscar. */
+.toca{font-size:12.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.toca.accion{color:var(--gold)}
+.toca.espera{color:var(--ink-3);font-weight:400}
+.toca.urge{color:#8A6A1F}
 .group-label::after{content:'';flex:1;height:1px;background:var(--line)}
 .group-label + .rows{margin-bottom:var(--s8)}
 .rows{display:flex;flex-direction:column;gap:var(--s2)}
 .row{background:var(--paper-1);border:1px solid var(--line);border-radius:var(--r);
-  padding:var(--s4) var(--s5);display:grid;gap:var(--s4) var(--s5);
-  grid-template-columns:minmax(0,1.5fr) minmax(0,1.35fr) auto;align-items:center;
+  padding:13px var(--s5);display:grid;gap:var(--s4) var(--s5);
+  grid-template-columns:minmax(0,1fr) auto;align-items:center;
   cursor:pointer;transition:border-color .16s,box-shadow .16s}
 .row:hover{border-color:var(--line-2);box-shadow:var(--shadow-1)}
 @media(max-width:820px){.row{grid-template-columns:1fr}}
@@ -125,6 +154,26 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 @media(max-width:900px){.detail{grid-template-columns:1fr}}
 .side{display:flex;flex-direction:column;gap:var(--s4)}
 .side .card-pad{display:flex;flex-direction:column;gap:var(--s3)}
+/* Barra de acción pegada arriba: el siguiente paso siempre visible. */
+.accionbar{position:sticky;top:0;z-index:25;background:var(--paper-1);border:1px solid var(--line);
+  border-radius:var(--r);padding:13px var(--s5);display:flex;align-items:center;
+  gap:var(--s4);margin-bottom:var(--s5);flex-wrap:wrap}
+.accionbar .tit{min-width:0;flex:1}
+.accionbar h2{font-family:var(--font-display);font-weight:500;font-size:21px;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.accionbar .sub{font-size:12.5px;color:var(--ink-2);margin-top:2px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.accionbar .sub em{font-style:normal;font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
+.accionbar .acc{display:flex;gap:8px;align-items:center;flex:0 0 auto;flex-wrap:wrap}
+.paso{font-size:12px;color:var(--ink-2);background:var(--paper-2);border:1px solid var(--line);
+  border-radius:8px;padding:7px 11px;white-space:nowrap}
+.paso b{color:var(--gold)}
+/* En pantallas angostas los botones se llevan el nombre del cliente por delante. */
+@media(max-width:860px){
+  .accionbar{flex-direction:column;align-items:stretch}
+  .accionbar .acc{justify-content:flex-start}
+}
+
 .dtitle{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s4);
   margin-bottom:var(--s6);flex-wrap:wrap}
 .dtitle h2{font-family:var(--font-display);font-weight:500;font-size:25px;margin-bottom:5px}
@@ -157,6 +206,37 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .prog i{display:block;height:100%;background:var(--gold-leaf);width:0;transition:width .2s}
 .progtxt{margin:6px 0 0 38px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3);
   font-variant-numeric:tabular-nums}
+/* ── Cuadricula densa de archivos ─────────────────────────────────────────── */
+/* 50 fotos tienen que caber sin scroll infinito, y sin nombres repetidos que no
+   distinguen nada. El nombre vive en el tooltip. */
+.tiras{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:5px;
+  margin:var(--s3) 0 0 38px}
+.tira{position:relative;aspect-ratio:1;border-radius:7px;overflow:hidden;
+  border:1px solid var(--line);background:var(--paper-2) center/cover;padding:0;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
+.tira:hover{border-color:var(--gold-leaf)}
+.tira.port{border:2px solid var(--gold-leaf)}
+.tira.vid{cursor:default;background:var(--paper-2)}
+.tira .est{position:absolute;bottom:2px;left:3px;color:var(--gold-leaf);
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));line-height:0}
+.tira .est.fantasma{display:none;color:#fff;opacity:.92}
+.tira:hover .est.fantasma{display:block}
+.tira .cinta{position:absolute;top:0;left:0;right:0;background:var(--gold-leaf);color:#1a1509;
+  font-family:var(--font-mono);font-size:8px;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 0;text-align:center;line-height:1.2}
+.tira .marca{position:absolute;inset:0;background:rgba(158,58,47,.45);display:none;
+  align-items:center;justify-content:center;color:#fff}
+.tira.sel{border:2px solid var(--danger)}
+.tira.sel .marca{display:flex}
+.selbar{display:flex;align-items:center;gap:10px;background:var(--danger-bg);
+  border:1px solid rgba(158,58,47,.28);border-radius:9px;padding:9px 12px;
+  margin:var(--s3) 0 0 38px}
+.selbar b{font-size:12.5px;color:var(--danger);flex:1}
+.btn-borrar{background:var(--danger);color:#fff;border-color:var(--danger)}
+.ayuda{font-size:11.5px;color:var(--ink-3);line-height:1.5;margin:9px 0 0 38px;
+  display:flex;align-items:center;gap:6px}
+.ayuda svg{color:var(--gold-leaf);flex:0 0 auto}
+
 .files{display:flex;flex-wrap:wrap;gap:7px;margin:var(--s3) 0 0 38px}
 .f{position:relative;width:74px}
 .f .im{width:74px;height:56px;border-radius:7px;background:var(--paper-2) center/cover;display:block;
@@ -243,8 +323,24 @@ tr:last-child td{border-bottom:none}
         <span class="mark">IA</span>
         <div><b>Entregas</b> <span>Inmuebles Audiovisuales</span></div>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="verLimpieza()">Limpiar sin pagar</button>
+      <div class="buscar" id="buscarBox">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="q" placeholder="Buscar cliente, folio o dirección…" oninput="filtrar()" autocomplete="off">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="menu">
+          <button class="icb" onclick="menu(event)" title="Configuración" aria-label="Configuración">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          </button>
+          <!-- Lo que borra material vive aqui: se usa dos veces al año y no tiene por
+               que estar junto al boton de todos los dias. -->
+          <div class="mpanel" id="mpanel">
+            <button onclick="verHuerfanos()">Buscar material sin dueño</button>
+            <button onclick="salir()">Cambiar de contraseña</button>
+            <hr>
+            <button class="rojo" onclick="verLimpieza()">Limpiar material de entregas que nunca pagaron</button>
+          </div>
+        </div>
         <button class="btn btn-primary btn-sm" onclick="abrirNueva()">Nueva entrega</button>
       </div>
     </div>
@@ -324,8 +420,27 @@ document.addEventListener('keydown', function(e){
 });
 
 // ── Lista ────────────────────────────────────────────────────────────────────
+// El menú de configuración. Se cierra al hacer clic en cualquier otro lado.
+function menu(ev){
+  if(ev) ev.stopPropagation();
+  document.getElementById('mpanel').classList.toggle('on');
+}
+document.addEventListener('click', function(e){
+  if(e.target.closest && e.target.closest('.menu')) return;
+  var p = document.getElementById('mpanel');
+  if(p) p.classList.remove('on');
+});
+function cerrarMenu(){ var p = document.getElementById('mpanel'); if(p) p.classList.remove('on'); }
+
+// El buscador solo tiene sentido en la lista: dentro de una entrega estorba.
+function verBuscador(v){
+  var b = document.getElementById('buscarBox');
+  if(b) b.style.visibility = v ? '' : 'hidden';
+}
+
 async function irLista(){
   VISTA = 'lista';
+  verBuscador(true);
   document.getElementById('tab-activas').className = 'tab on';
   document.getElementById('tab-hist').className = 'tab';
   var m = document.getElementById('main');
@@ -335,55 +450,78 @@ async function irLista(){
     D.pendientes.length + D.conCliente.length + D.liberadas.length;
   document.getElementById('nHist').textContent = D.historial.length;
 
-  var h = '';
-  h += grupo('Pendientes', D.pendientes, 'Nada pendiente. Todo lo grabado ya está publicado.');
-  h += grupo('Con el cliente', D.conCliente, '');
-  h += grupo('Liberadas', D.liberadas, '');
-  if(!D.pendientes.length && !D.conCliente.length && !D.liberadas.length){
-    h = '<div class="vacio"><b>Todavía no hay entregas</b>' +
-        'Cada contrato nuevo crea las suyas solo. También puedes crear una a mano.</div>';
-  }
-  m.innerHTML = h;
+  pintarLista();
 }
 
-function grupo(titulo, lista, vacioTxt){
-  if(!lista.length) return '';
-  var h = '<p class="group-label">' + esc(titulo) + '</p><div class="rows">';
-  lista.forEach(function(e){ h += fila(e); });
-  return h + '</div>';
+// Lo que Bruno quiere saber al abrir el portal no es el estado interno de la
+// entrega, es QUE LE TOCA HACER. Esto lo traduce, y de ahi salen los grupos.
+function queToca(e){
+  if(e.estado === 'borrador'){
+    if(!e.completa){
+      var falta = (e.faltan && e.faltan.length) ? e.faltan.join(', ') : 'material';
+      return { txt: 'Falta subir ' + falta, clase: 'accion', grupo: 'hacer' };
+    }
+    return { txt: 'Listo para publicar', clase: 'accion', grupo: 'hacer' };
+  }
+  if(e.estado === 'publicada'){
+    if(e.saldo != null && e.saldo > 0)
+      return { txt: 'Esperando pago · ' + money(e.saldo), clase: 'espera', grupo: 'esperando' };
+    return { txt: 'Ya pagó · falta liberar', clase: 'accion', grupo: 'hacer' };
+  }
+  if(e.estado === 'liberada'){
+    var d = e.diasRestantes;
+    if(d != null && d < 0) return { txt: 'Vencida', clase: 'espera', grupo: 'entregadas' };
+    if(d != null && d <= 3)
+      return { txt: 'Se borra en ' + d + (d === 1 ? ' día' : ' días'), clase: 'urge', grupo: 'urge' };
+    return { txt: d == null ? 'Liberada' : 'Descargando · ' + d + ' días', clase: 'espera', grupo: 'entregadas' };
+  }
+  if(e.estado === 'pausada') return { txt: 'Acceso en pausa', clase: 'espera', grupo: 'entregadas' };
+  return { txt: 'Expirada', clase: 'espera', grupo: 'entregadas' };
+}
+
+function filtrar(){ if(VISTA === 'lista') pintarLista(); }
+
+function pintarLista(){
+  var q = ((document.getElementById('q') || {}).value || '').trim().toLowerCase();
+  var todas = D.pendientes.concat(D.conCliente, D.liberadas);
+  var filas = todas.filter(function(e){
+    if(!q) return true;
+    return ((e.cliente || '') + ' ' + (e.folio || '') + ' ' + (e.titulo || '') + ' ' +
+            (e.direccion || '')).toLowerCase().indexOf(q) >= 0;
+  });
+
+  var g = { urge: [], hacer: [], esperando: [], entregadas: [] };
+  filas.forEach(function(e){ g[queToca(e).grupo].push(e); });
+
+  var nombres = { urge: 'Se borran pronto', hacer: 'Por hacer',
+                  esperando: 'Esperando pago', entregadas: 'Entregadas' };
+  var h = '';
+  ['urge','hacer','esperando','entregadas'].forEach(function(k){
+    if(!g[k].length) return;
+    h += '<p class="group-label' + (k === 'urge' ? ' urge' : '') + '">' + nombres[k] +
+      ' <span style="font-family:var(--font-mono)">' + g[k].length + '</span></p>' +
+      '<div class="rows">' + g[k].map(fila).join('') + '</div>';
+  });
+
+  if(!h){
+    h = q
+      ? '<div class="vacio"><b>Nada coincide con “' + esc(q) + '”</b>Prueba con el nombre del cliente o el folio.</div>'
+      : '<div class="vacio"><b>Todavía no hay entregas</b>' +
+        'Cada contrato nuevo crea las suyas solo. También puedes crear una a mano.</div>';
+  }
+  document.getElementById('main').innerHTML = h;
 }
 
 function fila(e){
-  var chips = e.entregables.map(function(i){
-    return '<span class="chip' + (i.completo ? ' done' : '') + '"><i class="dot"></i>' +
-           esc(i.nombre) + '</span>';
-  }).join('');
-  var hechos = e.entregables.filter(function(i){ return i.completo; }).length;
-
-  var derecha = '';
-  if(e.estado === 'borrador'){
-    derecha = e.completa
-      ? '<span class="pill ok">Completa</span>'
-      : '<span class="count"><b>' + hechos + '</b> de ' + e.entregables.length + '</span>';
-  } else if(e.estado === 'publicada'){
-    derecha = (e.saldo != null && e.saldo > 0)
-      ? '<span class="pill warn">Saldo ' + money(e.saldo) + '</span>'
-      : '<span class="pill info">Esperando pago</span>';
-  } else if(e.estado === 'liberada'){
-    var d = e.diasRestantes;
-    var cls = d == null ? 'mute' : (d <= 3 ? 'danger' : (d <= 7 ? 'warn' : 'ok'));
-    derecha = '<span class="pill ' + cls + '">' +
-      (d == null ? 'Liberada' : (d < 0 ? 'Vencida' : 'Quedan ' + d + ' días')) + '</span>';
-  } else if(e.estado === 'pausada'){
-    derecha = '<span class="pill mute">Pausada</span>';
-  }
-
+  var t = queToca(e);
+  // El cliente manda: es como Bruno piensa en sus entregas. La direccion queda de
+  // apoyo, y el folio abajo en mono.
   return '<div class="row" onclick="abrir(\'' + e.id + '\')">' +
-    '<div class="who"><b>' + esc(e.titulo) + '</b><span>' + esc(e.cliente || 'Sin cliente') + '</span>' +
+    '<div class="who"><b>' + esc(e.cliente || 'Sin cliente') + '</b>' +
+      '<span>' + esc(e.titulo || 'Sin dirección') + '</span>' +
       '<div class="meta">' + esc(e.folio || 'sin folio') +
       (e.fechaSesion ? ' · sesión ' + esc(e.fechaSesion) : '') + '</div></div>' +
-    '<div class="deliv">' + chips + '</div>' +
-    '<div class="tail">' + derecha +
+    '<div class="tail"><span class="toca ' + t.clase + '">' + esc(t.txt) + '</span>' +
       '<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>' +
     '</div>' +
   '</div>';
@@ -391,6 +529,7 @@ function fila(e){
 
 async function verHistorial(){
   VISTA = 'hist';
+  verBuscador(false);
   document.getElementById('tab-activas').className = 'tab';
   document.getElementById('tab-hist').className = 'tab on';
   if(!D) D = await api('listar');
@@ -408,11 +547,53 @@ async function verHistorial(){
 var ACT = null;
 async function abrir(id){
   VISTA = 'detalle';
+  verBuscador(false); cerrarMenu();
   var m = document.getElementById('main');
   m.innerHTML = '<div class="vacio">Cargando…</div>';
   try { ACT = await api('obtener', { qs: 'id=' + encodeURIComponent(id) }); }
   catch(e){ return toast(e.message, true); }
   pintarDetalle();
+}
+
+// La barra de accion se queda pegada arriba. Lo que hay que hacer no puede vivir
+// al final de 50 miniaturas: antes habia que hacer scroll por toda la galeria para
+// encontrar el boton de publicar.
+function barraAccion(e, c, estadoPill){
+  var pend = pendientesGaleria();
+  var paso = '', botones = '';
+
+  if(e.estado === 'borrador'){
+    if(!ACT.completa){
+      paso = '<span class="paso">Falta ' + esc((ACT.faltan || []).join(', ') || 'material') + '</span>';
+    } else if(pend){
+      paso = '<span class="paso">Galería sin preparar · <b>' + pend + '</b></span>';
+      botones = '<button class="btn btn-ghost btn-sm" onclick="prepararGaleria()">Preparar galería</button>';
+    } else {
+      paso = '<span class="paso">Todo listo</span>';
+    }
+    botones += '<button class="btn btn-primary btn-sm" ' + (ACT.completa ? '' : 'disabled') +
+      ' onclick="publicar()">Publicar</button>';
+  } else if(e.estado === 'publicada'){
+    paso = (e.saldo != null && e.saldo > 0)
+      ? '<span class="paso">Saldo <b>' + money(e.saldo) + '</b></span>'
+      : '<span class="paso">Ya pagó</span>';
+    botones = '<button class="btn btn-ghost btn-sm" onclick="copiar(\'' + esc(e.rutaPublica || '') + '\')">Copiar liga</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="liberar()">Liberar ahora</button>';
+  } else if(e.estado === 'liberada'){
+    paso = '<span class="paso">' +
+      (e.diasRestantes != null ? 'Vence en <b>' + e.diasRestantes + ' días</b>' : 'Liberada') + '</span>';
+    botones = '<button class="btn btn-ghost btn-sm" onclick="extender()">Extender 14 días</button>' +
+      '<button class="btn btn-primary btn-sm" onclick="copiar(\'' + esc(e.rutaPublica || '') + '\')">Copiar liga</button>';
+  } else {
+    botones = '<button class="btn btn-ghost btn-sm" onclick="copiar(\'' + esc(e.rutaPublica || '') + '\')">Copiar liga</button>';
+  }
+
+  return '<button class="back" onclick="irLista()">← Todas las entregas</button>' +
+    '<div class="accionbar"><div class="tit"><h2>' + esc(c.nombre || 'Sin cliente') + '</h2>' +
+      '<p class="sub">' + esc(e.titulo || 'Sin dirección') + ' · <em>' +
+      esc(e.folio || 'sin folio') + (e.fecha_sesion ? ' · sesión ' + esc(e.fecha_sesion) : '') +
+      '</em></p></div>' +
+      '<div class="acc">' + estadoPill + paso + botones + '</div></div>';
 }
 
 function pintarDetalle(){
@@ -435,6 +616,8 @@ function pintarDetalle(){
         (i.completo ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
       '</span>' +
       '<span class="lab"><b>' + esc(i.nombre) + '</b><span>' + det + '</span></span>' +
+      (arch.length && QUITANDO !== i.id
+        ? '<button class="btn btn-ghost btn-sm" onclick="modoQuitar(\'' + i.id + '\')">Quitar archivos</button>' : '') +
       '<button class="quitar" title="Quitar este entregable" onclick="borrarEntregable(\'' + i.id + '\')">Quitar</button>' +
       '</div>';
     if(i.tipo === 'enlace'){
@@ -446,19 +629,45 @@ function pintarDetalle(){
       // Archivos ya subidos. La miniatura la sirve el propio Worker desde R2; la
       // llave va en la URL porque una <img> no puede mandar cabeceras.
       if(arch.length){
-        h += '<div class="files">' + arch.map(function(a){
+        // Cuadricula densa y SIN nombres: "IAV-2607.17…" repetido 50 veces no
+        // distingue nada y duplica el alto. El nombre va en el tooltip.
+        if(QUITANDO === i.id){
+          h += '<div class="selbar"><b>' +
+            (SEL.length ? 'Vas a quitar ' + SEL.length + ' archivo' + (SEL.length === 1 ? '' : 's')
+                        : 'Toca los archivos que quieras quitar') + '</b>' +
+            '<button class="btn btn-ghost btn-sm" onclick="modoQuitar(null)">Cancelar</button>' +
+            (SEL.length ? '<button class="btn btn-sm btn-borrar" onclick="quitarSeleccion()">Quitar ' +
+                          SEL.length + '</button>' : '') + '</div>';
+        }
+        h += '<div class="tiras">' + arch.map(function(a){
           var esVid = /^video\//.test(a.mime || '');
-          var im = esVid
-            ? '<span class="im vid"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></span>'
-            : '<span class="im' + (a.destacado ? ' destacada' : '') + '" style="background-image:url(\'' +
-              '/api/e/foto?a=' + a.id + '&w=160&k=' + encodeURIComponent(KEY) + '\')"' +
-              ' title="' + (a.destacado ? 'Es la portada' : 'Usar como portada') + '"' +
-              ' onclick="ponerPortada(\'' + a.id + '\')"></span>';
-          return '<div class="f' + (esVid ? ' vid' : '') + '">' + im +
-            '<div class="nm" title="' + esc(a.nombre) + '">' +
-              (a.destacado ? 'portada · ' : '') + esc(a.nombre) + '</div>' +
-            '<button class="x" title="Quitar" onclick="borrarArchivo(\'' + a.id + '\')">×</button></div>';
+          var sel = SEL.indexOf(a.id) >= 0;
+          var quitando = QUITANDO === i.id;
+          var tit = quitando ? esc(a.nombre) + ' — tócalo para quitarlo'
+                  : (esVid ? esc(a.nombre)
+                     : (a.destacado ? esc(a.nombre) + ' — es la portada'
+                                    : esc(a.nombre) + ' — clic para usar como portada'));
+          var fondo = esVid ? ''
+            : ' style="background-image:url(\'/api/e/foto?a=' + a.id + '&w=140&d=70&k=' +
+              encodeURIComponent(KEY) + '\')"';
+          var accion = quitando ? 'marcar(\'' + a.id + '\')'
+                     : (esVid ? 'void 0' : 'ponerPortada(\'' + a.id + '\')');
+          return '<button class="tira' + (esVid ? ' vid' : '') +
+            (a.destacado && !quitando ? ' port' : '') + (sel ? ' sel' : '') +
+            '" title="' + tit + '" onclick="' + accion + '"' + fondo + '>' +
+            (esVid ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>' : '') +
+            (a.destacado && !quitando
+              ? '<span class="cinta">portada</span><span class="est"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>'
+              : (!quitando && !esVid
+                 ? '<span class="est fantasma"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>' : '')) +
+            '<span class="marca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+            '</button>';
         }).join('') + '</div>';
+        // Sin esta linea, elegir portada solo se descubre por accidente.
+        if(QUITANDO !== i.id && arch.filter(function(a){ return !/^video\//.test(a.mime||''); }).length > 1){
+          h += '<p class="ayuda"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>' +
+            'La foto con estrella es la portada que ve el cliente. Toca cualquier otra para cambiarla.</p>';
+        }
       }
       var acepta = i.tipo === 'video' ? 'video/*' : 'image/*';
       var multi = i.tipo === 'video' ? '' : ' multiple';
@@ -474,25 +683,17 @@ function pintarDetalle(){
     return h + '</div>';
   }).join('');
 
+  // Publicar, liberar, extender y copiar la liga viven ARRIBA, en la barra pegajosa.
+  // Aqui solo queda lo que no es el paso del momento, para no tener dos botones que
+  // hacen lo mismo en la misma pantalla.
   var acciones = '';
-  if(e.estado === 'borrador'){
-    // Con todo vacio, listar los tres renglones no dice nada nuevo: ya se ven vacios
-    // arriba. El detalle sirve cuando falta poco.
-    var razon = ACT.completa ? ''
-      : (ACT.faltan.length >= ACT.entregables.length
-          ? 'Sube el material para poder publicar'
-          : 'Falta ' + esc(ACT.faltan.join(', ')));
-    acciones = '<button class="btn btn-primary btn-block" ' + (ACT.completa ? '' : 'disabled') +
-      ' onclick="publicar()">Publicar</button>' +
-      (razon ? '<p class="hint" style="text-align:center">' + razon + '</p>' : '');
+  if(e.estado === 'borrador' && !ACT.completa){
+    acciones = '<p class="hint">Sube el material que falta para poder publicar.</p>';
   } else if(e.estado === 'publicada'){
-    acciones = '<button class="btn btn-primary btn-block" onclick="liberar()">Liberar ahora</button>' +
-      '<p class="hint">Se libera sola cuando el saldo llegue a cero.</p>';
+    acciones = '<p class="hint">Se libera sola cuando el saldo llegue a cero.</p>';
   } else if(e.estado === 'liberada'){
     acciones = '<div class="money"><span class="k">Vence</span><span class="v">' +
-        esc(e.fechaLimite || '—') + '</span></div>' +
-      '<p class="hint">' + (e.diasRestantes != null ? 'Quedan ' + e.diasRestantes + ' días.' : '') + '</p>' +
-      '<button class="btn btn-ghost btn-block" onclick="extender()">Extender 14 días</button>';
+        esc(e.fechaLimite || '—') + '</span></div>';
   }
   if(e.estado !== 'borrador'){
     acciones += '<button class="btn btn-ghost btn-block" onclick="pausar(' +
@@ -504,8 +705,14 @@ function pintarDetalle(){
   if(e.contrato_token){
     pago = '<div class="money"><span class="k">Total</span><span class="v">' + money(e.precioTotal) + '</span></div>' +
       '<div class="money"><span class="k">Saldo</span><span class="v' + (e.saldo > 0 ? ' due' : '') + '">' +
-        money(e.saldo) + '</span></div>' +
-      '<p class="hint">Se lee del contrato en vivo.</p>';
+        money(e.saldo) + '</span></div>';
+    // Liberar NO toca el contrato. Si se liberó a mano con saldo pendiente, decirlo
+    // con todas sus letras: si no, "Liberada" arriba y "Saldo $4,500" aquí se leen
+    // como una contradicción del sistema, cuando en realidad las dos son ciertas.
+    pago += (e.estado === 'liberada' && e.saldo > 0)
+      ? '<p class="hint" style="color:var(--aviso,#8A6A1F)">Liberada a mano. En el contrato siguen debiendo ' +
+        money(e.saldo) + '.</p>'
+      : '<p class="hint">Se lee del contrato en vivo. Al llegar a cero se libera sola.</p>';
   } else {
     // Fantasma a proposito: el boton dorado de la tarjeta de abajo es la accion del
     // momento. Dos primarios en la misma pantalla se compiten y ninguno guia.
@@ -527,10 +734,7 @@ function pintarDetalle(){
 
   document.getElementById('main').innerHTML =
     '<button class="back" onclick="irLista()">← Todas las entregas</button>' +
-    '<div class="dtitle"><div><h2>' + esc(e.titulo) + '</h2>' +
-      '<p class="sub">' + esc(c.nombre || 'Sin cliente') + ' · <em>' +
-      esc(e.folio || 'sin folio') + (e.fecha_sesion ? ' · sesión ' + esc(e.fecha_sesion) : '') +
-      '</em></p></div>' + estadoPill + '</div>' +
+    barraAccion(e, c, estadoPill) +
     '<div class="detail"><div style="display:flex;flex-direction:column;gap:16px">' +
       '<div class="card"><div class="card-hd"><b>Entregables</b>' +
         '<button class="btn btn-ghost btn-sm" onclick="abrirAgregar()">Agregar</button></div>' +
@@ -694,6 +898,37 @@ async function completarDerivados(onAvance){
 // en la miniatura; antes se quedaba para siempre la primera que se subio.
 function ponerPortada(id){
   accion('portada', { archivoId: id }, 'Portada actualizada');
+}
+
+// ── Modo quitar ──────────────────────────────────────────────────────────────
+// Borrar deja de ser algo que pasa por acercar el mouse a una miniatura: hay que
+// entrar a proposito, elegir, y confirmar cuantos. Con 50 archivos de 10 MB, un
+// clic accidental cuesta volver a subirlos.
+var QUITANDO = null, SEL = [];
+
+function modoQuitar(entregableId){
+  if(subiendo) return toast('Espera a que termine la subida', true);
+  QUITANDO = entregableId; SEL = [];
+  pintarDetalle();
+}
+function marcar(id){
+  var p = SEL.indexOf(id);
+  if(p >= 0) SEL.splice(p, 1); else SEL.push(id);
+  pintarDetalle();
+}
+async function quitarSeleccion(){
+  var ids = SEL.slice();
+  if(!ids.length) return;
+  if(!confirm('Se van a quitar ' + ids.length + ' archivo' + (ids.length === 1 ? '' : 's') +
+              '. Esto no se puede deshacer.')) return;
+  var ok = 0, fallos = 0;
+  for(var i = 0; i < ids.length; i++){
+    try { await api('borrarArchivo', { body: { archivoId: ids[i] } }); ok++; }
+    catch(e){ fallos++; console.error('borrarArchivo', ids[i], e.message); }
+  }
+  QUITANDO = null; SEL = [];
+  toast(fallos ? (ok + ' quitados, ' + fallos + ' fallaron') : (ok + ' archivos quitados'), !!fallos);
+  await abrir(ACT.entrega.id);
 }
 
 // Bruno tambien baja el ZIP: es su material y lo va a querer para respaldar.
@@ -974,6 +1209,42 @@ async function verLimpieza(){
         '<td class="mono">' + e.diasPublicada + '</td><td class="mono">' + money(e.saldo) + '</td></tr>';
     }).join('') + '</tbody></table></div>',
     '<button class="btn btn-ghost" onclick="cerrarModal()">Cerrar</button>');
+}
+
+// Material que quedó en R2 o en Stream sin ningún registro que lo referencie.
+// Cualquier subida que falle a la mitad deja restos, y esos restos se siguen
+// pagando en silencio: nadie más los va a encontrar.
+async function verHuerfanos(){
+  cerrarMenu();
+  var r;
+  try { r = await api('huerfanos'); } catch(e){ return toast(e.message, true); }
+  var total = r.r2.n + r.stream.n;
+  if(!total){
+    return modal('Material sin dueño',
+      '<p class="hint">Nada suelto. Todo lo que está guardado pertenece a una entrega.</p>',
+      '<button class="btn btn-ghost" onclick="cerrarModal()">Cerrar</button>');
+  }
+  modal('Material sin dueño',
+    '<p class="hint" style="margin-bottom:12px">' +
+      r.r2.n + ' archivos (' + r.r2.mb + ' MB) y ' + r.stream.n + ' videos no pertenecen a ninguna ' +
+      'entrega. Se siguen cobrando. Borrarlos no afecta a ninguna entrega viva.</p>',
+    '<button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>' +
+    '<button class="btn btn-borrar" onclick="limpiarHuerfanos()">Borrar los ' + total + '</button>');
+}
+async function limpiarHuerfanos(){
+  cerrarModal();
+  toast('Borrando…');
+  try {
+    var r = await api('huerfanos', { qs: 'borrar=1' });
+    toast(r.borrados.r2 + ' archivos y ' + r.borrados.stream + ' videos borrados' +
+          (r.borrados.fallos ? ' · ' + r.borrados.fallos + ' fallaron' : ''), !!r.borrados.fallos);
+  } catch(e){ toast(e.message, true); }
+}
+
+function salir(){
+  cerrarMenu();
+  try { localStorage.removeItem('iav_entregas_key'); } catch(e){}
+  location.reload();
 }
 
 // ── Arranque ─────────────────────────────────────────────────────────────────
