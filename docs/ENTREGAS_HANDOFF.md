@@ -966,3 +966,79 @@ Verificado en producción: buscador (filtra y da vacío coherente), modo quitar
 (entra, marca, cuenta, cancela sin borrar nada), menú (abre, cierra al hacer clic
 fuera), barra pegajosa (queda justo debajo del encabezado al hacer scroll), y las 50
 miniaturas intactas con su portada marcada.
+
+---
+
+## 20. Preparación automática y errores con nombre (12 ago 2026)
+
+Dos cosas que Bruno pidió después de usar el sistema de verdad.
+
+### 20.1 La galería se prepara sola
+
+Antes había que dejar la ventana abierta mirando una barra. Ahora un cron
+(`*/2 * * * *`) llama a `prepararPendientes()`, que procesa **3 archivos por
+ejecución**: cada uno decodifica un JPEG de 10 MB y pasarse revienta el CPU.
+
+El botón sigue existiendo como **"Prepararlas ya"**, para cuando quieres publicar
+sin esperar.
+
+**Honestidad sobre la puntualidad:** los cron de Cloudflare **no son puntuales**.
+Medido: hubo tramos de 3 minutos sin ninguna ejecución y luego 3 archivos de golpe.
+Por eso la interfaz dice "unos minutos" y no promete un número.
+
+### 20.2 Tres bugs en el camino, todos del mismo tipo
+
+**Colgar de una comparación exacta.** La primera versión hacía
+`if (event.cron === '* * * * *')` para separar el cron minutero del horario. No se
+ejecutó **nunca**. Ahora `prepararPendientes` corre en **todas** las ejecuciones —es
+barato e idempotente— y lo pesado (sincronización, respaldo, expiración) es lo que
+cuelga de la comparación, al revés: se salta si NO es el horario. Si ese valor
+llegara raro, se prepara de más en vez de no prepararse nunca.
+
+**Un archivo atorado bloqueaba la fila entera.** El cron ordena por fecha y siempre
+agarraba los mismos primeros. Al frente estaba **el video de Mireya de 986 MB** con
+el CRC sin calcular: pedirle el CRC revienta el CPU, falla, y al minuto siguiente le
+vuelve a tocar a él. Nada más se preparaba nunca, y ese 1102 además tumbaba las
+peticiones vecinas. Dos arreglos: los videos salen del filtro (no llevan copia
+reducida ni entran al ZIP, así que **nunca necesitaron CRC**), y lo que se intenta y
+no se puede se marca `crc32 = -2` y deja de reintentarse.
+
+> **Convención:** `crc32 = -1` es "nunca se intentó"; `-2` es "se intentó y no se
+> pudo". Cualquier consulta de pendientes debe usar `= -1`, no `< 0`.
+
+**Medir con la herramienta que hace el trabajo.** Durante el diagnóstico usé el
+endpoint `derivados` para contar pendientes — pero ese endpoint *procesa* al
+consultar, así que mis mediciones movían lo que intentaban medir, y encima chocaban
+con el cron y devolvían 1102. Las mediciones fiables salieron de consultar D1
+directamente.
+
+### 20.3 Cuando falla una subida, se dice cuál
+
+Antes el aviso era "2 fallaron" y tocaba adivinar cuáles de 50 y volver a buscarlas
+en el disco. Ahora sale una tabla con **el nombre de cada archivo y qué pasó**, y un
+botón **"Reintentar N"** que los vuelve a subir sin volver a elegirlos: los `File`
+quedan guardados en memoria.
+
+### 20.4 Otro efecto secundario del rediseño
+
+Las miniaturas del portal iban como `background-image`, que el navegador **descarga
+siempre y todo junto**. Con 50 fotos son 50 transformaciones simultáneas: tumban al
+Worker y —lo que Bruno reportó— tumban también las subidas que corren al mismo
+tiempo, con 503 en `subirFoto`. En su consola se veían las dos mitades. Ahora van
+como `<img loading="lazy">`.
+
+**Lección que ya se repitió tres veces:** cualquier cuadrícula que pida imágenes al
+Worker tiene que cargarlas de forma diferida. No es refinamiento visual, es lo que
+mantiene al Worker de pie.
+
+### 20.5 Y el bug que Bruno vio en el enlace del cliente
+
+La galería pedía las fotos con **ancho negativo** (`w=-36&d=-18`): el cálculo era
+`window.innerWidth - 36`, y cuando la ventana reporta 0 —pestaña en segundo plano, o
+antes de que termine el layout— sale negativo y no carga ninguna. El hero sí se veía
+porque tenía un valor de respaldo (`|| 375`).
+
+Tres arreglos, en capas: el ancho se mide del **contenedor**; `fotoUrl()` rechaza
+cualquier ancho inválido y cae a 375, así que ningún otro punto puede repetirlo; y si
+la carga diferida nunca arranca (pasa cuando la ventana mide 0), a los 2.5 s se
+fuerzan **de a 6 con pausa**.
