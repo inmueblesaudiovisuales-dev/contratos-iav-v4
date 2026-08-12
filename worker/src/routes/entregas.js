@@ -290,6 +290,35 @@ export async function liberarPorPago(db, contratoToken, env) {
   return { liberadas };
 }
 
+// ── Preparacion en segundo plano ──────────────────────────────────────────────
+// La galeria necesita, por cada foto, una copia reducida y su CRC. Hacerlo desde el
+// portal obliga a Bruno a dejar la ventana abierta mirando una barra, y si la cierra
+// se queda a medias. Esto lo hace solo, con un cron por minuto.
+//
+// Va de DOS en dos a proposito: cada una decodifica un JPEG de 10 MB, y pasarse
+// revienta el limite de CPU del Worker. Dos por minuto son 120 por hora: una sesion
+// de 50 fotos queda lista en media hora sin que nadie este presente.
+export async function prepararPendientes(env, tope = 2) {
+  const db = env.DB;
+  const { results } = await query(db,
+    `SELECT * FROM e_archivos
+     WHERE r2_key<>'' AND (crc32 < 0 OR (r2_key_web='' AND mime NOT LIKE 'video/%'))
+     ORDER BY fecha LIMIT ?`, [tope]);
+  if (!results || !results.length) return { hechos: 0, pendientes: 0 };
+
+  let hechos = 0;
+  for (const a of results) {
+    let algo = false;
+    if (!esVideo(a.mime) && !a.r2_key_web) algo = !!(await generarDerivado(env, db, a)) || algo;
+    if (Number(a.crc32) < 0) algo = (await asegurarCrc(env, db, a)) || algo;
+    if (algo) hechos++;
+  }
+  const pend = await queryOne(db,
+    `SELECT COUNT(*) AS n FROM e_archivos
+     WHERE r2_key<>'' AND (crc32 < 0 OR (r2_key_web='' AND mime NOT LIKE 'video/%'))`);
+  return { hechos, pendientes: (pend && pend.n) || 0 };
+}
+
 // ── Expiracion (F6) ───────────────────────────────────────────────────────────
 // La corre el cron horario. Es lo que hace que "14 dias" signifique algo y, de paso,
 // lo que mantiene plano el costo de R2: sin esto el bucket crece para siempre.

@@ -11,7 +11,7 @@ import { handleClientes } from './routes/clientes.js';
 import { handleTrabajos } from './routes/trabajos.js';
 import { handleActividades } from './routes/actividades.js';
 import { handleConfig } from './routes/config.js';
-import { handleEntregas, expirarEntregas } from './routes/entregas.js';
+import { handleEntregas, expirarEntregas, prepararPendientes } from './routes/entregas.js';
 import { codigoDeRuta } from './entregas-core.js';
 import { syncToSheets, backupChecklistToR2 } from './cron.js';
 import { err } from './auth.js';
@@ -132,6 +132,14 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    // El de cada minuto SOLO prepara galerias. Meter aqui la sincronizacion o el
+    // respaldo los correria 60 veces por hora sin ninguna razon.
+    if (event.cron === '* * * * *') {
+      ctx.waitUntil(
+        prepararPendientes(env).catch(e => console.error('R131 prepararPendientes falló:', e.message))
+      );
+      return;
+    }
     ctx.waitUntil(syncToSheets(env));
     ctx.waitUntil(backupChecklistToR2(env));
     // R129 — Vacia el material de las entregas vencidas. Si esto deja de correr,

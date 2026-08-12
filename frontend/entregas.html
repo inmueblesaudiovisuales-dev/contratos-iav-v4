@@ -848,6 +848,16 @@ async function subirUnaFoto(entregableId, f){
   throw new Error(ultimo || 'no se pudo subir');
 }
 
+// Los archivos que no lograron subir, para poder reintentarlos con un clic en vez
+// de mandar a Bruno a buscarlos otra vez entre 50 en el disco.
+var PENDIENTES = null;
+function reintentarFallidas(){
+  if(!PENDIENTES || !PENDIENTES.files.length) return cerrarModal();
+  var p = PENDIENTES; PENDIENTES = null;
+  cerrarModal();
+  subirFotos(p.entregableId, p.files);
+}
+
 // Las fotos van de una en una, no en paralelo: 38 peticiones simultaneas de 15 MB
 // saturan la subida y hacen que fallen a la mitad sin decir cual.
 async function subirFotos(entregableId, files){
@@ -861,13 +871,25 @@ async function subirFotos(entregableId, files){
     try {
       await subirUnaFoto(entregableId, f);
       ok++;
-    } catch(e){ fallos.push(f.name + ': ' + e.message); }
+    } catch(e){ fallos.push({ file: f, error: e.message }); }
   }
   progreso(entregableId, null);
   subiendo = false;
   if(fallos.length){
+    // Decir "2 fallaron" y nada mas obliga a adivinar cuales de 50. Se listan por
+    // nombre y se guardan los archivos para poder reintentar sin volver a buscarlos
+    // en el disco.
+    PENDIENTES = { entregableId: entregableId, files: fallos.map(function(f){ return f.file; }) };
     toast(ok + ' subidas, ' + fallos.length + ' fallaron', true);
-    console.error('fallos de subida:', fallos);
+    modal('No subieron ' + fallos.length + ' archivo' + (fallos.length === 1 ? '' : 's'),
+      '<p class="hint" style="margin-bottom:12px">Las demás sí quedaron. Casi siempre es que el ' +
+      'servidor se saturó un momento, no que el archivo tenga algo malo.</p>' +
+      '<div class="tablewrap"><table><thead><tr><th>Archivo</th><th>Qué pasó</th></tr></thead><tbody>' +
+      fallos.map(function(f){
+        return '<tr><td><b>' + esc(f.file.name) + '</b></td><td>' + esc(f.error) + '</td></tr>';
+      }).join('') + '</tbody></table></div>',
+      '<button class="btn btn-ghost" onclick="cerrarModal()">Ahora no</button>' +
+      '<button class="btn btn-primary" onclick="reintentarFallidas()">Reintentar ' + fallos.length + '</button>');
   } else {
     toast(ok + (ok === 1 ? ' foto subida' : ' fotos subidas'));
   }
@@ -972,8 +994,8 @@ function barraGaleria(faltan, total){
   return '<div class="prog" style="margin-left:0"><i style="width:' +
       (total ? Math.round(hechas / total * 100) : 0) + '%"></i></div>' +
     '<div class="progtxt" style="margin-left:0">Preparando · faltan ' + faltan + ' de ' + total + '</div>' +
-    '<p class="hint" style="color:var(--ink-2)"><b>No cierres esta ventana.</b> ' +
-    'Las fotos ya están guardadas, pero si cierras ahora hay que retomarlo desde aquí.</p>';
+    '<p class="hint">Puedes cerrar la ventana: el servidor sigue preparándolas solo. ' +
+    'Esto solo lo hace más rápido.</p>';
 }
 
 // Bloque del paso 2 en el panel lateral. Es lo unico que le dice a Bruno cuando
@@ -987,10 +1009,13 @@ function bloqueGaleria(){
       ' foto' + (fotos === 1 ? '' : 's') + '. Puedes cerrar la ventana.</p>' +
       '<button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="bajarZip()">Descargar las fotos (ZIP)</button></div>';
   }
+  // La preparacion la hace un cron cada minuto, de dos en dos. El boton solo la
+  // acelera: sirve cuando quieres publicar ya y no esperar media hora.
   return '<div id="gal">' +
-    '<button class="btn btn-ghost btn-block" onclick="prepararGaleria()">Preparar galería (' + pend + ')</button>' +
-    '<p class="hint">Faltan ' + pend + ' por preparar. Hazlo cuando ya no vayas a subir más fotos: ' +
-    'si las subes en varias tandas, conviene una sola vez al final.</p></div>';
+    '<p class="hint">Faltan <b>' + pend + '</b> por preparar. Se están haciendo solas, ' +
+    'aunque cierres la ventana (unas 2 por minuto).</p>' +
+    '<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="prepararGaleria()">Prepararlas ya</button>' +
+    '</div>';
 }
 
 // Stream elige perfil de marca de agua segun la orientacion, asi que hay que
@@ -1070,7 +1095,7 @@ async function accion(nombre, body, msg){
 async function publicar(){
   var pend = pendientesGaleria();
   if(pend){
-    if(!confirm('Faltan ' + pend + ' fotos por preparar. Si publicas ahora, las primeras vistas del cliente pueden salir en blanco.\n\nAceptar = preparar la galería primero.\nCancelar = publicar de todos modos.')){
+    if(!confirm('Faltan ' + pend + ' fotos por preparar. Si publicas y le mandas la liga de inmediato, las primeras vistas del cliente pueden salir en blanco.\n\nSe preparan solas en unos minutos, pero puedes adelantarlas.\n\nAceptar = prepararlas ahora.\nCancelar = publicar de todos modos.')){
       return accion('publicar', { id: ACT.entrega.id }, 'Publicada');
     }
     if(!await prepararGaleria2()) return;
