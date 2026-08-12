@@ -909,8 +909,11 @@ async function subirFotos(entregableId, files){
 function pendientesGaleria(){
   return (ACT && ACT.archivos || []).filter(function(a){
     if(!a.r2_key) return false;
-    var img = /^image\//.test(a.mime || '');
-    return (img && !a.r2_key_web) || Number(a.crc32) < 0;
+    // Solo imágenes: los videos no llevan copia reducida ni entran al ZIP, así que
+    // nunca están "pendientes". Y -2 significa "ya se intentó y no se pudo": contarlo
+    // dejaría el aviso encendido para siempre.
+    if(!/^image\//.test(a.mime || '')) return false;
+    return !a.r2_key_web || Number(a.crc32) === -1;
   }).length;
 }
 

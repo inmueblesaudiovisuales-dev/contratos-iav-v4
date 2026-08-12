@@ -290,6 +290,13 @@ export async function liberarPorPago(db, contratoToken, env) {
   return { liberadas };
 }
 
+// Lo que le falta preparacion. SOLO imagenes: los videos no llevan copia reducida
+// ni entran al ZIP, asi que no necesitan CRC — y pedirselo a uno de 986 MB revienta
+// el CPU del Worker y atora la fila entera.
+// crc32: -1 = nunca se intento; -2 = se intento y no se pudo (no reintentar).
+const FILTRO_PENDIENTE =
+  `r2_key<>'' AND mime NOT LIKE 'video/%' AND (crc32 = -1 OR r2_key_web='')`;
+
 // ── Preparacion en segundo plano ──────────────────────────────────────────────
 // La galeria necesita, por cada foto, una copia reducida y su CRC. Hacerlo desde el
 // portal obliga a Bruno a dejar la ventana abierta mirando una barra, y si la cierra
@@ -300,22 +307,24 @@ export async function liberarPorPago(db, contratoToken, env) {
 // de 50 fotos queda lista en media hora sin que nadie este presente.
 export async function prepararPendientes(env, tope = 2) {
   const db = env.DB;
-  const { results } = await query(db,
-    `SELECT * FROM e_archivos
-     WHERE r2_key<>'' AND (crc32 < 0 OR (r2_key_web='' AND mime NOT LIKE 'video/%'))
+  const { results } = await query(db, `SELECT * FROM e_archivos WHERE ${FILTRO_PENDIENTE}
      ORDER BY fecha LIMIT ?`, [tope]);
   if (!results || !results.length) return { hechos: 0, pendientes: 0 };
 
   let hechos = 0;
   for (const a of results) {
     let algo = false;
-    if (!esVideo(a.mime) && !a.r2_key_web) algo = !!(await generarDerivado(env, db, a)) || algo;
+    if (!a.r2_key_web) algo = !!(await generarDerivado(env, db, a)) || algo;
     if (Number(a.crc32) < 0) algo = (await asegurarCrc(env, db, a)) || algo;
     if (algo) hechos++;
+    // Un archivo que no avanza NO puede quedarse al frente de la fila para siempre:
+    // el cron lo volveria a agarrar cada minuto y nada mas se prepararia nunca. Se
+    // marca como intentado y se sigue. Paso con el video de 986 MB, que ademas no
+    // necesitaba CRC.
+    else await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
   }
   const pend = await queryOne(db,
-    `SELECT COUNT(*) AS n FROM e_archivos
-     WHERE r2_key<>'' AND (crc32 < 0 OR (r2_key_web='' AND mime NOT LIKE 'video/%'))`);
+    `SELECT COUNT(*) AS n FROM e_archivos WHERE ${FILTRO_PENDIENTE}`);
   return { hechos, pendientes: (pend && pend.n) || 0 };
 }
 
@@ -1345,10 +1354,9 @@ export async function handleEntregas(request, env, ctx, action) {
     // Tope de 2: cada una transforma un original de 10 MB y pasarse revienta el
     // isolate igual que en la subida. Mejor muchas peticiones chicas que una gorda.
     const n = Math.min(2, Math.max(1, Number(lote) || 1));
-    // Falta preparar si le falta la copia reducida O el CRC. El CRC lo necesitan
-    // tambien los videos: si no, no pueden ir en un ZIP — aunque hoy no van, el
-    // dia que se quiera no habra que recalcular nada.
-    const filtro = `r2_key<>'' AND (crc32 < 0 OR (r2_key_web='' AND mime NOT LIKE 'video/%'))`;
+    // Mismo criterio que el cron: solo imágenes, y lo que ya se intentó sin éxito
+    // (crc32 = -2) no se vuelve a intentar.
+    const filtro = FILTRO_PENDIENTE;
     const { results } = await query(db,
       `SELECT * FROM e_archivos WHERE ${filtro}
        ${entregaId ? 'AND e_entrega_id=?' : ''} LIMIT ?`,
@@ -1356,9 +1364,10 @@ export async function handleEntregas(request, env, ctx, action) {
     let hechos = 0;
     for (const a of (results || [])) {
       let algo = false;
-      if (!esVideo(a.mime) && !a.r2_key_web) algo = !!(await generarDerivado(env, db, a)) || algo;
+      if (!a.r2_key_web) algo = !!(await generarDerivado(env, db, a)) || algo;
       if (Number(a.crc32) < 0) algo = (await asegurarCrc(env, db, a)) || algo;
       if (algo) hechos++;
+      else await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
     }
     const pend = await queryOne(db,
       `SELECT COUNT(*) AS n FROM e_archivos WHERE ${filtro}
