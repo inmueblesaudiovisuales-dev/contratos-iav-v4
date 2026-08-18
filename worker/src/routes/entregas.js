@@ -896,6 +896,23 @@ export async function handleEntregas(request, env, ctx, action) {
                 opacidad: j.result.opacity, escala: j.result.scale });
   }
 
+  // Borra UN video de Stream por su uid. Hace falta porque `huerfanos` solo reconoce
+  // los que este sistema nombro (`entrega-*`, `limpio-*`): un video subido por otra
+  // via —o el uid que queda atras al reprocesar uno con un perfil nuevo— no lo
+  // detecta, y se queda pagandose en silencio para siempre.
+  //
+  // Salvaguarda: si el uid todavia esta referenciado en la base, no se borra. Sin eso
+  // un dedazo deja al cliente con un reproductor muerto y sin forma de recuperarlo.
+  if (action === 'borrarStream') {
+    const { uid } = await request.json();
+    if (!uid) return err('Falta el uid');
+    const enUso = await queryOne(db,
+      'SELECT id FROM e_archivos WHERE stream_uid=? OR stream_uid_limpio=?', [uid, uid]);
+    if (enUso) return err('Ese video está en uso por el archivo ' + enUso.id, 409);
+    const ok_ = await borrarDeStream(env, uid);
+    return ok({ ok: true, borrado: ok_, uid });
+  }
+
   // Lista los perfiles de marca de agua que existen en Stream, para saber cual esta
   // en uso y cual quedo huerfano de una calibracion anterior.
   if (action === 'watermarks') {
