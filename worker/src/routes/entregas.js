@@ -581,6 +581,17 @@ export async function handleEntregas(request, env, ctx, action) {
     // El mosaico se quita SOLO si esta liberada y vigente. Esa es la unica condicion.
     const limpia = e.estado === 'liberada' && !estaVencida(e.fecha_expira, now());
 
+    // Andamio de calibracion: m = densidad, o = opacidad. Sirve para comparar variantes
+    // en vivo sin redesplegar; cuando se decide, son dos constantes de una linea.
+    //
+    // EXIGEN LA LLAVE, y es importante. `m` era inofensivo —la fraccion tiene piso, asi
+    // que no puede desaparecer la marca— pero `o` si: con o=0 la foto saldria limpia y
+    // cualquiera con la liga tendria el material sin pagar. Un parametro que puede
+    // apagar el candado no puede vivir en una URL publica.
+    const calibra = !requireEntregas(request, env);
+    const mCal = calibra ? Number(url.searchParams.get('m')) || 0 : 0;
+    const oCal = calibra ? Number(url.searchParams.get('o')) || 0 : 0;
+
     // CACHE. Sin esto cada peticion vuelve a decodificar un JPEG de 10 MB, redimensionarlo
     // y dibujarle el mosaico. Una cuadricula dispara varias a la vez y el Worker revienta
     // su limite de recursos (error 1102 de Cloudflare) — pasa con fotos reales, no con
@@ -592,8 +603,14 @@ export async function handleEntregas(request, env, ctx, action) {
     const llaveCache = new Request(
       `${url.origin}/api/e/foto?a=${archivoId}&w=${ancho}&st=${limpia ? 'limpia' : 'marcada'}`,
       { method: 'GET' });
-    const cacheada = await cache.match(llaveCache);
-    if (cacheada) return cacheada;
+    // Las variantes de calibracion no tocan el cache: ni lo leen —queremos ver la
+    // variante, no lo que quedo guardado— ni lo escriben, que envenenaria la galeria
+    // real con una marca de prueba.
+    const usaCache = !mCal && !oCal;
+    if (usaCache) {
+      const cacheada = await cache.match(llaveCache);
+      if (cacheada) return cacheada;
+    }
 
     // Se transforma la copia REDUCIDA, no el original de 10 MB: esa es la diferencia
     // entre servir la galeria y que el Worker reviente su limite de recursos.
@@ -610,14 +627,13 @@ export async function handleEntregas(request, env, ctx, action) {
         const marca = await env.ENTREGAS_ORIGINALES.get(LLAVE_MARCA);
         if (marca) {
           // d = ancho real en pantalla, para que el texto salga del mismo tamaño
-          // fisico en el hero y en una miniatura. ?m= fuerza la base sin redesplegar.
-          const base = Number(url.searchParams.get('m')) || ANCHO_MARCA;
-          const w = fraccionMarca(url.searchParams.get('d'), base);
+          // fisico en el hero y en una miniatura.
+          const w = fraccionMarca(url.searchParams.get('d'), mCal || ANCHO_MARCA);
           if (w >= 1) {   // no deberia pasar; si pasa, mejor fallar que servir limpio
             console.error('fraccion de marca invalida', w);
             return err('Marca de agua mal configurada', 503);
           }
-          pipe = pipe.draw(marca.body, { repeat: true, opacity: OPACIDAD_MARCA, width: w });
+          pipe = pipe.draw(marca.body, { repeat: true, opacity: oCal || OPACIDAD_MARCA, width: w });
         } else {
           // Sin marca de agua NO se sirve la foto: es preferible fallar visible a
           // entregar el material limpio por accidente.
@@ -641,7 +657,7 @@ export async function handleEntregas(request, env, ctx, action) {
       h.set('Cache-Control', 'public, max-age=300, s-maxage=86400');
       h.set('Content-Type', 'image/jpeg');
       const resp = new Response(r.body, { status: 200, headers: h });
-      ctx.waitUntil(cache.put(llaveCache, resp.clone()));
+      if (usaCache) ctx.waitUntil(cache.put(llaveCache, resp.clone()));
       return resp;
     } catch (ex) {
       console.error('transformación de imagen falló', ex.message);
