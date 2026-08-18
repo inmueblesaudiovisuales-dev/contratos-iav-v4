@@ -29,6 +29,14 @@ const LLAVE_MARCA = 'sistema/marca-agua.png';
 // La version anterior, para poder volver atras: cambiar la marca afecta a todas las
 // entregas al instante y el bucket no se puede leer con wrangler.
 const LLAVE_MARCA_PREVIA = 'sistema/marca-agua-previa.png';
+// Version de la marca. Va en la llave del cache, asi que subirla es lo que hace que
+// las fotos ya servidas se vuelvan a dibujar.
+//
+// Sin esto, cambiar el PNG o la opacidad no se ve: cada ancho servido tiene su propia
+// entrada cacheada por 24 h. Pasó al calibrar la marca el 18 ago — la nueva estaba bien
+// y la galeria seguia mostrando la vieja, y el hero (que pide otro ancho) todavia mas
+// tiempo. **Al recalibrar la marca hay que subir este numero.**
+const VERSION_MARCA = 2;
 // Calibrada por Bruno el 18 ago 2026 sobre fotos reales, comparando nueve variantes.
 // Bajó de 0.60: con el tile nuevo el texto es mucho más grande y lleva sombra, así que
 // menos opacidad se lee mejor que más opacidad sin sombra.
@@ -616,7 +624,8 @@ export async function handleEntregas(request, env, ctx, action) {
     // marca que quedo cacheada, y el cliente pagaria para ver lo mismo.
     const cache = caches.default;
     const llaveCache = new Request(
-      `${url.origin}/api/e/foto?a=${archivoId}&w=${ancho}&st=${limpia ? 'limpia' : 'marcada'}`,
+      `${url.origin}/api/e/foto?a=${archivoId}&w=${ancho}&st=${limpia ? 'limpia' : 'marcada'}` +
+      `&mv=${VERSION_MARCA}`,
       { method: 'GET' });
     // Las variantes de calibracion no tocan el cache: ni lo leen —queremos ver la
     // variante, no lo que quedo guardado— ni lo escriben, que envenenaria la galeria
