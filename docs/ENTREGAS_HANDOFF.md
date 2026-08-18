@@ -1124,6 +1124,10 @@ Foto del momento, para que quien retome sepa qué hay vivo y no lo confunda con 
 > su entrega**. Sirve como banco de pruebas —es material de verdad, que es donde
 > aparecen los bugs de verdad— y nada más. Los enlaces vivos no son un riesgo.
 
+> **Al 18 ago 2026 hay 8 entregas**, no 4: se agregaron demos nuevas, entre ellas una
+> **liberada** ("CASA", 13 fotos + video, vence el 26 de agosto). La tabla de abajo es
+> del 12 de agosto y se dejó como estaba; el conteo vivo sale de D1.
+
 | Entrega | Estado | Material | Nota |
 |---|---|---|---|
 | **Mireya Gómez** (IAV-2607.17-A) | publicada | 45 fotos + video | **Saldo $4,500.** Enlace vivo, nunca enviado. Decidir si se pausa (C3). |
@@ -1316,7 +1320,28 @@ foto, el botón anuncia el número real, y nunca hay scroll horizontal.
 muestrario): cazó 312 fallos. Una suite que nunca ha fallado no sirve de nada —
 misma lección que la trampa #18 con `Expand-Archive`.
 
-Corrida 3 veces seguidas, sin un solo fallo, más los 94 tests del worker.
+Y una cuarta, `e2e.mjs`, que corre el ciclo entero **contra producción** con una
+entrega desechable: crear → subir 2 fotos → elegir portada y destacada → publicar →
+guardar los bytes de una foto → liberar → volver a pedir la misma foto → borrar.
+
+Es la única prueba que verifica el **resultado** y no la intención. Lo que midió:
+
+| | |
+|---|---|
+| La foto cambia al liberar | `2f24b4d3c9606081` → `0d74ae30af2d83eb` (37,023 → 38,103 bytes) |
+| Sin liberar, el payload no trae nada descargable | confirmado |
+| Al liberar aparecen descargas y ZIP | confirmado |
+| El original descargado es idéntico al subido | mismo hash |
+| Pedir sin `&v=` también sirve la limpia | el estado lo decide el servidor, no el parámetro |
+| La primera foto nace como portada | `portada=1 destacado=1` |
+| Después de borrar la prueba | 0 huérfanos en R2 y en Stream |
+
+Corrida 3 veces seguidas (y 2 más con el ciclo de producción incluido), sin un solo
+fallo, más los 94 tests del worker.
+
+**Verificado además sobre las entregas reales**, con capturas: la liberada sirve las
+fotos **sin mosaico**, la publicada con él, ninguna repite la portada, y la aritmética
+cierra en las dos (1 + 6 + resto = total).
 
 ### 22.7 Qué falta de esto
 
