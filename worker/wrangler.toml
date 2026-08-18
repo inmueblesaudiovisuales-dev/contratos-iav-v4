@@ -41,14 +41,25 @@ STREAM_CUSTOMER_CODE = "customer-cl73mgx0feu2w8io"
 #
 # R129 — Sistema de entregas
 ENTREGAS_BASE_URL = "https://entregas.inmueblesaudiovisuales.com"
-# Perfiles de marca de agua de Stream. El PNG mide 2622x225 (11.7:1), asi que la
-# misma escala no sirve para las dos orientaciones: en vertical —el formato nativo
-# de IAV— queda ilegible. Se elige perfil segun la forma del video.
-#   horizontal: position=center, opacity=0.30, scale=0.45
-#   vertical  : position=center, opacity=0.30, scale=0.85
-# NINGUNO se puede editar: cambiarlos obliga a resubir los videos ya subidos.
-STREAM_WATERMARK_UID = "d537462dcedc9c326ff9e3c517b31e34"
-STREAM_WATERMARK_UID_VERTICAL = "08ab04bc1cc268a0ff86d910e5b7f179"
+# Perfiles de marca de agua de Stream (R135, 18 ago 2026). Igualan la marca de las
+# fotos: mosaico de texto con sombra, opacity 0.35.
+#
+# Stream NO sabe repetir un mosaico —coloca UNA imagen y ya—, asi que el patron va
+# dibujado dentro del PNG y el perfil va con scale=1, position=center. Y como Stream
+# escala sin deformar, hace falta un PNG por orientacion: uno horizontal sobre un
+# video vertical deja una franja marcada y el resto limpio.
+#   horizontal: PNG 1920x1080, scale=1, position=center, opacity=0.35
+#   vertical  : PNG 1080x1920, scale=1, position=center, opacity=0.35
+#
+# NINGUNO se puede editar: cambiarlos obliga a reprocesar los videos ya subidos,
+# porque la marca se quema al codificar. Para hacer perfiles nuevos hay endpoints:
+# POST /api/e/crearWatermark y GET /api/e/watermarks.
+STREAM_WATERMARK_UID = "a6449a5380ebf5f3068679a5e5bfe918"
+STREAM_WATERMARK_UID_VERTICAL = "ff3919c145eb7bceee5538effaa3736f"
+# Los de antes (logo al centro, escala 0.45/0.85, opacidad 0.30). Se dejan vivos
+# porque los videos ya codificados con ellos siguen sirviendose:
+#   horizontal d537462dcedc9c326ff9e3c517b31e34
+#   vertical   08ab04bc1cc268a0ff86d910e5b7f179
 # ENTREGAS_KEY es opcional y va como secret (wrangler secret put ENTREGAS_KEY).
 #   Si no esta puesta, el portal de entregas acepta la ADMIN_KEY. Ponerla permite
 #   dar acceso a las entregas sin abrir el admin completo.
