@@ -8,6 +8,47 @@
 
 ---
 
+### R134 — la marca de agua se ve: pocas, grandes y con sombra (2026-08-18 03:30:00 CST)
+
+Bruno reportó que la marca casi no se notaba en las fotos grandes. Medido: el texto ocupaba
+el **14% del ancho en una destacada y el 6% en el hero**. Calibrada con él sobre fotos
+reales suyas, comparando nueve variantes; eligió texto al 75%, opacidad 0.35 y sombra suave.
+95 tests verde. NO se tocó el adapter.
+
+**Dos causas, y la segunda era de diseño.** El tile tenía el texto al 25% de su ancho: casi
+todo era aire. Y la compensación por ancho de despliegue —pensada para que el texto midiera
+lo mismo en píxeles en toda vista— obligaba a un piso (0.25) que resultó ser **el techo real
+de todo**: cualquier base topaba ahí en cuanto la foto se veía a más de 675 px, así que en
+el hero la marca salía idéntica pusieras el valor que pusieras. Cinco densidades distintas
+daban la misma imagen; eso fue lo que delató el problema.
+
+**La marca pasa a ser proporcional** a la foto, como cualquier marca de agua: misma fracción
+del ancho siempre, así el hero, una destacada y una miniatura se ven iguales entre sí. `d` se
+sigue recibiendo para elegir el ancho servido pero ya no la cambia. Adiós al piso.
+
+**Valores:** fracción `0.9375`, opacidad `0.35` (bajó de 0.60 — con sombra se lee mejor con
+menos), tile nuevo de `1922×912` con el texto al 80% y sombra suave. La sombra no es adorno:
+el texto es blanco y sin ella desaparece sobre una pared clara, que es media casa.
+
+**Tres cosas más que salieron del camino:**
+
+- **`VERSION_MARCA` en la llave del caché.** Cambiar el PNG no se veía: cada ancho servido
+  tiene su propia entrada por 24 h, así que la marca nueva convivía con la vieja y el hero
+  tardaba todavía más. Misma familia que la trampa 27. Al recalibrar hay que subirla.
+- **`m` y `o` exigen la llave.** `m` era inofensivo porque la fracción tiene tope, pero con
+  `o=0` la foto habría salido limpia para cualquiera con la liga. Cierra la deuda del `?m=`
+  expuesto.
+- **Endpoint `marca` y respaldo automático.** El PNG afecta a todas las entregas al instante
+  y no había forma de volver atrás: el bucket no se puede leer con wrangler. Ahora
+  `GET /api/e/marca` lo sirve, `?previa=1` da la versión anterior y `subirMarca` guarda la
+  que estaba antes de pisarla.
+
+Los videos **no** cambian: sus perfiles de Stream no se pueden editar sin resubir todo.
+
+Despliegue: push a `main` (GitHub Actions).
+
+---
+
 ### R133c — revisión visual: portada duplicada, colisión de CSS y scroll (2026-08-18 01:35:00 CST)
 
 Revisión con capturas de pantalla reales después de desplegar R133. Tres hallazgos, dos

@@ -1,4 +1,4 @@
-# Handoff — Sistema de Entregas (R129–R133)
+# Handoff — Sistema de Entregas (R129–R134)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
@@ -7,9 +7,10 @@
 > Rango de commits: `9994f46..HEAD`.
 >
 > **Atajos:** §2 estado · §15 lo que falta · §21 qué material hay vivo ahora ·
-> §14 las 28 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
+> §14 las 29 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
 > rediseño de los dos portales y preparación automática) · §22 la sesión del 18 ago
-> (la marca que no se quitaba tras liberar, y la galería de destacadas).
+> (la marca que no se quitaba tras liberar, y la galería de destacadas) · §9 la marca
+> de agua recalibrada el 18 ago.
 >
 > **Pendiente inmediato:** correr la migración `r133-destacadas.sql` en D1 (§22.5).
 
@@ -246,40 +247,80 @@ Todo bajo `/api/e/`. **Público** = sin llave.
 
 ## 9. La marca de agua, en detalle
 
-Es la pieza central y la que más iteraciones tomó.
+Es la pieza central y la que más iteraciones tomó. **Recalibrada por Bruno el 18 ago
+2026**; lo de antes se conserva abajo porque el error de diseño vale más que el valor.
 
 ### Cómo se genera
 
 El PNG vive en R2 en `sistema/marca-agua.png` y se dibuja con `draw({repeat:true})`.
-El tile actual mide **2186×486** y contiene el texto dos veces, la segunda desplazada
-media anchura, para reproducir el patrón de ladrillo con separación 2.0×. Se generó
-con canvas dibujando el patrón también desplazado ±ancho y ±alto, de modo que lo que
-cruza un borde reaparece del otro lado: así el tile repite sin costura.
+El tile actual mide **1922×912** y contiene el texto en patrón de ladrillo, con el
+texto ocupando el **80% del ancho del tile** y una **sombra suave** detrás. Se dibuja
+también desplazado ±ancho y ±alto, de modo que lo que cruza un borde reaparece del
+otro lado: así el tile repite sin costura.
+
+La sombra no es decorativa: el texto es blanco, y sin ella desaparece sobre una pared
+clara — que es la mitad de las fotos de un inmueble.
 
 ### Los parámetros
 
 | Parámetro | Valor | Dónde |
 |---|---|---|
-| Opacidad | `0.60` | `OPACIDAD_MARCA` en `routes/entregas.js` |
-| Ancho base | `0.45` | `ANCHO_MARCA` |
+| Opacidad | `0.35` | `OPACIDAD_MARCA` en `routes/entregas.js` |
+| Fracción | `0.9375` | `ANCHO_MARCA` — el tile ocupa casi todo el ancho de la foto |
 | Tope duro | `0.95` | `TOPE_MARCA` — **ver la trampa abajo** |
-| Ancho de referencia | `375` px | `ANCHO_REF` |
+| Versión | `2` | `VERSION_MARCA` — va en la llave del caché |
 
-### La compensación por tamaño
+Fracción 0.9375 × texto al 80% del tile = **el texto ocupa el 75% del ancho de la
+foto**. Salen dos o tres marcas por foto, grandes y legibles.
 
-Una fracción fija se ve bien en el hero y se vuelve ruido ilegible en una miniatura:
-el 45% de una celda de 160px es texto de 70px. Lo que tiene que quedar constante es
-el **tamaño físico** del texto en pantalla, no su proporción. Por eso el cliente manda
-el ancho real de despliegue (`&d=`) y el servidor compensa contra `ANCHO_REF`.
+### La marca es PROPORCIONAL, no de tamaño fijo
 
-### Cómo ajustarla en vivo
+Ocupa la misma fracción del ancho de la foto siempre, sin importar a qué tamaño se
+muestre. El hero, una destacada y una miniatura se ven iguales entre sí. Es como
+funciona cualquier marca de agua.
+
+> **Antes no era así, y ese fue el problema.** Se compensaba por el ancho de
+> despliegue (`d`) para que el texto midiera lo mismo en **píxeles** en todas partes.
+> La idea era razonable —una fracción fija se vuelve ruido en una miniatura— pero
+> obligaba a un piso, para que en pantallas grandes el tile no se volviera un punto, y
+> **ese piso terminó siendo el techo real de todo**: cualquier base topaba ahí en
+> cuanto la foto se veía a más de 675 px. Medido el 18 ago: en el hero la marca salía
+> idéntica pusieras el valor que pusieras, cinco densidades distintas daban la misma
+> imagen, y el texto acababa midiendo **el 14% del ancho en una destacada y el 6% en
+> el hero**. Prácticamente invisible, que era justo lo que Bruno reportaba.
+>
+> `d` se sigue recibiendo —las páginas lo mandan y sirve para elegir el ancho
+> servido— pero ya no cambia la marca.
+
+### Cómo recalibrarla
 
 ```
-/api/e/foto?a=<archivoId>&w=1000&d=500&m=0.30
+/api/e/foto?a=<archivoId>&w=1000&m=0.9&o=0.4&k=<llave>
 ```
 
-`m` fuerza la base sin redesplegar. Más chico = mosaico más denso. Cuando decidas, es
-una constante de una línea.
+`m` = fracción, `o` = opacidad. **Exigen la llave**, y no es un detalle: `m` es
+inofensivo porque la fracción tiene tope, pero con `o=0` la foto saldría limpia y
+cualquiera con la liga tendría el material sin pagar. Un parámetro que puede apagar el
+candado no puede vivir en una URL pública. Las variantes no tocan el caché, ni para
+leer ni para escribir.
+
+Para cambiar el PNG:
+
+```
+GET  /api/e/marca            ve o respalda el actual
+GET  /api/e/marca?previa=1   la versión anterior, para revertir
+POST /api/e/subirMarca       sube uno nuevo (guarda el anterior solo)
+```
+
+> **Al cambiar el PNG o cualquiera de los dos valores hay que subir `VERSION_MARCA`.**
+> Si no, no se ve el cambio: cada ancho servido tiene su propia entrada de caché por
+> 24 h. Pasó al calibrar: la marca nueva estaba bien y la galería seguía mostrando la
+> vieja; el hero, que pide otro ancho, todavía más tiempo.
+
+El generador del tile es un script de Playwright que dibuja el patrón en canvas
+(`scratchpad/tile.mjs`, sin versionar). El respaldo del PNG original vive en
+`E:\CLAUDE\Sistema de entregas\marca-mosaico-ORIGINAL-2026-08-18.png` y también en R2
+como `sistema/marca-agua-previa.png`.
 
 ### Los perfiles de Stream (video)
 
@@ -289,7 +330,8 @@ una constante de una línea.
 | `08ab04bc1cc268a0ff86d910e5b7f179` | VistaPreviaIAV-Vertical | 0.85 | **Vertical** (el formato nativo de IAV) |
 
 `perfilWatermark()` elige por orientación. **Ninguno se puede editar**: cambiarlos
-obliga a resubir todos los videos ya subidos.
+obliga a resubir todos los videos ya subidos. La recalibración del 18 ago **no los
+tocó**: el video sigue con la marca de antes.
 
 ---
 
@@ -579,6 +621,10 @@ vez en cuando, porque cualquier subida que falle a la mitad deja basura.
     su `width:31px` se lo impuso a la barra y sacó el botón "Publicar" de la tarjeta,
     en todos los anchos. **Ninguna prueba de lógica ve esto** — se vio en una captura
     de pantalla. Antes de nombrar una clase, buscarla en el archivo (§22.5).
+29. **Cambiar la marca de agua no se ve hasta que se invalida el cache.** Cada ancho
+    servido tiene su propia entrada por 24 h, asi que la marca nueva convive con la
+    vieja y el hero —que pide otro ancho— tarda todavia mas. Por eso existe
+    `VERSION_MARCA` en la llave: **al recalibrar hay que subirla** (§9).
 
 ---
 
@@ -626,7 +672,7 @@ el material, ver §18.9), pero un ciclo real de dos semanas no ha ocurrido.
 | C1 | Las 5 variantes `-1-N` de Mireya | ⬜ abierto |
 | C2 | Poder elegir la portada | ✅ **hecho** (§19) — clic en la miniatura |
 | C3 | Qué pasa con la entrega de Mireya | ⬜ **abierto y con enlace vivo** |
-| C4 | Densidad del mosaico (`ANCHO_MARCA = 0.45`) | ⬜ abierto |
+| C4 | Densidad del mosaico | ✅ **cerrado el 18 ago** (§9) — recalibrada con Bruno |
 | C5 | Cuándo se apaga R123 | ⬜ abierto |
 | C6 | Backfill de entregas para contratos viejos | ⬜ abierto |
 | C7 | Registrar pagos desde este portal | ❌ **NO por ahora** |
@@ -660,8 +706,10 @@ nuevo del portal.
 
 - ~~`ENTREGAS_KEY` sin configurar~~ ✅ hecho el 11 ago. La `ADMIN_KEY` sigue siendo
   aceptada a propósito, para no quedarse fuera si se pierde la otra.
-- **El parámetro `?m=`** sigue expuesto en producción. Inofensivo (solo cambia la
-  escala del mosaico) pero es andamio de depuración.
+- ~~El parámetro `?m=` expuesto en producción~~ ✅ resuelto el 18 ago: `m` y el nuevo
+  `o` (opacidad) **exigen la llave**. Importaba más de lo que parecía: `m` era
+  inofensivo porque la fracción tiene tope, pero con `o=0` la foto habría salido
+  limpia para cualquiera con la liga.
 - **El error de `procesarVideo` devuelve una URL de origen firmada** para poder
   probarla a mano. Solo la ve quien tenga la llave, pero es información de más.
 - **Columnas muertas:** `images_id` e `images_hash` en `e_archivos` ya no se
