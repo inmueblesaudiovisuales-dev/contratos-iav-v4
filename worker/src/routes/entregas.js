@@ -49,11 +49,17 @@ export const DESTACADAS_VISIBLES = 6;
 // desaparece sin error — la imagen sale limpia y nadie se entera. Verificado: a
 // partir de 1.00 la respuesta es identica byte por byte a no dibujar nada.
 export const TOPE_MARCA = 0.95;
+// Piso: evita que en una pantalla enorme el tile se vuelva un punto. Estuvo en 0.25 y
+// resultó ser el techo real de la densidad: **cualquier** base topaba ahí en cuanto la
+// foto se veía a más de 675 px, así que en el hero la marca era la misma pusieras lo
+// que pusieras, y ninguna cuadrícula podía pasar de 4 repeticiones a lo ancho. Medido
+// al intentar hacerla más densa: cinco densidades distintas daban la misma imagen.
+export const PISO_MARCA = 0.06;
 export function fraccionMarca(anchoDespliegue, base) {
   const b = base || ANCHO_MARCA;
   const d = Number(anchoDespliegue);
   if (!Number.isFinite(d) || d <= 0) return Math.min(TOPE_MARCA, b);
-  return Math.min(TOPE_MARCA, Math.max(0.25, b * (ANCHO_REF / d)));
+  return Math.min(TOPE_MARCA, Math.max(PISO_MARCA, b * (ANCHO_REF / d)));
 }
 
 // El sistema acepta su propia llave si esta configurada, y ademas la del admin para
