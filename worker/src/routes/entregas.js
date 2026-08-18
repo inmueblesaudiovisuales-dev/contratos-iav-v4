@@ -26,40 +26,49 @@ const WA_BASE = 'https://wa.me/5218127174207';
 // La marca de agua vive en R2 y se dibuja al servir. Cambiar este archivo cambia
 // TODAS las entregas, viejas y nuevas, al instante: ya no hay nada quemado.
 const LLAVE_MARCA = 'sistema/marca-agua.png';
-const OPACIDAD_MARCA = 0.6;   // calibrada por Bruno sobre una foto real
+// La version anterior, para poder volver atras: cambiar la marca afecta a todas las
+// entregas al instante y el bucket no se puede leer con wrangler.
+const LLAVE_MARCA_PREVIA = 'sistema/marca-agua-previa.png';
+// Calibrada por Bruno el 18 ago 2026 sobre fotos reales, comparando nueve variantes.
+// Bajó de 0.60: con el tile nuevo el texto es mucho más grande y lleva sombra, así que
+// menos opacidad se lee mejor que más opacidad sin sombra.
+const OPACIDAD_MARCA = 0.35;
 // repeat tilea el PNG a su tamaño NATIVO, que en una foto de 1000px deja el texto
 // gigante. width es una fraccion del ancho de la foto.
-// 0.45 reproduce de cerca lo que Bruno calibro (texto grande, separacion 2.0x).
-// Se compara en vivo con ?m=.
-const ANCHO_MARCA = 0.45;
-// Ancho de pantalla de referencia al que esa fraccion se ve bien.
-const ANCHO_REF = 375;
+//
+// 0.9375 = el tile ocupa casi todo el ancho de la foto. Con el tile nuevo (el texto
+// llena el 80% del tile) eso deja el texto al ~75% del ancho de la foto: pocas marcas
+// y grandes, que es lo que Bruno eligio. El valor sale de la separacion horizontal:
+// 1 / 1.25.
+const ANCHO_MARCA = 0.9375;
 
 // Cuantas fotos ve el cliente antes de tener que pedir el resto. Es un muestrario:
 // lo primero que ve tiene que ser el mejor trabajo, no 45 fotos revueltas. Seis
 // llenan dos filas de tres en escritorio y siguen siendo pocas en el telefono.
 export const DESTACADAS_VISIBLES = 6;
 
-// Una fraccion fija se ve bien en el hero y se vuelve ruido ilegible en una
-// miniatura: el 45% de una celda de 160px es texto de 70px. Lo que tiene que
-// quedar constante es el tamaño FISICO del texto en pantalla, no su proporcion.
-// Por eso el cliente manda el ancho real de despliegue (d) y aqui se compensa.
+// La marca es PROPORCIONAL a la foto: ocupa la misma fraccion del ancho siempre, sin
+// importar a que tamaño se muestre. Es como funciona cualquier marca de agua, y hace
+// que el hero, una destacada y una miniatura se vean iguales entre si.
+//
+// Antes se compensaba por el ancho de despliegue (`d`) para que el texto midiera lo
+// mismo en PIXELES en todas partes. La idea era razonable y el resultado no: obligaba
+// a un piso —para que en pantallas grandes el tile no se volviera un punto— y ese piso
+// terminaba siendo el techo real de todo. Medido el 18 ago: en el hero la marca era la
+// misma pusieras el valor que pusieras, y el texto acababa midiendo el 6% del ancho de
+// la foto. Practicamente invisible, que era justo lo que Bruno reportaba.
+//
+// `d` se sigue recibiendo (las paginas lo mandan y sirve para elegir el ancho servido),
+// pero ya no cambia la marca.
+//
 // TOPE CRITICO en 0.95, no en 1 ni mas: Cloudflare lee width <= 1 como FRACCION y
 // > 1 como PIXELES. Con width:1 el overlay mide un pixel y la marca de agua
 // desaparece sin error — la imagen sale limpia y nadie se entera. Verificado: a
 // partir de 1.00 la respuesta es identica byte por byte a no dibujar nada.
 export const TOPE_MARCA = 0.95;
-// Piso: evita que en una pantalla enorme el tile se vuelva un punto. Estuvo en 0.25 y
-// resultó ser el techo real de la densidad: **cualquier** base topaba ahí en cuanto la
-// foto se veía a más de 675 px, así que en el hero la marca era la misma pusieras lo
-// que pusieras, y ninguna cuadrícula podía pasar de 4 repeticiones a lo ancho. Medido
-// al intentar hacerla más densa: cinco densidades distintas daban la misma imagen.
-export const PISO_MARCA = 0.06;
-export function fraccionMarca(anchoDespliegue, base) {
-  const b = base || ANCHO_MARCA;
-  const d = Number(anchoDespliegue);
-  if (!Number.isFinite(d) || d <= 0) return Math.min(TOPE_MARCA, b);
-  return Math.min(TOPE_MARCA, Math.max(PISO_MARCA, b * (ANCHO_REF / d)));
+export function fraccionMarca(_anchoDespliegue, base) {
+  const b = Number(base) > 0 ? Number(base) : ANCHO_MARCA;
+  return Math.min(TOPE_MARCA, b);
 }
 
 // El sistema acepta su propia llave si esta configurada, y ademas la del admin para
@@ -825,10 +834,32 @@ export async function handleEntregas(request, env, ctx, action) {
     const form = await request.formData();
     const png = form.get('archivo');
     if (!png) return err('Falta el archivo');
+    // Antes de pisarla, se guarda la que estaba. Cambiar este PNG afecta a TODAS las
+    // entregas al instante, y no habia forma de volver atras: el bucket no se puede
+    // leer con wrangler (su OAuth no incluye R2), asi que la version anterior se
+    // perdia para siempre en cuanto se subia una nueva.
+    const previa = await env.ENTREGAS_ORIGINALES.get(LLAVE_MARCA);
+    if (previa) {
+      await env.ENTREGAS_ORIGINALES.put(LLAVE_MARCA_PREVIA, previa.body,
+        { httpMetadata: { contentType: 'image/png' } });
+    }
     await env.ENTREGAS_ORIGINALES.put(LLAVE_MARCA, png.stream(),
       { httpMetadata: { contentType: 'image/png' } });
     const check = await env.ENTREGAS_ORIGINALES.head(LLAVE_MARCA);
-    return ok({ ok: true, llave: LLAVE_MARCA, bytes: check ? check.size : 0 });
+    return ok({ ok: true, llave: LLAVE_MARCA, bytes: check ? check.size : 0,
+                respaldo: !!previa });
+  }
+
+  // Sirve el PNG de la marca tal cual esta en R2. Es la unica forma de verlo o
+  // respaldarlo: el bucket no se puede leer con wrangler. `?previa=1` devuelve la
+  // version anterior, que es como se revierte un cambio que no gusto.
+  if (action === 'marca') {
+    const obj = await env.ENTREGAS_ORIGINALES.get(
+      url.searchParams.get('previa') ? LLAVE_MARCA_PREVIA : LLAVE_MARCA);
+    if (!obj) return err('No hay marca guardada', 404);
+    return new Response(obj.body, {
+      headers: { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store' }
+    });
   }
 
   // Prueba de vida del binding de Images: toma la marca de agua, la reduce y la

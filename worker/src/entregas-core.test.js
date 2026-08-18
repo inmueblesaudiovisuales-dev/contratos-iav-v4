@@ -312,16 +312,30 @@ test('la fraccion de marca NUNCA llega a 1', async () => {
   }
 });
 
-test('la fraccion crece cuando la foto se muestra mas chica', () => {
-  // Asi el texto conserva el mismo tamaño fisico en pantalla.
-  assert.ok(fraccionMarca(166, 0.45) > fraccionMarca(375, 0.45));
-  assert.ok(fraccionMarca(375, 0.45) > fraccionMarca(800, 0.45));
+test('la marca es proporcional: el ancho de despliegue ya NO la cambia', () => {
+  // Cambio del 18 ago 2026. Antes se compensaba por `d` para que el texto midiera
+  // lo mismo en pixeles en todas partes; eso obligaba a un piso, y el piso termino
+  // siendo el techo de todo: en el hero la marca salia igual pusieras el valor que
+  // pusieras, y el texto acababa midiendo el 6% del ancho de la foto.
+  const esperada = fraccionMarca(null, 0.9375);
+  for (const d of [1, 80, 166, 300, 375, 800, 1200, 4000]) {
+    assert.equal(fraccionMarca(d, 0.9375), esperada, `d=${d} cambio la marca`);
+  }
 });
 
-test('sin ancho de despliegue se usa la base, tambien acotada', () => {
+test('una base absurda no puede desactivar la marca', () => {
+  // Si algo manda basura vale mas marcar de mas que servir la foto limpia.
+  for (const b of [0, -1, null, undefined, NaN, 'x']) {
+    const f = fraccionMarca(300, b);
+    assert.ok(f > 0 && f < 1, `base ${b} dio ${f}`);
+  }
+});
+
+test('la base se usa tal cual, acotada por el tope', () => {
   assert.equal(fraccionMarca(null, 0.45), 0.45);
   assert.equal(fraccionMarca(0, 0.45), 0.45);
-  assert.ok(fraccionMarca(undefined, 2) < 1);
+  assert.equal(fraccionMarca(300, 0.9375), 0.9375);
+  assert.ok(fraccionMarca(undefined, 2) < 1);   // el tope sigue mandando
 });
 
 // ── Marca de version de las fotos ─────────────────────────────────────────────
