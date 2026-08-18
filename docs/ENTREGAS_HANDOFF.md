@@ -1,14 +1,17 @@
-# Handoff — Sistema de Entregas (R129–R132)
+# Handoff — Sistema de Entregas (R129–R133)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
 >
-> Última actualización: 2026-08-12
+> Última actualización: 2026-08-18
 > Rango de commits: `9994f46..HEAD`.
 >
 > **Atajos:** §2 estado · §15 lo que falta · §21 qué material hay vivo ahora ·
-> §14 las 26 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
-> rediseño de los dos portales y preparación automática).
+> §14 las 27 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
+> rediseño de los dos portales y preparación automática) · §22 la sesión del 18 ago
+> (la marca que no se quitaba tras liberar, y la galería de destacadas).
+>
+> **Pendiente inmediato:** correr la migración `r133-destacadas.sql` en D1 (§22.5).
 
 ---
 
@@ -565,6 +568,12 @@ vez en cuando, porque cualquier subida que falle a la mitad deja basura.
     medir y además chocaban con el cron. Para medir, consultar D1 directo (§20.2).
 26. **El runner de GitHub falla a veces al clonar** (`server certificate verification
     failed`). No es el código: `gh run rerun <id>`.
+27. **El borde y el navegador son dos cachés distintas.** Meter el estado en la llave
+    del borde no sirve de nada si la URL que ve el navegador no cambia: él guarda por
+    URL y no sabe nada de esa llave. Cualquier cosa que se sirva distinto según un
+    estado tiene que llevar ese estado **en la URL**. Costó que el cliente siguiera
+    viendo la marca de agua después de pagar, y no lo detecta ninguna prueba de
+    servidor: `curl` no tiene caché (§22.1).
 
 ---
 
@@ -618,9 +627,11 @@ el material, ver §18.9), pero un ciclo real de dos semanas no ha ocurrido.
 | C7 | Registrar pagos desde este portal | ❌ **NO por ahora** |
 | C8 | Los 5 PNG colados en la entrega de Felipe | ⬜ **abierto** |
 
-**C3 — Mireya.** Publicada desde el 11 ago con material real de una clienta que
-sigue debiendo **$4,500**. El enlace es inadivinable y no se envió nada, pero está
-vivo. Decidir si se pausa o se le manda.
+**C3 — Mireya. CERRADO el 18 ago:** Bruno aclaró que **todas las entregas que hay
+son demos, no clientes reales**. El material es real y el saldo de $4,500 sale del
+contrato, pero no hay nadie esperando del otro lado. Deja de ser urgencia y deja de
+ser decisión pendiente. Lo mismo vale para la de Felipe (C8) y para §21 entero: lo
+que hay es banco de pruebas, no entregas vivas.
 
 **C7 — Registrar pagos aquí.** Se planteó el 12 ago. Es factible y usaría el mismo
 motor que admin, con el efecto bonito de que registrar el pago **liberaría la
@@ -683,9 +694,13 @@ Bruno decidió no atenderlo por ahora. Queda aquí como registro, no como insist
 
 ### Si retomas esto sin contexto, empieza por aquí
 
-1. **Rotar el token** (D). Es lo único que bloquea trabajo de video.
-2. **Abrir una entrega en un teléfono real** (B5).
-3. **Decidir qué pasa con Mireya** (C3) — es la única entrega real con enlace vivo.
+1. **Correr la migración `r133-destacadas.sql`** en D1. El código ya la da por hecha
+   (§22.4): sin ella no existe la columna `portada`.
+2. **Rotar el token** (D). Es lo único que bloquea trabajo de video.
+3. **Abrir una entrega en un teléfono real** (B5).
+
+Lo que **ya no** es prioridad: decidir qué pasa con las entregas que hay. Son demos
+(§4 C3). No hay ningún cliente esperando.
 
 ---
 
@@ -1099,6 +1114,11 @@ fuerzan **de a 6 con pausa**.
 
 Foto del momento, para que quien retome sepa qué hay vivo y no lo confunda con basura.
 
+> **Corrección del 18 ago 2026:** todo lo de esta tabla son **demos**. El material es
+> real y los saldos salen de contratos reales, pero **no hay ningún cliente esperando
+> su entrega**. Sirve como banco de pruebas —es material de verdad, que es donde
+> aparecen los bugs de verdad— y nada más. Los enlaces vivos no son un riesgo.
+
 | Entrega | Estado | Material | Nota |
 |---|---|---|---|
 | **Mireya Gómez** (IAV-2607.17-A) | publicada | 45 fotos + video | **Saldo $4,500.** Enlace vivo, nunca enviado. Decidir si se pausa (C3). |
@@ -1116,3 +1136,121 @@ Foto del momento, para que quien retome sepa qué hay vivo y no lo confunda con 
 Todo lo creado para probar se borró: entregas `ZZZ PRUEBA *`, la copia de Stream
 `PRUEBA-A2-borrar`, y los 2 GB de huérfanos que había dejado el bug del borrado.
 Lo que queda arriba es material real de Bruno.
+
+---
+
+## 22. Sesión del 18 ago 2026 — la marca que no se quitaba, y la galería de destacadas
+
+Dos cosas pedidas por Bruno. La primera era un bug real y del peor tipo: el único que
+se enteraba era el cliente, justo después de pagar.
+
+### 22.1 Las fotos seguían con marca de agua después de liberar
+
+**El servidor nunca estuvo mal.** Decide mosaico o no según el estado, y su caché de
+borde ya llevaba `st=limpia|marcada` en la llave — eso se había previsto desde el
+principio y funcionaba.
+
+Quien no distinguía nada era el **navegador**. Guarda por URL, y la URL de una foto
+—`/api/e/foto?a=…&w=…&d=…`— era **idéntica** antes y después de liberar. Con
+`Cache-Control: public, max-age=86400`, quien había abierto su galería sin pagar
+seguía viendo el mosaico un día entero, servido de su propio disco, sin volver a
+preguntarle a nadie. Pagaba y veía exactamente lo mismo.
+
+Es la clase de falla que no aparece en ninguna prueba de servidor: `curl` no tiene
+caché, y una pestaña recién abierta tampoco. Solo la sufre quien miró antes de pagar
+—o sea, el cliente, siempre.
+
+**El arreglo, en dos capas.**
+
+`versionFotos()` vive en `entregas-core.js` y devuelve una cadena que cambia al
+liberarse (`m` mientras tiene marca, `l<fecha>` cuando ya no). El payload público la
+manda como `fotoVer`; las dos páginas la cuelgan de la URL como `&v=`. **El servidor
+la ignora por completo**: su único trabajo es que la URL deje de ser la misma, para
+que el navegador la trate como una foto que nunca ha visto.
+
+Y el `Cache-Control` se parte en dos plazos, que antes eran uno solo:
+
+| Quién | Antes | Ahora | Por qué |
+|---|---|---|---|
+| Borde de Cloudflare | 86400 | `s-maxage=86400` | Es quien absorbe la carga, y ya distingue marcada de limpia |
+| Navegador | 86400 | `max-age=300` | No distingue nada; 5 min es el respaldo por si algo pide sin `&v=` |
+
+**Cómo se comprobó, que es lo que vale.** Con un servidor de prueba que cuenta
+peticiones y responde con el `Cache-Control` de producción, cargando las fotos desde
+el navegador de verdad:
+
+| | Peticiones que llegan al servidor |
+|---|---|
+| URL sin `&v=` (lo de antes), vista con marca y luego liberada | **1** ← la segunda salió del disco: mosaico |
+| URL con `&v=`, mismo recorrido | **2** ← la segunda va al servidor: limpia |
+
+6 tests nuevos sobre `versionFotos`, incluido el caso de la entrega **vencida**: al
+expirar el servidor vuelve a poner el mosaico, así que la versión también tiene que
+regresar a `m` o el navegador seguiría mostrando la limpia que alcanzó a guardar.
+
+> **Trampa nueva, y es general:** el borde y el navegador son dos cachés distintas.
+> Meter el estado en la llave del borde no sirve de nada si la URL que ve el
+> navegador no cambia. Cualquier cosa que se sirva distinto según un estado tiene que
+> llevar ese estado **en la URL**, no solo en la llave de caché del servidor.
+
+### 22.2 La galería: un muestrario, no un archivero
+
+Antes caían las 45 fotos de golpe, todas del mismo tamaño y en el orden en que se
+subieron. Orden nuevo del portal del cliente:
+
+**portada → descarga → video → 6 destacadas EN GRANDE → botón "Ver las 45" → el resto.**
+
+- Las destacadas van a **una columna en celular y dos en escritorio**: medido, 339 px
+  contra los 166 px del mosaico en un teléfono de 375. El doble o el triple.
+- Si nadie marcó destacadas, caen las primeras 6. Si Bruno marcó 10, se muestran las
+  **10**: es su decisión, no la del sistema. El 6 solo manda cuando nadie eligió.
+- **El resto no se monta hasta que se pide.** No es refinamiento visual: cada
+  miniatura es una transformación del Worker, y no tiene caso pagar 39 por fotos que
+  quizá nadie abra.
+- El visor sigue navegando sobre **todas** las fotos, en el orden en que se ven. Por
+  eso `fotos()` devuelve la lista ya ordenada —destacadas primero— y cada tanda sabe
+  desde qué índice empieza: si el orden de la página y el del visor no coincidieran,
+  tocar la tercera foto abriría otra distinta.
+- Con 6 fotos o menos no aparece el botón.
+
+### 22.3 Elegir portada y destacadas, en el portal de control
+
+Las miniaturas medían **62 px** — un timbre postal donde no se distingue una foto de
+otra — y encima elegir portada era un clic invisible sobre esa miniatura. Aquí se
+toman dos decisiones y las dos piden ver la foto de verdad.
+
+- Miniaturas de **150 px**, con las dos acciones **siempre a la vista**: palomita
+  (entra al muestrario) y estrella (es la portada). Escondidas tras el hover no
+  existen: la portada llevaba meses sin poder cambiarse porque nadie sabía que se
+  podía.
+- Contador **"N de 6"** arriba, para no ir contando anillos dorados en una cuadrícula
+  de 50.
+- La portada cuenta como destacada y **no se puede sacar del muestrario desde ahí**:
+  el servidor lo rechaza con un mensaje que dice qué hacer ("elige otra portada y
+  luego quítala"), en vez de ignorar el clic en silencio.
+- **En modo quitar, la tira vuelve a ser un solo botón.** Ahí la única decisión es
+  cuál se va, y dos acciones más encima invitan al accidente que ese modo vino a
+  evitar.
+
+### 22.4 Migración r133
+
+`portada` se separa de `destacado`. Hasta aquí `destacado` significaba las dos cosas
+porque solo hacía falta una: era la portada y era exclusiva.
+
+| Columna | Qué significa ahora |
+|---|---|
+| `portada` | 0/1, a lo más **una** por entrega. La foto grande de la cabecera |
+| `destacado` | 0/1, **varias** por entrega. El muestrario |
+
+Lo ya elegido se conserva: las que eran `destacado=1` pasan a `portada=1` y siguen
+destacadas. La portada siempre cuenta como destacada — sería raro que la foto elegida
+como la mejor no apareciera entre las mejores.
+
+### 22.5 Qué falta de esto
+
+- **Correr la migración r133 en D1.** El código la necesita: sin ella, `portada` no
+  existe como columna y el `SELECT *` no la trae.
+- Verlo en un **teléfono real** (sigue siendo B5). Las destacadas se midieron a
+  375 px emulados, no en una pantalla táctil.
+- El número 6 vive en `DESTACADAS_VISIBLES` (`routes/entregas.js`) y el portal lo lee
+  del servidor, así que cambiarlo es una línea.

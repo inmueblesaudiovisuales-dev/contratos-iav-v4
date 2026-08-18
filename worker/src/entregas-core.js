@@ -224,3 +224,21 @@ export function ordenarEntregas(lista, ahoraISO) {
       .localeCompare(String(b.fecha_sesion || b.fecha_creacion || ''));
   });
 }
+
+// ── Marca de version de las fotos ─────────────────────────────────────────────
+// El servidor decide bien: sirve la foto con mosaico o sin el segun el estado, y su
+// cache de borde ya distingue las dos. Quien no distinguia era el NAVEGADOR: guarda
+// por URL, y la URL de una foto era identica antes y despues de liberar. Como la
+// respuesta viaja con Cache-Control publico, el cliente que vio la galeria sin pagar
+// seguia viendo el mosaico despues de pagar, servido de su propio disco, sin volver a
+// preguntar. Pagaba y veia exactamente lo mismo.
+//
+// Esto devuelve una cadena que cambia al liberarse, y que la pagina cuelga de la URL
+// como parametro. El servidor la ignora por completo: su unico trabajo es que la URL
+// deje de ser la misma. Se limpia a alfanumericos porque va en una query string.
+export function versionFotos(entrega, ahoraISO) {
+  const e = entrega || {};
+  const liberada = e.estado === 'liberada' && !estaVencida(e.fecha_expira, ahoraISO);
+  if (!liberada) return 'm';
+  return 'l' + String(e.fecha_liberada || 1).replace(/[^0-9a-zA-Z]/g, '');
+}

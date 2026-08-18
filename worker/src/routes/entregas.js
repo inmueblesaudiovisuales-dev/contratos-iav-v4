@@ -11,7 +11,7 @@ import {
   calcularExpiracion, diasRestantes, estaVencida, fechaLegible,
   entregaCompleta, faltantes, entregableCumplido,
   debeLiberarAlPagar, debeLiberarAlPublicar,
-  datosCliente, grupoDeEntrega, ordenarEntregas
+  datosCliente, grupoDeEntrega, ordenarEntregas, versionFotos
 } from '../entregas-core.js';
 import {
   llaveR2, guardarEnR2, copiarAStream, perfilWatermark, streamListo,
@@ -34,6 +34,11 @@ const OPACIDAD_MARCA = 0.6;   // calibrada por Bruno sobre una foto real
 const ANCHO_MARCA = 0.45;
 // Ancho de pantalla de referencia al que esa fraccion se ve bien.
 const ANCHO_REF = 375;
+
+// Cuantas fotos ve el cliente antes de tener que pedir el resto. Es un muestrario:
+// lo primero que ve tiene que ser el mejor trabajo, no 45 fotos revueltas. Seis
+// llenan dos filas de tres en escritorio y siguen siendo pocas en el telefono.
+export const DESTACADAS_VISIBLES = 6;
 
 // Una fraccion fija se ve bien en el hero y se vuelve ruido ilegible en una
 // miniatura: el 45% de una celda de 160px es texto de 70px. Lo que tiene que
@@ -438,7 +443,22 @@ async function payloadPublico(db, env, entrega) {
   // una URL que apunte al original limpio.
   base.fotos = (archivos || [])
     .filter(a => a.r2_key && !esVideo(a.mime))
-    .map(a => ({ id: a.id, nombre: a.nombre, destacado: !!a.destacado }));
+    .map(a => ({
+      id: a.id, nombre: a.nombre,
+      portada: !!a.portada,
+      // La portada tambien va en el muestrario: seria raro que la foto elegida como
+      // la mejor no apareciera entre las mejores.
+      destacado: !!a.destacado || !!a.portada
+    }));
+  // Cuantas fotos ve el cliente antes del boton "ver todas". Si nadie eligio
+  // destacadas, la pagina cae a las primeras de este numero.
+  base.destacadas = DESTACADAS_VISIBLES;
+  // Marca de version de las fotos. NO la usa el servidor para nada: existe para que
+  // la URL cambie al liberar. Sin esto, la direccion de cada foto es identica antes
+  // y despues de pagar, y el navegador —que la guardo en disco— sigue mostrando la
+  // copia con mosaico que ya tenia sin volver a preguntar. El cliente paga y ve lo
+  // mismo. Ver §11 del handoff.
+  base.fotoVer = versionFotos(entrega, now());
   // TODOS los videos, no solo el primero. Antes se mandaba uno y los demas
   // quedaban invisibles para el cliente aunque si aparecieran en las descargas:
   // veia un video y bajaba tres.
@@ -610,7 +630,15 @@ export async function handleEntregas(request, env, ctx, action) {
       const h = new Headers(r.headers);
       // public para que el borde de Cloudflare la guarde: la URL trae un UUID
       // inadivinable, asi que la foto queda tan protegida como su propia liga.
-      h.set('Cache-Control', 'public, max-age=86400');
+      //
+      // Los dos plazos son distintos a proposito. s-maxage es para el borde, que es
+      // quien absorbe la carga y ya distingue marcada de limpia en su llave. max-age
+      // es para el NAVEGADOR, que no distingue nada: guarda por URL, y la URL de una
+      // foto era identica antes y despues de liberar. Con un dia de plazo, quien vio
+      // la galeria sin pagar seguia viendo el mosaico despues de pagar. La defensa
+      // principal es `fotoVer` en la URL —al liberar cambia y el navegador vuelve a
+      // pedir—; estos 5 minutos son el respaldo por si algo la pide sin esa marca.
+      h.set('Cache-Control', 'public, max-age=300, s-maxage=86400');
       h.set('Content-Type', 'image/jpeg');
       const resp = new Response(r.body, { status: 200, headers: h });
       ctx.waitUntil(cache.put(llaveCache, resp.clone()));
@@ -821,11 +849,14 @@ export async function handleEntregas(request, env, ctx, action) {
     const c = await queryOne(db,
       'SELECT COUNT(*) AS n FROM e_archivos WHERE e_entregable_id=?', [entregableId]);
     await run(db,
+      // La primera foto nace como portada —y por lo tanto destacada— para que una
+      // entrega recien subida ya tenga cabecera sin que nadie elija nada. Desde r133
+      // son dos columnas: marcar solo `destacado` la dejaria sin portada.
       `INSERT INTO e_archivos (id, e_entregable_id, e_entrega_id, nombre, bytes, mime,
-        r2_key, orden, destacado, estado, fecha)
-       VALUES (?,?,?,?,?,?,?,?,?, 'listo', ?)`,
+        r2_key, orden, portada, destacado, estado, fecha)
+       VALUES (?,?,?,?,?,?,?,?,?,?, 'listo', ?)`,
       [archivoId, entregableId, ent.e_entrega_id, nombre, original.size || 0, original.type || '',
-       key, (c && c.n) || 0, (c && c.n) === 0 ? 1 : 0, now()]);
+       key, (c && c.n) || 0, (c && c.n) === 0 ? 1 : 0, (c && c.n) === 0 ? 1 : 0, now()]);
     await refrescarEntregable(db, entregableId);
     // NO se genera aqui la copia reducida, aunque sea tentador. Se intento con
     // ctx.waitUntil y el resultado fue peor que el problema: transformar un JPEG de
@@ -884,12 +915,16 @@ export async function handleEntregas(request, env, ctx, action) {
     const c = await queryOne(db,
       'SELECT COUNT(*) AS n FROM e_archivos WHERE e_entregable_id=?', [entregableId]);
     await run(db,
+      // Igual que en subirFoto: la primera nace como portada y destacada. Un video
+      // nunca puede ser ninguna de las dos.
       `INSERT INTO e_archivos (id, e_entregable_id, e_entrega_id, nombre, bytes, mime,
-        r2_key, orden, destacado, estado, fecha)
-       VALUES (?,?,?,?,?,?,?,?,?, 'listo', ?)`,
+        r2_key, orden, portada, destacado, estado, fecha)
+       VALUES (?,?,?,?,?,?,?,?,?,?, 'listo', ?)`,
       [archivoId, entregableId, ent.e_entrega_id, nombre || 'archivo',
        (guardado && guardado.size) || bytes, mime, key,
-       (c && c.n) || 0, (c && c.n) === 0 && !esVideoFlag ? 1 : 0, now()]);
+       (c && c.n) || 0,
+       (c && c.n) === 0 && !esVideoFlag ? 1 : 0,
+       (c && c.n) === 0 && !esVideoFlag ? 1 : 0, now()]);
     await refrescarEntregable(db, entregableId);
     // Igual que en subirFoto: la copia reducida NO se genera aqui. Ver el comentario
     // de alla — hacerlo durante la importacion tumba el isolate y la siguiente falla.
@@ -1016,16 +1051,39 @@ export async function handleEntregas(request, env, ctx, action) {
 
   // Cual foto es la portada. Existia la columna y hasta el borde dorado en el
   // portal, pero no habia forma de cambiarla: se quedaba la primera que se subio.
+  // Desde r133 la portada es exclusiva y ademas entra al muestrario de destacadas.
   if (action === 'portada') {
     const { archivoId } = await request.json();
     const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
     if (!a) return err('Archivo no encontrado', 404);
     if (esVideo(a.mime)) return err('La portada tiene que ser una foto', 400);
     await batch(db, [
-      { sql: 'UPDATE e_archivos SET destacado=0 WHERE e_entrega_id=?', params: [a.e_entrega_id] },
-      { sql: 'UPDATE e_archivos SET destacado=1 WHERE id=?', params: [archivoId] }
+      { sql: 'UPDATE e_archivos SET portada=0 WHERE e_entrega_id=?', params: [a.e_entrega_id] },
+      { sql: 'UPDATE e_archivos SET portada=1, destacado=1 WHERE id=?', params: [archivoId] }
     ]);
     return ok({ ok: true });
+  }
+
+  // Cuales fotos forman el muestrario que el cliente ve antes del boton "ver todas".
+  // Es un interruptor: la misma llamada pone y quita. La portada no se puede quitar
+  // de aqui —es la cabecera de la galeria—; para sacarla, primero se cambia de
+  // portada. Se dice explicito en vez de ignorar el clic en silencio.
+  if (action === 'destacar') {
+    const { archivoId, valor } = await request.json();
+    const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
+    if (!a) return err('Archivo no encontrado', 404);
+    if (esVideo(a.mime)) return err('Solo las fotos se pueden destacar', 400);
+    const quiere = valor === undefined ? !a.destacado : !!valor;
+    if (!quiere && a.portada) {
+      return err('Es la portada. Elige otra portada y luego quítala de las destacadas.', 400);
+    }
+    await run(db, 'UPDATE e_archivos SET destacado=? WHERE id=?', [quiere ? 1 : 0, archivoId]);
+    // El portal pinta el contador con esto, para no tener que recargar la entrega
+    // entera en cada clic.
+    const c = await queryOne(db,
+      'SELECT COUNT(*) AS n FROM e_archivos WHERE e_entrega_id=? AND destacado=1',
+      [a.e_entrega_id]);
+    return ok({ ok: true, destacado: quiere, total: (c && c.n) || 0, meta: DESTACADAS_VISIBLES });
   }
 
   if (action === 'borrarArchivo') {
@@ -1103,6 +1161,9 @@ export async function handleEntregas(request, env, ctx, action) {
       entregables: items,
       archivos: archivos || [],
       eventos: eventos || [],
+      // Para el contador del portal ("3 de 6"). Va del servidor para que el numero
+      // no quede escrito en dos lados y se separen.
+      destacadasVisibles: DESTACADAS_VISIBLES,
       completa: entregaCompleta(items),
       faltan: faltantes(items)
     });

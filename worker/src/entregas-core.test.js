@@ -6,7 +6,7 @@ import {
   calcularExpiracion, diasRestantes, estaVencida, fechaLegible, OFFSET_MTY_MS,
   entregaCompleta, faltantes, entregableCumplido,
   debeLiberarAlPagar, debeLiberarAlPublicar,
-  datosCliente, grupoDeEntrega, ordenarEntregas
+  datosCliente, grupoDeEntrega, ordenarEntregas, versionFotos
 } from './entregas-core.js';
 
 // ── Codigo publico ────────────────────────────────────────────────────────────
@@ -322,4 +322,58 @@ test('sin ancho de despliegue se usa la base, tambien acotada', () => {
   assert.equal(fraccionMarca(null, 0.45), 0.45);
   assert.equal(fraccionMarca(0, 0.45), 0.45);
   assert.ok(fraccionMarca(undefined, 2) < 1);
+});
+
+// ── Marca de version de las fotos ─────────────────────────────────────────────
+// El bug que cierran: la URL de una foto era la misma antes y despues de liberar,
+// asi que el navegador seguia sirviendo de su disco la copia con marca de agua. El
+// cliente pagaba y veia exactamente lo mismo.
+
+test('la version cambia al liberarse: es lo unico que obliga al navegador a volver a pedir', () => {
+  const ahora = '2026-08-18T12:00:00.000Z';
+  const publicada = { estado: 'publicada' };
+  const liberada = { estado: 'liberada', fecha_liberada: '2026-08-18T10:00:00.000Z',
+                     fecha_expira: '2026-09-01T00:00:00.000Z' };
+  assert.notEqual(versionFotos(publicada, ahora), versionFotos(liberada, ahora));
+});
+
+test('mientras no este liberada, todos los estados comparten version', () => {
+  const ahora = '2026-08-18T12:00:00.000Z';
+  for (const estado of ['borrador', 'publicada', 'pausada', 'expirada']) {
+    assert.equal(versionFotos({ estado }, ahora), 'm');
+  }
+});
+
+test('una entrega liberada pero vencida vuelve a la version marcada', () => {
+  // El servidor le pone el mosaico otra vez al vencer. Si la version no volviera
+  // atras, el navegador seguiria mostrando la limpia que guardo mientras podia.
+  const v = versionFotos({
+    estado: 'liberada',
+    fecha_liberada: '2026-07-01T10:00:00.000Z',
+    fecha_expira: '2026-07-15T00:00:00.000Z'
+  }, '2026-08-18T12:00:00.000Z');
+  assert.equal(v, 'm');
+});
+
+test('la version es estable: dos consultas seguidas dan lo mismo', () => {
+  // Si cambiara en cada visita, cada carga volveria a pedir las 45 fotos al Worker
+  // y el cache dejaria de servir para nada.
+  const e = { estado: 'liberada', fecha_liberada: '2026-08-18T10:00:00.000Z',
+              fecha_expira: '2026-09-01T00:00:00.000Z' };
+  assert.equal(versionFotos(e, '2026-08-18T12:00:00.000Z'),
+               versionFotos(e, '2026-08-18T18:30:00.000Z'));
+});
+
+test('la version solo trae caracteres que sobreviven una query string', () => {
+  const v = versionFotos({ estado: 'liberada', fecha_liberada: '2026-08-18T10:00:00.000Z',
+                           fecha_expira: '2026-09-01T00:00:00.000Z' }, '2026-08-18T12:00:00.000Z');
+  assert.match(v, /^[0-9a-zA-Z]+$/);
+  assert.equal(v, encodeURIComponent(v));
+});
+
+test('una liberada sin fecha registrada sigue distinguiendose de la marcada', () => {
+  // No deberia pasar, pero si pasara, caer en 'm' serviria la version con marca a
+  // quien ya pago. Vale mas una version rara que un cliente viendo el mosaico.
+  const v = versionFotos({ estado: 'liberada', fecha_liberada: null }, '2026-08-18T12:00:00.000Z');
+  assert.notEqual(v, 'm');
 });

@@ -208,25 +208,45 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .prog i{display:block;height:100%;background:var(--gold-leaf);width:0;transition:width .2s}
 .progtxt{margin:6px 0 0 38px;font-family:var(--font-mono);font-size:11px;color:var(--ink-3);
   font-variant-numeric:tabular-nums}
-/* ── Cuadricula densa de archivos ─────────────────────────────────────────── */
-/* 50 fotos tienen que caber sin scroll infinito, y sin nombres repetidos que no
-   distinguen nada. El nombre vive en el tooltip. */
-.tiras{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:5px;
+/* ── Cuadricula de archivos ───────────────────────────────────────────────── */
+/* Antes median 62 px: un timbre postal donde no se distingue una foto de otra, y
+   encima elegir portada era un clic invisible sobre esa miniatura. Aqui se toman
+   dos decisiones —cual es la portada y cuales son las destacadas— y las dos piden
+   ver la foto de verdad. 150 px es el minimo en el que se puede decidir. */
+.tiras{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;
   margin:var(--s3) 0 0 38px}
-.tira{position:relative;aspect-ratio:1;border-radius:7px;overflow:hidden;
-  border:1px solid var(--line);background:var(--paper-2) center/cover;padding:0;cursor:pointer;
+.tira{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;
+  border:1px solid var(--line);background:var(--paper-2) center/cover;padding:0;
   display:flex;align-items:center;justify-content:center;color:var(--ink-3)}
-.tira:hover{border-color:var(--gold-leaf)}
+.tira.pick{cursor:pointer}
+.tira.pick:hover{border-color:var(--gold-leaf)}
 .tira img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.tira.port{border:2px solid var(--gold-leaf)}
+/* Los dos estados se distinguen a simple vista y sin leer nada: la destacada trae
+   un anillo, la portada el anillo grueso y su cinta. */
+.tira.dest{border:2px solid var(--gold-hi)}
+.tira.port{border:3px solid var(--gold-leaf)}
 .tira.vid{cursor:default;background:var(--paper-2)}
-.tira .est{position:absolute;bottom:2px;left:3px;color:var(--gold-leaf);
-  filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));line-height:0}
-.tira .est.fantasma{display:none;color:#fff;opacity:.92}
-.tira:hover .est.fantasma{display:block}
 .tira .cinta{position:absolute;top:0;left:0;right:0;background:var(--gold-leaf);color:#1a1509;
-  font-family:var(--font-mono);font-size:8px;letter-spacing:.05em;text-transform:uppercase;
-  padding:2px 0;text-align:center;line-height:1.2}
+  font-family:var(--font-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 0;text-align:center;line-height:1.2;z-index:2}
+
+/* Las dos acciones, siempre a la vista. Escondidas tras el hover no existen: la
+   portada llevaba meses sin poder cambiarse porque nadie sabia que se podia. */
+.accs{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;gap:6px;
+  padding:7px;justify-content:flex-end;
+  background:linear-gradient(to top,rgba(16,13,8,.62),rgba(16,13,8,0))}
+.acc{width:31px;height:31px;border-radius:50%;border:none;cursor:pointer;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,253,248,.9);color:var(--ink-2);line-height:0}
+.acc:hover{background:#fff;color:var(--ink-1)}
+.acc.on{background:var(--gold-leaf);color:#1a1509}
+.acc.on:hover{background:var(--gold-hi)}
+/* El contador dice cuantas van y cuantas caben, para no tener que ir contando
+   anillos dorados en una cuadricula de 50. */
+.dcount{display:flex;align-items:center;gap:8px;margin:var(--s3) 0 0 38px;
+  font-size:12px;color:var(--ink-2)}
+.dcount b{font-family:var(--font-mono);font-weight:500;color:var(--ink-1)}
+.dcount .lleno{color:var(--gold)}
 .tira .marca{position:absolute;inset:0;background:rgba(158,58,47,.45);display:none;
   align-items:center;justify-content:center;color:#fff}
 .tira.sel{border:2px solid var(--danger)}
@@ -653,38 +673,63 @@ function pintarDetalle(){
             (SEL.length ? '<button class="btn btn-sm btn-borrar" onclick="quitarSeleccion()">Quitar ' +
                           SEL.length + '</button>' : '') + '</div>';
         }
+        var quitando = QUITANDO === i.id;
         h += '<div class="tiras">' + arch.map(function(a){
           var esVid = /^video\//.test(a.mime || '');
           var sel = SEL.indexOf(a.id) >= 0;
-          var quitando = QUITANDO === i.id;
-          var tit = quitando ? esc(a.nombre) + ' — tócalo para quitarlo'
-                  : (esVid ? esc(a.nombre)
-                     : (a.destacado ? esc(a.nombre) + ' — es la portada'
-                                    : esc(a.nombre) + ' — clic para usar como portada'));
+          var tit = quitando ? esc(a.nombre) + ' — tócalo para quitarlo' : esc(a.nombre);
           // Va como <img loading="lazy"> y NO como background-image: el fondo CSS se
           // descarga siempre, todo de golpe. Con 50 fotos eso son 50 transformaciones
           // simultaneas que tumban al Worker — y mientras subes, tumban tambien las
           // subidas (503 en subirFoto). Medido en produccion el 12 ago.
+          //
+          // v= es la marca de version: sin ella el navegador se queda con la copia
+          // marcada que guardo antes de liberar. Misma razon que en el portal del
+          // cliente.
           var mini = esVid ? ''
             : '<img loading="lazy" decoding="async" alt="" src="/api/e/foto?a=' + a.id +
-              '&w=140&d=70&k=' + encodeURIComponent(KEY) + '">';
-          var accion = quitando ? 'marcar(\'' + a.id + '\')'
-                     : (esVid ? 'void 0' : 'ponerPortada(\'' + a.id + '\')');
-          return '<button class="tira' + (esVid ? ' vid' : '') +
-            (a.destacado && !quitando ? ' port' : '') + (sel ? ' sel' : '') +
-            '" title="' + tit + '" onclick="' + accion + '">' + mini +
-            (esVid ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>' : '') +
-            (a.destacado && !quitando
-              ? '<span class="cinta">portada</span><span class="est"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>'
-              : (!quitando && !esVid
-                 ? '<span class="est fantasma"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span>' : '')) +
-            '<span class="marca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>' +
-            '</button>';
+              '&w=360&d=180&v=' + verFoto() + '&k=' + encodeURIComponent(KEY) + '">';
+          var icoVid = esVid
+            ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>' : '';
+
+          // En modo quitar la tira entera vuelve a ser un solo boton: ahi la unica
+          // decision es cual se va, y dos acciones mas encima invitan al accidente.
+          if(quitando){
+            return '<button class="tira pick' + (esVid ? ' vid' : '') + (sel ? ' sel' : '') +
+              '" title="' + tit + '" onclick="marcar(\'' + a.id + '\')">' + mini + icoVid +
+              '<span class="marca"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+              '</button>';
+          }
+          if(esVid){
+            return '<div class="tira vid" title="' + tit + '">' + icoVid + '</div>';
+          }
+          // La portada cuenta como destacada, asi que su palomita va prendida y
+          // apagarla desde aqui no tendria a donde llevar la cabecera: el servidor
+          // lo rechaza y aqui se dice por que en vez de dejar que falle.
+          var esPort = !!a.portada, esDest = !!a.destacado || esPort;
+          return '<div class="tira' + (esPort ? ' port' : (esDest ? ' dest' : '')) +
+            '" title="' + tit + '">' + mini +
+            (esPort ? '<span class="cinta">portada</span>' : '') +
+            '<span class="accs">' +
+              '<button class="acc' + (esDest ? ' on' : '') + '" onclick="alternarDestacada(\'' + a.id + '\')" ' +
+                'title="' + (esDest ? 'Quitar de las destacadas' : 'Poner en las destacadas') + '">' +
+                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"/></svg></button>' +
+              '<button class="acc' + (esPort ? ' on' : '') + '" onclick="ponerPortada(\'' + a.id + '\')" ' +
+                'title="' + (esPort ? 'Es la portada' : 'Usar como portada') + '">' +
+                '<svg width="15" height="15" viewBox="0 0 24 24" fill="' + (esPort ? 'currentColor' : 'none') +
+                '" stroke="currentColor" stroke-width="2"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></button>' +
+            '</span></div>';
         }).join('') + '</div>';
-        // Sin esta linea, elegir portada solo se descubre por accidente.
-        if(QUITANDO !== i.id && arch.filter(function(a){ return !/^video\//.test(a.mime||''); }).length > 1){
-          h += '<p class="ayuda"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>' +
-            'La foto con estrella es la portada que ve el cliente. Toca cualquier otra para cambiarla.</p>';
+
+        var fotos = arch.filter(function(a){ return !/^video\//.test(a.mime||''); });
+        if(!quitando && fotos.length > 1){
+          var nd = fotos.filter(function(a){ return a.destacado || a.portada; }).length;
+          var meta = ACT.destacadasVisibles || 6;
+          h += '<div class="dcount"><b class="' + (nd >= meta ? 'lleno' : '') + '">' +
+            nd + ' de ' + meta + '</b> destacadas · el cliente ve estas en grande antes ' +
+            'del botón “ver todas”.</div>' +
+            '<p class="ayuda"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>' +
+            'La estrella elige la portada (la foto grande de arriba). La palomita arma la selección.</p>';
         }
       }
       var acepta = i.tipo === 'video' ? 'video/*' : 'image/*';
@@ -938,10 +983,25 @@ async function completarDerivados(onAvance){
   return false;
 }
 
-// La portada es la foto grande que el cliente ve al abrir. Se elige con un clic
-// en la miniatura; antes se quedaba para siempre la primera que se subio.
+// Marca de version de las miniaturas. No la usa el servidor: hace que la URL cambie
+// cuando la entrega se libera. Sin esto el navegador sigue mostrando la copia con
+// marca de agua que guardo antes, aqui y en el portal del cliente.
+function verFoto(){
+  var e = ACT && ACT.entrega;
+  if(!e || e.estado !== 'liberada') return 'm';
+  return 'l' + String(e.fecha_liberada || 1).replace(/[^0-9a-zA-Z]/g, '');
+}
+
+// La portada es la foto grande que abre la galeria del cliente. Es una sola, y
+// ademas entra al muestrario de destacadas.
 function ponerPortada(id){
-  accion('portada', { archivoId: id }, 'Portada actualizada');
+  return accion('portada', { archivoId: id }, 'Portada actualizada');
+}
+
+// Las destacadas son las fotos que el cliente ve en grande antes del boton "ver
+// todas". Es un interruptor: el mismo boton pone y quita.
+function alternarDestacada(id){
+  return accion('destacar', { archivoId: id }, 'Selección actualizada');
 }
 
 // ── Modo quitar ──────────────────────────────────────────────────────────────

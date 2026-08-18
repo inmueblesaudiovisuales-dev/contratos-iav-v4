@@ -96,6 +96,24 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
    vertical se ve vertical en vez de salir recortada a 4:3. */
 .mosaico{column-count:2;column-gap:8px}
 @media(min-width:640px){ .mosaico{column-count:3;column-gap:12px} }
+
+/* Las destacadas son un muestrario, no un archivo: van en UNA columna en el
+   telefono y dos en escritorio, o sea al doble o triple de tamaño que el mosaico.
+   Lo primero que ve el cliente tiene que ser el mejor trabajo, en grande. */
+.destacadas{column-count:1;column-gap:12px}
+@media(min-width:640px){ .destacadas{column-count:2;column-gap:14px} }
+.destacadas .ph{margin-bottom:12px;border-radius:11px}
+.destacadas .ph::after{border-radius:11px}
+
+/* El resto de las fotos no se monta hasta que se pide: cada miniatura es una
+   transformacion del Worker, y no tiene caso pagar 40 por fotos que quiza nadie
+   abra. Al pedirlas, este boton se cambia por el mosaico. */
+.vertodas{width:100%;background:var(--paper-1);border:1px solid var(--line-2);
+  border-radius:11px;padding:14px;font-family:inherit;font-size:13.5px;font-weight:600;
+  color:var(--ink-1);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px}
+.vertodas:hover{background:var(--paper-2)}
+.vertodas .n{font-family:var(--font-mono);font-weight:400;color:var(--ink-3);font-size:12px}
+.subt{font-size:11.5px;color:var(--ink-3);margin:-4px 0 13px}
 .ph{break-inside:avoid;margin:0 0 8px;position:relative;border-radius:9px;overflow:hidden;
   background:var(--paper-2);cursor:zoom-in;display:block;width:100%;border:none;padding:0}
 @media(min-width:640px){ .ph{margin-bottom:12px} }
@@ -260,7 +278,12 @@ function fotoUrl(f, display){
   // Vale más servir una foto de más que ninguna.
   var d = Math.round(Number(display));
   if(!isFinite(d) || d < 120) d = 375;
-  return '/api/e/foto?a=' + encodeURIComponent(f.id) + '&w=' + Math.min(2400, d * 2) + '&d=' + d;
+  // v NO lo usa el servidor: cambia la URL cuando la entrega se libera. Sin esto la
+  // direccion de cada foto es idéntica antes y después de pagar, y el navegador
+  // —que ya la tiene guardada en disco— sigue mostrando la copia con marca de agua
+  // sin volver a preguntar. El cliente pagaba y veía exactamente lo mismo.
+  return '/api/e/foto?a=' + encodeURIComponent(f.id) + '&w=' + Math.min(2400, d * 2) +
+    '&d=' + d + '&v=' + encodeURIComponent(D && D.fotoVer || 'm');
 }
 function vidThumb(v){
   return 'https://' + D.streamCustomer + '.cloudflarestream.com/' + v.uid +
@@ -308,16 +331,36 @@ async function cargar(){
   render();
 }
 
-function fotos(){ return D.fotos || []; }
 function videos(){ return (D.videos && D.videos.length) ? D.videos : (D.video ? [D.video] : []); }
+
+// La galeria se parte en dos: un muestrario grande y el resto tras un boton.
+//
+// `fotos()` devuelve la lista YA en el orden en que se ve —destacadas primero—,
+// porque el visor navega sobre ella: si el orden de la pagina y el del visor no
+// coinciden, tocar la tercera foto abre otra distinta.
+function fotos(){
+  var todas = D.fotos || [];
+  var d = todas.filter(function(f){ return f.destacado; });
+  if(!d.length) return todas;   // nadie eligio: se respeta el orden de subida
+  var resto = todas.filter(function(f){ return !f.destacado; });
+  return d.concat(resto);
+}
+// Cuantas van arriba. Si Bruno marco fotos, se muestran TODAS las que marco —es su
+// decision, no la del sistema—; el numero del servidor solo manda cuando no marco
+// ninguna y hay que cortar por algun lado.
+function cuantasDestacadas(){
+  var marcadas = (D.fotos || []).filter(function(f){ return f.destacado; }).length;
+  return marcadas || Math.min(D.destacadas || 6, (D.fotos || []).length);
+}
 
 function render(){
   var liberada = !!D.liberada;
   var fs = fotos(), vs = videos();
 
-  // Portada: la foto que Bruno eligio. Sin fotos cae al primer cuadro del video,
-  // para que nunca quede un hueco gris.
-  var portada = fs.filter(function(f){ return f.destacado; })[0] || fs[0];
+  // Portada: la foto que Bruno eligio. Desde r133 es su propia marca; antes se
+  // confundia con "destacada", que ahora son varias. Sin fotos cae al primer cuadro
+  // del video, para que nunca quede un hueco gris.
+  var portada = fs.filter(function(f){ return f.portada; })[0] || fs[0];
   var hi = document.getElementById('heroImg');
   if(portada) hi.src = fotoUrl(portada, Math.min(1200, window.innerWidth || 375));
   else if(vs.length && D.streamCustomer) hi.src = vidThumb(vs[0]);
@@ -342,10 +385,21 @@ function render(){
       }).join('') + '</div></div>';
   }
 
-  // 3. Fotos.
+  // 3. Fotos: primero el muestrario grande, y el resto detras de un boton. Antes
+  //    caian las 45 de golpe, que es un archivero, no una entrega.
   if(fs.length){
+    var nd = cuantasDestacadas();
+    var resto = fs.length - nd;
     h += '<div class="bloque"><h3 class="sect">Fotografías <span class="n">' + fs.length + '</span></h3>' +
-      '<div class="mosaico" id="mosaico"></div></div>';
+      (resto > 0 ? '<p class="subt">Una selección de tu material.</p>' : '') +
+      '<div class="destacadas" id="destacadas"></div>';
+    if(resto > 0){
+      h += '<button class="vertodas" id="btnTodas" onclick="verTodas()">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' +
+        'Ver las ' + fs.length + ' fotografías <span class="n">+' + resto + '</span></button>' +
+        '<div class="mosaico" id="mosaico"></div>';
+    }
+    h += '</div>';
   }
 
   // 4. El recorrido, que no expira y por eso se explica aparte.
@@ -364,7 +418,9 @@ function render(){
     '<div class="foot">Una producción de <b>Inmuebles Audiovisuales</b></div>';
 
   document.getElementById('cuerpo').innerHTML = h;
-  if(fs.length) montarMosaico(fs);
+  if(fs.length){
+    montarMosaico(document.getElementById('destacadas'), fs.slice(0, cuantasDestacadas()), 0, true);
+  }
   document.getElementById('contenido').style.display = '';
 }
 
@@ -405,21 +461,24 @@ function bloqueBloqueada(){
 // Carga diferida. No es un lujo: cada miniatura es una transformacion del Worker y
 // pedir 45 de golpe es lo que lo tumba. Solo se piden las que van a entrar en
 // pantalla.
-function montarMosaico(fs){
-  var cont = document.getElementById('mosaico');
+// `desde` es el indice de la primera foto de esta tanda dentro de la lista completa:
+// el visor navega sobre TODAS las fotos, no solo sobre las que este contenedor pinta.
+// Sin ese corrimiento, tocar la primera foto del mosaico abriria la primera
+// destacada.
+function montarMosaico(cont, fs, desde, anchas){
   // El ancho se mide del CONTENEDOR, no de la ventana. window.innerWidth vale 0
   // cuando la pestaña abre en segundo plano o antes de que termine el layout, y
   // "innerWidth - 36" daba un ancho NEGATIVO: la galería entera se quedaba sin
   // cargar. Medido en producción. El piso de 200 px es la última red.
   var caja = cont.clientWidth || document.body.clientWidth || window.innerWidth || 375;
-  var cols = caja >= 620 ? 3 : 2;
+  var cols = anchas ? (caja >= 640 ? 2 : 1) : (caja >= 620 ? 3 : 2);
   var ancho = Math.max(200, Math.round(caja / cols));
 
   fs.forEach(function(f, i){
     var b = document.createElement('button');
     b.className = 'ph';
     b.setAttribute('aria-label', 'Ver ' + (f.nombre || 'foto'));
-    b.onclick = function(){ abrirFoto(i); };
+    b.onclick = (function(n){ return function(){ abrirFoto(n); }; })(desde + i);
     var img = document.createElement('img');
     // Carga diferida NATIVA del navegador, en vez de un IntersectionObserver: el
     // observer no dispara si la pestaña nunca llega a pintarse, y entonces las
@@ -452,6 +511,23 @@ function montarMosaico(fs){
       if(n < imgs.length) setTimeout(tanda, 700);
     })();
   }, 2500);
+}
+
+// El resto de las fotos se monta hasta que se piden. El boton desaparece y en su
+// lugar queda el mosaico, precedido de su propio encabezado para que no parezca que
+// las destacadas y las demas son la misma tanda.
+function verTodas(){
+  var btn = document.getElementById('btnTodas');
+  var cont = document.getElementById('mosaico');
+  if(!btn || !cont) return;
+  var fs = fotos(), desde = cuantasDestacadas();
+  var t = document.createElement('p');
+  t.className = 'subt';
+  t.style.margin = '18px 0 13px';
+  t.textContent = 'Todas tus fotografías';
+  btn.parentNode.replaceChild(t, btn);
+  montarMosaico(cont, fs.slice(desde), desde, false);
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ── Visor ───────────────────────────────────────────────────────────────────

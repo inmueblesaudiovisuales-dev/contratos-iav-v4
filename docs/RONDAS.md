@@ -8,6 +8,50 @@
 
 ---
 
+### R133 — Marca de agua pegada tras liberar, y galería de destacadas (2026-08-18 01:00:50 CST)
+
+Dos cosas del sistema de entregas: un bug del que el cliente era el único que se enteraba, y el rediseño de cómo
+se enseñan las fotos. Tests `node --test src/*.test.js`: **94 verde** (6 nuevos), 1 saltado a propósito.
+NO se tocó el adapter.
+
+**El bug — las fotos seguían con marca de agua después de pagar.** El servidor siempre estuvo bien: decide
+mosaico o no según el estado, y su caché de borde ya distinguía `st=limpia|marcada` en la llave. Quien no
+distinguía era el **navegador**: guarda por URL, y la URL de una foto (`/api/e/foto?a=…&w=…&d=…`) era idéntica
+antes y después de liberar. Con `Cache-Control: public, max-age=86400`, quien había visto la galería sin pagar
+seguía viendo el mosaico un día entero, servido de su propio disco, sin volver a preguntar. Pagaba y veía
+exactamente lo mismo.
+
+Arreglo en dos capas: `versionFotos()` (en `entregas-core.js`, 6 tests) devuelve una marca que cambia al
+liberarse; el payload público la manda como `fotoVer` y las dos páginas la cuelgan de la URL como `&v=`. El
+servidor la ignora por completo — su único trabajo es que la URL deje de ser la misma. Y el `Cache-Control` se
+parte: `max-age=300` para el navegador, `s-maxage=86400` para el borde, que es quien absorbe la carga.
+Reproducido y verificado con la caché real del navegador: con el código viejo, dos vistas de la misma foto son
+**una sola** petición al servidor; con el arreglo, **dos**.
+
+**Migración r133** — `portada` se separa de `destacado`. Hasta aquí `destacado` significaba las dos cosas porque
+solo hacía falta una. Ahora `portada` es 0/1 y a lo más una por entrega; `destacado` son varias. Lo ya elegido se
+conserva (las que eran `destacado=1` pasan a `portada=1` y siguen destacadas).
+
+**Portal del cliente** — antes caían las 45 fotos de golpe, que es un archivero, no una entrega. Ahora: portada →
+descarga → video → **6 fotos destacadas en grande** (una columna en celular, dos en escritorio: el doble o triple
+que el mosaico) → botón *"Ver las 45 fotografías"*, que monta el resto en la misma página. Si nadie marcó
+destacadas caen las primeras 6; si Bruno marcó 10, se muestran las 10 — es su decisión, no la del sistema. El
+resto no se monta hasta que se pide: cada miniatura es una transformación del Worker. El visor sigue navegando
+sobre **todas** las fotos, en el orden en que se ven.
+
+**Portal de control** — las miniaturas de 62 px (un timbre postal donde no se distingue una foto de otra) pasan a
+150 px, y cada una trae sus dos acciones **siempre a la vista**: palomita para la selección, estrella para la
+portada. Antes elegir portada era un clic invisible sobre la miniatura, y llevaba meses sin poder cambiarse
+porque nadie sabía que se podía. Contador "N de 6" arriba. En modo quitar la tira vuelve a ser un solo botón:
+ahí la única decisión es cuál se va, y dos acciones más encima invitan al accidente.
+
+**API:** `destacar` (interruptor; rechaza quitar la portada del muestrario con un mensaje que dice qué hacer),
+`portada` ahora escribe `portada=1, destacado=1`, y `obtener` devuelve `destacadasVisibles`.
+
+Despliegue: push a `main` (GitHub Actions). **Falta correr la migración r133 en D1.**
+
+---
+
 ### R128 — Sony unificada, redundancias, rangos por número, pulido + auditoría (2026-06-11 15:29:00 CST)
 
 Sesión grande sobre `frontend/checklist.html` y `frontend/checklist-logic.js` (rama `main`). Spec/plan/arranque en
