@@ -1,4 +1,4 @@
-# Handoff — Sistema de Entregas (R129–R130)
+# Handoff — Sistema de Entregas (R129–R132)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
@@ -6,8 +6,9 @@
 > Última actualización: 2026-08-12
 > Rango de commits: `9994f46..HEAD`.
 >
-> **Atajos:** §2 estado · §15 lo que falta · §14 trampas · §18 y §19 las sesiones del
-> 11-12 ago (ZIP, descargas y el rediseño de los dos portales).
+> **Atajos:** §2 estado · §15 lo que falta · §21 qué material hay vivo ahora ·
+> §14 las 26 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
+> rediseño de los dos portales y preparación automática).
 
 ---
 
@@ -37,7 +38,8 @@ sin pisarse; el corte se decidirá aparte.
 | F3 — Subida y marca de agua | ✅ en producción |
 | F4 — Portal del cliente | ✅ en producción |
 | F5 — Liberación, reloj, descargas | ✅ en producción, **con ZIP** (§18) |
-| F6 — Expiración y limpieza | ✅ cron activo |
+| F6 — Expiración y limpieza | ✅ cron activo (horario) |
+| Preparación automática de galerías | ✅ cron cada 2 min (§20) |
 | F7 — Liga en el evento de Calendar | ❌ **descartada por Bruno** (11 ago 2026) |
 
 **El ciclo completo está probado de punta a punta con material real** (12 ago 2026):
@@ -49,6 +51,9 @@ ejercer. Ver §18.9.
 
 **Verificación:** 84 pruebas unitarias + verificación end-to-end contra producción,
 incluido un ZIP de 476 MB extraído y comparado archivo por archivo (§18.6).
+
+**La galería se prepara sola**: un cron cada 2 minutos, sin necesidad de dejar la
+ventana abierta (§20).
 
 **Lo que falta es de otro tipo** — probarlo en un teléfono real, dejar correr los 14
 días y rotar el token de Cloudflare. Ver §15.
@@ -521,6 +526,45 @@ vez en cuando, porque cualquier subida que falle a la mitad deja basura.
     `confirm=t`.** `drive.google.com/uc` devuelve una página de aviso de antivirus.
 12. **Un `custom_domain` nuevo puede borrar el registro DNS de un hostname que estaba
     como `[[routes]]`.** Ver §11b.
+13. **Un secret que existe no es un secret correcto.** `wrangler secret list` muestra
+    **nombres, nunca valores**: la lista se ve bien mientras el contenido está mal. La
+    única verificación real es usarlo. Costó un diagnóstico entero (§18.8).
+14. **Antes de culpar a la pieza nueva y complicada, probar la operación más simple.**
+    Se dio por hecho que Stream no podía leer nuestro origen firmado; bastaba una
+    *lectura* de estado —sin ninguna URL nuestra— para ver que fallaba igual y que el
+    problema era el token (§12b).
+15. **`obj.range` de R2 viene lleno aunque nadie pida un rango.** Fiarse de él hace que
+    una descarga normal conteste 206. Quien manda es la petición (§18.7).
+16. **Cloudflare descarta el `Content-Length` que pongas a mano** si el cuerpo es un
+    stream normal: responde `chunked`. Solo `FixedLengthStream` lo conserva.
+17. **Un `TransformStream` normal cuesta CPU por byte**, aunque tu código no toque los
+    datos. Para mover volumen dentro de un Worker: `FixedLengthStream` o
+    `IdentityTransformStream` con `pipeTo` (§18.3).
+18. **`Expand-Archive` de Windows no valida el CRC.** Un test que dependa de eso da
+    falso verde.
+19. **`background-image` se descarga SIEMPRE y todo junto.** No hay carga diferida
+    posible. Cualquier cuadrícula que pida imágenes al Worker tiene que usar
+    `<img loading="lazy">`; si no, 50 miniaturas son 50 transformaciones simultáneas
+    que tumban al Worker **y a las subidas que corran al mismo tiempo** (§20.4).
+20. **`window.innerWidth` puede ser 0**: pestaña en segundo plano, o antes de que
+    termine el layout. Restarle un margen da un ancho **negativo** y las URLs salen
+    imposibles. Medir el contenedor y poner piso (§20.5).
+21. **La carga diferida nativa no arranca si la ventana mide 0.** El navegador concluye
+    que nada está cerca de la pantalla. Hace falta una red de seguridad que fuerce la
+    carga, y **por tandas** (§20.5).
+22. **Los cron de Cloudflare no son puntuales.** Medido: tramos de 3 minutos sin
+    ninguna ejecución y luego varias de golpe. No prometer un número en la interfaz.
+23. **No colgar lógica de comparar `event.cron` con una cadena exacta.** Así se quedó
+    sin ejecutar la preparación entera. Que lo barato corra siempre y lo caro sea lo
+    que cuelga de la comparación (§20.2).
+24. **Un elemento atorado al frente de una fila ordenada la bloquea completa.** El cron
+    ordenaba por fecha y siempre agarraba el mismo archivo imposible. Lo que falla hay
+    que marcarlo para no reintentarlo (§20.2).
+25. **No medir con la herramienta que hace el trabajo.** Se contaban los pendientes con
+    un endpoint que *procesa* al consultar: las mediciones movían lo que intentaban
+    medir y además chocaban con el cron. Para medir, consultar D1 directo (§20.2).
+26. **El runner de GitHub falla a veces al clonar** (`server certificate verification
+    failed`). No es el código: `gh run rerun <id>`.
 
 ---
 
@@ -616,6 +660,12 @@ nuevo del portal.
   eso truena un celular. Decisión consciente, no olvido.
 - **Correr `huerfanos` de vez en cuando.** Cualquier subida que falle a la mitad
   deja restos que nadie más va a encontrar. Está en el menú de configuración.
+- **El ZIP rechaza la entrega si algún archivo quedó con `crc32 = -2`** (se intentó
+  preparar y no se pudo). Hoy contesta "faltan N por preparar", que en ese caso es
+  confuso porque no se van a preparar nunca. Debería decir cuáles y ofrecer excluirlos.
+- **`asegurarCrc` no tiene tope de tamaño.** Con el video de 986 MB reventaba el CPU
+  cada minuto (§20.2). Los videos ya salieron del filtro, pero una foto de 60 MB haría
+  lo mismo: un solo intento, marcarla `-2` y seguir. Conviene un tope explícito.
 
 ### E. Preexistente, no causado por este trabajo
 
@@ -1042,3 +1092,27 @@ Tres arreglos, en capas: el ancho se mide del **contenedor**; `fotoUrl()` rechaz
 cualquier ancho inválido y cae a 375, así que ningún otro punto puede repetirlo; y si
 la carga diferida nunca arranca (pasa cuando la ventana mide 0), a los 2.5 s se
 fuerzan **de a 6 con pausa**.
+
+---
+
+## 21. Estado del material el 12 ago 2026
+
+Foto del momento, para que quien retome sepa qué hay vivo y no lo confunda con basura.
+
+| Entrega | Estado | Material | Nota |
+|---|---|---|---|
+| **Mireya Gómez** (IAV-2607.17-A) | publicada | 45 fotos + video | **Saldo $4,500.** Enlace vivo, nunca enviado. Decidir si se pausa (C3). |
+| **Felipe johnson** ("casita") | publicada | 50 fotos | Quedó publicada; si fue sin querer, pausar. Trae 5 PNG colados (C8). |
+| **Valeria Castillo Ceuz** (IAV-2608.04-A) | borrador | 8 fotos | De la tanda donde fallaron 2 por el 503 de §20.4. |
+| **Gustavo Sepulveda** (IAV-2608.04-B) | borrador | vacía | Sembrada del contrato. |
+
+- **0 archivos pendientes de preparar** en todo el sistema.
+- **0 huérfanos** en R2 y en Stream.
+- En Stream viven el video de Mireya (`prueba-auth`) y **6 videos de R123**, que no son
+  de este sistema y que `huerfanos` ignora a propósito.
+
+### Cuentas de las pruebas de esta semana
+
+Todo lo creado para probar se borró: entregas `ZZZ PRUEBA *`, la copia de Stream
+`PRUEBA-A2-borrar`, y los 2 GB de huérfanos que había dejado el bug del borrado.
+Lo que queda arriba es material real de Bruno.
