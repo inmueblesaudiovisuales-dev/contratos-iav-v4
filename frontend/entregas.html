@@ -235,12 +235,17 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .accs{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;gap:6px;
   padding:7px;justify-content:flex-end;
   background:linear-gradient(to top,rgba(16,13,8,.62),rgba(16,13,8,0))}
-.acc{width:31px;height:31px;border-radius:50%;border:none;cursor:pointer;padding:0;
+/* Van scopeados a .accs y SIN clase propia a proposito. La primera version los llamo
+   `.acc`, que ya era el contenedor de botones de la barra de accion (.accionbar .acc):
+   como esa regla no fija tamaño, mi `width:31px;height:31px` se lo imponia a la barra
+   y el boton "Publicar" se salia de la tarjeta, en todos los anchos. Lo encontro una
+   captura de pantalla, no el codigo. */
+.accs button{width:31px;height:31px;border-radius:50%;border:none;cursor:pointer;padding:0;
   display:flex;align-items:center;justify-content:center;
   background:rgba(255,253,248,.9);color:var(--ink-2);line-height:0}
-.acc:hover{background:#fff;color:var(--ink-1)}
-.acc.on{background:var(--gold-leaf);color:#1a1509}
-.acc.on:hover{background:var(--gold-hi)}
+.accs button:hover{background:#fff;color:var(--ink-1)}
+.accs button.on{background:var(--gold-leaf);color:#1a1509}
+.accs button.on:hover{background:var(--gold-hi)}
 /* El contador dice cuantas van y cuantas caben, para no tener que ir contando
    anillos dorados en una cuadricula de 50. */
 .dcount{display:flex;align-items:center;gap:8px;margin:var(--s3) 0 0 38px;
@@ -711,10 +716,10 @@ function pintarDetalle(){
             '" title="' + tit + '">' + mini +
             (esPort ? '<span class="cinta">portada</span>' : '') +
             '<span class="accs">' +
-              '<button class="acc' + (esDest ? ' on' : '') + '" onclick="alternarDestacada(\'' + a.id + '\')" ' +
+              '<button class="' + (esDest ? 'on' : '') + '" onclick="alternarDestacada(\'' + a.id + '\')" ' +
                 'title="' + (esDest ? 'Quitar de las destacadas' : 'Poner en las destacadas') + '">' +
                 '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"/></svg></button>' +
-              '<button class="acc' + (esPort ? ' on' : '') + '" onclick="ponerPortada(\'' + a.id + '\')" ' +
+              '<button class="' + (esPort ? 'on' : '') + '" onclick="ponerPortada(\'' + a.id + '\')" ' +
                 'title="' + (esPort ? 'Es la portada' : 'Usar como portada') + '">' +
                 '<svg width="15" height="15" viewBox="0 0 24 24" fill="' + (esPort ? 'currentColor' : 'none') +
                 '" stroke="currentColor" stroke-width="2"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></button>' +
@@ -992,16 +997,46 @@ function verFoto(){
   return 'l' + String(e.fecha_liberada || 1).replace(/[^0-9a-zA-Z]/g, '');
 }
 
+// Elegir portada y destacadas NO pasa por accion(), aunque seria la via corta.
+// accion() recarga la entrega entera, y recargar devuelve el scroll al principio:
+// medido, marcar una foto a media cuadricula saltaba de 750 px a 0. Con 50 fotos,
+// armar una seleccion de 6 serian 6 saltos y 6 veces buscar donde ibas — lo contrario
+// de lo que este rediseño vino a hacer.
+//
+// Entonces se actualiza el archivo en memoria con lo que contesto el servidor, se
+// repinta, y se devuelve el scroll a donde estaba. El alto no cambia (solo cambian
+// clases), asi que la pagina no se mueve ni un pixel.
+async function conScroll(fn){
+  var y = window.scrollY;
+  try { await fn(); } catch(e){ return toast(e.message, true); }
+  pintarDetalle();
+  window.scrollTo(0, y);
+}
+function archivoDe(id){
+  return (ACT && ACT.archivos || []).filter(function(a){ return a.id === id; })[0];
+}
+
 // La portada es la foto grande que abre la galeria del cliente. Es una sola, y
 // ademas entra al muestrario de destacadas.
 function ponerPortada(id){
-  return accion('portada', { archivoId: id }, 'Portada actualizada');
+  return conScroll(async function(){
+    await api('portada', { body: { archivoId: id } });
+    (ACT.archivos || []).forEach(function(a){ a.portada = 0; });
+    var a = archivoDe(id);
+    if(a){ a.portada = 1; a.destacado = 1; }
+    toast('Portada actualizada');
+  });
 }
 
 // Las destacadas son las fotos que el cliente ve en grande antes del boton "ver
 // todas". Es un interruptor: el mismo boton pone y quita.
 function alternarDestacada(id){
-  return accion('destacar', { archivoId: id }, 'Selección actualizada');
+  return conScroll(async function(){
+    var r = await api('destacar', { body: { archivoId: id } });
+    var a = archivoDe(id);
+    if(a) a.destacado = r.destacado ? 1 : 0;
+    toast(r.destacado ? 'Agregada a las destacadas' : 'Quitada de las destacadas');
+  });
 }
 
 // ── Modo quitar ──────────────────────────────────────────────────────────────

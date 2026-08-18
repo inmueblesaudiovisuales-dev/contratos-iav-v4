@@ -7,7 +7,7 @@
 > Rango de commits: `9994f46..HEAD`.
 >
 > **Atajos:** §2 estado · §15 lo que falta · §21 qué material hay vivo ahora ·
-> §14 las 27 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
+> §14 las 28 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
 > rediseño de los dos portales y preparación automática) · §22 la sesión del 18 ago
 > (la marca que no se quitaba tras liberar, y la galería de destacadas).
 >
@@ -574,6 +574,11 @@ vez en cuando, porque cualquier subida que falle a la mitad deja basura.
     estado tiene que llevar ese estado **en la URL**. Costó que el cliente siguiera
     viendo la marca de agua después de pagar, y no lo detecta ninguna prueba de
     servidor: `curl` no tiene caché (§22.1).
+28. **Una clase CSS nueva puede romper algo que nadie tocó.** Los botones de la
+    cuadrícula se llamaron `.acc`, que ya era el contenedor de la barra de acción:
+    su `width:31px` se lo impuso a la barra y sacó el botón "Publicar" de la tarjeta,
+    en todos los anchos. **Ninguna prueba de lógica ve esto** — se vio en una captura
+    de pantalla. Antes de nombrar una clase, buscarla en el archivo (§22.5).
 
 ---
 
@@ -1254,7 +1259,66 @@ Lo ya elegido se conserva: las que eran `destacado=1` pasan a `portada=1` y sigu
 destacadas. La portada siempre cuenta como destacada — sería raro que la foto elegida
 como la mejor no apareciera entre las mejores.
 
-### 22.5 Qué falta de esto
+### 22.5 Revisión visual del 18 ago — tres cosas que solo se ven mirando
+
+Después de desplegar R133 se hizo una revisión con capturas de pantalla reales
+(Playwright sobre el Chrome instalado, sin descargar navegadores). Las tres cosas que
+salieron **no las detecta ninguna prueba de lógica**, y dos de ellas eran regresiones
+metidas ese mismo día.
+
+#### La portada salía dos veces
+
+El hero es la portada. Y como la portada cuenta como destacada, aparecía otra vez
+como primera foto del muestrario: el cliente veía la misma imagen dos veces seguidas,
+una debajo de la otra. Ahora el muestrario excluye la portada y se completa con las
+siguientes, así que **1 (hero) + 6 (muestrario) + resto = el total**, sin repetir
+ninguna. De paso desapareció el corrimiento por índice (`desde`), que obligaba a que
+cada tanda fuera un tramo contiguo: ahora cada foto busca su lugar en la lista
+completa, que es lo que hace que tocar una abra esa y no otra.
+
+#### El botón "Publicar" se salía de su tarjeta
+
+Los botones nuevos de la cuadrícula se llamaron `.acc`. Ya existía `.accionbar .acc`:
+el contenedor de los botones de la barra de acción. Como esa regla no fija tamaño, el
+`width:31px; height:31px` de los botones nuevos **se lo imponía a la barra entera**, y
+"Publicar" quedaba fuera de la tarjeta — en todos los anchos, desde el primer deploy.
+
+> **Trampa nueva (#28):** una clase CSS nueva puede romper una parte del sistema que
+> nadie tocó. `.acc` existía desde el rediseño de agosto. Ninguna prueba de lógica ve
+> esto; se vio en una captura de pantalla. Ahora los botones van scopeados (`.accs
+> button`) y sin clase propia.
+
+#### Marcar una destacada devolvía el scroll al principio
+
+`alternarDestacada` usaba `accion()`, que recarga la entrega completa. Medido: marcar
+una foto a media cuadrícula saltaba de 750 px a 0. Armar una selección de 6 eran seis
+saltos y seis veces buscar dónde ibas — exactamente lo contrario de lo que este
+rediseño venía a arreglar. Ahora se actualiza el archivo en memoria con lo que
+contestó el servidor, se repinta y se devuelve el scroll: el alto no cambia (solo
+cambian clases), así que la página no se mueve un píxel.
+
+### 22.6 El arnés que quedó
+
+Tres suites sobre un navegador de verdad, en `scratchpad` (no se versionaron; se
+pueden rehacer):
+
+| Suite | Qué cubre |
+|---|---|
+| `suite.mjs` | 106 escenarios del portal del cliente × 2 anchos: 0/1/4/6/7/45 fotos, 0/1/3/6/12 marcadas, con y sin portada elegida |
+| `suite-admin.mjs` | 4 anchos del portal de control: desbordes, marcas visibles, modo quitar, scroll al marcar |
+| `suite-liberada.mjs` | El gate: publicada **no** puede traer nada descargable; liberada tiene que traerlo todo |
+
+Invariantes que verifica la primera, y que son las que importan: ninguna foto sale dos
+veces, se ven todas (hero + muestrario + resto = total), tocar una foto abre **esa**
+foto, el botón anuncia el número real, y nunca hay scroll horizontal.
+
+**La suite se probó contra un bug puesto a propósito** (volver a meter la portada al
+muestrario): cazó 312 fallos. Una suite que nunca ha fallado no sirve de nada —
+misma lección que la trampa #18 con `Expand-Archive`.
+
+Corrida 3 veces seguidas, sin un solo fallo, más los 94 tests del worker.
+
+### 22.7 Qué falta de esto
 
 - **Correr la migración r133 en D1.** El código la necesita: sin ella, `portada` no
   existe como columna y el `SELECT *` no la trae.

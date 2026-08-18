@@ -333,27 +333,46 @@ async function cargar(){
 
 function videos(){ return (D.videos && D.videos.length) ? D.videos : (D.video ? [D.video] : []); }
 
-// La galeria se parte en dos: un muestrario grande y el resto tras un boton.
+// La galeria se parte en tres: la portada arriba de todo, un muestrario grande, y el
+// resto tras un boton. Ninguna foto sale dos veces.
 //
-// `fotos()` devuelve la lista YA en el orden en que se ve —destacadas primero—,
-// porque el visor navega sobre ella: si el orden de la pagina y el del visor no
-// coinciden, tocar la tercera foto abre otra distinta.
+// `fotos()` devuelve la lista YA en el orden en que se ve, porque el visor navega
+// sobre ella: si el orden de la pagina y el del visor no coinciden, tocar la tercera
+// foto abre otra distinta.
 function fotos(){
   var todas = D.fotos || [];
-  var d = todas.filter(function(f){ return f.destacado; });
-  if(!d.length) return todas;   // nadie eligio: se respeta el orden de subida
-  var resto = todas.filter(function(f){ return !f.destacado; });
-  return d.concat(resto);
+  var p = fotoPortada();
+  var orden = todas.filter(function(f){ return f !== p && f.destacado; });
+  var resto = todas.filter(function(f){ return f !== p && !f.destacado; });
+  return (p ? [p] : []).concat(orden, resto);
 }
-// Cuantas van arriba. Si Bruno marco MAS del minimo se muestran todas las que marco
-// —es su decision, no la del sistema—; si marco menos, se completa con las que
-// siguen. Esto ultimo importa mas de lo que parece: al separar portada de destacada
-// (r133) toda entrega vieja quedo con exactamente UNA destacada, y sin el relleno el
-// muestrario seria de una sola foto hasta que alguien entre a marcar.
-function cuantasDestacadas(){
-  var fs = D.fotos || [];
-  var marcadas = fs.filter(function(f){ return f.destacado; }).length;
-  return Math.min(fs.length, Math.max(marcadas, D.destacadas || 6));
+
+// La foto de la cabecera. Si nadie eligio, la primera; asi el hero nunca queda vacio.
+function fotoPortada(){
+  var todas = D.fotos || [];
+  return todas.filter(function(f){ return f.portada; })[0] || todas[0] || null;
+}
+
+// El muestrario: lo que se ve en grande antes del boton. **Sin la portada**, que ya
+// esta arriba en el hero — si no, el cliente ve la misma foto dos veces seguidas.
+//
+// Si se marcaron mas del minimo se muestran todas las marcadas —es decision de Bruno,
+// no del sistema—; si se marcaron menos, se completa con las que siguen. Esto ultimo
+// importa mas de lo que parece: al separar portada de destacada (r133) toda entrega
+// existente quedo con exactamente UNA destacada (su portada), y sin el relleno el
+// muestrario habria quedado vacio.
+function destacadasVisibles(){
+  var p = fotoPortada();
+  var sinPortada = fotos().filter(function(f){ return f !== p; });
+  var marcadas = sinPortada.filter(function(f){ return f.destacado; }).length;
+  return sinPortada.slice(0, Math.min(sinPortada.length,
+                                      Math.max(marcadas, D.destacadas || 6)));
+}
+// Lo que queda: ni la portada ni el muestrario. Asi 1 + 6 + resto = el total que
+// anuncia el boton, sin repetir ninguna.
+function restoVisible(){
+  var arriba = destacadasVisibles(), p = fotoPortada();
+  return fotos().filter(function(f){ return f !== p && arriba.indexOf(f) < 0; });
 }
 
 function render(){
@@ -391,8 +410,7 @@ function render(){
   // 3. Fotos: primero el muestrario grande, y el resto detras de un boton. Antes
   //    caian las 45 de golpe, que es un archivero, no una entrega.
   if(fs.length){
-    var nd = cuantasDestacadas();
-    var resto = fs.length - nd;
+    var resto = restoVisible().length;
     h += '<div class="bloque"><h3 class="sect">Fotografías <span class="n">' + fs.length + '</span></h3>' +
       (resto > 0 ? '<p class="subt">Una selección de tu material.</p>' : '') +
       '<div class="destacadas" id="destacadas"></div>';
@@ -422,7 +440,7 @@ function render(){
 
   document.getElementById('cuerpo').innerHTML = h;
   if(fs.length){
-    montarMosaico(document.getElementById('destacadas'), fs.slice(0, cuantasDestacadas()), 0, true);
+    montarMosaico(document.getElementById('destacadas'), destacadasVisibles(), true);
   }
   document.getElementById('contenido').style.display = '';
 }
@@ -464,11 +482,12 @@ function bloqueBloqueada(){
 // Carga diferida. No es un lujo: cada miniatura es una transformacion del Worker y
 // pedir 45 de golpe es lo que lo tumba. Solo se piden las que van a entrar en
 // pantalla.
-// `desde` es el indice de la primera foto de esta tanda dentro de la lista completa:
-// el visor navega sobre TODAS las fotos, no solo sobre las que este contenedor pinta.
-// Sin ese corrimiento, tocar la primera foto del mosaico abriria la primera
-// destacada.
-function montarMosaico(cont, fs, desde, anchas){
+// El visor navega sobre TODAS las fotos, no solo sobre las que este contenedor
+// pinta, asi que el indice de cada una se busca en la lista completa. Se buscaba
+// antes con un corrimiento (`desde`), que obligaba a que cada tanda fuera un tramo
+// contiguo — y dejo de serlo al sacar la portada del muestrario.
+function montarMosaico(cont, fs, anchas){
+  var todas = fotos();
   // El ancho se mide del CONTENEDOR, no de la ventana. window.innerWidth vale 0
   // cuando la pestaña abre en segundo plano o antes de que termine el layout, y
   // "innerWidth - 36" daba un ancho NEGATIVO: la galería entera se quedaba sin
@@ -481,7 +500,7 @@ function montarMosaico(cont, fs, desde, anchas){
     var b = document.createElement('button');
     b.className = 'ph';
     b.setAttribute('aria-label', 'Ver ' + (f.nombre || 'foto'));
-    b.onclick = (function(n){ return function(){ abrirFoto(n); }; })(desde + i);
+    b.onclick = (function(n){ return function(){ abrirFoto(n); }; })(todas.indexOf(f));
     var img = document.createElement('img');
     // Carga diferida NATIVA del navegador, en vez de un IntersectionObserver: el
     // observer no dispara si la pestaña nunca llega a pintarse, y entonces las
@@ -523,13 +542,13 @@ function verTodas(){
   var btn = document.getElementById('btnTodas');
   var cont = document.getElementById('mosaico');
   if(!btn || !cont) return;
-  var fs = fotos(), desde = cuantasDestacadas();
+  var resto = restoVisible();
   var t = document.createElement('p');
   t.className = 'subt';
   t.style.margin = '18px 0 13px';
   t.textContent = 'Todas tus fotografías';
   btn.parentNode.replaceChild(t, btn);
-  montarMosaico(cont, fs.slice(desde), desde, false);
+  montarMosaico(cont, resto, false);
   cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 

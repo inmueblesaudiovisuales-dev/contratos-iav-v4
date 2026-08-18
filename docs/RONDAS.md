@@ -8,6 +8,31 @@
 
 ---
 
+### R133c — revisión visual: portada duplicada, colisión de CSS y scroll (2026-08-18 01:35:00 CST)
+
+Revisión con capturas de pantalla reales después de desplegar R133. Tres hallazgos, dos
+de ellos regresiones del mismo día, y ninguno detectable por pruebas de lógica.
+
+1. **La portada salía dos veces**: como hero y otra vez como primera del muestrario.
+   Ahora el muestrario la excluye y se completa con las siguientes: 1 + 6 + resto = total,
+   sin repetir. Se quitó el corrimiento por índice; cada foto busca su lugar en la lista
+   completa.
+2. **El botón "Publicar" se salía de su tarjeta**, en todos los anchos: los botones nuevos
+   de la cuadrícula se llamaron `.acc`, que ya era el contenedor de la barra de acción
+   (`.accionbar .acc`), y su `width:31px; height:31px` se lo impuso a la barra entera.
+   Ahora van scopeados (`.accs button`) y sin clase propia.
+3. **Marcar una destacada devolvía el scroll al principio** (medido: de 750 px a 0). Ya no
+   recarga la entrega: actualiza en memoria, repinta y conserva la posición.
+
+Arnés nuevo (en scratchpad, sin versionar): 106 escenarios del portal del cliente × 2
+anchos, 4 anchos del portal de control, y el gate publicada/liberada. Verificado contra un
+bug puesto a propósito: cazó 312 fallos. Corrido 3 veces seguidas limpio, más los 94 tests
+del worker.
+
+Despliegue: push a `main` (GitHub Actions). NO se tocó el adapter.
+
+---
+
 ### R133 — Marca de agua pegada tras liberar, y galería de destacadas (2026-08-18 01:00:50 CST)
 
 Dos cosas del sistema de entregas: un bug del que el cliente era el único que se enteraba, y el rediseño de cómo
