@@ -859,6 +859,58 @@ export async function handleEntregas(request, env, ctx, action) {
                 respaldo: !!previa });
   }
 
+  // Crea un perfil de marca de agua en Stream. Existe para no tener que sacar el
+  // CF_MEDIA_TOKEN de Cloudflare: el Worker ya lo tiene y es el unico que deberia
+  // tocarlo (se pego dos veces en el chat, y esa es deuda que no conviene repetir).
+  //
+  // Stream NO sabe repetir un mosaico: coloca UNA imagen y ya. Por eso el PNG que se
+  // sube aqui trae el patron ya dibujado y va con scale=1 y position=center, para que
+  // cubra el cuadro entero. Y por eso hacen falta dos perfiles: Stream escala sin
+  // deformar, asi que un PNG horizontal sobre un video vertical deja una franja
+  // marcada y el resto limpio.
+  if (action === 'crearWatermark') {
+    const form = await request.formData();
+    const png = form.get('archivo');
+    const nombre = String(form.get('nombre') || 'IAV');
+    if (!png) return err('Falta el archivo');
+    const opacidad = Number(form.get('opacidad')) || OPACIDAD_MARCA;
+
+    const fd = new FormData();
+    fd.append('file', png, nombre + '.png');
+    fd.append('name', nombre);
+    fd.append('opacity', String(opacidad));
+    fd.append('padding', '0');
+    fd.append('scale', '1');
+    fd.append('position', 'center');
+
+    const r = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/watermarks`,
+      { method: 'POST', headers: { Authorization: `Bearer ${env.CF_MEDIA_TOKEN}` }, body: fd });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j || !j.success) {
+      const detalle = j && j.errors ? JSON.stringify(j.errors) : 'HTTP ' + r.status;
+      return err('Stream rechazó la marca: ' + detalle, 502);
+    }
+    // El uid es lo que hay que poner en wrangler.toml.
+    return ok({ ok: true, uid: j.result.uid, nombre: j.result.name,
+                opacidad: j.result.opacity, escala: j.result.scale });
+  }
+
+  // Lista los perfiles de marca de agua que existen en Stream, para saber cual esta
+  // en uso y cual quedo huerfano de una calibracion anterior.
+  if (action === 'watermarks') {
+    const r = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/watermarks`,
+      { headers: { Authorization: `Bearer ${env.CF_MEDIA_TOKEN}` } });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j || !j.success) return err('No se pudieron leer los perfiles', 502);
+    const enUso = [env.STREAM_WATERMARK_UID, env.STREAM_WATERMARK_UID_VERTICAL];
+    return ok({ ok: true, perfiles: (j.result || []).map(w => ({
+      uid: w.uid, nombre: w.name, opacidad: w.opacity, escala: w.scale,
+      posicion: w.position, enUso: enUso.includes(w.uid)
+    })) });
+  }
+
   // Sirve el PNG de la marca tal cual esta en R2. Es la unica forma de verlo o
   // respaldarlo: el bucket no se puede leer con wrangler. `?previa=1` devuelve la
   // version anterior, que es como se revierte un cambio que no gusto.
