@@ -8,6 +8,53 @@
 
 ---
 
+### R135 — el video también lleva la marca nueva (2026-08-18 04:20:00 CST)
+
+Los videos se quedaron con la marca vieja (logo al centro, casi invisible) cuando las
+fotos se recalibraron en R134. Ahora igualan: mismo texto, misma separación, misma sombra,
+opacidad 0.35. Los dos videos que existían se reprocesaron. 95 tests verde. NO se tocó el
+adapter.
+
+**La trampa: Stream no sabe repetir un mosaico.** Su marca de agua es *una* imagen colocada
+en una posición, no un patrón que se tilea — por eso los perfiles viejos eran un logo al
+centro. Entonces el patrón va dibujado **dentro** del PNG y el perfil va con `scale=1`,
+`position=center`, para que cubra el cuadro entero.
+
+**Y hacen falta dos PNG, uno por orientación.** Stream escala sin deformar: un PNG
+horizontal sobre un video vertical se encoge para caber y deja una franja marcada con el
+resto limpio. Se verificó con una simulación sobre un cuadro real **antes** de crear nada.
+
+Perfiles nuevos (los viejos se dejan vivos por si algún video sigue codificado con ellos):
+
+| uid | Nombre | PNG |
+|---|---|---|
+| `a6449a5380ebf5f3068679a5e5bfe918` | IAV-Mosaico-Horizontal | 1920×1080 |
+| `ff3919c145eb7bceee5538effaa3736f` | IAV-Mosaico-Vertical | 1080×1920 |
+
+**Endpoints nuevos**, todos con llave:
+
+- `POST /api/e/crearWatermark` — crea un perfil en Stream desde un PNG.
+- `GET /api/e/watermarks` — lista los perfiles y marca cuál está en uso.
+- `POST /api/e/borrarStream` — borra un video de Stream por uid, y **se niega si sigue
+  referenciado en la base**.
+
+Los tres existen para **no sacar el `CF_MEDIA_TOKEN` de Cloudflare**: el Worker ya lo tiene
+y es el único que debería tocarlo. Se pegó dos veces en el chat y esa deuda sigue abierta;
+no tenía caso repetirla para algo que el Worker puede hacer solo.
+
+**Reproceso de los dos videos existentes.** `procesarVideo` con su `ancho`/`alto`, esperar
+`ready`, y borrar el uid viejo. Detalle que costó descubrir: **`procesarVideo` no borra el
+uid anterior y `huerfanos` tampoco lo encuentra** — solo reconoce los que este sistema
+nombró (`entrega-*`, `limpio-*`), así que el video de Mireya, subido por otra vía, se habría
+quedado pagándose en silencio para siempre. De ahí `borrarStream`.
+
+Estado final verificado: 0 huérfanos en R2 y en Stream, la entrega publicada apunta al video
+con marca nueva y la liberada sigue apuntando a su copia limpia.
+
+Despliegue: push a `main` (GitHub Actions).
+
+---
+
 ### R134 — la marca de agua se ve: pocas, grandes y con sombra (2026-08-18 03:30:00 CST)
 
 Bruno reportó que la marca casi no se notaba en las fotos grandes. Medido: el texto ocupaba

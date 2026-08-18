@@ -1,4 +1,4 @@
-# Handoff — Sistema de Entregas (R129–R134)
+# Handoff — Sistema de Entregas (R129–R135)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
@@ -7,7 +7,7 @@
 > Rango de commits: `9994f46..HEAD`.
 >
 > **Atajos:** §2 estado · §15 lo que falta · §21 qué material hay vivo ahora ·
-> §14 las 29 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
+> §14 las 30 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
 > rediseño de los dos portales y preparación automática) · §22 la sesión del 18 ago
 > (la marca que no se quitaba tras liberar, y la galería de destacadas) · §9 la marca
 > de agua recalibrada el 18 ago.
@@ -324,14 +324,56 @@ como `sistema/marca-agua-previa.png`.
 
 ### Los perfiles de Stream (video)
 
+**Recalibrados el 18 ago 2026 (R135)** para igualar la marca de las fotos.
+
 | uid | Nombre | Escala | Para |
 |---|---|---|---|
-| `d537462dcedc9c326ff9e3c517b31e34` | VistaPreviaIAV | 0.45 | Horizontal |
-| `08ab04bc1cc268a0ff86d910e5b7f179` | VistaPreviaIAV-Vertical | 0.85 | **Vertical** (el formato nativo de IAV) |
+| `a6449a5380ebf5f3068679a5e5bfe918` | IAV-Mosaico-Horizontal | 1.0 | Horizontal |
+| `ff3919c145eb7bceee5538effaa3736f` | IAV-Mosaico-Vertical | 1.0 | **Vertical** (el formato nativo de IAV) |
 
-`perfilWatermark()` elige por orientación. **Ninguno se puede editar**: cambiarlos
-obliga a resubir todos los videos ya subidos. La recalibración del 18 ago **no los
-tocó**: el video sigue con la marca de antes.
+`perfilWatermark()` elige por orientación. Opacidad 0.35, `position=center`, `padding=0`.
+
+**Stream no sabe repetir un mosaico**: coloca *una* imagen y ya. Por eso el patrón va
+dibujado **dentro** del PNG, y el perfil va a escala 1.0 para que cubra el cuadro
+entero. Y como Stream escala sin deformar, hace falta un PNG por orientación: uno
+horizontal sobre un video vertical deja una franja marcada y el resto limpio —
+verificado con una simulación sobre un cuadro real antes de crear nada.
+
+Los PNG se generan con `scratchpad/wm-video.mjs` (1920×1080 y 1080×1920) usando los
+mismos valores que las fotos: texto al 75% del ancho, separación 1.25 × 7.5, sombra
+0.55. La opacidad **no** va en el PNG: la pone el perfil, igual que en las fotos la
+pone el `draw`.
+
+### Cómo hacer un perfil nuevo
+
+```
+POST /api/e/crearWatermark    multipart: archivo=<png>, nombre, opacidad
+GET  /api/e/watermarks        lista los perfiles y marca cuál está en uso
+POST /api/e/borrarStream      {uid} — borra un video de Stream, con salvaguarda
+```
+
+Existen para **no sacar el `CF_MEDIA_TOKEN` de Cloudflare**: el Worker ya lo tiene y
+es el único que debería tocarlo. Después de crear el perfil se ponen los uids en
+`wrangler.toml` (`STREAM_WATERMARK_UID` y `_VERTICAL`) y se hace push.
+
+> **Un perfil no se puede editar, y cambiarlo no toca los videos ya subidos:** la marca
+> se quema al codificar. Para que un video existente use el perfil nuevo hay que
+> **reprocesarlo** (`procesarVideo` con su `ancho`/`alto`), esperar a que Stream lo
+> deje en `ready`, y borrar el uid viejo — que `procesarVideo` **no** borra.
+
+> **`huerfanos` no encuentra esos uids viejos.** Solo reconoce los que este sistema
+> nombró (`entrega-*`, `limpio-*`), así que un video subido por otra vía se queda
+> pagándose en silencio. Para eso está `borrarStream`, que se niega si el uid sigue
+> referenciado en la base.
+
+Los perfiles anteriores (logo al centro, escala 0.45/0.85, opacidad 0.30) siguen
+existiendo en Stream y **no se borraron**: si algún video quedara codificado con
+ellos, se sigue sirviendo igual.
+
+| uid anterior | Nombre |
+|---|---|
+| `d537462dcedc9c326ff9e3c517b31e34` | VistaPreviaIAV |
+| `08ab04bc1cc268a0ff86d910e5b7f179` | VistaPreviaIAV-Vertical |
 
 ---
 
@@ -625,6 +667,10 @@ vez en cuando, porque cualquier subida que falle a la mitad deja basura.
     servido tiene su propia entrada por 24 h, asi que la marca nueva convive con la
     vieja y el hero —que pide otro ancho— tarda todavia mas. Por eso existe
     `VERSION_MARCA` en la llave: **al recalibrar hay que subirla** (§9).
+30. **Cambiar un perfil de Stream no toca los videos ya subidos.** La marca se quema
+    al codificar. Hay que reprocesar cada uno, y ojo: `procesarVideo` **no borra el uid
+    viejo** y `huerfanos` tampoco lo encuentra si el video no se llamaba `entrega-*`.
+    Se queda pagandose en silencio. Para eso esta `borrarStream` (§9).
 
 ---
 
