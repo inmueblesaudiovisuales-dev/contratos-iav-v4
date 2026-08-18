@@ -1202,8 +1202,16 @@ subieron. Orden nuevo del portal del cliente:
 
 - Las destacadas van a **una columna en celular y dos en escritorio**: medido, 339 px
   contra los 166 px del mosaico en un teléfono de 375. El doble o el triple.
-- Si nadie marcó destacadas, caen las primeras 6. Si Bruno marcó 10, se muestran las
-  **10**: es su decisión, no la del sistema. El 6 solo manda cuando nadie eligió.
+- **Las marcadas van primero y siempre aparecen; si son menos de 6, se completa con
+  las que siguen.** Si Bruno marcó 10, se muestran las 10 — es su decisión, no la del
+  sistema. Si marcó 3, se ven esas 3 más 3 de relleno.
+
+  > Esto último se descubrió **al verificar en producción**, no antes. Al separar
+  > portada de destacada, la migración dejó a **toda** entrega existente con
+  > exactamente UNA destacada (su portada). Sin el relleno, el muestrario de las 4
+  > entregas que hay habría sido de una sola foto hasta que alguien entrara a marcar.
+  > La primera versión decía "si hay marcadas, muestra solo esas", que es correcto en
+  > abstracto y malo de verdad el día que se enciende.
 - **El resto no se monta hasta que se pide.** No es refinamiento visual: cada
   miniatura es una transformación del Worker, y no tiene caso pagar 39 por fotos que
   quizá nadie abra.

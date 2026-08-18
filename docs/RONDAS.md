@@ -35,7 +35,7 @@ conserva (las que eran `destacado=1` pasan a `portada=1` y siguen destacadas).
 **Portal del cliente** — antes caían las 45 fotos de golpe, que es un archivero, no una entrega. Ahora: portada →
 descarga → video → **6 fotos destacadas en grande** (una columna en celular, dos en escritorio: el doble o triple
 que el mosaico) → botón *"Ver las 45 fotografías"*, que monta el resto en la misma página. Si nadie marcó
-destacadas caen las primeras 6; si Bruno marcó 10, se muestran las 10 — es su decisión, no la del sistema. El
+destacadas caen las primeras 6; si marcó menos de 6 se completa con las que siguen, y si marcó 10 se muestran las 10. El
 resto no se monta hasta que se pide: cada miniatura es una transformación del Worker. El visor sigue navegando
 sobre **todas** las fotos, en el orden en que se ven.
 

@@ -345,12 +345,15 @@ function fotos(){
   var resto = todas.filter(function(f){ return !f.destacado; });
   return d.concat(resto);
 }
-// Cuantas van arriba. Si Bruno marco fotos, se muestran TODAS las que marco —es su
-// decision, no la del sistema—; el numero del servidor solo manda cuando no marco
-// ninguna y hay que cortar por algun lado.
+// Cuantas van arriba. Si Bruno marco MAS del minimo se muestran todas las que marco
+// —es su decision, no la del sistema—; si marco menos, se completa con las que
+// siguen. Esto ultimo importa mas de lo que parece: al separar portada de destacada
+// (r133) toda entrega vieja quedo con exactamente UNA destacada, y sin el relleno el
+// muestrario seria de una sola foto hasta que alguien entre a marcar.
 function cuantasDestacadas(){
-  var marcadas = (D.fotos || []).filter(function(f){ return f.destacado; }).length;
-  return marcadas || Math.min(D.destacadas || 6, (D.fotos || []).length);
+  var fs = D.fotos || [];
+  var marcadas = fs.filter(function(f){ return f.destacado; }).length;
+  return Math.min(fs.length, Math.max(marcadas, D.destacadas || 6));
 }
 
 function render(){
