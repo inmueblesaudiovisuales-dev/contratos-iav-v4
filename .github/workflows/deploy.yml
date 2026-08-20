@@ -5,9 +5,29 @@ on:
     branches: [main]
 
 jobs:
+  # Los tests corren ANTES del deploy y lo bloquean si fallan. Sin esta etapa, un
+  # push roto llegaba a produccion en ~1 min y el unico aviso era que el admin
+  # dejara de cargar. Son ~400 tests de logica pura: tardan segundos.
+  test:
+    runs-on: ubuntu-latest
+    name: Tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Logica del Worker: entregas-core, entregas-media, entregas-zip.
+      - name: Tests del worker
+        run: node --test "src/**/*.test.js"
+        working-directory: worker
+      # Logica del checklist. Vive en frontend/ y es CommonJS, por eso va aparte.
+      - name: Tests del checklist
+        run: node --test frontend/checklist-logic.test.js
+
   deploy:
     runs-on: ubuntu-latest
     name: Deploy
+    needs: test
     steps:
       - uses: actions/checkout@v4
       - name: Deploy Worker

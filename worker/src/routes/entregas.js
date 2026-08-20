@@ -9,6 +9,7 @@ import { ok, err } from '../auth.js';
 import {
   generarCodigo, rutaPublica, entregablesSembrados, parsearAdicionales,
   calcularExpiracion, diasRestantes, estaVencida, fechaLegible,
+  debeBorrarse, diasParaBorrado, DIAS_GRACIA,
   entregaCompleta, faltantes, entregableCumplido,
   debeLiberarAlPagar, debeLiberarAlPublicar,
   datosCliente, grupoDeEntrega, ordenarEntregas, versionFotos
@@ -335,9 +336,21 @@ const FILTRO_PENDIENTE =
 // de 50 fotos queda lista en media hora sin que nadie este presente.
 export async function prepararPendientes(env, tope = 2) {
   const db = env.DB;
+
+  // R136 — Va PRIMERO y siempre, aunque no haya nada que preparar. Un reemplazo en
+  // vuelo es lo unico que tiene a un cliente viendo una version vieja a proposito:
+  // conviene consumarlo en cuanto Stream termine, no cuando ademas haya derivados
+  // pendientes. Es barato — una consulta indexada que casi siempre sale vacia.
+  let reemplazos = { consumados: 0, esperando: 0 };
+  try {
+    reemplazos = await confirmarReemplazos(env, db);
+  } catch (ex) {
+    console.error('R136 confirmarReemplazos falló:', ex.message);
+  }
+
   const { results } = await query(db, `SELECT * FROM e_archivos WHERE ${FILTRO_PENDIENTE}
      ORDER BY fecha LIMIT ?`, [tope]);
-  if (!results || !results.length) return { hechos: 0, pendientes: 0 };
+  if (!results || !results.length) return { hechos: 0, pendientes: 0, reemplazos };
 
   let hechos = 0;
   for (const a of results) {
@@ -353,12 +366,88 @@ export async function prepararPendientes(env, tope = 2) {
   }
   const pend = await queryOne(db,
     `SELECT COUNT(*) AS n FROM e_archivos WHERE ${FILTRO_PENDIENTE}`);
-  return { hechos, pendientes: (pend && pend.n) || 0 };
+  return { hechos, pendientes: (pend && pend.n) || 0, reemplazos };
+}
+
+// ── Reemplazo de version (R136) ───────────────────────────────────────────────
+// Consuma los reemplazos cuya version nueva ya esta lista. Hasta que esto corre, el
+// cliente sigue viendo la version vieja: el renglon nuevo esta filtrado del payload
+// por reemplaza_a<>''.
+//
+// Un video no esta listo cuando termina de subirse, sino cuando Stream termina de
+// CODIFICARLO, que puede tardar minutos. Cambiar antes deja al cliente con un
+// reproductor muerto — el mismo error que ya se cometio una vez con la copia limpia
+// al liberar, y por eso aqui se pregunta igual con streamListo().
+//
+// Una foto no pasa por Stream, asi que esta lista en cuanto se subio.
+async function confirmarReemplazos(env, db, tope = 4) {
+  const { results } = await query(db,
+    `SELECT * FROM e_archivos WHERE reemplaza_a<>'' ORDER BY fecha LIMIT ?`, [tope]);
+  if (!results || !results.length) return { consumados: 0, esperando: 0 };
+
+  let consumados = 0, esperando = 0;
+  for (const nuevo of results) {
+    // Un video sin stream_uid es una subida que nunca llego a Stream. No se puede
+    // consumar: dejaria al cliente sin video. Se queda esperando a que Bruno le de
+    // "procesar" otra vez, o lo cancele.
+    if (esVideo(nuevo.mime)) {
+      if (!nuevo.stream_uid) { esperando++; continue; }
+      if (!(await streamListo(env, nuevo.stream_uid))) { esperando++; continue; }
+    } else {
+      // Una foto no pasa por Stream, pero SI necesita su CRC antes de entrar: el ZIP
+      // se arma con los CRC precalculados y se niega a salir si a alguna le falta
+      // (409, "faltan N fotos por preparar"). Meter aqui una foto sin CRC le romperia
+      // el "descargar todo" al cliente hasta que el cron la alcance.
+      // crc32 -1 = todavia no se intenta; -2 = se intento y no se pudo.
+      if (Number(nuevo.crc32) < 0) { esperando++; continue; }
+    }
+
+    const viejo = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [nuevo.reemplaza_a]);
+
+    // El viejo ya no esta (lo borro alguien a mano, o se consumo dos veces). No es un
+    // error: el nuevo simplemente pasa a ser el bueno.
+    if (!viejo) {
+      await run(db, `UPDATE e_archivos SET reemplaza_a='', estado='listo' WHERE id=?`, [nuevo.id]);
+      consumados++;
+      continue;
+    }
+
+    // El nuevo hereda el LUGAR del viejo, no solo su contenido: orden, portada y
+    // destacado. Sin esto, reemplazar la foto de portada la mandaba al final de la
+    // galeria y la entrega se quedaba sin portada.
+    await run(db,
+      `UPDATE e_archivos SET reemplaza_a='', estado='listo', orden=?, portada=?, destacado=?
+       WHERE id=?`,
+      [viejo.orden, viejo.portada, viejo.destacado, nuevo.id]);
+
+    // PRIMERO el registro, DESPUES el material: si el borrado de R2/Stream falla a
+    // medias, lo que queda huerfano son bytes (los caza `huerfanos`), no un renglon
+    // apuntando a un archivo que ya no existe.
+    await run(db, 'DELETE FROM e_archivos WHERE id=?', [viejo.id]);
+    try {
+      await borrarMediaDeEntrega(env, [viejo]);
+    } catch (ex) {
+      console.error('R136 no se pudo borrar la version vieja', viejo.id, ex.message);
+    }
+
+    await refrescarEntregable(db, nuevo.e_entregable_id);
+    await evento(db, nuevo.e_entrega_id, 'reemplazo',
+      `${viejo.nombre || 'archivo'} → ${nuevo.nombre || 'archivo'}`);
+    consumados++;
+  }
+  return { consumados, esperando };
 }
 
 // ── Expiracion (F6) ───────────────────────────────────────────────────────────
-// La corre el cron horario. Es lo que hace que "14 dias" signifique algo y, de paso,
-// lo que mantiene plano el costo de R2: sin esto el bucket crece para siempre.
+// La corre el cron horario. Es lo que mantiene plano el costo de R2: sin esto el
+// bucket crece para siempre.
+//
+// DOS RELOJES, y no hay que confundirlos:
+//   fecha_expira            — dia 14. Le cierra la galeria al cliente. Es lo unico
+//                             que el cliente ve y lo unico que se le promete.
+//   fecha_expira + gracia   — dia 17. Recien aqui se tiran los bytes. NO se anuncia.
+// La gracia existe para el caso de "no lo guarde": entre el 14 y el 17 se reabre con
+// extender y no hay que volver a subir nada.
 //
 // Se borra el MATERIAL, no el registro: e_entregas y e_eventos sobreviven para saber
 // que le entregaste a quien y cuando. La liga del tour tambien sobrevive — vive en
@@ -371,7 +460,11 @@ export async function expirarEntregas(env) {
   const resumen = { revisadas: (results || []).length, expiradas: 0, r2: 0, images: 0, stream: 0, fallos: 0 };
 
   for (const e of (results || [])) {
-    if (!estaVencida(e.fecha_expira, ahora)) continue;
+    // OJO: se borra por debeBorrarse(), NO por estaVencida(). Al cliente se le cerro
+    // la galeria a los 14 dias —eso lo decide fecha_expira y no pasa por aqui—, pero
+    // los bytes viven 3 dias mas. Es la ventana para reabrirle a quien no guardo el
+    // material sin tener que volver a subir 1 GB. Ver DIAS_GRACIA en entregas-core.
+    if (!debeBorrarse(e.fecha_expira, ahora)) continue;
     const { results: archivos } = await query(db,
       'SELECT * FROM e_archivos WHERE e_entrega_id=?', [e.id]);
     let borrado = { r2: 0, images: 0, stream: 0, fallos: 0 };
@@ -443,8 +536,13 @@ export async function borrarEntregasDeContrato(db, contratoToken, env) {
 async function payloadPublico(db, env, entrega) {
   const cliente = await resolverCliente(db, entrega.e_cliente_id);
   const items = await entregablesDe(db, entrega.id);
+  // reemplaza_a='' deja fuera las versiones EN VUELO (R136). Es el unico punto donde
+  // hay que filtrarlas para el cliente: si un reemplazo a medio codificar se colara
+  // aqui, el cliente veria las dos versiones a la vez, que es justo lo que se
+  // queria evitar. El renglon viejo sigue saliendo hasta que el cambio se consuma.
   const { results: archivos } = await query(db,
-    'SELECT * FROM e_archivos WHERE e_entrega_id=? ORDER BY orden, rowid', [entrega.id]);
+    `SELECT * FROM e_archivos WHERE e_entrega_id=? AND reemplaza_a=''
+     ORDER BY orden, rowid`, [entrega.id]);
 
   const liberada = entrega.estado === 'liberada';
   const vencida = estaVencida(entrega.fecha_expira, now());
@@ -752,6 +850,7 @@ export async function handleEntregas(request, env, ctx, action) {
     }
     const { results } = await query(db,
       `SELECT * FROM e_archivos WHERE e_entrega_id=? AND r2_key<>'' AND mime NOT LIKE 'video/%'
+         AND reemplaza_a=''
        ORDER BY orden, rowid`, [entregaId]);
     if (!results || !results.length) return err('No hay fotos que descargar', 404);
 
@@ -973,21 +1072,40 @@ export async function handleEntregas(request, env, ctx, action) {
     if (!ent) return err('Entregable no encontrado', 404);
     if (!esImagen(original.type)) return err('Ese archivo no es una imagen que el navegador pueda mostrar', 400);
 
+    // R136 — Misma validacion que en videoIniciar. Una foto no pasa por Stream, pero
+    // igual espera a tener su CRC antes de entrar (lo exige el ZIP), asi que tambien
+    // vive un rato como reemplazo en vuelo.
+    const sustituye = String(form.get('reemplazaA') || '');
+    if (sustituye) {
+      const viejo = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [sustituye]);
+      if (!viejo) return err('El archivo que quieres reemplazar ya no existe', 404);
+      if (viejo.e_entregable_id !== entregableId) {
+        return err('Ese archivo es de otro entregable', 400);
+      }
+      const enVuelo = await queryOne(db,
+        `SELECT id FROM e_archivos WHERE reemplaza_a=?`, [sustituye]);
+      if (enVuelo) return err('Ya hay un reemplazo en curso para ese archivo', 409);
+    }
+
     const archivoId = uuid();
     const key = llaveR2(ent.e_entrega_id, archivoId, nombre);
     await guardarEnR2(env, key, original.stream(), original.type);
 
     const c = await queryOne(db,
       'SELECT COUNT(*) AS n FROM e_archivos WHERE e_entregable_id=?', [entregableId]);
+    // Un reemplazo NO nace portada aunque sea el primero de la cuenta: hereda el
+    // lugar del archivo al que sustituye, y eso lo decide confirmarReemplazos().
+    const esPrimera = !sustituye && (c && c.n) === 0;
     await run(db,
       // La primera foto nace como portada —y por lo tanto destacada— para que una
       // entrega recien subida ya tenga cabecera sin que nadie elija nada. Desde r133
       // son dos columnas: marcar solo `destacado` la dejaria sin portada.
       `INSERT INTO e_archivos (id, e_entregable_id, e_entrega_id, nombre, bytes, mime,
-        r2_key, orden, portada, destacado, estado, fecha)
-       VALUES (?,?,?,?,?,?,?,?,?,?, 'listo', ?)`,
+        r2_key, orden, portada, destacado, estado, reemplaza_a, fecha)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [archivoId, entregableId, ent.e_entrega_id, nombre, original.size || 0, original.type || '',
-       key, (c && c.n) || 0, (c && c.n) === 0 ? 1 : 0, (c && c.n) === 0 ? 1 : 0, now()]);
+       key, (c && c.n) || 0, esPrimera ? 1 : 0, esPrimera ? 1 : 0,
+       sustituye ? 'reemplazando' : 'listo', sustituye, now()]);
     await refrescarEntregable(db, entregableId);
     // NO se genera aqui la copia reducida, aunque sea tentador. Se intento con
     // ctx.waitUntil y el resultado fue peor que el problema: transformar un JPEG de
@@ -1064,10 +1182,28 @@ export async function handleEntregas(request, env, ctx, action) {
 
   // Video: subida multiparte a R2. Cada trozo cabe en el limite del Worker.
   if (action === 'videoIniciar') {
-    const { entregableId, nombre, mime, bytes } = await request.json();
+    const { entregableId, nombre, mime, bytes, reemplazaA } = await request.json();
     const ent = await queryOne(db, 'SELECT * FROM e_entregables WHERE id=?', [entregableId]);
     if (!ent) return err('Entregable no encontrado', 404);
     if (!esVideo(mime)) return err('Ese archivo no es un video', 400);
+
+    // R136 — Si viene reemplazaA, esta subida sustituye a un archivo que ya existe.
+    // Se valida que sea del MISMO entregable: reemplazar el video cinematico con el
+    // de "como llegar" no es un reemplazo, es mover material de renglon.
+    const sustituye = String(reemplazaA || '');
+    if (sustituye) {
+      const viejo = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [sustituye]);
+      if (!viejo) return err('El archivo que quieres reemplazar ya no existe', 404);
+      if (viejo.e_entregable_id !== entregableId) {
+        return err('Ese archivo es de otro entregable', 400);
+      }
+      // Dos reemplazos encima del mismo archivo dejarian dos renglones peleando por
+      // consumarse y uno borraria al otro. Se corta aqui.
+      const enVuelo = await queryOne(db,
+        `SELECT id FROM e_archivos WHERE reemplaza_a=?`, [sustituye]);
+      if (enVuelo) return err('Ya hay un reemplazo en curso para ese archivo', 409);
+    }
+
     const archivoId = uuid();
     const key = llaveR2(ent.e_entrega_id, archivoId, nombre || 'video.mp4');
     const mp = await env.ENTREGAS_ORIGINALES.createMultipartUpload(key, {
@@ -1075,11 +1211,11 @@ export async function handleEntregas(request, env, ctx, action) {
     });
     await run(db,
       `INSERT INTO e_archivos (id, e_entregable_id, e_entrega_id, nombre, bytes, mime,
-        r2_key, orden, estado, fecha)
-       VALUES (?,?,?,?,?,?,?,0,'subiendo',?)`,
+        r2_key, orden, estado, reemplaza_a, fecha)
+       VALUES (?,?,?,?,?,?,?,0,'subiendo',?,?)`,
       [archivoId, entregableId, ent.e_entrega_id, nombre || 'video.mp4', bytes || 0,
-       mime || 'video/mp4', key, now()]);
-    return ok({ ok: true, archivoId, key, uploadId: mp.uploadId });
+       mime || 'video/mp4', key, sustituye, now()]);
+    return ok({ ok: true, archivoId, key, uploadId: mp.uploadId, reemplaza: !!sustituye });
   }
 
   if (action === 'videoParte') {
@@ -1111,7 +1247,11 @@ export async function handleEntregas(request, env, ctx, action) {
       console.error('copiarAStream falló', e.message);
     }
     await run(db,
-      `UPDATE e_archivos SET estado='listo', stream_uid=?, ancho=?, alto=? WHERE id=?`,
+      // Un reemplazo NO pasa a 'listo' aqui: queda en 'reemplazando' hasta que Stream
+      // termine de codificar y confirmarReemplazos() haga el cambio. Mientras tanto el
+      // cliente sigue viendo la version vieja, que es justo el punto.
+      `UPDATE e_archivos SET estado=CASE WHEN reemplaza_a<>'' THEN 'reemplazando' ELSE 'listo' END,
+              stream_uid=?, ancho=?, alto=? WHERE id=?`,
       [streamUid, Number(ancho) || 0, Number(alto) || 0, archivoId]);
     const a = await queryOne(db, 'SELECT e_entregable_id FROM e_archivos WHERE id=?', [archivoId]);
     if (a) await refrescarEntregable(db, a.e_entregable_id);
@@ -1217,6 +1357,29 @@ export async function handleEntregas(request, env, ctx, action) {
     return ok({ ok: true, destacado: quiere, total: (c && c.n) || 0, meta: DESTACADAS_VISIBLES });
   }
 
+  // R136 — Tira un reemplazo a medias y deja la version vieja intacta. Es la salida
+  // cuando la v2 salio mal, o cuando Stream nunca la codifico. Borra SOLO el renglon
+  // nuevo: el viejo nunca se toco, asi que el cliente no se entera de nada.
+  if (action === 'cancelarReemplazo') {
+    const { archivoId } = await request.json();
+    const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
+    if (!a) return err('Archivo no encontrado', 404);
+    if (!a.reemplaza_a) return err('Ese archivo no es un reemplazo en curso', 400);
+    await run(db, 'DELETE FROM e_archivos WHERE id=?', [archivoId]);
+    await borrarMediaDeEntrega(env, [a]);
+    await refrescarEntregable(db, a.e_entregable_id);
+    await evento(db, a.e_entrega_id, 'reemplazo', `Cancelado: ${a.nombre || 'archivo'}`);
+    return ok({ ok: true });
+  }
+
+  // R136 — Fuerza la revision de los reemplazos en vuelo sin esperar al cron. Lo
+  // llama el portal despues de subir, para que el cambio se sienta inmediato en vez
+  // de tardar hasta dos minutos.
+  if (action === 'revisarReemplazos') {
+    const r = await confirmarReemplazos(env, db, 8);
+    return ok({ ok: true, ...r });
+  }
+
   if (action === 'borrarArchivo') {
     const { archivoId } = await request.json();
     const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
@@ -1229,14 +1392,50 @@ export async function handleEntregas(request, env, ctx, action) {
 
 
   if (action === 'listar') {
-    const { results } = await query(db, 'SELECT * FROM e_entregas ORDER BY fecha_creacion DESC');
+    // TRES consultas, no cuatro por entrega. Antes este bloque llamaba a
+    // resolverCliente + entregablesDe + folioDeEntrega + saldoDeEntrega DENTRO del
+    // for, en serie: con 100 entregas eran ~400 viajes a D1 encadenados, y ademas
+    // folioDeEntrega y saldoDeEntrega pedian LA MISMA fila de contratos por separado.
+    // Con el JOIN el listado no se degrada al crecer la operacion.
+    const { results } = await query(db,
+      `SELECT e.*, c.folio AS c_folio, c.saldo_pendiente AS c_saldo
+       FROM e_entregas e
+       LEFT JOIN contratos c ON c.token = e.contrato_token
+       ORDER BY e.fecha_creacion DESC`);
     const lista = results || [];
+
+    // Clientes de un jalon. El LEFT JOIN trae de paso la ficha del admin, que es la
+    // que manda cuando la entrega esta ligada (no se copia nada: se lee en vivo).
+    // Se pide c.id explicitamente para distinguir "cliente borrado" (sin fila) de
+    // "cliente con campos vacios" — datosCliente() decide distinto en cada caso.
+    const { results: clientesRows } = await query(db,
+      `SELECT ec.id, ec.cliente_id, ec.nombre, ec.telefono, ec.correo,
+              c.id AS a_id, c.nombre AS a_nombre, c.telefono AS a_telefono, c.correo AS a_correo
+       FROM e_clientes ec LEFT JOIN clientes c ON c.id = ec.cliente_id`);
+    const porCliente = new Map();
+    for (const r of (clientesRows || [])) {
+      const admin = r.a_id
+        ? { nombre: r.a_nombre, telefono: r.a_telefono, correo: r.a_correo }
+        : null;
+      porCliente.set(r.id, datosCliente(r, admin));
+    }
+
+    // Entregables de todas las entregas en una sola pasada, agrupados en memoria.
+    const { results: itemsRows } = await query(db,
+      `SELECT eb.*, (SELECT COUNT(*) FROM e_archivos a WHERE a.e_entregable_id = eb.id) AS num_archivos
+       FROM e_entregables eb ORDER BY eb.e_entrega_id, eb.orden, eb.rowid`);
+    const porEntrega = new Map();
+    for (const r of (itemsRows || [])) {
+      if (!porEntrega.has(r.e_entrega_id)) porEntrega.set(r.e_entrega_id, []);
+      porEntrega.get(r.e_entrega_id).push(r);
+    }
+
     const salida = [];
     for (const e of lista) {
-      const cliente = await resolverCliente(db, e.e_cliente_id);
-      const items = await entregablesDe(db, e.id);
-      const folio = await folioDeEntrega(db, e);
-      const saldo = await saldoDeEntrega(db, e);
+      const cliente = porCliente.get(e.e_cliente_id) || { nombre: '' };
+      const items = porEntrega.get(e.id) || [];
+      const folio = e.c_folio || '';
+      const saldo = e.contrato_token ? e.c_saldo : null;
       salida.push({
         id: e.id, codigo: e.codigo, titulo: e.titulo, direccion: e.direccion,
         estado: e.estado, grupo: grupoDeEntrega(e.estado),
@@ -1245,6 +1444,10 @@ export async function handleEntregas(request, env, ctx, action) {
         fechaPublicada: e.fecha_publicada, fechaLiberada: e.fecha_liberada,
         fechaExpira: e.fecha_expira,
         diasRestantes: diasRestantes(e.fecha_expira, now()),
+        // Dias que le quedan al MATERIAL, no al acceso del cliente. Mientras esto
+        // sea >= 0 la entrega se rescata con "extender" y no hay que volver a subir
+        // nada. Es la unica pista de que existe la gracia: al cliente no se le dice.
+        diasParaBorrado: diasParaBorrado(e.fecha_expira, now()),
         saldo, pagadoManual: !!e.pagado_manual,
         entregables: items.map(i => ({ id: i.id, tipo: i.tipo, nombre: i.nombre,
                                        completo: !!i.completo, numArchivos: i.num_archivos })),

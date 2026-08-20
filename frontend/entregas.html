@@ -37,8 +37,10 @@ header{background:var(--paper-1);border-bottom:1px solid var(--line);position:st
 .hd{max-width:1180px;margin:0 auto;padding:var(--s4) var(--s6);display:flex;
   align-items:center;justify-content:space-between;gap:var(--s4);flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:var(--s3)}
-.brand .mark{width:30px;height:30px;border-radius:7px;background:var(--onyx);color:var(--gold-leaf);
-  display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:15px}
+/* Logo real de la marca. Antes era un cuadrito con las iniciales "IA" dibujadas
+   a mano; el logo de verdad ya vive en /assets. Variante oscura: el header de este
+   portal va sobre fondo claro. */
+.brand .mark{height:34px;width:auto;max-width:140px}
 .brand b{font-family:var(--font-display);font-weight:500;font-size:19px}
 .brand span{font-family:var(--font-mono);font-size:11px;color:var(--ink-3)}
 .tabs{max-width:1180px;margin:0 auto;padding:0 var(--s6);display:flex;gap:var(--s5);overflow-x:auto}
@@ -230,8 +232,9 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
   font-family:var(--font-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
   padding:3px 0;text-align:center;line-height:1.2;z-index:2}
 
-/* Las dos acciones, siempre a la vista. Escondidas tras el hover no existen: la
-   portada llevaba meses sin poder cambiarse porque nadie sabia que se podia. */
+/* Las acciones, siempre a la vista. Escondidas tras el hover no existen: la portada
+   llevaba meses sin poder cambiarse porque nadie sabia que se podia. En una foto son
+   tres (destacada, portada, reemplazar) y en un video una sola (reemplazar). */
 .accs{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;gap:6px;
   padding:7px;justify-content:flex-end;
   background:linear-gradient(to top,rgba(16,13,8,.62),rgba(16,13,8,0))}
@@ -248,6 +251,12 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .accs button.on:hover{background:var(--gold-hi)}
 /* El contador dice cuantas van y cuantas caben, para no tener que ir contando
    anillos dorados en una cuadricula de 50. */
+/* R136 — Aviso de reemplazo en vuelo. Ambar y no verde: no es que algo este
+   listo, es que algo esta a medias y todavia se puede cancelar. */
+.reemp{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 0;
+  padding:10px 12px;border:1px solid #E7D3A6;background:#FDF7E8;border-radius:9px}
+.reemp b{font-size:12.5px;color:#7A5B12}
+.reemp span{flex:1;min-width:180px;font-size:12px;color:var(--ink-2)}
 .dcount{display:flex;align-items:center;gap:8px;margin:var(--s3) 0 0 38px;
   font-size:12px;color:var(--ink-2)}
 .dcount b{font-family:var(--font-mono);font-weight:500;color:var(--ink-1)}
@@ -348,8 +357,8 @@ tr:last-child td{border-bottom:none}
   <header>
     <div class="hd">
       <div class="brand">
-        <span class="mark">IA</span>
-        <div><b>Entregas</b> <span>Inmuebles Audiovisuales</span></div>
+        <img class="mark" src="/assets/logo.svg" alt="Inmuebles Audiovisuales">
+        <b>Entregas</b>
       </div>
       <div class="buscar" id="buscarBox">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -646,7 +655,12 @@ function pintarDetalle(){
   }[e.estado] || '';
 
   var items = ACT.entregables.map(function(i){
-    var arch = ACT.archivos.filter(function(a){ return a.e_entregable_id === i.id; });
+    var todosArch = ACT.archivos.filter(function(a){ return a.e_entregable_id === i.id; });
+    // R136 — Un reemplazo en vuelo NO es un archivo mas del entregable: es una
+    // version esperando a entrar. Si contara en la cuadricula, reemplazar se veria
+    // igual que subir un duplicado, que es justo lo que se quiso evitar.
+    var pendientes = todosArch.filter(function(a){ return !!a.reemplaza_a; });
+    var arch = todosArch.filter(function(a){ return !a.reemplaza_a; });
     var det = i.tipo === 'enlace'
       ? (i.valor ? esc(i.valor) : 'pega la liga')
       : (arch.length ? arch.length + ' archivo' + (arch.length===1?'':'s') : 'sin archivos');
@@ -659,6 +673,15 @@ function pintarDetalle(){
         ? '<button class="btn btn-ghost btn-sm" onclick="modoQuitar(\'' + i.id + '\')">Quitar archivos</button>' : '') +
       '<button class="quitar" title="Quitar este entregable" onclick="borrarEntregable(\'' + i.id + '\')">Quitar</button>' +
       '</div>';
+    pendientes.forEach(function(a){
+      var viejo = archivoDe(a.reemplaza_a);
+      h += '<div class="reemp">' +
+        '<b>Reemplazando' + (viejo ? ' ' + esc(viejo.nombre) : '') + '</b>' +
+        '<span>' + esc(a.nombre) + ' se está preparando. El cliente sigue viendo la ' +
+          'versión anterior hasta que quede lista.</span>' +
+        '<button class="btn btn-ghost btn-sm" onclick="cancelarReemplazo(\'' + a.id + '\')">' +
+          'Cancelar</button></div>';
+    });
     if(i.tipo === 'enlace'){
       h += '<div class="urlrow">' +
         '<input type="url" id="lk-' + i.id + '" value="' + esc(i.valor || '') + '" placeholder="https://…">' +
@@ -706,7 +729,10 @@ function pintarDetalle(){
               '</button>';
           }
           if(esVid){
-            return '<div class="tira vid" title="' + tit + '">' + icoVid + '</div>';
+            return '<div class="tira vid" title="' + tit + '">' + icoVid +
+              '<span class="accs"><button onclick="reemplazar(\'' + a.id + '\')" ' +
+                'title="Reemplazar por una versión nueva">' + ICO_REEMP + '</button></span>' +
+              '</div>';
           }
           // La portada cuenta como destacada, asi que su palomita va prendida y
           // apagarla desde aqui no tendria a donde llevar la cabecera: el servidor
@@ -723,6 +749,8 @@ function pintarDetalle(){
                 'title="' + (esPort ? 'Es la portada' : 'Usar como portada') + '">' +
                 '<svg width="15" height="15" viewBox="0 0 24 24" fill="' + (esPort ? 'currentColor' : 'none') +
                 '" stroke="currentColor" stroke-width="2"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></button>' +
+              '<button onclick="reemplazar(\'' + a.id + '\')" title="Reemplazar por una versión nueva">' +
+                ICO_REEMP + '</button>' +
             '</span></div>';
         }).join('') + '</div>';
 
@@ -872,7 +900,7 @@ function elegidos(entregableId, tipo, files){
 // deja de aceptar TODO por un rato: no es que el archivo tenga nada malo. Sin esto,
 // un tropiezo momentaneo se lleva por delante las 40 fotos que faltaban.
 // La espera crece (1s, 2s, 4s) para darle tiempo a recuperarse.
-async function subirUnaFoto(entregableId, f){
+async function subirUnaFoto(entregableId, f, reemplazaA){
   var ultimo = '';
   for(var intento = 0; intento < 4; intento++){
     if(intento) await new Promise(function(r){ setTimeout(r, 1000 * Math.pow(2, intento - 1)); });
@@ -880,6 +908,7 @@ async function subirUnaFoto(entregableId, f){
     fd.append('entregableId', entregableId);
     fd.append('nombre', f.name);
     fd.append('original', f, f.name);
+    if(reemplazaA) fd.append('reemplazaA', reemplazaA);
     var r;
     try {
       r = await fetch('/api/e/subirFoto', {
@@ -1133,14 +1162,15 @@ function medirVideo(file){
   });
 }
 
-async function subirVideo(entregableId, file){
+async function subirVideo(entregableId, file, reemplazaA){
   subiendo = true;
   try {
     progreso(entregableId, 0, 'Preparando ' + file.name + '…');
     var dim = await medirVideo(file);
     var ini = await api('videoIniciar', { body: {
       entregableId: entregableId, nombre: file.name,
-      mime: file.type || 'video/mp4', bytes: file.size } });
+      mime: file.type || 'video/mp4', bytes: file.size,
+      reemplazaA: reemplazaA || '' } });
 
     var partes = [], n = 1, subido = 0;
     for(var off = 0; off < file.size; off += TAM_PARTE){
@@ -1162,14 +1192,76 @@ async function subirVideo(entregableId, file){
       archivoId: ini.archivoId, key: ini.key, uploadId: ini.uploadId,
       partes: partes, ancho: dim.ancho, alto: dim.alto } });
     progreso(entregableId, null);
-    toast(fin.conMarca ? 'Video subido y marcándose' : 'Video subido (Stream no respondió)',
-          !fin.conMarca);
+    if(reemplazaA){
+      // El cambio no es inmediato: Stream tarda en codificar y hasta entonces el
+      // cliente sigue viendo la version anterior. Se dice explicitamente para que
+      // nadie crea que fallo al ver la vieja todavia en la galeria.
+      try { await api('revisarReemplazos', { body: {} }); } catch(e){}
+      toast('Version nueva subida. Entra en cuanto Stream la codifique; mientras tanto ' +
+            'el cliente sigue viendo la anterior.');
+    } else {
+      toast(fin.conMarca ? 'Video subido y marcándose' : 'Video subido (Stream no respondió)',
+            !fin.conMarca);
+    }
   } catch(e){
     progreso(entregableId, null);
     toast('Falló la subida: ' + e.message, true);
   }
   subiendo = false;
   await abrir(ACT.entrega.id);
+}
+
+// R136 — Reemplazar una version por otra sin dejar dos subidas.
+// El archivo nuevo entra apuntando al viejo y NO se le muestra al cliente hasta
+// que esta listo; recien ahi se hace el cambio y el viejo se borra con su material.
+// Asi nunca hay dos versiones a la vista ni un hueco sin video.
+var ICO_REEMP = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" ' +
+  'stroke="currentColor" stroke-width="2.2"><path d="M4 9h11l-3-3M20 15H9l3 3"/></svg>';
+
+function reemplazar(archivoId){
+  var a = archivoDe(archivoId);
+  if(!a) return;
+  var esVid = /^video\//.test(a.mime || '');
+  // Si la entrega ya esta liberada, el cliente pudo haber bajado la version vieja.
+  // Reemplazar no se la quita, pero su liga empieza a dar la nueva sin avisarle.
+  if(ACT && ACT.entrega && ACT.entrega.estado === 'liberada'){
+    if(!confirm('Esta entrega ya está liberada.\n\nSi el cliente ya descargó ' +
+       'este archivo, se queda con la versión anterior, y de aquí en adelante su ' +
+       'liga le va a dar la nueva sin avisarle.\n\n¿Reemplazar de todos modos?')) return;
+  }
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = esVid ? 'video/*' : 'image/*';
+  inp.onchange = function(){
+    var f = inp.files && inp.files[0];
+    if(!f) return;
+    if(subiendo) return toast('Espera a que termine la subida en curso', true);
+    if(esVid) subirVideo(a.e_entregable_id, f, archivoId);
+    else      reemplazarFoto(a.e_entregable_id, f, archivoId);
+  };
+  inp.click();
+}
+
+async function reemplazarFoto(entregableId, f, archivoId){
+  subiendo = true;
+  progreso(entregableId, 40, 'Subiendo ' + f.name + '…');
+  try {
+    await subirUnaFoto(entregableId, f, archivoId);
+    // Una foto no pasa por Stream, pero si necesita su CRC antes de entrar (lo
+    // exige el ZIP). Se pide la revision por si ya lo tiene; si no, entra sola.
+    try { await api('revisarReemplazos', { body: {} }); } catch(e){}
+    toast('Versión nueva subida');
+  } catch(e){
+    toast('Falló el reemplazo: ' + e.message, true);
+  }
+  progreso(entregableId, null);
+  subiendo = false;
+  await abrir(ACT.entrega.id);
+}
+
+function cancelarReemplazo(archivoId){
+  if(!confirm('¿Descartar esta versión nueva? La anterior se queda como está.')) return;
+  accion('cancelarReemplazo', { archivoId: archivoId }, 'Reemplazo descartado');
 }
 
 function borrarArchivo(archivoId){

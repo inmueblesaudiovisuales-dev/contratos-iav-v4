@@ -8,6 +8,51 @@
 
 ---
 
+### R136 — reemplazar una versión, y 3 días de gracia antes de borrar (2026-08-20)
+
+Dos cambios. 102 tests verde. NO se tocó el adapter.
+
+**1. Reemplazar un archivo por una versión nueva.** Antes, cambiar un video era borrar el
+viejo y subir el nuevo. Si subías primero, el cliente veía **dos videos**; si borrabas
+primero, quedaba una ventana con la entrega sin video y el entregable incompleto — y si ya
+estaba publicada, el cliente caía justo ahí.
+
+Ahora la versión nueva entra como un renglón propio que apunta al viejo con `reemplaza_a`.
+Mientras se prepara **no se le manda al cliente** y el viejo se sigue sirviendo. Cuando está
+lista se hace el cambio, el nuevo hereda el lugar del viejo (orden, portada, destacado) y el
+viejo se borra con su material. Si la subida falla, se tira el renglón nuevo y no pasó nada.
+
+Es el mismo patrón que ya usaba la copia limpia al liberar: apuntar al uid viejo hasta que
+`streamListo()` confirme el nuevo. Lo consuma `confirmarReemplazos()` desde el cron de 2
+minutos, y `revisarReemplazos` lo fuerza para que el portal no espere.
+
+**La trampa: una foto no está lista cuando se sube.** El ZIP se arma con los CRC
+precalculados y se niega a salir si a alguna le falta (409). Meter una foto sin CRC le
+rompería el "descargar todo" al cliente, así que el reemplazo de foto también espera —
+no a Stream, sino a su CRC.
+
+**2. El material se borra a los 17 días, no a los 14.** Al cliente **no se le dice**: sigue
+viendo 14 días y a los 14 se le cierra la galería. Lo único que cambia es cuándo se tiran los
+bytes. Los 3 de gracia son para el caso de "no lo guardé": entre el 14 y el 17 se reabre con
+extender y no hay que volver a subir nada.
+
+Son dos relojes y no hay que confundirlos: `fecha_expira` manda sobre lo que ve el cliente y
+no cambió; `debeBorrarse()` manda sobre el barrido. Si la gracia se le anunciara al cliente
+dejaría de ser gracia — guardaría a los 17 y volveríamos a empezar.
+
+> **Requiere migración ANTES de desplegar:**
+> ```
+> cd worker && wrangler d1 execute contratos-iav-v4 --remote --file=migrations/r136-reemplazo-archivos.sql
+> ```
+> El código consulta `reemplaza_a` en el payload del cliente. Si se despliega antes de correr
+> esto, **todas las galerías fallan**. Migración primero, push después.
+
+**Pendiente relacionado:** el barrido sólo mira entregas en `liberada`. Una `publicada` que
+nunca se pagó, o una `pausada` que se olvidó, se quedan en R2 para siempre. `sinPagar` las
+lista pero no borra nada.
+
+---
+
 ### R135 — el video también lleva la marca nueva (2026-08-18 04:20:00 CST)
 
 Los videos se quedaron con la marca vieja (logo al centro, casi invisible) cuando las

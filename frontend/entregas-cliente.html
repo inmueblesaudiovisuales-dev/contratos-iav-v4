@@ -28,8 +28,11 @@ img{display:block;max-width:100%}
   min-height:100vh}
 
 header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;justify-content:center}
-.logo{font-family:var(--font-display);font-size:14px;color:var(--paper-0);letter-spacing:.03em}
-.logo em{font-style:normal;color:var(--gold-leaf)}
+/* Logo real de la marca (websiteinmuebles/logo-invertido.svg, servido local).
+   Antes habia TEXTO simulando el logo: el cliente veia una tipografia que no es la
+   de la marca. La variante invertida es la que va sobre fondo oscuro y trae el
+   dorado #ad8e63. Alto 44px: la misma medida que usa el nav del sitio. */
+.logo{height:44px;width:auto;max-width:180px}
 .hair{height:1px;background:var(--gold-leaf);opacity:.55}
 
 /* El hero es SIEMPRE una foto (la que Bruno eligio como portada). El video ya no
@@ -199,7 +202,7 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
   </div>
 
   <div id="contenido" style="display:none">
-    <header><span class="logo">Inmuebles <em>Audiovisuales</em></span></header>
+    <header><img class="logo" src="/assets/logo-invertido.svg" alt="Inmuebles Audiovisuales"></header>
     <div class="hair"></div>
 
     <div class="hero" id="hero">

@@ -4,6 +4,7 @@ import {
   generarCodigo, esCodigoValido, rutaPublica, codigoDeRuta, LARGO_CODIGO,
   clavesAcordadas, parsearAdicionales, entregablesSembrados,
   calcularExpiracion, diasRestantes, estaVencida, fechaLegible, OFFSET_MTY_MS,
+  debeBorrarse, fechaBorrado, diasParaBorrado, DIAS_GRACIA,
   entregaCompleta, faltantes, entregableCumplido,
   debeLiberarAlPagar, debeLiberarAlPublicar,
   datosCliente, grupoDeEntrega, ordenarEntregas, versionFotos
@@ -58,6 +59,17 @@ test('codigoDeRuta ignora rutas que no son entregas', () => {
   assert.equal(codigoDeRuta('/e/IAV-2608.08-A'), '');   // ruta de control, no publica
   assert.equal(codigoDeRuta('/'), '');
   assert.equal(codigoDeRuta(''), '');
+});
+
+// En el subdominio de entregas, index.js le pasa a codigoDeRuta CUALQUIER ruta que
+// no sea /api/. Si un archivo estatico se colara como codigo valido, la peticion
+// devolveria el HTML de la galeria en vez del archivo: el logo del header dejaria de
+// cargar en la pagina del cliente y el sintoma no apuntaria al router.
+test('codigoDeRuta no se traga los assets del sitio', () => {
+  assert.equal(codigoDeRuta('/assets/logo.svg'), '');
+  assert.equal(codigoDeRuta('/assets/logo-invertido.svg'), '');
+  assert.equal(codigoDeRuta('/assets/tabler-icons.css'), '');
+  assert.equal(codigoDeRuta('/favicon.ico'), '');
 });
 
 test('el enlace del cliente sobrevive a que cambie el folio', () => {
@@ -190,6 +202,56 @@ test('estaVencida usa el instante exacto del corte', () => {
   assert.equal(estaVencida(exp, '2026-08-26T05:59:58.000Z'), false);
   assert.equal(estaVencida(exp, '2026-08-26T06:00:00.000Z'), true);
   assert.equal(estaVencida(null, '2026-08-26T06:00:00.000Z'), false);
+});
+
+// ── Gracia antes del borrado (14 visibles, 17 reales) ─────────────────────────
+
+test('la gracia son 3 dias sobre la fecha que ve el cliente', () => {
+  assert.equal(DIAS_GRACIA, 3);
+  const exp = calcularExpiracion('2026-08-11T08:00:00.000Z', 14); // 2026-08-26T05:59:59Z
+  // 3 dias exactos, conservando el corte a las 23:59:59 de Monterrey.
+  assert.equal(fechaBorrado(exp), '2026-08-29T05:59:59.000Z');
+  // Equivale a haber liberado con 17 dias de vigencia.
+  assert.equal(fechaBorrado(exp), calcularExpiracion('2026-08-11T08:00:00.000Z', 17));
+});
+
+test('vencida para el cliente NO significa borrada', () => {
+  const exp = calcularExpiracion('2026-08-11T08:00:00.000Z', 14);
+  // Dia 15: el cliente ya no entra, pero el material sigue ahi. Es justo la ventana
+  // en la que "no lo guarde" se resuelve extendiendo, sin volver a subir nada.
+  assert.equal(estaVencida(exp, '2026-08-27T12:00:00.000Z'), true);
+  assert.equal(debeBorrarse(exp, '2026-08-27T12:00:00.000Z'), false);
+});
+
+test('debeBorrarse usa el instante exacto del corte de gracia', () => {
+  const exp = calcularExpiracion('2026-08-11T08:00:00.000Z', 14);
+  assert.equal(debeBorrarse(exp, '2026-08-29T05:59:58.000Z'), false);
+  assert.equal(debeBorrarse(exp, '2026-08-29T06:00:00.000Z'), true);
+});
+
+test('sin fecha de expiracion no se borra nada', () => {
+  // Un borrador o una publicada no tienen reloj: el barrido no debe tocarlos.
+  assert.equal(debeBorrarse(null, '2027-01-01T00:00:00.000Z'), false);
+  assert.equal(debeBorrarse('', '2027-01-01T00:00:00.000Z'), false);
+  assert.equal(fechaBorrado(null), null);
+  assert.equal(diasParaBorrado(null, '2027-01-01T00:00:00.000Z'), null);
+});
+
+test('diasParaBorrado le dice a Bruno si todavia alcanza a rescatar', () => {
+  const exp = calcularExpiracion('2026-08-11T08:00:00.000Z', 14);
+  // El 25 el cliente esta en su ultimo dia (diasRestantes 0) y al material le
+  // quedan 3: los dos relojes corren a la vez, desfasados por la gracia.
+  assert.equal(diasParaBorrado(exp, '2026-08-25T12:00:00.000Z'), 3);
+  assert.equal(diasRestantes(exp, '2026-08-25T12:00:00.000Z'), 0);
+  assert.equal(diasParaBorrado(exp, '2026-08-28T12:00:00.000Z'), 0);   // se borra hoy
+  assert.equal(diasParaBorrado(exp, '2026-08-29T12:00:00.000Z'), -1);  // ya se fue
+});
+
+test('la gracia no se le filtra al cliente por diasRestantes', () => {
+  // Lo que ve el cliente sigue colgando de fecha_expira. Si esto cambiara, el
+  // colchon dejaria de ser colchon: sabria que tiene 17 y guardaria a los 17.
+  const exp = calcularExpiracion('2026-08-11T08:00:00.000Z', 14);
+  assert.equal(diasRestantes(exp, '2026-08-11T08:00:00.000Z'), 14);
 });
 
 test('fechaLegible muestra el dia local, no el UTC', () => {

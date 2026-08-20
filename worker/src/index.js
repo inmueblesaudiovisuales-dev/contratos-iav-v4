@@ -146,7 +146,9 @@ export default {
     ctx.waitUntil(syncToSheets(env));
     ctx.waitUntil(backupChecklistToR2(env));
     // R129 — Vacia el material de las entregas vencidas. Si esto deja de correr,
-    // R2 crece para siempre y la promesa de los 14 días deja de cumplirse.
+    // R2 crece para siempre. Borra a los 17 días, no a los 14: al cliente se le
+    // cierra la galería a los 14 (eso lo decide fecha_expira, no este cron) y los
+    // 3 de gracia son para poder reabrirle sin volver a subir. Ver DIAS_GRACIA.
     ctx.waitUntil(
       expirarEntregas(env).catch(e => console.error('R129 expirarEntregas falló:', e.message))
     );

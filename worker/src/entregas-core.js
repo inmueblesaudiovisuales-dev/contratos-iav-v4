@@ -138,6 +138,47 @@ export function estaVencida(fechaExpiraISO, ahoraISO) {
   return Number.isFinite(fin) && Number.isFinite(hoy) && hoy > fin;
 }
 
+// ── Gracia antes de tirar los bytes ───────────────────────────────────────────
+// Al cliente se le acaba el acceso a los 14 dias y eso NO cambia: fecha_expira
+// sigue mandando sobre la galeria, la descarga y el mosaico. Lo que cambia es
+// cuando se borra el material de R2 y de Stream, que ahora ocurre 3 dias despues.
+//
+// El margen existe para un caso real: "no lo guarde, ¿me lo puedes volver a abrir?".
+// Dentro de la gracia eso se resuelve con extender — el material sigue ahi y no hay
+// que volver a subir nada. Pasada la gracia, hay que subirlo todo otra vez.
+//
+// NO se le anuncia al cliente, a proposito. Si supiera que son 17 no guardaria a los
+// 14, y el colchon se convertiria en la fecha real. Por eso nada de lo que ve el
+// cliente usa esta constante: solo la usa el barrido y la lista de Bruno.
+export const DIAS_GRACIA = 3;
+
+// Cuando le toca al barrido tirar el material. Se suman dias completos a un instante
+// que ya cae a las 23:59:59 de Monterrey, y Mexico no tiene horario de verano desde
+// 2022, asi que sumar 3x86400000 conserva la hora del corte.
+export function fechaBorrado(fechaExpiraISO, dias = DIAS_GRACIA) {
+  if (!fechaExpiraISO) return null;
+  const fin = new Date(fechaExpiraISO).getTime();
+  if (!Number.isFinite(fin)) return null;
+  return new Date(fin + dias * 86400000).toISOString();
+}
+
+// El barrido pregunta por ESTO, no por estaVencida(). Una entrega vencida hace un dia
+// ya no se ve, pero todavia se puede rescatar.
+export function debeBorrarse(fechaExpiraISO, ahoraISO, dias = DIAS_GRACIA) {
+  const limite = fechaBorrado(fechaExpiraISO, dias);
+  if (!limite) return false;
+  const hoy = new Date(ahoraISO || Date.now()).getTime();
+  return Number.isFinite(hoy) && hoy > new Date(limite).getTime();
+}
+
+// Dias que le quedan al MATERIAL, para que Bruno sepa si todavia alcanza a rescatarlo.
+// 0 = se borra hoy. Negativo = ya se borro (o esta por borrarse en el proximo barrido).
+export function diasParaBorrado(fechaExpiraISO, ahoraISO, dias = DIAS_GRACIA) {
+  const limite = fechaBorrado(fechaExpiraISO, dias);
+  if (!limite) return null;
+  return diasRestantes(limite, ahoraISO);
+}
+
 const MESES = ['enero','febrero','marzo','abril','mayo','junio',
                'julio','agosto','septiembre','octubre','noviembre','diciembre'];
 

@@ -86,6 +86,10 @@ contratos-iav-v4/
 ```
 
 > **Archivos no productivos** (no forman parte del sistema vivo, no están en el mapa de relaciones):
-> `frontend/admin-v4-backup.html` y `frontend/portal-v4-backup.html` (respaldos previos al rediseño),
 > `frontend/chat.html` (mockup; ver `docs/CHAT_PRODUCCION.md` para su plan de productivización),
 > `frontend/checklist-demo.js` (demo) y `frontend/checklist-logic.test.js` (tests de `checklist-logic.js`).
+
+> Los respaldos `admin-v4-backup.html` / `portal-v4-backup.html` se borraron. `frontend/` es el
+> directorio de assets del Worker, así que todo lo que vive ahí se publica en internet: los dos
+> respaldos se servían completos, y el de admin traía además la contraseña dentro. El historial
+> de git ya los conserva, que es donde debe vivir un respaldo.
