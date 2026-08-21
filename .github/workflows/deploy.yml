@@ -12,8 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     name: Tests
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       # Logica del Worker: entregas-core, entregas-media, entregas-zip.
@@ -29,14 +29,21 @@ jobs:
     name: Deploy
     needs: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: worker
-          # R129 — Fijar la version es obligatorio. La que trae la accion por
-          # defecto no entiende el binding [images] y lo DESCARTA EN SILENCIO:
-          # el deploy sale verde y la galeria del cliente se cae con
-          # "Cannot read properties of undefined (reading 'input')".
-          wranglerVersion: '4.120.1'
+          # La version va FIJA, y tiene que ser 4.x. Con wrangler 3 el binding
+          # [images] no se entiende y se DESCARTA EN SILENCIO: el deploy sale verde
+          # y la galeria del cliente se cae con "Cannot read properties of undefined
+          # (reading 'input')". Eso fue lo que obligo a fijarla en R129, cuando la
+          # accion todavia instalaba wrangler 3 por defecto.
+          #
+          # Desde wrangler-action v4 el default ya es wrangler 4, asi que el peligro
+          # de origen desaparecio. Se sigue fijando por otra razon: que el deploy use
+          # exactamente la misma version que corre en la maquina de Bruno. Si se sube
+          # aqui, hay que subirla TAMBIEN en worker/package.json — si se despegan,
+          # lo que pruebas en local deja de ser lo que se despliega.
+          wranglerVersion: '4.125.0'
