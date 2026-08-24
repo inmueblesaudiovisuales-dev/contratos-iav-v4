@@ -132,7 +132,12 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 .tour p{font-size:12px;color:var(--ink-2);line-height:1.5}
 .copyrow{display:flex;align-items:center;gap:9px;margin-top:12px;padding-top:12px;
   border-top:1px solid var(--line)}
-.copyrow .u{flex:1;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);
+/* Las dos filas del bloque 360 —la liga y el codigo de insercion— comparten
+   forma: nombre de lo que se copia arriba y detalle abajo. La URL cruda sola no
+   decia para que servia, y el snippet es demasiado largo para mostrarlo entero. */
+.copyrow .lbl{flex:1;min-width:0;font-size:11.5px;color:var(--ink-2);line-height:1.35}
+.copyrow .lbl i{display:block;font-style:normal;font-size:10px;color:var(--ink-4);margin-top:2px}
+.copyrow .lbl i.u{font-family:var(--font-mono);color:var(--ink-3);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .btn{font-family:var(--font-ui);font-size:13.5px;font-weight:600;border-radius:9px;
@@ -183,6 +188,12 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 #estado p{font-size:13px;color:var(--ink-2);line-height:1.6;max-width:320px}
 #estado .marca{font-family:var(--font-display);font-size:15px;color:var(--ink-1);margin-bottom:6px}
 #estado .marca em{font-style:normal;color:var(--gold)}
+/* El bloque del recorrido tambien se pinta aqui cuando la entrega vencio. La
+   pantalla de estado centra y limita el ancho de sus parrafos, cosa que aplasta
+   la tarjeta: dentro de eExtra se vuelve al alineado normal. */
+#eExtra{width:100%;max-width:400px;text-align:left}
+#eExtra p{max-width:none}
+#eExtra .sect{margin-top:6px}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
   background:var(--onyx);color:#fff;padding:11px 18px;border-radius:999px;font-size:12.5px;
   font-weight:600;z-index:250;opacity:0;transition:.25s;pointer-events:none}
@@ -321,11 +332,12 @@ async function cargar(){
     return estado('Acceso en pausa',
       'El acceso a este material está en pausa. Escríbenos y con gusto te ayudamos.');
   if(D.estado === 'expirada'){
+    // El recorrido sigue vivo cuando fotos y video ya se retiraron, asi que aqui va
+    // el bloque COMPLETO, el mismo de la entrega viva. Antes solo habia un boton
+    // "Abrir": el cliente podia entrar al tour pero no copiar la liga ni el codigo,
+    // que es justo lo que necesita para pegarlo en su anuncio.
     var extra = D.tourUrl
-      ? '<p style="font-size:13px;color:var(--ink-2);line-height:1.6;max-width:300px">' +
-        'Tu recorrido 360° sigue disponible:</p>' +
-        '<a class="wa" style="border-color:var(--line-2);color:var(--ink-1);max-width:280px" ' +
-        'href="' + esc(D.tourUrl) + '" target="_blank" rel="noopener">Abrir recorrido 360°</a>'
+      ? '<h3 class="sect">Recorrido 360°</h3>' + bloqueTour()
       : '';
     return estado('El periodo de descarga terminó',
       'Las fotos y el video ya se retiraron. Si necesitas el material otra vez, escríbenos.',
@@ -428,12 +440,7 @@ function render(){
 
   // 4. El recorrido, que no expira y por eso se explica aparte.
   if(D.tourUrl){
-    h += '<div class="bloque"><h3 class="sect">Recorrido 360°</h3><div class="tour">' +
-      '<div class="fila"><div class="tx"><b>Tour virtual</b>' +
-      '<p>Vive en línea y <b style="display:inline">no expira</b>. Úsalo en tus anuncios cuando quieras.</p></div>' +
-      '<a class="btn btn-ghost" href="' + esc(D.tourUrl) + '" target="_blank" rel="noopener">Abrir</a></div>' +
-      '<div class="copyrow"><span class="u">' + esc(D.tourUrl) + '</span>' +
-      '<button class="mini" onclick="copiar360()">Copiar</button></div></div></div>';
+    h += '<div class="bloque"><h3 class="sect">Recorrido 360°</h3>' + bloqueTour() + '</div>';
   }
 
   h += '<a class="wa" href="' + esc(D.waLink || '#') + '" target="_blank" rel="noopener">' +
@@ -644,9 +651,53 @@ document.addEventListener('keydown', function(e){
   }, { passive: true });
 })();
 
+// La tarjeta del recorrido. Vive en una sola funcion porque se pinta en dos
+// pantallas —la entrega viva y la vencida— y tienen que ofrecer exactamente lo
+// mismo: abrir, copiar la liga y copiar el codigo de insercion.
+function bloqueTour(){
+  if(!D || !D.tourUrl) return '';
+  return '<div class="tour">' +
+    '<div class="fila"><div class="tx"><b>Tour virtual</b>' +
+    '<p>Úsalo en tus anuncios: copia la liga o insértalo en tu sitio web.</p></div>' +
+    '<a class="btn btn-ghost" href="' + esc(D.tourUrl) + '" target="_blank" rel="noopener">Abrir</a></div>' +
+    '<div class="copyrow"><span class="lbl">Liga para compartir a tus clientes' +
+    '<i class="u">' + esc(D.tourUrl) + '</i></span>' +
+    '<button class="mini" onclick="copiar360()">Copiar</button></div>' +
+    '<div class="copyrow"><span class="lbl">Código para tu sitio web' +
+    '<i>Pégalo en tu página de la propiedad</i></span>' +
+    '<button class="mini" onclick="copiarEmbed360()">Copiar código</button></div></div>';
+}
+
 function copiar360(){
   if(navigator.clipboard && D.tourUrl) navigator.clipboard.writeText(D.tourUrl);
   toast('Liga copiada');
+}
+
+// El codigo que el cliente pega en su sitio. Se arma con iframe y no con el
+// shareScript.js de CloudPano por dos razones: los constructores que usan las
+// inmobiliarias (Wix, EasyBroker, WordPress sin plugins) suelen borrar los
+// <script> y si permiten iframes; y el splash de CloudPano muestra el titulo
+// del tour, que es nuestro folio interno, mas su marca "powered by".
+// Los tours siempre son de CloudPano, asi que se puede normalizar la URL: si la
+// pegada trae parametros o utm, el cliente recibe la forma canonica limpia.
+function embed360(url){
+  var limpia = String(url || '');
+  var m = limpia.match(/cloudpano\.com\/tours\/([A-Za-z0-9_-]+)/);
+  if(m) limpia = 'https://app.cloudpano.com/tours/' + m[1];
+  // esc() tambien aqui: la forma canonica no lleva caracteres especiales, pero si
+  // la liga guardada no fuera de CloudPano cae al valor crudo, y un & o una
+  // comilla romperian el atributo del snippet que el cliente pega en su sitio.
+  return '<div style="position:relative;width:100%;aspect-ratio:16/9">\n' +
+    '  <iframe src="' + esc(limpia) + '"\n' +
+    '    style="position:absolute;inset:0;width:100%;height:100%;border:0"\n' +
+    '    allowfullscreen allow="vr;accelerometer;gyroscope;fullscreen"\n' +
+    '    title="Recorrido 360"></iframe>\n' +
+    '</div>';
+}
+
+function copiarEmbed360(){
+  if(navigator.clipboard && D.tourUrl) navigator.clipboard.writeText(embed360(D.tourUrl));
+  toast('Código copiado — pégalo en tu sitio');
 }
 
 document.addEventListener('DOMContentLoaded', cargar);
