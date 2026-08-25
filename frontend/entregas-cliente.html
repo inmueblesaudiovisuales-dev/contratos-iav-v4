@@ -698,7 +698,16 @@ function pintarVisor(){
     // un video vertical. El ancho se acota para que no se estire en escritorio.
     if(actual.ancho > 0 && actual.alto > 0){
       f.style.aspectRatio = actual.ancho + '/' + actual.alto;
-      if(actual.alto > actual.ancho) f.style.maxWidth = 'min(460px, 92vw)';
+      if(actual.alto > actual.ancho){
+        // Se manda el ALTO y se deja que el ancho salga de la proporcion. Acotar el
+        // ancho con max-width no basta: el alto lo topaba max-height y el marco
+        // quedaba mas ancho que el video, o sea barras negras otra vez — medido,
+        // 460x656 para un 9:16. Con height 100% y width auto, el marco mide
+        // exactamente lo que el video.
+        f.style.height = '100%';
+        f.style.width = 'auto';
+        f.style.maxWidth = 'min(460px, 92vw)';
+      }
     }
     f.src = 'https://' + D.streamCustomer + '.cloudflarestream.com/' + actual.uid + '/iframe';
     f.allow = 'accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;';
