@@ -223,6 +223,11 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-b
 .tira.pick{cursor:pointer}
 .tira.pick:hover{border-color:var(--gold-leaf)}
 .tira img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+/* R139c — El hueco de una foto que todavia no tiene su copia reducida. Ver el
+   comentario en el render: pedirla costaria mas de lo que vale. */
+.tira .prep{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:var(--paper-2);color:var(--ink-3);font-family:var(--font-mono);
+  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;text-align:center;padding:8px}
 /* Los dos estados se distinguen a simple vista y sin leer nada: la destacada trae
    un anillo, la portada el anillo grueso y su cinta. */
 .tira.dest{border:2px solid var(--gold-hi)}
@@ -721,9 +726,19 @@ function pintarDetalle(){
           // v= es la marca de version: sin ella el navegador se queda con la copia
           // marcada que guardo antes de liberar. Misma razon que en el portal del
           // cliente.
+          // R139c — Una foto SIN copia reducida obliga al Worker a bajar el original de
+          // 9 MB y transformarlo entero, y eso por CADA miniatura. Con 76 en pantalla
+          // son 76 de esas, y consumen el mismo CPU que necesita la preparacion:
+          // medido en produccion el 24 ago, 56 de 67 miniaturas murieron por CPU y se
+          // llevaron por delante las peticiones del boton "Preparar galeria". La
+          // pantalla saboteaba justo el trabajo que estaba esperando, y ademas esas
+          // miniaturas salian rotas de todos modos. Mientras no este lista se pinta un
+          // hueco: no cuesta nada y deja el Worker libre para prepararla.
           var mini = esVid ? ''
-            : '<img loading="lazy" decoding="async" alt="" src="/api/e/foto?a=' + a.id +
-              '&w=360&d=180&v=' + verFoto() + '&k=' + encodeURIComponent(KEY) + '">';
+            : (a.r2_key_web
+              ? '<img loading="lazy" decoding="async" alt="" src="/api/e/foto?a=' + a.id +
+                '&w=360&d=180&v=' + verFoto() + '&k=' + encodeURIComponent(KEY) + '">'
+              : '<span class="prep">Preparando</span>');
           var icoVid = esVid
             ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>' : '';
 
