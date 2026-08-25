@@ -1,4 +1,4 @@
-# Handoff — Sistema de Entregas (R129–R140)
+# Handoff — Sistema de Entregas (R129–R142)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
@@ -12,15 +12,16 @@
 > (la marca que no se quitaba tras liberar, y la galería de destacadas) · §9 la marca
 > de agua recalibrada el 18 ago · §23 la sesión del 24 ago (el recorrido 360 copiable
 > y los sets de fotos con galería o sin ella) · §24 el cron que moría de CPU ·
-> **§25 EL TECHO DE CPU: la cuenta está en Workers Free** — si ves preparaciones
-> atoradas, miniaturas rotas o 503, empieza ahí.
+> §25 el techo de CPU (resuelto) · **§26 la galería del cliente: peso, caché y video
+> vertical**.
 >
 > **Sin pendientes de migración.** `r133-destacadas.sql` y `r138-galeria-entregables.sql`
 > están aplicadas y verificadas en producción (§23.4).
 >
-> **Pendiente que importa:** contratar **Workers Paid** (~5 USD/mes). La cuenta está en
-> el plan gratuito, con 10 ms de CPU por petición, y este sistema pide ~90 ms. Es la
-> causa de fondo de todo §25.
+> **Workers Paid: contratado el 24 ago 2026.** Era el pendiente principal y ya está
+> resuelto — el techo pasó de 10 ms a 30 s por petición. Verificado: 14 transformaciones
+> nuevas seguidas, 14 de 14 en 200, y una foto gasta 32 ms medidos. Todo §25 se lee ahora
+> como historia, no como pendiente.
 
 ---
 
@@ -1724,9 +1725,14 @@ Esto explica, de una sola vez, todo lo que se vio esa tarde:
 `Ok` con **90 ms de CPU** mientras las peticiones normales morían. Traen su propia
 bolsa, mucho mayor. Durante horas el cron fue lo único que avanzaba.
 
-> **Pendiente real, y es lo único que arregla esto de fondo: contratar Workers Paid**
-> (~5 USD/mes). Sube el techo de 10 ms a 30 s. Todo lo de §25.2–§25.5 son parches que
-> siguen siendo buenos, pero pelean contra un techo que no debería estar ahí.
+> **RESUELTO el 24 ago 2026: Workers Paid contratado.** El techo pasó de 10 ms a 30 s.
+> Verificado tras el cambio: 14 transformaciones nuevas seguidas, 14 de 14 en 200 —la
+> misma prueba que antes daba 503 en 6 de 6— y una foto gasta **32 ms medidos**, o sea
+> que con el plan gratuito pedía tres veces lo permitido y nunca iba a caber.
+>
+> Lo de §25.2–§25.5 se queda: son buenos cambios por sí mismos. Lo que cambió es que
+> dejaron de ser parches contra un techo equivocado. Los lotes que se calibraron contra
+> los 10 ms se subieron después (§26.4).
 
 ### 25.2 El cron moría sin dejar rastro (R139)
 
@@ -1837,3 +1843,145 @@ Los cuatro anteriores quedan documentados en `wrangler.toml` y **no se borran**.
   fallidas**. Si fallara de verdad, quedarían marcadas.
 - **El límite se cruza por tamaño de archivo, no por número.** Estas fotos eran de 9 a
   16 MB. Si un día entran de 20, los lotes actuales pueden volver a no caber.
+
+---
+
+## 26. La galería del cliente: peso, caché y video vertical (24-25 ago 2026, R141–R142)
+
+Con el techo de CPU ya resuelto (§25.1), la queja pasó a ser otra: *"siento que se tarda
+en cargar"*. Resultó tener tres causas distintas, y una de ellas no era de rendimiento
+sino un defecto que llevaba tiempo afectando casi todas las entregas.
+
+### 26.1 El dato que ordena todo
+
+Misma foto, dos veces seguidas:
+
+| | Primera vez | Ya en caché |
+|---|---|---|
+| Hero (1200 px) | **2 331 ms** | **3 ms** |
+| Destacada (600 px) | **4 971 ms** | **3 ms** |
+
+Mil veces más rápido la segunda. **La pregunta no es cuánto tarda, es quién paga la
+primera.** Bruno abre el portal, se cachea, y a él ya le vuela. Pero el cliente casi
+siempre es el primero en pedir **sus** tamaños, así que se come la espera completa —
+y Bruno nunca ve lo que su cliente ve.
+
+### 26.2 El 2× regalado (lo que más pesó)
+
+`fotoUrl()` pedía `w = d * 2` **siempre**, sin mirar el `devicePixelRatio` real. El doble
+tiene sentido en una pantalla retina; en un monitor normal (dpr 1) pedía el doble de
+resolución de la que se puede ver. Y el doble de ancho son **cuatro veces** los píxeles.
+
+Medido en producción, en monitor normal:
+
+| | Antes | Ahora |
+|---|---|---|
+| Una destacada | 257 KB | **72 KB** |
+| El hero | 592 KB | **257 KB** |
+
+La primera pantalla pasa de ~2.1 MB a ~690 KB.
+
+Se añadió además una **escalera fija de anchos** (`ESCALERA_ANCHOS`) en vez del ancho
+exacto del contenedor. La llave del caché incluye el ancho: anchos arbitrarios son una
+llave por dispositivo y casi siempre camino frío. Con la escalera son pocas llaves, se
+comparten entre clientes y **se pueden calentar por adelantado**.
+
+> Si cambia `ESCALERA_ANCHOS` en `entregas-cliente.html`, tiene que cambiar
+> `ESCALERA_CALIENTE` en `routes/entregas.js`. Si se separan, se calienta lo que nadie
+> pide y el cliente sigue esperando.
+
+### 26.3 WebP: se hizo, y ahorró mucho menos de lo prometido
+
+Se estimó 25-35% y **el ahorro real es 8%**. Queda escrito porque la estimación era
+razonable y estuvo mal: los ahorros que se citan de WebP son sobre gráficos e imágenes
+planas, y estas son fotos de inmuebles con mucho detalle fino **y una marca de agua
+encima**. Ahí la ventaja se encoge.
+
+Se dejó puesto —8% gratis es 8%— pero no era el cambio importante. Se descartó AVIF a
+propósito: ahorraría más, pero su codificación se paga en el MISS, o sea en la primera
+carga del cliente, que es justo la que duele.
+
+Detalles que costaron: el formato va en la llave del caché (si no, el primero en pedir
+decide por todos y un navegador viejo se lleva un WebP que no sabe pintar), y el
+`Content-Type` estaba **fijo** en `image/jpeg` — habría mandado bytes WebP mal
+etiquetados.
+
+### 26.4 Preparar en paralelo, y calentar
+
+**El cuello nunca fue el CPU.** Un derivado gasta 90 ms de CPU y tarda 2 316 ms de
+reloj: el 96% del tiempo el Worker está parado esperando a R2. En serie esas esperas se
+suman; en paralelo se solapan. Se agregó `enTandas()` con alberca de 5 — y el límite real
+pasa a ser la **memoria del isolate** (128 MB), no el CPU: por eso 5 y no 20, aunque
+todo vaya por streams.
+
+Los lotes subieron de 3 a 12 en el cron y de 2 a 12 en el botón. Una entrega de 76 fotos
+pasó de más de una hora a ~15 min sola, y a cerca de un minuto con el botón.
+
+**Calentar** (`/api/e/calentar`) pide las fotos por adelantado en los anchos de la
+escalera, para que el cliente entre en caliente. Corre solo al terminar de preparar.
+
+> **No intentes que el Worker se pida las fotos a sí mismo.** Se probó: un Worker no
+> puede hacer `fetch` a su propia ruta —Cloudflare no lo reinvoca— y salieron **380
+> fallos de 380**, sin una sola subpetición en el log. Por eso el endpoint devuelve el
+> PLAN y el portal hace las peticiones. La escalera vive del lado del Worker para que
+> siga siendo una sola verdad.
+
+**Consecuencia operativa:** al cambiar la escalera, el caché anterior queda inservible
+—guarda medidas que ya nadie pide— y hay que volver a calentar las entregas vivas.
+
+### 26.5 Los videos verticales se veían mal (R142)
+
+No es rendimiento, es un defecto. **La mayoría de los videos de IAV son 9:16** —lo
+confirmó Bruno y lo respalda la base: 1512×2688 y 2160×3840 contra un solo 1920×1080— y
+el portal asumía 16:9 para todos:
+
+- La tarjeta estaba fija en `aspect-ratio:16/9` con `object-fit:cover`: de un vertical se
+  veía **una franja del centro**.
+- Peor, el reproductor: `.vmid iframe` también fijo en 16/9. Un 9:16 salía diminuto
+  entre dos barras negras enormes.
+
+**Las medidas ya estaban en la base**: las guarda la subida y las usa `perfilWatermark()`
+para elegir la marca horizontal o vertical. Solo faltaba mandarlas en el payload.
+
+Un tropiezo que costó dos intentos: al principio se acotó el **ancho** del reproductor,
+pero entre ese tope y el de `max-height` el marco dejaba de respetar la proporción y
+volvían las barras (medido: 460×656 para un 9:16, o sea 0.70 en vez de 0.563). La
+solución fue fijar el **alto** y dejar que el ancho saliera de la proporción. Verificado
+contra una entrega real: tarjeta y reproductor en 0.563 exacto.
+
+### 26.6 Prototipo de galería — decidido a medias
+
+Se armó un prototipo navegable (Propuesta / Diseño actual / Celular) con fotos reales.
+**No está en producción.** Vive en la pestaña y muere al recargar.
+
+El argumento central es medible, no de gusto: la galería usa **mosaico por columnas**
+(`column-count`), que llena de arriba abajo. Medido en el prototipo, en celular:
+
+| | Orden en que lo lee el ojo |
+|---|---|
+| Retícula regular | 2, 3, 4, 5, 6, 7 |
+| Mosaico actual | 2, **5**, 3, **6**, 4, 7 |
+
+El cliente ve la quinta foto en segundo lugar. **El recorrido con el que se fotografió la
+casa se pierde.** Y el mosaico existe para acomodar proporciones mezcladas — que aquí no
+hay: las 20 fotos medidas son **3:2 exacto**, todas horizontales.
+
+Lo demás de la propuesta: hero al 70% (hoy 420 px), barra de descarga fija, contador y
+teclado en el visor, y una foto a todo lo ancho cada tres filas.
+
+> **Dos correcciones que hizo Bruno y que quedaron en la propuesta:** el corte de "Ver
+> las 76" **no** era un parche técnico sino una decisión de producto —no abrumar—, y el
+> hero **se queda como foto**, no como video.
+
+> **La foto ancha es lo más frágil.** `grid-column:1/-1` solo cabe si la fila anterior
+> quedó completa; si no, la retícula la empuja abajo y **deja un hueco visible**. Pasó y
+> Bruno lo detectó. La posición no puede ser un número fijo: se calcula desde el número
+> de columnas del momento y se recalcula al redimensionar. Si algún día estorba, quitarla
+> es una línea.
+
+### 26.7 Lo que queda
+
+- **Decidir el rediseño** (§26.6) y, si va, portarlo al portal real.
+- **Si entran fotos verticales**, la retícula uniforme las recortaría. Hoy todas son 3:2.
+- **Si `pausada` debe mostrar el recorrido 360.** Hoy no lo muestra: pausar es cortar el
+  acceso a propósito. Sin decidir.
