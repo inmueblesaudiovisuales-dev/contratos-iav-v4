@@ -676,7 +676,7 @@ function montarMosaico(cont, fs, anchas){
   // la empuja abajo y deja un hueco visible.
   if (conAnchas) {
     var g = getComputedStyle(cont).gridTemplateColumns;
-    var colsReales = (g && g !== 'none') ? g.trim().split(/s+/).length : cols;
+    var colsReales = (g && g !== 'none') ? g.trim().split(/ +/).length : cols;
     periodo = colsReales * 3 + 1;
     var celdas = cont.querySelectorAll('.ph');
     for (var k = colsReales * 3; k < celdas.length; k += periodo) {
