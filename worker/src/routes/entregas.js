@@ -1824,6 +1824,32 @@ export async function handleEntregas(request, env, ctx, action) {
   }
 
   // ---- Transiciones ----
+  // R144 — Regresa una entrega a borrador. El ciclo solo sabia avanzar, y el caso que
+  // lo pidio es real: una entrega publicada que nunca se entrego porque fallaba, cuyo
+  // material se borro para volver a subirlo. Quedaba publicada con cero archivos, o sea
+  // con la liga viva mostrando una galeria vacia, y sin manera de retirarla.
+  //
+  // NO se permite desde 'liberada' ni 'expirada' a proposito: ahi ya corre el reloj de
+  // los 14 dias y el cliente pudo haber descargado. Retirar eso no es "seguir editando"
+  // sino revocar algo entregado, y si alguna vez hace falta merece su propia decision,
+  // no colarse por aqui.
+  if (action === 'volverBorrador') {
+    const { id } = await request.json();
+    const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [id]);
+    if (!e) return err('Entrega no encontrada', 404);
+    if (e.estado !== 'publicada' && e.estado !== 'pausada') {
+      return err('Solo se puede volver a borrador una entrega publicada o pausada, y ésta está ' +
+                 e.estado + '.', 400);
+    }
+    // fecha_publicada se limpia: `publicar` la conserva con COALESCE, y si no se
+    // borrara, republicar dejaria la fecha de la publicacion fallida.
+    await run(db,
+      `UPDATE e_entregas SET estado='borrador', fecha_publicada=NULL, fecha_pausada=NULL WHERE id=?`,
+      [id]);
+    await evento(db, id, 'borrador', 'Regresada a borrador desde ' + e.estado);
+    return ok({ ok: true, estado: 'borrador' });
+  }
+
   if (action === 'publicar') {
     const { id } = await request.json();
     const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [id]);

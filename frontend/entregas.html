@@ -610,8 +610,10 @@ function barraAccion(e, c, estadoPill){
     if(!ACT.completa){
       paso = '<span class="paso">Falta ' + esc((ACT.faltan || []).join(', ') || 'material') + '</span>';
     } else if(pend){
+      // R144 — Aqui SOLO se informa. El boton de preparar vive en el panel de la
+      // galeria, que es donde ademas se pinta la barra de avance y donde el texto
+      // explica que se hacen solas. Habia dos botones llamando a la misma funcion.
       paso = '<span class="paso">Galería sin preparar · <b>' + pend + '</b></span>';
-      botones = '<button class="btn btn-ghost btn-sm" onclick="prepararGaleria()">Preparar galería</button>';
     } else {
       paso = '<span class="paso">Todo listo</span>';
     }
@@ -621,7 +623,8 @@ function barraAccion(e, c, estadoPill){
     paso = (e.saldo != null && e.saldo > 0)
       ? '<span class="paso">Saldo <b>' + money(e.saldo) + '</b></span>'
       : '<span class="paso">Ya pagó</span>';
-    botones = '<button class="btn btn-ghost btn-sm" onclick="copiar(\'' + esc(e.rutaPublica || '') + '\')">Copiar liga</button>' +
+    botones = '<button class="btn btn-ghost btn-sm" onclick="volverBorrador()">Volver a borrador</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="copiar(\'' + esc(e.rutaPublica || '') + '\')">Copiar liga</button>' +
       '<button class="btn btn-primary btn-sm" onclick="liberar()">Liberar ahora</button>';
   } else if(e.estado === 'liberada'){
     paso = '<span class="paso">' +
@@ -1164,11 +1167,12 @@ function bloqueGaleria(){
       ' foto' + (fotos === 1 ? '' : 's') + '. Puedes cerrar la ventana.</p>' +
       '<button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="bajarZip()">Descargar las fotos (ZIP)</button></div>';
   }
-  // La preparacion la hace un cron cada minuto, de dos en dos. El boton solo la
-  // acelera: sirve cuando quieres publicar ya y no esperar media hora.
+  // La preparacion la hace un cron cada minuto, de doce en doce. El boton solo la
+  // acelera: sirve cuando quieres publicar ya y no esperar.
   return '<div id="gal">' +
-    '<p class="hint">Faltan <b>' + pend + '</b> por preparar. Se están haciendo solas, ' +
-    'aunque cierres la ventana (unas 2 por minuto).</p>' +
+    '<p class="hint">Faltan <b>' + pend + '</b> pasos por preparar. Se están haciendo ' +
+    'solas, aunque cierres la ventana. Con el botón van mucho más rápido y de paso se ' +
+    'deja la galería lista para el cliente.</p>' +
     '<button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="prepararGaleria()">Prepararlas ya</button>' +
     '</div>';
 }
@@ -1377,6 +1381,13 @@ async function prepararGaleria2(){
   preparando = false;
   if(!listo) toast('No se pudieron preparar todas las fotos', true);
   return listo;
+}
+// R144 — Retira una entrega publicada. Se pregunta porque la liga deja de servirle al
+// cliente: si ya se la mandaste, se le cae.
+function volverBorrador(){
+  if(!confirm('La entrega vuelve a borrador y su liga deja de mostrar el material.\n\n' +
+              'Si ya se la mandaste al cliente, va a ver que no está disponible.')) return;
+  accion('volverBorrador', { id: ACT.entrega.id }, 'De vuelta en borrador');
 }
 function liberar(){ accion('liberar', { id: ACT.entrega.id }, 'Liberada'); }
 function extender(){ accion('extender', { id: ACT.entrega.id, dias: 14 }, 'Vigencia extendida'); }
