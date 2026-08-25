@@ -67,11 +67,18 @@ STREAM_WATERMARK_UID_VERTICAL = "ff3919c145eb7bceee5538effaa3736f"
 [triggers]
 # Cada hora: sincronizacion, respaldo y expiracion de entregas.
 # Cada 2 minutos: preparar la galeria de lo que se acaba de subir, para que Bruno no
-# tenga que dejar la ventana abierta mirando una barra. Procesa de tres en tres:
-# cada uno decodifica un JPEG de 10 MB y pasarse revienta el CPU del Worker.
+# tenga que dejar la ventana abierta mirando una barra.
 # OJO: los cron de Cloudflare NO son puntuales: hay tramos de varios minutos sin
 # ninguna ejecucion y luego varias juntas.
-crons = ["0 * * * *", "*/2 * * * *"]
+#
+# R139d — Pasa a cada minuto. Medido el 24 ago 2026: el endpoint 'derivados' —el que
+# usa el boton "Preparar galeria"— contesta 503 "Worker exceeded resource limits" de
+# forma sostenida (6 de 6 intentos, siempre en ~200 ms, sin llegar a ejecutarse),
+# mientras el MISMO trabajo desde el cron sale en Ok con 90 ms de CPU. Las peticiones
+# normales y las ejecuciones programadas no tienen el mismo margen, asi que el camino
+# que de verdad termina el trabajo es este, no el boton. Cada minuto en vez de cada
+# dos lo hace el doble de rapido sin pedirle nada nuevo al Worker.
+crons = ["0 * * * *", "* * * * *"]
 
 # R130 — Pasa de route a custom_domain para que Cloudflare sea dueño del registro
 # DNS y lo mantenga. Como route, el DNS vivia aparte y quedo huerfano al agregar el

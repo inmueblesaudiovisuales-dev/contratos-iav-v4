@@ -137,10 +137,13 @@ export default {
     // event.cron con la cadena exacta del cron minutero y no se ejecutaba nunca;
     // asi ya no depende de que ese valor llegue como se espera.
     ctx.waitUntil(
-      // R139 — Baja de 3 a 1. Con 3 el cron moria con "Exceeded CPU Limit" en cada
-      // vuelta y no preparaba NADA: 64 fotos atoradas indefinidamente. Uno cada dos
-      // minutos son 30 por hora, que es infinitamente mas que cero.
-      prepararPendientes(env, 1).catch(e => console.error('R131 prepararPendientes falló:', e.message))
+      // R139 — Bajo de 3 a 1: con 3 el cron moria con "Exceeded CPU Limit" en cada
+      // vuelta y no preparaba NADA. Pero aquel 3 eran tres ARCHIVOS con sus dos
+      // trabajos cada uno, o sea seis; desde que las colas van separadas, tres son
+      // tres trabajos sueltos. Medido: un trabajo son 90 ms de CPU, asi que tres
+      // andan por 270 ms — la mitad de lo que reventaba. Con el cron ya en cada
+      // minuto (R139d), son 3 por minuto: 180 por hora contra las 30 de antes.
+      prepararPendientes(env, 3).catch(e => console.error('R131 prepararPendientes falló:', e.message))
     );
     // Lo pesado —sincronizacion, respaldo, expiracion— SOLO en el cron horario. Si
     // corriera cada minuto serian 60 sincronizaciones por hora sin ninguna razon.
