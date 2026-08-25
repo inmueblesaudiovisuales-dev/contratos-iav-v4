@@ -1974,25 +1974,17 @@ export async function handleEntregas(request, env, ctx, action) {
     // Se piden contra el propio Worker para pasar por EXACTAMENTE el mismo camino que
     // usara el cliente: mismo transform, misma marca, misma llave. Reimplementarlo
     // aqui seria una segunda verdad que se despega en cuanto alguien toque una.
-    const llavePropia = env.ENTREGAS_KEY || env.ADMIN_KEY || '';
-    const tareas = [];
-    for (const f of fotos) for (const w of lista) tareas.push({ id: f.id, w });
-    let ok200 = 0, fallos = 0;
-    await enTandas(tareas, async t => {
-      try {
-        // Va con la llave para poder calentar tambien en borrador, que es cuando de
-        // verdad conviene: se calienta ANTES de mandarle la liga al cliente. La llave
-        // NO forma parte de la llave del cache —esa lleva id, ancho, estado, version
-        // de marca y formato— asi que se puebla exactamente la entrada que el pedira.
-        // Y como no se mandan `m` ni `o`, no cuenta como variante de calibracion y sí
-        // escribe en el cache.
-        const r = await fetch(
-          `${url.origin}/api/e/foto?a=${t.id}&w=${t.w}&d=${Math.round(t.w / 2)}&v=cal`,
-          { headers: { Accept: 'image/webp,image/*,*/*', 'X-Entregas-Key': llavePropia } });
-        if (r.ok) { ok200++; await r.arrayBuffer(); } else fallos++;
-      } catch (ex) { fallos++; }
-    }, 4);
-    return ok({ ok: true, fotos: fotos.length, anchos: lista, calentadas: ok200, fallos });
+    // Devuelve el PLAN, no las imagenes: quien pide es el portal.
+    //
+    // Se intento que el Worker se pidiera las fotos a si mismo, para no depender de que
+    // nadie tenga el portal abierto. No funciona: un Worker no puede hacer fetch a su
+    // propia ruta —Cloudflare no lo reinvoca— y salieron 380 fallos de 380, sin una
+    // sola subpeticion en el log. Se deja aqui escrito para que nadie lo reintente.
+    //
+    // El plan vive aqui y no en el portal a proposito: la escalera de anchos tiene que
+    // ser UNA, y este es el lado que tambien la usaria si algun dia se calienta desde
+    // el cron.
+    return ok({ ok: true, anchos: lista, fotos: fotos.map(f => f.id) });
   }
 
   if (action === 'derivados') {

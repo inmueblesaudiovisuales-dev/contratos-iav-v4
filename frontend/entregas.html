@@ -1323,6 +1323,45 @@ async function publicar(){
 
 // Igual que prepararGaleria pero sin refrescar la vista al final: quien la llama
 // va a seguir trabajando sobre ACT y un re-render a media accion la deja coja.
+// R141 — Deja el caché del borde caliente para que el CLIENTE no pague el camino frío.
+// Medido: pedir una foto por primera vez cuesta de 0.6 a 5 s; ya en caché, 3 ms. Bruno
+// nunca ve el frío —cuando abre el portal ya quedó caliente— pero el cliente casi
+// siempre es el primero en pedir SUS tamaños y se lo come entero.
+//
+// Las peticiones salen de aquí y no del Worker porque un Worker no puede hacer fetch a
+// su propia ruta: se intentó y fueron 380 fallos de 380. El servidor solo dice QUÉ hay
+// que pedir; la escalera de anchos vive de aquel lado para que sea una sola.
+async function calentarGaleria(){
+  var plan = null;
+  try { plan = await api('calentar', { body: { entregaId: ACT.entrega.id } }); }
+  catch(e){ return; }
+  if(!plan || !plan.fotos || !plan.fotos.length) return;
+
+  var tareas = [];
+  plan.fotos.forEach(function(id){
+    (plan.anchos || []).forEach(function(w){ tareas.push({ id: id, w: w }); });
+  });
+  var hechas = 0;
+  pintarGaleria(barraGaleria(tareas.length, tareas.length));
+
+  // De cinco en cinco: son peticiones que el servidor atiende una por una y no tiene
+  // caso apurarlas mas. Los fallos no se reintentan — si una no se calienta, el cliente
+  // paga esa y ya; no vale la pena complicar el camino feliz por eso.
+  var i = 0;
+  async function obrero(){
+    while(i < tareas.length){
+      var t = tareas[i++];
+      try {
+        await fetch('/api/e/foto?a=' + encodeURIComponent(t.id) + '&w=' + t.w +
+          '&d=' + Math.round(t.w / 2) + '&v=cal&k=' + encodeURIComponent(KEY));
+      } catch(e){}
+      hechas++;
+      if(hechas % 5 === 0) pintarGaleria(barraGaleria(tareas.length - hechas, tareas.length));
+    }
+  }
+  await Promise.all([obrero(), obrero(), obrero(), obrero(), obrero()]);
+}
+
 async function prepararGaleria2(){
   if(preparando) return false;
   preparando = true;
@@ -1334,10 +1373,7 @@ async function prepararGaleria2(){
   // siempre es el primero en pedir los suyos, asi que se lo come entero — y Bruno
   // nunca lo ve, porque cuando el abre el portal ya quedo caliente. Calentar aqui
   // mueve esa espera de su cliente a esta pantalla, que es donde no molesta.
-  if(listo){
-    pintarGaleria('<p class="hint">Dejando la galería lista para el cliente…</p>');
-    try { await api('calentar', { body: { entregaId: ACT.entrega.id } }); } catch(e){}
-  }
+  if(listo) await calentarGaleria();
   preparando = false;
   if(!listo) toast('No se pudieron preparar todas las fotos', true);
   return listo;
