@@ -644,17 +644,14 @@ function montarMosaico(cont, fs, anchas){
   // la VENTANA con otro: en cuanto discrepen, la ancha cae a media fila y reaparece el
   // hueco. Preguntarle al navegador cuantas columnas pinto es la unica fuente que no
   // se puede despegar del CSS.
-  var colsReales = cols;
-  try {
-    var g = getComputedStyle(cont).gridTemplateColumns;
-    if (g && g !== 'none') colsReales = g.trim().split(/s+/).length;
-  } catch (e) {}
-  var periodo = colsReales * 3 + 1;
+  // Se miden DESPUES de montar, no antes: una reticula vacia todavia no tiene layout y
+  // getComputedStyle devolvia una sola columna. Con eso el periodo salia 4 y aparecia
+  // una ancha cada cuatro fotos — nueve de treinta y ocho. Se marcan al final.
+  var periodo = 0;
 
   fs.forEach(function(f, i){
-    var esAncha = conAnchas && i % periodo === colsReales * 3;
     var b = document.createElement('button');
-    b.className = 'ph' + (esAncha ? ' ancha' : '');
+    b.className = 'ph';
     b.setAttribute('aria-label', 'Ver ' + (f.nombre || 'foto'));
     b.onclick = (function(n){ return function(){ abrirFoto(n); }; })(todas.indexOf(f));
     var img = document.createElement('img');
@@ -667,11 +664,28 @@ function montarMosaico(cont, fs, anchas){
     img.decoding = 'async';
     img.alt = f.nombre || '';
     img.onload = function(){ img.className = 'ok'; };
-    // Una ancha ocupa la fila entera, asi que necesita el ancho del contenedor.
-    img.src = fotoUrl(f, esAncha ? caja : ancho);
+    img.src = fotoUrl(f, ancho);
     b.appendChild(img);
     cont.appendChild(b);
   });
+
+  // R143 — Ahora si: la reticula ya esta montada y el navegador puede decir cuantas
+  // columnas pinto. Una foto a todo lo ancho cada TRES FILAS llenas — con 2 columnas
+  // toca cada 7 y con 3 cada 10, por eso el numero sale de las columnas y no es fijo.
+  // `grid-column:1/-1` solo cabe si la fila anterior quedo completa; si no, la reticula
+  // la empuja abajo y deja un hueco visible.
+  if (conAnchas) {
+    var g = getComputedStyle(cont).gridTemplateColumns;
+    var colsReales = (g && g !== 'none') ? g.trim().split(/s+/).length : cols;
+    periodo = colsReales * 3 + 1;
+    var celdas = cont.querySelectorAll('.ph');
+    for (var k = colsReales * 3; k < celdas.length; k += periodo) {
+      celdas[k].className += ' ancha';
+      // Ocupa la fila entera, asi que necesita el ancho del contenedor.
+      var im = celdas[k].querySelector('img');
+      if (im) im.src = fotoUrl(fs[k], caja);
+    }
+  }
 
   // Red de seguridad. La carga diferida del navegador decide sola qué está "cerca
   // de la pantalla", y si la ventana reporta tamaño 0 concluye que nada lo está:
