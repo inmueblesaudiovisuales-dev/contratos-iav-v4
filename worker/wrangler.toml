@@ -54,12 +54,22 @@ ENTREGAS_BASE_URL = "https://entregas.inmueblesaudiovisuales.com"
 # NINGUNO se puede editar: cambiarlos obliga a reprocesar los videos ya subidos,
 # porque la marca se quema al codificar. Para hacer perfiles nuevos hay endpoints:
 # POST /api/e/crearWatermark y GET /api/e/watermarks.
-STREAM_WATERMARK_UID = "a6449a5380ebf5f3068679a5e5bfe918"
-STREAM_WATERMARK_UID_VERTICAL = "ff3919c145eb7bceee5538effaa3736f"
-# Los de antes (logo al centro, escala 0.45/0.85, opacidad 0.30). Se dejan vivos
-# porque los videos ya codificados con ellos siguen sirviendose:
-#   horizontal d537462dcedc9c326ff9e3c517b31e34
-#   vertical   08ab04bc1cc268a0ff86d910e5b7f179
+#
+# R140 (24 ago 2026) — Opacidad 0.35 -> 0.15, para igualar la marca nueva de las fotos.
+# Los PNG se regeneraron a partir del mosaico REAL que usan las fotos (bajado de
+# /api/e/marca, 1922x912) y no de una reconstruccion: el tile se dibuja al 93.75% del
+# ancho del cuadro, la misma fraccion que ANCHO_MARCA, y se repite hasta cubrirlo.
+# Asi un video y una foto de la misma entrega se ven igual.
+STREAM_WATERMARK_UID = "4e07f0699bbcf0d9cfbd8c03e593ccd4"
+STREAM_WATERMARK_UID_VERTICAL = "498ce8be25027059c2edad321d9875de"
+# Los anteriores. NINGUNO se borra: un perfil de Stream no se puede editar ni quitar
+# sin romper los videos que ya se codificaron con el, y la marca va quemada.
+#   R135, mosaico a 0.35:
+#     horizontal a6449a5380ebf5f3068679a5e5bfe918
+#     vertical   ff3919c145eb7bceee5538effaa3736f
+#   Antes de R135 (logo al centro, escala 0.45/0.85, opacidad 0.30):
+#     horizontal d537462dcedc9c326ff9e3c517b31e34
+#     vertical   08ab04bc1cc268a0ff86d910e5b7f179
 # ENTREGAS_KEY es opcional y va como secret (wrangler secret put ENTREGAS_KEY).
 #   Si no esta puesta, el portal de entregas acepta la ADMIN_KEY. Ponerla permite
 #   dar acceso a las entregas sin abrir el admin completo.
