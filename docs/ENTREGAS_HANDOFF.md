@@ -1834,8 +1834,9 @@ Los cuatro anteriores quedan documentados en `wrangler.toml` y **no se borran**.
 
 ### 25.7 Lo que queda anotado
 
-- **Contratar Workers Paid.** Es lo único que resuelve la causa. Todo lo demás son
-  parches buenos alrededor de un techo equivocado.
+- ~~Contratar Workers Paid.~~ **Hecho el 24 ago 2026.** Era la causa de fondo; lo demás
+  eran parches buenos alrededor de un techo equivocado. Los lotes que se calibraron
+  contra los 10 ms se subieron después (§26.4).
 - **`scratchpad/` no está versionado y ya costó caro.** `wm-video.mjs` y `tile.mjs`
   generan artefactos de producción y se perdieron. Esta vez se salvó porque
   `GET /api/e/marca` devuelve el mosaico vivo; la próxima puede no haber salida.
