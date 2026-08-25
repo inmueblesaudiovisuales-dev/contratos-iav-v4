@@ -1,4 +1,4 @@
-# Handoff — Sistema de Entregas (R129–R143)
+# Handoff — Sistema de Entregas (R129–R146)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
@@ -13,7 +13,8 @@
 > de agua recalibrada el 18 ago · §23 la sesión del 24 ago (el recorrido 360 copiable
 > y los sets de fotos con galería o sin ella) · §24 el cron que moría de CPU ·
 > §25 el techo de CPU (resuelto) · §26 la galería del cliente: peso, caché y video
-> vertical · **§27 la retícula regular (R143) y el bug del carácter perdido**.
+> vertical · §27 la retícula regular y el bug del carácter perdido · **§28 rehacer una
+> entrega: volver a borrador, destacadas y el consejo de Drive**.
 >
 > **Sin pendientes de migración.** `r133-destacadas.sql` y `r138-galeria-entregables.sql`
 > están aplicadas y verificadas en producción (§23.4).
@@ -246,6 +247,10 @@ Todo bajo `/api/e/`. **Público** = sin llave.
 | `estadoVideo` | GET | Si Stream ya terminó de codificar |
 | `borrarArchivo` | POST | Quita un archivo |
 | `publicar` / `liberar` / `marcarPagada` / `extender` / `pausar` / `borrar` | POST | Transiciones |
+| `volverBorrador` | POST | Retira una entrega publicada o pausada (R144, §28.1). No aplica a liberada ni expirada |
+| `derivados` | POST | Prepara pendientes: copia reducida y CRC. Lote hasta 12 (§26.4) |
+| `calentar` | POST | Devuelve el PLAN de anchos a pedir. **Las peticiones las hace el portal**, no el Worker (§26.4) |
+| `galeriaEntregable` | POST | Prende o apaga la galería de un set de fotos (R138, §23.2) |
 | `porExpirar` | GET | Lo que se borra en los próximos días |
 | `expirarAhora` | POST | Dispara la expiración a mano |
 | `sinPagar` | GET | Publicadas sin pagar, para la limpieza manual |
@@ -2061,3 +2066,80 @@ ofrece. Si algún día se quiere lo contrario, es una línea en `cargar()`.
 - **Si entran fotos verticales**, `object-fit:cover` las recortaría. Hoy todas son 3:2.
   Habría que decidir si una vertical ocupa dos filas o se acepta el recorte.
 - **La foto ancha se puede quitar** si algún día estorba: es una línea.
+
+---
+
+## 28. Rehacer una entrega (25 ago 2026, R144–R146)
+
+Bruno borró el material de una entrega publicada para volver a subirlo y probar el ciclo
+completo con los arreglos del día. Ese ejercicio destapó tres cosas.
+
+### 28.1 El ciclo solo sabía avanzar (R144)
+
+Se borraron los 77 archivos con `borrarArchivo` —que limpia R2 y Stream antes de tirar el
+renglón, por eso no quedaron huérfanos— y la entrega quedó **publicada con cero
+archivos**: la liga viva mostrando una galería vacía, y sin manera de retirarla.
+
+Se agrega `volverBorrador`. **Solo desde `publicada` o `pausada`.** Desde `liberada` o
+`expirada` no, a propósito: ahí ya corre el reloj de los 14 días y el cliente pudo haber
+descargado. Retirar eso no es seguir editando sino **revocar algo entregado**, y merece
+su propia decisión en vez de colarse por esta puerta.
+
+`fecha_publicada` se limpia: `publicar` la conserva con `COALESCE`, y sin limpiarla
+republicar dejaría la fecha de la publicación fallida.
+
+> Al borrar el material se conservan los **entregables**. Son los recipientes donde se
+> vuelve a subir; borrarlos obligaría a recrearlos a mano.
+
+**También se quitó un botón duplicado.** Había dos "Preparar galería" llamando a la misma
+función: uno en la barra de acción y otro en el panel de la galería. Se conserva el del
+panel —ahí se pinta la barra de avance y el texto explica que se hacen solas— y en la
+barra queda solo el conteo. De paso se corrigió ese texto, que decía "unas 2 por minuto"
+cuando desde R141b son doce.
+
+### 28.2 Elegir destacadas no servía de nada (R145)
+
+Bruno marcó seis y el portal siguió enseñando otras. **En la base estaban bien
+guardadas**; el fallo era al mostrarlas.
+
+`destacadasVisibles()` hacía `slice()` sobre la galería **en orden de subida** y usaba las
+marcadas solo para calcular **cuántas** mostrar. Marcar una foto cambiaba el número de
+huecos del muestrario, pero no qué foto ocupaba cada hueco.
+
+**Lo rompió R138.** Antes el `slice` salía de `fotos()`, que devuelve la lista ya ordenada
+con la portada primero y las destacadas después, así que cortar por el frente daba justo
+las marcadas. Al acotarlo al set principal se pasó a `galeriaPrincipal()`, que viene en
+orden de subida, y el `slice` dejó de significar lo mismo.
+
+> **Por qué sobrevivió tres rondas:** el síntoma solo aparece si alguien marca destacadas
+> **y se fija en cuáles salieron**. Con ninguna marcada el resultado es idéntico —las
+> primeras seis— y así se ve en cualquier entrega recién subida.
+
+Comportamiento correcto, probado en aislado con cinco escenarios:
+
+| Marcadas | Muestrario |
+|---|---|
+| Ninguna | las primeras 6 |
+| 3 | **las 3** + 3 de relleno |
+| 6 | las 6 |
+| 9 | **las 9** (no hay tope) |
+| todas | todas, y el botón "ver todas" desaparece |
+
+El piso de `DESTACADAS_VISIBLES` se conserva: al separar portada de destacada (r133) toda
+entrega existente quedó con **exactamente una** destacada, y sin relleno el muestrario
+saldría vacío.
+
+### 28.3 El consejo de Drive (R146)
+
+El portal avisaba que el material vence pero no decía qué hacer con esa información. En el
+recuadro de descarga va ahora una recomendación de subirlo a Google Drive.
+
+Dos decisiones de colocación, las dos deliberadas:
+
+- **Después de los botones**, no antes. Se lee cuando el cliente ya bajó su material;
+  puesto arriba sería un estorbo entre él y lo que vino a hacer.
+- **Sobre papel, no sobre el verde** del recuadro. Arriba ya está el aviso de
+  vencimiento; si esto también gritara serían dos alertas compitiendo.
+
+El texto explica el **porqué** —que el material se retira— y no solo da la orden. Un
+consejo sin razón se ignora.
