@@ -37,11 +37,16 @@ const LLAVE_MARCA_PREVIA = 'sistema/marca-agua-previa.png';
 // entrada cacheada por 24 h. Pasó al calibrar la marca el 18 ago — la nueva estaba bien
 // y la galeria seguia mostrando la vieja, y el hero (que pide otro ancho) todavia mas
 // tiempo. **Al recalibrar la marca hay que subir este numero.**
-const VERSION_MARCA = 2;
+const VERSION_MARCA = 3;
 // Calibrada por Bruno el 18 ago 2026 sobre fotos reales, comparando nueve variantes.
 // Bajó de 0.60: con el tile nuevo el texto es mucho más grande y lleva sombra, así que
 // menos opacidad se lee mejor que más opacidad sin sombra.
-const OPACIDAD_MARCA = 0.35;
+//
+// R140 (24 ago 2026) — De 0.35 a 0.15. Bruno la comparó sobre sus propias fotos con
+// ocho variantes (0.35 a 0.05 y sin marca), en claro y sobre fondo oscuro. A 0.35 la
+// marca competía con la foto; a 0.15 sigue siendo legible y deja ver el trabajo, que
+// es lo que el cliente vino a mirar. El tamaño NO cambia: sigue en ANCHO_MARCA.
+const OPACIDAD_MARCA = 0.15;
 // repeat tilea el PNG a su tamaño NATIVO, que en una foto de 1000px deja el texto
 // gigante. width es una fraccion del ancho de la foto.
 //
