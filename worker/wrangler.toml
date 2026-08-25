@@ -80,6 +80,15 @@ STREAM_WATERMARK_UID_VERTICAL = "ff3919c145eb7bceee5538effaa3736f"
 # dos lo hace el doble de rapido sin pedirle nada nuevo al Worker.
 crons = ["0 * * * *", "* * * * *"]
 
+# R139f — Sube el techo de CPU por peticion. Medido el 24 ago 2026: servir una foto
+# que no esta en el cache del borde muere con "Worker exceeded CPU time limit" —
+# leer la copia reducida, redimensionarla y DIBUJARLE el mosaico de la marca se pasa
+# por poco. Se nota porque unas pasan y otras no: en la galeria del portal, 65 fotos
+# se veian (venian del cache) y 11 salian rotas por ser las ultimas en prepararse y
+# no haberse guardado nunca. El trabajo no es excesivo, el techo estaba bajo.
+[limits]
+cpu_ms = 30000
+
 # R130 — Pasa de route a custom_domain para que Cloudflare sea dueño del registro
 # DNS y lo mantenga. Como route, el DNS vivia aparte y quedo huerfano al agregar el
 # custom domain de entregas: el hostname dejo de resolver y el admin se cayo.
