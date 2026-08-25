@@ -724,7 +724,15 @@ async function payloadPublico(db, env, entrega) {
     const hermanos = vids.filter(x => x.e_entregable_id === v.e_entregable_id);
     let nombre = (suyo && suyo.nombre) || 'Video';
     if (hermanos.length > 1) nombre += ' ' + (hermanos.indexOf(v) + 1);
-    base.videos.push({ id: v.id, uid, nombre, conMarca: uid === v.stream_uid });
+    // R142 — Las medidas viajan al portal. Ya estaban en la base (las guarda la subida
+    // y las usa perfilWatermark para elegir la marca horizontal o vertical), pero el
+    // payload no las mandaba, asi que la pagina asumia 16:9 para todo. La mayoria de
+    // los videos de IAV son 9:16 y salian recortados en la tarjeta y encajonados entre
+    // barras negras en el reproductor.
+    base.videos.push({
+      id: v.id, uid, nombre, conMarca: uid === v.stream_uid,
+      ancho: Number(v.ancho) || 0, alto: Number(v.alto) || 0
+    });
   }
   if (base.videos.length) {
     base.streamCustomer = env.STREAM_CUSTOMER_CODE || '';
