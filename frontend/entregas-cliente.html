@@ -285,6 +285,20 @@ function toast(m){var t=document.getElementById('toast');t.textContent=m;t.class
 // El ancho de despliegue (d) va aparte del servido (w) porque la marca de agua se
 // dibuja como fraccion del ancho SERVIDO: sin esto, la misma foto sale con el
 // mosaico grande en el hero y diminuto en una miniatura.
+// R141 — Los anchos que el servidor sirve y que se pueden calentar por adelantado.
+// Tiene que ser la MISMA lista que usa el portal de control al calentar: si se
+// separan, se calientan llaves que nadie pide y el cliente sigue pagando el camino
+// frio. Si algún día cambia, cambia en los dos lados.
+var ESCALERA_ANCHOS = [400, 600, 800, 1200, 1600, 2000, 2400];
+function anchoServido(display){
+  var dpr = Math.min(2, Number(window.devicePixelRatio) || 1);
+  var necesario = Math.round(display * dpr);
+  for(var i = 0; i < ESCALERA_ANCHOS.length; i++){
+    if(ESCALERA_ANCHOS[i] >= necesario) return ESCALERA_ANCHOS[i];
+  }
+  return ESCALERA_ANCHOS[ESCALERA_ANCHOS.length - 1];
+}
+
 function fotoUrl(f, display){
   if(!f || !f.id) return '';
   // Piso duro. Un ancho de 0 o negativo pide una foto imposible y el navegador se
@@ -292,11 +306,22 @@ function fotoUrl(f, display){
   // Vale más servir una foto de más que ninguna.
   var d = Math.round(Number(display));
   if(!isFinite(d) || d < 120) d = 375;
+  // R141 — Antes: w = d * 2, SIEMPRE. El doble tiene sentido en una pantalla retina,
+  // pero en un monitor normal (dpr 1) pedia el doble de resolucion de la que se puede
+  // ver — y el doble de ancho son CUATRO veces los pixeles, o sea 3-4 veces los bytes
+  // tirados a la basura. Ahora se mira el dpr real, con tope de 2: arriba de eso el
+  // ojo ya no distingue y solo se paga.
+  //
+  // Ademas se redondea a una escalera fija en vez de pedir el ancho exacto del
+  // contenedor. La llave del cache del borde incluye el ancho, asi que anchos
+  // arbitrarios = una llave por dispositivo = casi siempre camino frio, que es el que
+  // tarda de 2 a 5 segundos. Con la escalera son pocas llaves, se comparten entre
+  // clientes y se pueden calentar por adelantado.
   // v NO lo usa el servidor: cambia la URL cuando la entrega se libera. Sin esto la
   // direccion de cada foto es idéntica antes y después de pagar, y el navegador
   // —que ya la tiene guardada en disco— sigue mostrando la copia con marca de agua
   // sin volver a preguntar. El cliente pagaba y veía exactamente lo mismo.
-  return '/api/e/foto?a=' + encodeURIComponent(f.id) + '&w=' + Math.min(2400, d * 2) +
+  return '/api/e/foto?a=' + encodeURIComponent(f.id) + '&w=' + anchoServido(d) +
     '&d=' + d + '&v=' + encodeURIComponent(D && D.fotoVer || 'm');
 }
 function vidThumb(v){

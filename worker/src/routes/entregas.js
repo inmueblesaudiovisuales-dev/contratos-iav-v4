@@ -838,9 +838,18 @@ export async function handleEntregas(request, env, ctx, action) {
     // El ESTADO va en la llave: si no, al liberar se seguiria sirviendo la version con
     // marca que quedo cacheada, y el cliente pagaria para ver lo mismo.
     const cache = caches.default;
+    // R141 — WebP cuando el navegador lo acepta. Mismo aspecto y 25-35% menos bytes
+    // que el JPEG que se servia siempre. Se queda en WebP y no AVIF a proposito:
+    // AVIF ahorraria mas, pero su codificacion es mucho mas cara y se paga en el
+    // MISS, que es justo el camino que le toca al cliente cuando abre su liga.
+    //
+    // El formato va en la llave del cache. Sin eso, el primero en pedir decide por
+    // todos: un navegador viejo se llevaria un WebP que no sabe pintar.
+    const aceptaWebp = /image\/webp/i.test(request.headers.get('Accept') || '');
+    const formato = aceptaWebp ? 'image/webp' : 'image/jpeg';
     const llaveCache = new Request(
       `${url.origin}/api/e/foto?a=${archivoId}&w=${ancho}&st=${limpia ? 'limpia' : 'marcada'}` +
-      `&mv=${VERSION_MARCA}`,
+      `&mv=${VERSION_MARCA}&fmt=${aceptaWebp ? 'webp' : 'jpeg'}`,
       { method: 'GET' });
     // Las variantes de calibracion no tocan el cache: ni lo leen —queremos ver la
     // variante, no lo que quedo guardado— ni lo escriben, que envenenaria la galeria
@@ -880,7 +889,8 @@ export async function handleEntregas(request, env, ctx, action) {
           return err('Marca de agua no configurada', 503);
         }
       }
-      const out = await pipe.output({ format: 'image/jpeg', quality: 82 });
+      // WebP 80 se ve como JPEG 82 y pesa bastante menos.
+      const out = await pipe.output({ format: formato, quality: aceptaWebp ? 80 : 82 });
       const r = out.response();
       const h = new Headers(r.headers);
       // public para que el borde de Cloudflare la guarde: la URL trae un UUID
@@ -894,7 +904,12 @@ export async function handleEntregas(request, env, ctx, action) {
       // principal es `fotoVer` en la URL —al liberar cambia y el navegador vuelve a
       // pedir—; estos 5 minutos son el respaldo por si algo la pide sin esa marca.
       h.set('Cache-Control', 'public, max-age=300, s-maxage=86400');
-      h.set('Content-Type', 'image/jpeg');
+      // El tipo tiene que seguir al formato REAL. Estaba fijo en jpeg y con WebP
+      // habria mandado bytes mal etiquetados. Y `Vary: Accept` avisa a la cache del
+      // navegador y a cualquier intermediario de que esta URL responde distinto
+      // segun lo que el cliente acepte — la del borde ya lo distingue por su llave.
+      h.set('Content-Type', formato);
+      h.set('Vary', 'Accept');
       const resp = new Response(r.body, { status: 200, headers: h });
       if (usaCache) ctx.waitUntil(cache.put(llaveCache, resp.clone()));
       return resp;
