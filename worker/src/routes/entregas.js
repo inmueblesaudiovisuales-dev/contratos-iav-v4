@@ -12,7 +12,7 @@ import {
   debeBorrarse, diasParaBorrado, DIAS_GRACIA,
   entregaCompleta, faltantes, entregableCumplido,
   debeLiberarAlPagar, debeLiberarAlPublicar,
-  datosCliente, grupoDeEntrega, ordenarEntregas, versionFotos
+  datosCliente, grupoDeEntrega, ordenarEntregas, versionFotos, repartirFotos
 } from '../entregas-core.js';
 import {
   llaveR2, guardarEnR2, copiarAStream, perfilWatermark, streamListo,
@@ -530,6 +530,38 @@ export async function borrarEntregasDeContrato(db, contratoToken, env) {
   return { borradas: (results || []).length };
 }
 
+// ── Sets de fotos (R138) ──────────────────────────────────────────────────────
+// El primer entregable de fotos que tenga galeria encendida. Es el que manda: de
+// ahi sale la portada. Se ordena igual que entregablesDe para que "primero"
+// signifique lo mismo en todos lados.
+async function primerSetConGaleria(db, entregaId) {
+  return await queryOne(db,
+    `SELECT * FROM e_entregables WHERE e_entrega_id=? AND tipo='fotos' AND galeria=1
+     ORDER BY orden, rowid LIMIT 1`, [entregaId]);
+}
+
+// Deja la portada en una foto que de verdad se vea. Se llama al apagar la galeria
+// de un set: si la portada vivia ahi, la entrega se quedaria con la cabecera en
+// blanco. Si no queda ningun set con galeria no se inventa nada.
+async function reasignarPortada(db, entregaId) {
+  const actual = await queryOne(db,
+    `SELECT a.* FROM e_archivos a JOIN e_entregables e ON e.id = a.e_entregable_id
+     WHERE a.e_entrega_id=? AND a.portada=1 AND e.galeria=1 LIMIT 1`, [entregaId]);
+  if (actual) return actual;
+  const set = await primerSetConGaleria(db, entregaId);
+  if (!set) return null;
+  const nueva = await queryOne(db,
+    `SELECT * FROM e_archivos WHERE e_entregable_id=? AND r2_key<>''
+       AND mime NOT LIKE 'video/%' AND reemplaza_a=''
+     ORDER BY orden, rowid LIMIT 1`, [set.id]);
+  if (!nueva) return null;
+  await batch(db, [
+    { sql: 'UPDATE e_archivos SET portada=0 WHERE e_entrega_id=?', params: [entregaId] },
+    { sql: 'UPDATE e_archivos SET portada=1, destacado=1 WHERE id=?', params: [nueva.id] }
+  ]);
+  return nueva;
+}
+
 // ── Payload publico (lo que ve el cliente) ────────────────────────────────────
 // Regla dura: si la entrega NO esta liberada, este objeto no puede contener ninguna
 // URL de descarga del material original. Es el gate de F4.
@@ -562,15 +594,29 @@ async function payloadPublico(db, env, entrega) {
   // Las fotos se piden al propio Worker, que las saca de R2 y decide ahi si les
   // dibuja el mosaico o no segun el estado de la entrega. El cliente nunca recibe
   // una URL que apunte al original limpio.
-  base.fotos = (archivos || [])
-    .filter(a => a.r2_key && !esVideo(a.mime))
-    .map(a => ({
-      id: a.id, nombre: a.nombre,
-      portada: !!a.portada,
-      // La portada tambien va en el muestrario: seria raro que la foto elegida como
-      // la mejor no apareciera entre las mejores.
-      destacado: !!a.destacado || !!a.portada
-    }));
+  const fotosDe = a => a.r2_key && !esVideo(a.mime);
+  const comoFoto = a => ({
+    id: a.id, nombre: a.nombre,
+    portada: !!a.portada,
+    // La portada tambien va en el muestrario: seria raro que la foto elegida como
+    // la mejor no apareciera entre las mejores.
+    destacado: !!a.destacado || !!a.portada
+  });
+
+  // R138 — Las fotos se reparten por entregable, no en una sola lista. Un entregable
+  // con galeria=1 se ve en cuadricula; con galeria=0 no se ve ninguna imagen y el set
+  // solo se ofrece como descarga. Asi un cliente puede recibir sus fotos y ademas las
+  // mismas con su logotipo sin verlas dobles.
+  const reparto = repartirFotos(items, archivos, fotosDe);
+  base.galerias = reparto.galerias.map(g => ({
+    id: g.id, nombre: g.nombre, fotos: g.fotos.map(comoFoto)
+  }));
+  // De un set sin galeria el cliente no ve ninguna imagen, asi que no se le mandan:
+  // solo cuantas son, para poder escribirlo en el boton de descarga.
+  base.sets = reparto.sets.map(s => ({ id: s.id, nombre: s.nombre, cantidad: s.fotos.length }));
+  // Se conserva `fotos` plano —solo lo que SI va en galeria— porque es lo que lee una
+  // pagina que haya quedado en cache con la version anterior.
+  base.fotos = base.galerias.flatMap(g => g.fotos);
   // Cuantas fotos ve el cliente antes del boton "ver todas". Si nadie eligio
   // destacadas, la pagina cae a las primeras de este numero.
   base.destacadas = DESTACADAS_VISIBLES;
@@ -647,6 +693,29 @@ async function payloadPublico(db, env, entrega) {
         // el tamano exacto se mide contra R2 al momento de armarlo.
         bytes: fotos.reduce((s, a) => s + (Number(a.bytes) || 0), 0)
       };
+    }
+
+    // R138 — Cada set de fotos lleva ademas su propio ZIP. Para un set sin galeria
+    // este boton es la UNICA forma de bajarlo completo, porque sus fotos no se ven.
+    // Se firma por entregable: la firma del ZIP general no sirve para bajar un set,
+    // ni al reves.
+    const zipDeSet = async it => {
+      const suyas = (archivos || []).filter(a => a.e_entregable_id === it.id && fotosDe(a));
+      if (!suyas.length) return null;
+      const f = await firmar(env, 'zip:' + entrega.id + ':' + it.id, 900);
+      return {
+        url: `/api/e/zip?e=${entrega.id}&ent=${it.id}&f=${encodeURIComponent(f)}`,
+        archivos: suyas.length,
+        bytes: suyas.reduce((s, a) => s + (Number(a.bytes) || 0), 0)
+      };
+    };
+    // Solo tiene sentido separar cuando hay mas de un set CON archivos: con uno solo,
+    // el ZIP del set y el general serian el mismo archivo con dos botones. Se cuentan
+    // los grupos ya armados y no los entregables, porque un entregable de fotos vacio
+    // no produce ningun grupo y firmarlo seria trabajo tirado.
+    if (base.galerias.length + base.sets.length > 1) {
+      for (const g of base.galerias) { if (g.id) g.zip = await zipDeSet({ id: g.id }); }
+      for (const s of base.sets) { s.zip = await zipDeSet({ id: s.id }); }
     }
   }
   return base;
@@ -837,10 +906,14 @@ export async function handleEntregas(request, env, ctx, action) {
   if (action === 'zip') {
     const entregaId = url.searchParams.get('e') || '';
     const firma = url.searchParams.get('f') || '';
+    // R138 — Con `ent` se baja un solo set de fotos; sin el, todas las de la entrega.
+    const entregableId = url.searchParams.get('ent') || '';
     // Bruno tambien puede bajarlo, en cualquier estado y con su llave: es su
     // material y lo va a querer para respaldar. El cliente pasa por la firma.
     const esBruno = !requireEntregas(request, env);
-    if (!esBruno && !await verificarFirma(env, 'zip:' + entregaId, firma)) {
+    // La firma incluye el entregable: la del ZIP general no abre un set, ni al reves.
+    const alcance = entregableId ? 'zip:' + entregaId + ':' + entregableId : 'zip:' + entregaId;
+    if (!esBruno && !await verificarFirma(env, alcance, firma)) {
       return err('Enlace de descarga vencido. Vuelve a entrar a tu galería.', 403);
     }
     const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [entregaId]);
@@ -848,10 +921,15 @@ export async function handleEntregas(request, env, ctx, action) {
     if (!esBruno && (e.estado !== 'liberada' || estaVencida(e.fecha_expira, now()))) {
       return err('Este material ya no está disponible.', 403);
     }
-    const { results } = await query(db,
-      `SELECT * FROM e_archivos WHERE e_entrega_id=? AND r2_key<>'' AND mime NOT LIKE 'video/%'
-         AND reemplaza_a=''
-       ORDER BY orden, rowid`, [entregaId]);
+    const { results } = entregableId
+      ? await query(db,
+        `SELECT * FROM e_archivos WHERE e_entrega_id=? AND e_entregable_id=? AND r2_key<>''
+           AND mime NOT LIKE 'video/%' AND reemplaza_a=''
+         ORDER BY orden, rowid`, [entregaId, entregableId])
+      : await query(db,
+        `SELECT * FROM e_archivos WHERE e_entrega_id=? AND r2_key<>'' AND mime NOT LIKE 'video/%'
+           AND reemplaza_a=''
+         ORDER BY orden, rowid`, [entregaId]);
     if (!results || !results.length) return err('No hay fotos que descargar', 404);
 
     // Los tamanos se leen de R2, no de la base: el Content-Length tiene que ser
@@ -1328,6 +1406,15 @@ export async function handleEntregas(request, env, ctx, action) {
     const a = await queryOne(db, 'SELECT * FROM e_archivos WHERE id=?', [archivoId]);
     if (!a) return err('Archivo no encontrado', 404);
     if (esVideo(a.mime)) return err('La portada tiene que ser una foto', 400);
+    // R138 — La portada sale del PRIMER set con galeria. Una foto de un set sin
+    // galeria no se muestra en ningun lado, asi que de portada dejaria la cabecera
+    // en blanco; y con dos galerias la regla evita tener que decidir cada vez.
+    const suEnt = await queryOne(db, 'SELECT * FROM e_entregables WHERE id=?',
+      [a.e_entregable_id]);
+    const primero = await primerSetConGaleria(db, a.e_entrega_id);
+    if (primero && (!suEnt || suEnt.id !== primero.id)) {
+      return err('La portada tiene que salir de ' + primero.nombre + '.', 400);
+    }
     await batch(db, [
       { sql: 'UPDATE e_archivos SET portada=0 WHERE e_entrega_id=?', params: [a.e_entrega_id] },
       { sql: 'UPDATE e_archivos SET portada=1, destacado=1 WHERE id=?', params: [archivoId] }
@@ -1582,10 +1669,37 @@ export async function handleEntregas(request, env, ctx, action) {
     if (!['fotos', 'video', 'enlace'].includes(tipo)) return err('Tipo no válido');
     const c = await queryOne(db,
       'SELECT COUNT(*) AS n FROM e_entregables WHERE e_entrega_id=?', [entregaId]);
+    // R138 — El PRIMER entregable de fotos nace con galeria; los siguientes no. El
+    // caso normal de un segundo set es una variante del primero (las mismas fotos con
+    // el logotipo del cliente), y ahi mostrarlas seria verlas dobles. Cuando el
+    // segundo set si es material distinto —staging virtual— se prende con un clic.
+    let galeria = 1;
+    if (tipo === 'fotos') {
+      const yaHay = await queryOne(db,
+        `SELECT COUNT(*) AS n FROM e_entregables WHERE e_entrega_id=? AND tipo='fotos'`,
+        [entregaId]);
+      if ((yaHay && yaHay.n) > 0) galeria = 0;
+    }
     await run(db,
-      `INSERT INTO e_entregables (id, e_entrega_id, tipo, nombre, orden, completo, valor)
-       VALUES (?,?,?,?,?,0,'')`, [uuid(), entregaId, tipo, nombre, (c && c.n) || 0]);
+      `INSERT INTO e_entregables (id, e_entrega_id, tipo, nombre, orden, completo, valor, galeria)
+       VALUES (?,?,?,?,?,0,'',?)`, [uuid(), entregaId, tipo, nombre, (c && c.n) || 0, galeria]);
     return ok({ ok: true });
+  }
+
+  // R138 — Prender o apagar la galeria de un set de fotos.
+  if (action === 'galeriaEntregable') {
+    const { entregableId, valor } = await request.json();
+    const e = await queryOne(db, 'SELECT * FROM e_entregables WHERE id=?', [entregableId]);
+    if (!e) return err('Entregable no encontrado', 404);
+    if (e.tipo !== 'fotos') return err('Solo los entregables de fotos tienen galería', 400);
+    const quiere = valor === undefined ? !e.galeria : !!valor;
+    // La portada sale SIEMPRE del primer set con galeria. Si se apaga el set que la
+    // tenia, esa foto dejaria de verse y la entrega se quedaria sin cabecera: la
+    // portada se reasigna a la primera foto del set con galeria que quede.
+    await run(db, 'UPDATE e_entregables SET galeria=? WHERE id=?',
+      [quiere ? 1 : 0, entregableId]);
+    if (!quiere) await reasignarPortada(db, e.e_entrega_id);
+    return ok({ ok: true, galeria: quiere });
   }
 
   if (action === 'borrarEntregable') {

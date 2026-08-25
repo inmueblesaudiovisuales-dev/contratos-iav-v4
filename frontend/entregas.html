@@ -671,6 +671,13 @@ function pintarDetalle(){
       '<span class="lab"><b>' + esc(i.nombre) + '</b><span>' + det + '</span></span>' +
       (arch.length && QUITANDO !== i.id
         ? '<button class="btn btn-ghost btn-sm" onclick="modoQuitar(\'' + i.id + '\')">Quitar archivos</button>' : '') +
+      // R138 — Galeria si/no, solo en los sets de fotos. Se muestra cuando hay mas de
+      // un set (ahi si hay que decidir) y TAMBIEN cuando el set esta apagado aunque
+      // sea el unico: si no, al borrar el otro set este boton desaparecia y las fotos
+      // quedaban invisibles sin manera de volver a prenderlas.
+      (i.tipo === 'fotos' && (numSetsFoto() > 1 || !i.galeria)
+        ? '<button class="btn btn-ghost btn-sm" onclick="alternarGaleria(\'' + i.id + '\')">' +
+          (i.galeria ? 'Con galería' : 'Solo descarga') + '</button>' : '') +
       '<button class="quitar" title="Quitar este entregable" onclick="borrarEntregable(\'' + i.id + '\')">Quitar</button>' +
       '</div>';
     pendientes.forEach(function(a){
@@ -1316,6 +1323,22 @@ function guardarEnlace(id){
 function borrarEntregable(id){
   if(!confirm('¿Quitar este entregable? Se borran también sus archivos.')) return;
   accion('borrarEntregable', { entregableId: id }, 'Entregable quitado');
+}
+
+// R138 — Cuantos sets de fotos tiene la entrega. Con uno solo no se ofrece el
+// interruptor de galeria: ese set siempre se ve.
+function numSetsFoto(){
+  return (ACT.entregables || []).filter(function(i){ return i.tipo === 'fotos'; }).length;
+}
+
+// Prende o apaga la galeria de un set. Apagarla es el caso de una variante —las
+// mismas fotos con el logotipo del cliente—: se entrega, pero no se ve doble.
+function alternarGaleria(id){
+  var i = (ACT.entregables || []).filter(function(e){ return e.id === id; })[0];
+  if(!i) return;
+  var prender = !i.galeria;
+  accion('galeriaEntregable', { entregableId: id, valor: prender },
+    prender ? 'Este set ahora se ve en galería' : 'Este set solo se descarga');
 }
 async function borrarEntrega(){
   if(!confirm('¿Borrar la entrega completa? Esto no se puede deshacer.')) return;

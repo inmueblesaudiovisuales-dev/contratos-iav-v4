@@ -1,0 +1,24 @@
+-- R138 — Un entregable de fotos puede tener galeria o no tenerla.
+--
+-- Hasta aqui todas las fotos de una entrega caian en la MISMA cuadricula, sin
+-- importar de que entregable venian: el payload publico mandaba una lista plana y
+-- la pagina la pintaba tal cual. Con un solo set de fotos eso alcanzaba.
+--
+-- Deja de alcanzar cuando hay dos. El caso que lo destapo: un cliente que pide sus
+-- fotos normales Y las mismas con SU logotipo encima. Subir los dos sets hacia que
+-- el cliente viera cada foto dos veces, y no habia forma de decirle a la pagina que
+-- uno de los dos era una variante y no material nuevo.
+--
+-- Con `galeria` cada entregable de fotos decide como se muestra:
+--   galeria=1  sus fotos se ven en cuadricula, con su propio encabezado.
+--   galeria=0  no se ve ninguna imagen; el set aparece solo como una descarga.
+--
+-- El default es 1 para no cambiarle nada a lo que ya existe: toda entrega de hoy
+-- tiene un unico entregable de fotos y ese se sigue viendo igual. Los entregables
+-- de fotos que se agreguen DESPUES del primero nacen en 0, que es el caso comun
+-- (una variante). Prenderlos es un clic, y es lo que se hace cuando el segundo set
+-- si es material distinto y no una variante — staging virtual, por ejemplo.
+--
+-- La columna tambien queda en 1 para los entregables de video y enlace. No estorba:
+-- solo se consulta para los de tipo 'fotos'.
+ALTER TABLE e_entregables ADD COLUMN galeria INTEGER NOT NULL DEFAULT 1;

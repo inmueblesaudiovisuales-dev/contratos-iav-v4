@@ -321,6 +321,16 @@ async function cargar(){
     var r = await fetch('/api/e/publica?codigo=' + encodeURIComponent(CODIGO));
     D = await r.json();
     if(!r.ok) D = null;
+    // R138 — El servidor manda las mismas fotos dos veces: dentro de `galerias` y
+    // aplanadas en `fotos`. Al pasar por JSON dejan de ser el MISMO objeto, y todo
+    // el codigo de la galeria compara por identidad: `f !== portada` para no repetir
+    // la portada, y `todas.indexOf(f)` para saber que foto abrir en el visor. Con
+    // objetos distintos la portada salia dos veces y tocar una foto del segundo set
+    // devolvia indexOf === -1. Se reconstruye `fotos` desde `galerias` para que haya
+    // una sola copia de cada foto y la identidad vuelva a valer.
+    if(D && D.galerias && D.galerias.length){
+      D.fotos = D.galerias.reduce(function(acc, g){ return acc.concat(g.fotos || []); }, []);
+    }
   } catch(e){ D = null; }
   if(!D || !D.ok) return estado('No disponible',
     'No pudimos cargar tu entrega. Intenta de nuevo en un momento.');
@@ -362,9 +372,23 @@ function fotos(){
   return (p ? [p] : []).concat(orden, resto);
 }
 
+// R138 — Los sets de fotos con galeria. El primero es el principal: es el que trae
+// portada, muestrario y boton "ver todas". Los demas se pintan como cuadricula
+// simple debajo, con su nombre. `galerias` es nuevo: una pagina que haya quedado en
+// cache manda solo `fotos`, y entonces todo se comporta como antes.
+function galerias(){
+  if(D.galerias && D.galerias.length) return D.galerias;
+  return (D.fotos || []).length ? [{ id: '', nombre: 'Fotografías', fotos: D.fotos }] : [];
+}
+function galeriaPrincipal(){
+  var g = galerias()[0];
+  return (g && g.fotos) || [];
+}
+
 // La foto de la cabecera. Si nadie eligio, la primera; asi el hero nunca queda vacio.
+// Sale SIEMPRE del set principal: una foto de otro set podria ni siquiera mostrarse.
 function fotoPortada(){
-  var todas = D.fotos || [];
+  var todas = galeriaPrincipal();
   return todas.filter(function(f){ return f.portada; })[0] || todas[0] || null;
 }
 
@@ -378,7 +402,9 @@ function fotoPortada(){
 // muestrario habria quedado vacio.
 function destacadasVisibles(){
   var p = fotoPortada();
-  var sinPortada = fotos().filter(function(f){ return f !== p; });
+  // Solo del set principal: si no, las fotos de otro set se colarian al muestrario
+  // y el conteo del boton "ver las N" dejaria de cuadrar con lo que hay debajo.
+  var sinPortada = galeriaPrincipal().filter(function(f){ return f !== p; });
   var marcadas = sinPortada.filter(function(f){ return f.destacado; }).length;
   return sinPortada.slice(0, Math.min(sinPortada.length,
                                       Math.max(marcadas, D.destacadas || 6)));
@@ -387,17 +413,19 @@ function destacadasVisibles(){
 // anuncia el boton, sin repetir ninguna.
 function restoVisible(){
   var arriba = destacadasVisibles(), p = fotoPortada();
-  return fotos().filter(function(f){ return f !== p && arriba.indexOf(f) < 0; });
+  return galeriaPrincipal().filter(function(f){ return f !== p && arriba.indexOf(f) < 0; });
 }
 
 function render(){
   var liberada = !!D.liberada;
-  var fs = fotos(), vs = videos();
+  var vs = videos();
 
   // Portada: la foto que Bruno eligio. Desde r133 es su propia marca; antes se
   // confundia con "destacada", que ahora son varias. Sin fotos cae al primer cuadro
   // del video, para que nunca quede un hueco gris.
-  var portada = fs.filter(function(f){ return f.portada; })[0] || fs[0];
+  // fotoPortada() ya acota al set principal: una foto de otro set podria no
+  // mostrarse en ningun lado y dejaria la cabecera apuntando a algo invisible.
+  var portada = fotoPortada();
   var hi = document.getElementById('heroImg');
   if(portada) hi.src = fotoUrl(portada, Math.min(1200, window.innerWidth || 375));
   else if(vs.length && D.streamCustomer) hi.src = vidThumb(vs[0]);
@@ -424,19 +452,34 @@ function render(){
 
   // 3. Fotos: primero el muestrario grande, y el resto detras de un boton. Antes
   //    caian las 45 de golpe, que es un archivero, no una entrega.
-  if(fs.length){
+  var gs = galerias();
+  var principal = galeriaPrincipal();
+  if(principal.length){
     var resto = restoVisible().length;
-    h += '<div class="bloque"><h3 class="sect">Fotografías <span class="n">' + fs.length + '</span></h3>' +
+    // El nombre del entregable solo se escribe cuando hay mas de un set: con uno
+    // solo, "Fotografias" es el encabezado de siempre y no hay nada que distinguir.
+    var titulo = gs.length > 1 ? esc(gs[0].nombre) : 'Fotografías';
+    h += '<div class="bloque"><h3 class="sect">' + titulo + ' <span class="n">' + principal.length + '</span></h3>' +
       (resto > 0 ? '<p class="subt">Una selección de tu material.</p>' : '') +
       '<div class="destacadas" id="destacadas"></div>';
     if(resto > 0){
       h += '<button class="vertodas" id="btnTodas" onclick="verTodas()">' +
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' +
-        'Ver las ' + fs.length + ' fotografías <span class="n">+' + resto + '</span></button>' +
+        'Ver las ' + principal.length + ' fotografías <span class="n">+' + resto + '</span></button>' +
         '<div class="mosaico" id="mosaico"></div>';
     }
     h += '</div>';
   }
+
+  // 3b. Los demas sets con galeria —staging virtual, por ejemplo—. Van completos en
+  //     una cuadricula, sin muestrario ni "ver todas": son tandas chicas y partirlas
+  //     en dos pasos seria ceremonia de mas.
+  gs.slice(1).forEach(function(g, i){
+    if(!g.fotos || !g.fotos.length) return;
+    h += '<div class="bloque"><h3 class="sect">' + esc(g.nombre) +
+      ' <span class="n">' + g.fotos.length + '</span></h3>' +
+      '<div class="mosaico" id="gal' + i + '"></div></div>';
+  });
 
   // 4. El recorrido, que no expira y por eso se explica aparte.
   if(D.tourUrl){
@@ -449,9 +492,13 @@ function render(){
     '<div class="foot">Una producción de <b>Inmuebles Audiovisuales</b></div>';
 
   document.getElementById('cuerpo').innerHTML = h;
-  if(fs.length){
+  if(principal.length){
     montarMosaico(document.getElementById('destacadas'), destacadasVisibles(), true);
   }
+  gs.slice(1).forEach(function(g, i){
+    var c = document.getElementById('gal' + i);
+    if(c && g.fotos && g.fotos.length) montarMosaico(c, g.fotos, false);
+  });
   document.getElementById('contenido').style.display = '';
 }
 
@@ -472,6 +519,26 @@ function bloqueDescarga(vs){
       '<span class="tx"><b>Descargar las fotografías</b>' +
       '<span>' + D.zip.archivos + ' fotos · ' + peso(D.zip.bytes) + ' · un solo archivo</span></span></a>';
   }
+  // R138 — Cada set aparte con su propio ZIP. Los que SI tienen galeria van primero
+  // porque el cliente acaba de verlos; los que no, despues. El ZIP general de arriba
+  // sigue trayendo todas las fotos juntas, sin importar de que set salgan.
+  galerias().slice(1).forEach(function(g){
+    if(!g.zip || !g.zip.url) return;
+    h += '<a class="dbtn" href="' + esc(g.zip.url) + '" download>' +
+      '<span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3v13m0 0l-5-5m5 5l5-5M4 21h16"/></svg></span>' +
+      '<span class="tx"><b>' + esc(g.nombre) + '</b>' +
+      '<span>' + g.zip.archivos + ' fotos · ' + peso(g.zip.bytes) + ' · un solo archivo</span></span></a>';
+  });
+  // Los sets sin galeria. Sus fotos no se ven en ningun lado, asi que este boton es
+  // la unica manera de bajarlos: si falta el ZIP el set seria invisible, por eso no
+  // se pinta el renglon en vez de pintarlo muerto.
+  (D.sets || []).forEach(function(s){
+    if(!s.zip || !s.zip.url) return;
+    h += '<a class="dbtn" href="' + esc(s.zip.url) + '" download>' +
+      '<span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3v13m0 0l-5-5m5 5l5-5M4 21h16"/></svg></span>' +
+      '<span class="tx"><b>' + esc(s.nombre) + '</b>' +
+      '<span>' + s.zip.archivos + ' fotos · ' + peso(s.zip.bytes) + ' · un solo archivo</span></span></a>';
+  });
   vd.forEach(function(v){
     h += '<a class="dbtn" href="' + esc(v.url) + '" download>' +
       '<span class="ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10l6-3v10l-6-3z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></span>' +

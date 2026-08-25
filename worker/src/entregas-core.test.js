@@ -7,7 +7,7 @@ import {
   debeBorrarse, fechaBorrado, diasParaBorrado, DIAS_GRACIA,
   entregaCompleta, faltantes, entregableCumplido,
   debeLiberarAlPagar, debeLiberarAlPublicar,
-  datosCliente, grupoDeEntrega, ordenarEntregas, versionFotos
+  datosCliente, grupoDeEntrega, ordenarEntregas, versionFotos, repartirFotos
 } from './entregas-core.js';
 
 // ── Codigo publico ────────────────────────────────────────────────────────────
@@ -452,4 +452,82 @@ test('una liberada sin fecha registrada sigue distinguiendose de la marcada', ()
   // quien ya pago. Vale mas una version rara que un cliente viendo el mosaico.
   const v = versionFotos({ estado: 'liberada', fecha_liberada: null }, '2026-08-18T12:00:00.000Z');
   assert.notEqual(v, 'm');
+});
+
+// ── Reparto de fotos por set (R138) ───────────────────────────────────────────
+
+const esFotoTest = a => !!a.r2_key && !String(a.mime || '').startsWith('video/');
+const ents = [
+  { id: 'A', tipo: 'fotos', nombre: 'Fotografías', galeria: 1 },
+  { id: 'B', tipo: 'fotos', nombre: 'Con su logotipo', galeria: 0 },
+  { id: 'V', tipo: 'video', nombre: 'Video cinemático', galeria: 1 }
+];
+const arch = (id, ent, extra) => ({ id, e_entregable_id: ent, r2_key: 'k/' + id,
+                                    mime: 'image/jpeg', ...(extra || {}) });
+
+test('cada set de fotos cae donde le toca segun su galeria', () => {
+  const { galerias, sets } = repartirFotos(ents,
+    [arch('a1', 'A'), arch('a2', 'A'), arch('b1', 'B')], esFotoTest);
+  assert.equal(galerias.length, 1);
+  assert.equal(galerias[0].nombre, 'Fotografías');
+  assert.deepEqual(galerias[0].fotos.map(f => f.id), ['a1', 'a2']);
+  assert.equal(sets.length, 1);
+  assert.deepEqual(sets[0].fotos.map(f => f.id), ['b1']);
+});
+
+test('con galeria=1 en los dos, los dos son galeria y ninguno set', () => {
+  const dos = ents.map(e => ({ ...e, galeria: 1 }));
+  const { galerias, sets } = repartirFotos(dos,
+    [arch('a1', 'A'), arch('b1', 'B')], esFotoTest);
+  assert.deepEqual(galerias.map(g => g.id), ['A', 'B']);
+  assert.equal(sets.length, 0);
+});
+
+test('el orden de las galerias es el de los entregables: el primero manda', () => {
+  const alReves = [ents[1], ents[0]].map(e => ({ ...e, galeria: 1 }));
+  const { galerias } = repartirFotos(alReves,
+    [arch('a1', 'A'), arch('b1', 'B')], esFotoTest);
+  assert.equal(galerias[0].id, 'B', 'manda el orden de la lista, no el de los archivos');
+});
+
+test('un set sin archivos no aparece: seria un encabezado vacio', () => {
+  const { galerias, sets } = repartirFotos(ents, [arch('a1', 'A')], esFotoTest);
+  assert.deepEqual(galerias.map(g => g.id), ['A']);
+  assert.equal(sets.length, 0);
+});
+
+test('los videos no entran al reparto de fotos', () => {
+  const { galerias } = repartirFotos(ents,
+    [arch('a1', 'A'), arch('v1', 'V', { mime: 'video/mp4' })], esFotoTest);
+  assert.deepEqual(galerias[0].fotos.map(f => f.id), ['a1']);
+});
+
+test('una foto sin r2_key no se reparte: no hay nada que servir', () => {
+  const { galerias } = repartirFotos(ents,
+    [arch('a1', 'A'), { id: 'a2', e_entregable_id: 'A', r2_key: '', mime: 'image/jpeg' }],
+    esFotoTest);
+  assert.deepEqual(galerias[0].fotos.map(f => f.id), ['a1']);
+});
+
+test('las huerfanas no se pierden: van a una galeria al final', () => {
+  const { galerias } = repartirFotos(ents,
+    [arch('a1', 'A'), arch('x1', 'BORRADO')], esFotoTest);
+  assert.equal(galerias.length, 2);
+  assert.deepEqual(galerias[1].fotos.map(f => f.id), ['x1']);
+  assert.equal(galerias[1].id, '', 'la huerfana no puede colgar de un entregable');
+});
+
+test('una entrega vieja —sin la columna galeria— se ve como siempre', () => {
+  // Antes de la migracion `galeria` llega undefined, no 0. Solo el 0 explicito
+  // apaga la galeria; cualquier otra cosa la deja prendida.
+  const viejos = [{ id: 'A', tipo: 'fotos', nombre: 'Fotografías' }];
+  const { galerias, sets } = repartirFotos(viejos, [arch('a1', 'A')], esFotoTest);
+  assert.equal(galerias.length, 1);
+  assert.equal(sets.length, 0);
+});
+
+test('sin entregables ni archivos no truena', () => {
+  const r = repartirFotos(null, null, esFotoTest);
+  assert.deepEqual(r.galerias, []);
+  assert.deepEqual(r.sets, []);
 });

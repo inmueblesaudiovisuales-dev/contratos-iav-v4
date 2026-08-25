@@ -283,3 +283,35 @@ export function versionFotos(entrega, ahoraISO) {
   if (!liberada) return 'm';
   return 'l' + String(e.fecha_liberada || 1).replace(/[^0-9a-zA-Z]/g, '');
 }
+
+// ── Reparto de fotos por set (R138) ───────────────────────────────────────────
+// Una entrega puede traer mas de un entregable de fotos. El caso que lo obligo: un
+// cliente que pide sus fotos Y las mismas con SU logotipo. Sin separarlas, el portal
+// las pintaba todas en la misma cuadricula y el cliente veia cada foto dos veces.
+//
+// Cada entregable de fotos decide como se muestra con su columna `galeria`:
+//   galeria=1  va a cuadricula, con su nombre de encabezado.
+//   galeria=0  no se ve ninguna imagen; el set solo se ofrece como descarga.
+//
+// Las huerfanas —fotos cuyo entregable ya no existe— no se tiran: caerian en ningun
+// grupo y desaparecerian de la entrega sin que nadie lo note. Van a una galeria al
+// final, que es lo mismo que hacia el portal antes de que existieran los sets.
+export function repartirFotos(entregables, archivos, esFoto) {
+  const items = entregables || [];
+  const todos = (archivos || []).filter(a => esFoto(a));
+  const galerias = [];
+  const sets = [];
+  const vistas = new Set();
+
+  for (const it of items.filter(i => i.tipo === 'fotos')) {
+    const suyas = todos.filter(a => a.e_entregable_id === it.id);
+    if (!suyas.length) continue;
+    suyas.forEach(a => vistas.add(a.id));
+    if (it.galeria === 0) sets.push({ id: it.id, nombre: it.nombre, fotos: suyas });
+    else galerias.push({ id: it.id, nombre: it.nombre, fotos: suyas });
+  }
+
+  const huerfanas = todos.filter(a => !vistas.has(a.id));
+  if (huerfanas.length) galerias.push({ id: '', nombre: 'Fotografías', fotos: huerfanas });
+  return { galerias, sets };
+}
