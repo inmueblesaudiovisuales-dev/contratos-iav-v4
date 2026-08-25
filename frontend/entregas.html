@@ -1329,6 +1329,15 @@ async function prepararGaleria2(){
   var total = pendientesGaleria();
   pintarGaleria(barraGaleria(total, total));
   var listo = await completarDerivados(function(f){ pintarGaleria(barraGaleria(f, total)); });
+  // R141 — Preparar deja las fotos listas para SERVIRSE, pero la primera vez que
+  // alguien pide un tamaño concreto igual cuesta de 0.6 a 5 segundos. El cliente casi
+  // siempre es el primero en pedir los suyos, asi que se lo come entero — y Bruno
+  // nunca lo ve, porque cuando el abre el portal ya quedo caliente. Calentar aqui
+  // mueve esa espera de su cliente a esta pantalla, que es donde no molesta.
+  if(listo){
+    pintarGaleria('<p class="hint">Dejando la galería lista para el cliente…</p>');
+    try { await api('calentar', { body: { entregaId: ACT.entrega.id } }); } catch(e){}
+  }
   preparando = false;
   if(!listo) toast('No se pudieron preparar todas las fotos', true);
   return listo;

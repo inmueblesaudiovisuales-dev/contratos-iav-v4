@@ -358,14 +358,37 @@ async function contarPendientes(db, entregaId) {
   return (r && r.n) || 0;
 }
 
+// Corre las tareas de a POCAS A LA VEZ en vez de una tras otra. Es lo que mas acelera
+// la preparacion, y no por CPU: un derivado gasta 90 ms de CPU pero tarda 2 316 ms de
+// reloj — el 96% del tiempo el Worker esta parado esperando a R2. En serie esas esperas
+// se suman; en paralelo se solapan y seis tardan casi lo que una.
+//
+// El limite no es el CPU sino la memoria del isolate (128 MB): aunque generarDerivado y
+// crcDeStream van por streams y no bufean el archivo entero, varios de 9 MB a la vez si
+// hacen pico. Cinco es conservador a proposito.
+const EN_PARALELO = 5;
+
+// Los anchos que se calientan. DEBE coincidir con ESCALERA_ANCHOS de
+// entregas-cliente.html: si se separan, se calienta lo que nadie pide.
+// No estan los 2000 ni los 2400 de la escalera a proposito: solo los pide una pantalla
+// retina grande, y calentarlos multiplicaria el trabajo por unos pocos clientes.
+export const ESCALERA_CALIENTE = [400, 600, 800, 1200, 1600];
+async function enTandas(lista, fn, ancho = EN_PARALELO) {
+  const salida = [];
+  for (let i = 0; i < lista.length; i += ancho) {
+    salida.push(...await Promise.all(lista.slice(i, i + ancho).map(fn)));
+  }
+  return salida;
+}
+
 // Un solo trabajo, el que toque. Devuelve si avanzo algo.
 // El orden importa y no es arbitrario: primero lo que hace visible la galeria.
 async function prepararUno(env, db, tope) {
   const { results: sinWeb } = await query(db,
     `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_DERIVADO} ORDER BY fecha LIMIT ?`, [tope]);
   if (sinWeb && sinWeb.length) {
-    let hechos = 0;
-    for (const a of sinWeb) if (await generarDerivado(env, db, a)) hechos++;
+    const r = await enTandas(sinWeb, a => generarDerivado(env, db, a));
+    const hechos = r.filter(Boolean).length;
     // Un derivado que falla NO se marca como fallido: generarDerivado ya dice que si
     // no sale, la galeria cae al original y solo va lenta. Marcarlo obligaria a usar
     // crc32=-2, que ademas traba el ZIP — un problema peor que el que resuelve.
@@ -373,21 +396,22 @@ async function prepararUno(env, db, tope) {
     // la vuelta no avanzo se sigue con los CRC, que son una cola independiente.
     if (hechos) return hechos;
   }
-  // R139e — Las firmas van de UNA en una, aunque los derivados vayan de tres en tres.
-  // No cuestan lo mismo: el derivado lo hace el binding de Images y el Worker casi
-  // solo espera, mientras que la firma recorre los 9 MB dentro del propio Worker.
-  // Medido el 24 ago 2026: con lote de 3, los derivados salian en Ok y las firmas
-  // mataban el cron con "Exceeded CPU Limit" tres vueltas seguidas.
+  // La firma es mas cara que el derivado: recorre los 9 MB DENTRO del Worker, mientras
+  // que el derivado lo hace el binding de Images y aqui solo se espera. Con el techo
+  // de 10 ms del plan gratuito iban de una en una, porque de tres mataban el cron
+  // (R139e). Con Workers Paid el techo es 30 s y ya no es la restriccion; sigue siendo
+  // el trabajo mas pesado, asi que va en tandas mas chicas que los derivados.
   const { results: sinCrc } = await query(db,
-    `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_CRC} ORDER BY fecha LIMIT 1`);
-  let hechos = 0;
-  for (const a of (sinCrc || [])) {
-    if (await asegurarCrc(env, db, a)) hechos++;
+    `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_CRC} ORDER BY fecha LIMIT ?`,
+    [Math.max(1, Math.ceil(tope / 2))]);
+  const hechos = (await enTandas(sinCrc || [], async a => {
+    if (await asegurarCrc(env, db, a)) return true;
     // Un archivo que no avanza no puede quedarse al frente de la fila para siempre:
     // se marca como intentado y se sigue. Paso con el video de 986 MB, que ademas no
     // necesitaba CRC.
-    else await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
-  }
+    await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
+    return false;
+  }, 3)).filter(Boolean).length;
   return hechos;
 }
 
@@ -1921,11 +1945,62 @@ export async function handleEntregas(request, env, ctx, action) {
 
   // Genera las copias reducidas que falten. Va de a pocas por peticion para no
   // reventar los limites del Worker; el portal la llama en bucle hasta que no quedan.
+  // R141 — Calienta el cache del borde pidiendo las fotos por adelantado, para que el
+  // CLIENTE no pague el camino frio. Medido: un MISS tarda de 0.6 a 5 s y un HIT 3 ms.
+  // Bruno nunca ve el MISS —cuando el abre el portal ya quedo caliente— pero el
+  // cliente casi siempre es el primero en pedir SUS tamaños, asi que se lo come entero.
+  //
+  // Se piden los anchos de ESCALERA_CALIENTE, que tiene que coincidir con la escalera
+  // del portal del cliente (ESCALERA_ANCHOS en entregas-cliente.html). Si se separan,
+  // se calientan llaves que nadie pide y el cliente sigue esperando.
+  //
+  // Ojo: la llave del cache lleva el estado (marcada/limpia). Al liberar cambia, asi
+  // que hay que volver a calentar; liberarEntrega() lo dispara.
+  if (action === 'calentar') {
+    const { entregaId, anchos } = await request.json();
+    if (!entregaId) return err('Falta la entrega');
+    const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE id=?', [entregaId]);
+    if (!e) return err('Entrega no encontrada', 404);
+    const { results } = await query(db,
+      `SELECT id FROM e_archivos WHERE e_entrega_id=? AND r2_key<>'' AND mime NOT LIKE 'video/%'
+         AND reemplaza_a='' AND r2_key_web<>''
+       ORDER BY orden, rowid`, [entregaId]);
+    const fotos = results || [];
+    if (!fotos.length) return ok({ ok: true, calentadas: 0, pendientes: 0, nota: 'sin fotos preparadas' });
+
+    const lista = Array.isArray(anchos) && anchos.length
+      ? anchos.map(Number).filter(n => n >= 120 && n <= 2400)
+      : ESCALERA_CALIENTE;
+    // Se piden contra el propio Worker para pasar por EXACTAMENTE el mismo camino que
+    // usara el cliente: mismo transform, misma marca, misma llave. Reimplementarlo
+    // aqui seria una segunda verdad que se despega en cuanto alguien toque una.
+    const llavePropia = env.ENTREGAS_KEY || env.ADMIN_KEY || '';
+    const tareas = [];
+    for (const f of fotos) for (const w of lista) tareas.push({ id: f.id, w });
+    let ok200 = 0, fallos = 0;
+    await enTandas(tareas, async t => {
+      try {
+        // Va con la llave para poder calentar tambien en borrador, que es cuando de
+        // verdad conviene: se calienta ANTES de mandarle la liga al cliente. La llave
+        // NO forma parte de la llave del cache —esa lleva id, ancho, estado, version
+        // de marca y formato— asi que se puebla exactamente la entrada que el pedira.
+        // Y como no se mandan `m` ni `o`, no cuenta como variante de calibracion y sí
+        // escribe en el cache.
+        const r = await fetch(
+          `${url.origin}/api/e/foto?a=${t.id}&w=${t.w}&d=${Math.round(t.w / 2)}&v=cal`,
+          { headers: { Accept: 'image/webp,image/*,*/*', 'X-Entregas-Key': llavePropia } });
+        if (r.ok) { ok200++; await r.arrayBuffer(); } else fallos++;
+      } catch (ex) { fallos++; }
+    }, 4);
+    return ok({ ok: true, fotos: fotos.length, anchos: lista, calentadas: ok200, fallos });
+  }
+
   if (action === 'derivados') {
     const { entregaId, lote } = await request.json();
-    // Tope de 2: cada una transforma un original de 10 MB y pasarse revienta el
-    // isolate igual que en la subida. Mejor muchas peticiones chicas que una gorda.
-    const n = Math.min(2, Math.max(1, Number(lote) || 1));
+    // El tope estuvo en 2 mientras la cuenta era Workers Free: alli cada peticion
+    // tenia 10 ms de CPU y pasarse la mataba. Con Workers Paid son 30 s, y como las
+    // tareas van en paralelo, una peticion con 12 tarda casi lo que una con 1.
+    const n = Math.min(12, Math.max(1, Number(lote) || 1));
     // R139 — Un solo trabajo por peticion, y los derivados antes que los CRC, igual
     // que el cron. Antes cada peticion hacia los dos trabajos del mismo archivo: el
     // doble de CPU de golpe, que es lo que tumbaba al cron. Aqui no llegaba a matarlo
@@ -1938,7 +2013,8 @@ export async function handleEntregas(request, env, ctx, action) {
        ${entregaId ? 'AND e_entrega_id=?' : ''} ORDER BY fecha LIMIT ?`,
       entregaId ? [entregaId, n] : [n]);
     if (sinWeb.results && sinWeb.results.length) {
-      for (const a of sinWeb.results) if (await generarDerivado(env, db, a)) hechos++;
+      hechos += (await enTandas(sinWeb.results, x => generarDerivado(env, db, x)))
+        .filter(Boolean).length;
     }
     // Igual que el cron: si los derivados no avanzaron, no se traba la fila — se
     // siguen con los CRC, que son otra cola.
@@ -1947,10 +2023,11 @@ export async function handleEntregas(request, env, ctx, action) {
         `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_CRC}
          ${entregaId ? 'AND e_entrega_id=?' : ''} ORDER BY fecha LIMIT ?`,
         entregaId ? [entregaId, n] : [n]);
-      for (const a of (sinCrc.results || [])) {
-        if (await asegurarCrc(env, db, a)) hechos++;
-        else await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
-      }
+      hechos += (await enTandas(sinCrc.results || [], async x => {
+        if (await asegurarCrc(env, db, x)) return true;
+        await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [x.id]);
+        return false;
+      }, 3)).filter(Boolean).length;
     }
     return ok({ ok: true, hechos, pendientes: await contarPendientes(db, entregaId || null) });
   }
