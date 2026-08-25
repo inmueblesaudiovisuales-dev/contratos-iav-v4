@@ -1,4 +1,4 @@
-# Handoff — Sistema de Entregas (R129–R142)
+# Handoff — Sistema de Entregas (R129–R143)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
@@ -12,8 +12,8 @@
 > (la marca que no se quitaba tras liberar, y la galería de destacadas) · §9 la marca
 > de agua recalibrada el 18 ago · §23 la sesión del 24 ago (el recorrido 360 copiable
 > y los sets de fotos con galería o sin ella) · §24 el cron que moría de CPU ·
-> §25 el techo de CPU (resuelto) · **§26 la galería del cliente: peso, caché y video
-> vertical**.
+> §25 el techo de CPU (resuelto) · §26 la galería del cliente: peso, caché y video
+> vertical · **§27 la retícula regular (R143) y el bug del carácter perdido**.
 >
 > **Sin pendientes de migración.** `r133-destacadas.sql` y `r138-galeria-entregables.sql`
 > están aplicadas y verificadas en producción (§23.4).
@@ -1953,7 +1953,8 @@ contra una entrega real: tarjeta y reproductor en 0.563 exacto.
 ### 26.6 Prototipo de galería — decidido a medias
 
 Se armó un prototipo navegable (Propuesta / Diseño actual / Celular) con fotos reales.
-**No está en producción.** Vive en la pestaña y muere al recargar.
+**Se aprobó y se llevó a producción el 25 ago — ver §27.** Lo que sigue es el
+razonamiento con el que se decidió.
 
 El argumento central es medible, no de gusto: la galería usa **mosaico por columnas**
 (`column-count`), que llena de arriba abajo. Medido en el prototipo, en celular:
@@ -1982,7 +1983,81 @@ teclado en el visor, y una foto a todo lo ancho cada tres filas.
 
 ### 26.7 Lo que queda
 
-- **Decidir el rediseño** (§26.6) y, si va, portarlo al portal real.
+- ~~Decidir el rediseño.~~ **Hecho: en producción desde el 25 ago (§27).**
 - **Si entran fotos verticales**, la retícula uniforme las recortaría. Hoy todas son 3:2.
-- **Si `pausada` debe mostrar el recorrido 360.** Hoy no lo muestra: pausar es cortar el
-  acceso a propósito. Sin decidir.
+- ~~Si `pausada` debe mostrar el recorrido 360.~~ **Decidido: no lo muestra (§27.4).**
+
+---
+
+## 27. La retícula regular, y el bug del carácter perdido (25 ago 2026, R143)
+
+El prototipo de §26.6 se llevó a producción. El cambio es chico de escribir y costó
+**tres intentos**, todos por la misma pieza: la foto a todo lo ancho.
+
+### 27.1 Qué cambió
+
+| | Antes | Ahora |
+|---|---|---|
+| Retícula | `column-count` (mosaico) | `grid` regular |
+| Proporción de celda | la de cada foto | 3:2 fija, `object-fit:cover` |
+| Hero | tope 420 px | `clamp(380px, 70vh, 720px)` |
+| Foto ancha | no había | una cada tres filas llenas |
+
+**El argumento no es estético.** El mosaico por columnas llena de arriba abajo: el
+cliente barre de izquierda a derecha y lee 1, 11, 21. Medido en celular: mosaico
+`2,5,3,6,4,7` contra retícula `2,3,4,5,6,7`. El recorrido con el que se fotografió la
+casa se perdía.
+
+Y el mosaico existe para proporciones mezcladas, que aquí no hay: las 20 fotos medidas
+son 3:2 exacto.
+
+**Dos cosas de la propuesta NO se hicieron, a propósito:** el visor ya tenía contador y
+flechas de teclado, y la barra fija de descarga sobra porque la descarga ya es lo
+primero del cuerpo. Duplicarla no aportaba.
+
+### 27.2 La foto ancha es la parte frágil
+
+`grid-column:1/-1` **solo cabe si la fila anterior quedó completa**. Si no, la retícula
+la empuja abajo y deja un hueco visible. Con 2 columnas toca cada 7 y con 3 cada 10, así
+que la posición **no puede ser un número fijo**: sale del número de columnas.
+
+Los tres intentos:
+
+1. **Período fijo de 7.** Con 2 columnas caía a media fila → hueco después de la 10.
+   Lo detectó Bruno en el prototipo.
+2. **Leer las columnas con `getComputedStyle`… antes de montar.** Una retícula vacía no
+   tiene layout y devolvía una sola columna. Período 4: **nueve anchas de treinta y
+   ocho**. Se arregló montando primero y marcando al final.
+3. **El carácter perdido.** Seguía dando período 4. La causa no era la lógica:
+
+   ```
+   split(/s+/)     ← lo que quedó escrito
+   split(/\s+/)    ← lo que debía decir
+   ```
+
+   Sin la barra invertida parte por la **letra "s"**, que no aparece en
+   `"245px 245px 245px"`, así que devolvía un solo pedazo — una columna — siempre. Se
+   perdió al generar el archivo desde un script, no al escribir el código. Se cambió a
+   `split(/ +/)`, que parte por espacios literales y no depende de escapes.
+
+> **Lo que hizo difícil ver el 2 y el 3: no dejaban huecos.** Con 3 columnas, tres fotos
+> y una ancha encajan perfecto. La única señal era el exceso. Si no se cuenta, pasa.
+> **Al tocar esto, audita: columnas reales, huecos, y CUÁNTAS anchas salieron.**
+
+### 27.3 Verificación
+
+En el portal real del cliente, con 38 fotos y 3 columnas: anchas en **9, 19, 29**, cero
+huecos, orden correcto de izquierda a derecha, hero de 551 px.
+
+### 27.4 Decisión cerrada: `pausada` no muestra el recorrido 360
+
+Quedaba abierto desde R137. **Se cierra: no lo muestra.** Pausar es cortarle el acceso
+al cliente a propósito, y enseñarle el tour contradiría a medias esa decisión. Expirar
+es otra cosa —la relación terminó bien y el material se retiró en tiempo—, y ahí sí se
+ofrece. Si algún día se quiere lo contrario, es una línea en `cargar()`.
+
+### 27.5 Lo que queda
+
+- **Si entran fotos verticales**, `object-fit:cover` las recortaría. Hoy todas son 3:2.
+  Habría que decidir si una vertical ocupa dos filas o se acepta el recorte.
+- **La foto ancha se puede quitar** si algún día estorba: es una línea.
