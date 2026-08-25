@@ -137,7 +137,10 @@ export default {
     // event.cron con la cadena exacta del cron minutero y no se ejecutaba nunca;
     // asi ya no depende de que ese valor llegue como se espera.
     ctx.waitUntil(
-      prepararPendientes(env, 3).catch(e => console.error('R131 prepararPendientes falló:', e.message))
+      // R139 — Baja de 3 a 1. Con 3 el cron moria con "Exceeded CPU Limit" en cada
+      // vuelta y no preparaba NADA: 64 fotos atoradas indefinidamente. Uno cada dos
+      // minutos son 30 por hora, que es infinitamente mas que cero.
+      prepararPendientes(env, 1).catch(e => console.error('R131 prepararPendientes falló:', e.message))
     );
     // Lo pesado —sincronizacion, respaldo, expiracion— SOLO en el cron horario. Si
     // corriera cada minuto serian 60 sincronizaciones por hora sin ninguna razon.

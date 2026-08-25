@@ -323,8 +323,51 @@ export async function liberarPorPago(db, contratoToken, env) {
 // ni entran al ZIP, asi que no necesitan CRC — y pedirselo a uno de 986 MB revienta
 // el CPU del Worker y atora la fila entera.
 // crc32: -1 = nunca se intento; -2 = se intento y no se pudo (no reintentar).
-const FILTRO_PENDIENTE =
-  `r2_key<>'' AND mime NOT LIKE 'video/%' AND (crc32 = -1 OR r2_key_web='')`;
+const FILTRO_BASE = `r2_key<>'' AND mime NOT LIKE 'video/%'`;
+// R139 — Dos colas separadas en vez de una. Antes cada vuelta agarraba un archivo y
+// le hacia los DOS trabajos: la copia de 2000 px y el CRC32. Juntos no caben: el CRC
+// recorre el original entero byte por byte en JavaScript, y con fotos de 9 MB tres
+// archivos por vuelta son 27 MB de cómputo. El cron moria con "Exceeded CPU Limit"
+// antes de llegar a la linea que marca el fallo, asi que reintentaba lo mismo cada
+// dos minutos sin avanzar nunca ni dejar rastro. Medido en produccion el 24 ago 2026
+// con una entrega de 76 fotos: 64 atoradas y 0 marcadas como fallidas.
+//
+// Separarlas ademas ordena las prioridades. El derivado es lo unico que la galeria
+// necesita para verse; el CRC solo sirve para armar el ZIP, y el ZIP no existe hasta
+// que la entrega se libera. Haciendo TODOS los derivados primero, Bruno ve su galeria
+// completa en la mitad del tiempo y los CRC se calculan despues, sin prisa.
+const FILTRO_SIN_DERIVADO = `${FILTRO_BASE} AND (r2_key_web='' OR r2_key_web IS NULL)`;
+const FILTRO_SIN_CRC = `${FILTRO_BASE} AND crc32 = -1`;
+// Lo que falta en total, para el contador del portal y su barra de avance.
+const FILTRO_PENDIENTE = `${FILTRO_BASE} AND (crc32 = -1 OR r2_key_web='')`;
+
+// Un solo trabajo, el que toque. Devuelve si avanzo algo.
+// El orden importa y no es arbitrario: primero lo que hace visible la galeria.
+async function prepararUno(env, db, tope) {
+  const { results: sinWeb } = await query(db,
+    `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_DERIVADO} ORDER BY fecha LIMIT ?`, [tope]);
+  if (sinWeb && sinWeb.length) {
+    let hechos = 0;
+    for (const a of sinWeb) if (await generarDerivado(env, db, a)) hechos++;
+    // Un derivado que falla NO se marca como fallido: generarDerivado ya dice que si
+    // no sale, la galeria cae al original y solo va lenta. Marcarlo obligaria a usar
+    // crc32=-2, que ademas traba el ZIP — un problema peor que el que resuelve.
+    // Pero tampoco puede quedarse al frente de la fila tapando todo, asi que cuando
+    // la vuelta no avanzo se sigue con los CRC, que son una cola independiente.
+    if (hechos) return hechos;
+  }
+  const { results: sinCrc } = await query(db,
+    `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_CRC} ORDER BY fecha LIMIT ?`, [tope]);
+  let hechos = 0;
+  for (const a of (sinCrc || [])) {
+    if (await asegurarCrc(env, db, a)) hechos++;
+    // Un archivo que no avanza no puede quedarse al frente de la fila para siempre:
+    // se marca como intentado y se sigue. Paso con el video de 986 MB, que ademas no
+    // necesitaba CRC.
+    else await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
+  }
+  return hechos;
+}
 
 // ── Preparacion en segundo plano ──────────────────────────────────────────────
 // La galeria necesita, por cada foto, una copia reducida y su CRC. Hacerlo desde el
@@ -334,7 +377,7 @@ const FILTRO_PENDIENTE =
 // Va de DOS en dos a proposito: cada una decodifica un JPEG de 10 MB, y pasarse
 // revienta el limite de CPU del Worker. Dos por minuto son 120 por hora: una sesion
 // de 50 fotos queda lista en media hora sin que nadie este presente.
-export async function prepararPendientes(env, tope = 2) {
+export async function prepararPendientes(env, tope = 1) {
   const db = env.DB;
 
   // R136 — Va PRIMERO y siempre, aunque no haya nada que preparar. Un reemplazo en
@@ -348,22 +391,7 @@ export async function prepararPendientes(env, tope = 2) {
     console.error('R136 confirmarReemplazos falló:', ex.message);
   }
 
-  const { results } = await query(db, `SELECT * FROM e_archivos WHERE ${FILTRO_PENDIENTE}
-     ORDER BY fecha LIMIT ?`, [tope]);
-  if (!results || !results.length) return { hechos: 0, pendientes: 0, reemplazos };
-
-  let hechos = 0;
-  for (const a of results) {
-    let algo = false;
-    if (!a.r2_key_web) algo = !!(await generarDerivado(env, db, a)) || algo;
-    if (Number(a.crc32) < 0) algo = (await asegurarCrc(env, db, a)) || algo;
-    if (algo) hechos++;
-    // Un archivo que no avanza NO puede quedarse al frente de la fila para siempre:
-    // el cron lo volveria a agarrar cada minuto y nada mas se prepararia nunca. Se
-    // marca como intentado y se sigue. Paso con el video de 986 MB, que ademas no
-    // necesitaba CRC.
-    else await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
-  }
+  const hechos = await prepararUno(env, db, tope);
   const pend = await queryOne(db,
     `SELECT COUNT(*) AS n FROM e_archivos WHERE ${FILTRO_PENDIENTE}`);
   return { hechos, pendientes: (pend && pend.n) || 0, reemplazos };
@@ -1863,23 +1891,34 @@ export async function handleEntregas(request, env, ctx, action) {
     // Tope de 2: cada una transforma un original de 10 MB y pasarse revienta el
     // isolate igual que en la subida. Mejor muchas peticiones chicas que una gorda.
     const n = Math.min(2, Math.max(1, Number(lote) || 1));
-    // Mismo criterio que el cron: solo imágenes, y lo que ya se intentó sin éxito
-    // (crc32 = -2) no se vuelve a intentar.
-    const filtro = FILTRO_PENDIENTE;
-    const { results } = await query(db,
-      `SELECT * FROM e_archivos WHERE ${filtro}
-       ${entregaId ? 'AND e_entrega_id=?' : ''} LIMIT ?`,
-      entregaId ? [entregaId, n] : [n]);
+    // R139 — Un solo trabajo por peticion, y los derivados antes que los CRC, igual
+    // que el cron. Antes cada peticion hacia los dos trabajos del mismo archivo: el
+    // doble de CPU de golpe, que es lo que tumbaba al cron. Aqui no llegaba a matarlo
+    // porque el lote es de uno, pero si producia los 503 pasajeros que el bucle del
+    // portal tiene que aguantar. Ademas, con los derivados primero la galeria se ve
+    // completa a media preparacion en vez de al final.
     let hechos = 0;
-    for (const a of (results || [])) {
-      let algo = false;
-      if (!a.r2_key_web) algo = !!(await generarDerivado(env, db, a)) || algo;
-      if (Number(a.crc32) < 0) algo = (await asegurarCrc(env, db, a)) || algo;
-      if (algo) hechos++;
-      else await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
+    const sinWeb = await query(db,
+      `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_DERIVADO}
+       ${entregaId ? 'AND e_entrega_id=?' : ''} ORDER BY fecha LIMIT ?`,
+      entregaId ? [entregaId, n] : [n]);
+    if (sinWeb.results && sinWeb.results.length) {
+      for (const a of sinWeb.results) if (await generarDerivado(env, db, a)) hechos++;
+    }
+    // Igual que el cron: si los derivados no avanzaron, no se traba la fila — se
+    // siguen con los CRC, que son otra cola.
+    if (!hechos) {
+      const sinCrc = await query(db,
+        `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_CRC}
+         ${entregaId ? 'AND e_entrega_id=?' : ''} ORDER BY fecha LIMIT ?`,
+        entregaId ? [entregaId, n] : [n]);
+      for (const a of (sinCrc.results || [])) {
+        if (await asegurarCrc(env, db, a)) hechos++;
+        else await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
+      }
     }
     const pend = await queryOne(db,
-      `SELECT COUNT(*) AS n FROM e_archivos WHERE ${filtro}
+      `SELECT COUNT(*) AS n FROM e_archivos WHERE ${FILTRO_PENDIENTE}
        ${entregaId ? 'AND e_entrega_id=?' : ''}`, entregaId ? [entregaId] : []);
     return ok({ ok: true, hechos, pendientes: (pend && pend.n) || 0 });
   }
