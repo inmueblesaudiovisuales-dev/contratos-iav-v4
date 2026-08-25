@@ -1,9 +1,9 @@
-# Handoff — Sistema de Entregas (R129–R139)
+# Handoff — Sistema de Entregas (R129–R140)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
 >
-> Última actualización: 2026-08-24
+> Última actualización: 2026-08-24 (noche)
 > Rango de commits: `9994f46..HEAD`.
 >
 > **Atajos:** §2 estado · §15 lo que falta · §21 qué material hay vivo ahora ·
@@ -11,11 +11,16 @@
 > rediseño de los dos portales y preparación automática) · §22 la sesión del 18 ago
 > (la marca que no se quitaba tras liberar, y la galería de destacadas) · §9 la marca
 > de agua recalibrada el 18 ago · §23 la sesión del 24 ago (el recorrido 360 copiable
-> y los sets de fotos con galería o sin ella) · **§24 el cron que moría de CPU y no
-> preparaba nada** — léelo si ves preparaciones atoradas.
+> y los sets de fotos con galería o sin ella) · §24 el cron que moría de CPU ·
+> **§25 EL TECHO DE CPU: la cuenta está en Workers Free** — si ves preparaciones
+> atoradas, miniaturas rotas o 503, empieza ahí.
 >
 > **Sin pendientes de migración.** `r133-destacadas.sql` y `r138-galeria-entregables.sql`
 > están aplicadas y verificadas en producción (§23.4).
+>
+> **Pendiente que importa:** contratar **Workers Paid** (~5 USD/mes). La cuenta está en
+> el plan gratuito, con 10 ms de CPU por petición, y este sistema pide ~90 ms. Es la
+> causa de fondo de todo §25.
 
 ---
 
@@ -268,13 +273,14 @@ clara — que es la mitad de las fotos de un inmueble.
 
 | Parámetro | Valor | Dónde |
 |---|---|---|
-| Opacidad | `0.35` | `OPACIDAD_MARCA` en `routes/entregas.js` |
+| Opacidad | `0.15` | `OPACIDAD_MARCA` en `routes/entregas.js` — bajó de 0.35 en R140 (§25.6) |
 | Fracción | `0.9375` | `ANCHO_MARCA` — el tile ocupa casi todo el ancho de la foto |
 | Tope duro | `0.95` | `TOPE_MARCA` — **ver la trampa abajo** |
-| Versión | `2` | `VERSION_MARCA` — va en la llave del caché |
+| Versión | `3` | `VERSION_MARCA` — va en la llave del caché. Subió con R140 |
 
 Fracción 0.9375 × texto al 80% del tile = **el texto ocupa el 75% del ancho de la
-foto**. Salen dos o tres marcas por foto, grandes y legibles.
+foto**. Salen dos o tres marcas por foto, grandes y legibles. El **tamaño no cambió**
+en R140: lo único que bajó fue la opacidad.
 
 ### La marca es PROPORCIONAL, no de tamaño fijo
 
@@ -334,7 +340,9 @@ como `sistema/marca-agua-previa.png`.
 | `a6449a5380ebf5f3068679a5e5bfe918` | IAV-Mosaico-Horizontal | 1.0 | Horizontal |
 | `ff3919c145eb7bceee5538effaa3736f` | IAV-Mosaico-Vertical | 1.0 | **Vertical** (el formato nativo de IAV) |
 
-`perfilWatermark()` elige por orientación. Opacidad 0.35, `position=center`, `padding=0`.
+`perfilWatermark()` elige por orientación. Opacidad **0.15** desde R140, `position=center`,
+`padding=0`. Los perfiles a 0.35 de R135 siguen vivos: un perfil no se puede editar ni
+borrar sin romper los videos ya codificados con él.
 
 **Stream no sabe repetir un mosaico**: coloca *una* imagen y ya. Por eso el patrón va
 dibujado **dentro** del PNG, y el perfil va a escala 1.0 para que cubra el cuadro
@@ -1571,6 +1579,13 @@ existente cambia de comportamiento.
 
 ## 24. El cron de preparación moría de CPU (24 ago 2026, R139)
 
+> **Esta sección se quedó a medias. Lee §25.**
+>
+> Se escribió el mismo día, antes de saber lo importante. Aquí la causa se atribuye al
+> lote de 3, que era la causa *inmediata* y cierta — pero la de fondo es que la cuenta
+> está en **Workers Free**, con 10 ms de CPU por petición, y este trabajo pide ~90 ms.
+> Todo lo que sigue es correcto; simplemente no es el final de la historia.
+
 El bug más caro de encontrar de toda la sesión, y el más barato de arreglar: un `3`
 donde el propio código decía **dos**.
 
@@ -1669,3 +1684,156 @@ vuelve a acercarse al límite, el sospechoso es el CRC, no la imagen.
   caber. La señal es la misma: pendientes que no bajan y **cero** fallidas.
 - El CRC durante la subida sigue descartado (§18, la tanda donde de 50 fotos entraron
   10 y 40 murieron en cadena).
+
+---
+
+## 25. La tarde del techo de CPU (24 ago 2026, R139–R140)
+
+> **Si vuelves a ver preparaciones atoradas, miniaturas rotas o 503, empieza por §25.1.**
+> La causa de todo lo de esta sesión es una sola y no está en el código.
+
+Una entrega de 76 fotos de ~9 MB no terminaba de prepararse. Se arreglaron cinco cosas
+distintas, cada una real, y ninguna era la causa. La causa apareció al final, por
+accidente, al intentar subir un límite.
+
+### 25.1 La causa: la cuenta está en Workers Free
+
+**El plan gratuito de Cloudflare da 10 ms de CPU por petición.** El trabajo de este
+sistema —dibujar una marca de agua, recorrer 9 MB para un CRC— pide del orden de 90 ms.
+Un orden de magnitud arriba del techo.
+
+Se descubrió al añadir `[limits] cpu_ms` a `wrangler.toml`. El deploy falló con:
+
+```
+CPU limits are not supported for the Free plan. [code: 100328]
+```
+
+Ese intento se revirtió (el bloque `[limits]` rompe el deploy mientras la cuenta siga
+en Free). **La confirmó Bruno en el panel: Workers Free.**
+
+Esto explica, de una sola vez, todo lo que se vio esa tarde:
+
+| Síntoma | Por qué |
+|---|---|
+| Miniaturas rotas en el portal | Dibujar la marca no cabe en 10 ms |
+| `derivados` con 503 en serie | El CRC de 9 MB no cabe |
+| El cron muriendo | Varios trabajos juntos no caben |
+| Que a veces sí y a veces no | Está justo en el filo |
+
+**Los cron son la excepción y por eso confundían**: una ejecución programada salió en
+`Ok` con **90 ms de CPU** mientras las peticiones normales morían. Traen su propia
+bolsa, mucho mayor. Durante horas el cron fue lo único que avanzaba.
+
+> **Pendiente real, y es lo único que arregla esto de fondo: contratar Workers Paid**
+> (~5 USD/mes). Sube el techo de 10 ms a 30 s. Todo lo de §25.2–§25.5 son parches que
+> siguen siendo buenos, pero pelean contra un techo que no debería estar ahí.
+
+### 25.2 El cron moría sin dejar rastro (R139)
+
+Síntoma: 64 fotos atoradas, sin avanzar en horas, **y cero marcadas como fallidas**.
+
+Esa ausencia era la pista. Si el cron las intentara y fallara, quedarían en `crc32=-2`.
+Que siguieran en `-1` significaba que ni las tocaba. `wrangler tail` lo mostró en 40
+segundos: `"*/2 * * * *" - Exceeded CPU Limit`, puntual, cada dos minutos. Moría **antes**
+de la línea que marca el fallo, así que reintentaba lo mismo para siempre sin dejar
+huella en la base. Invisible desde SQL.
+
+La causa estaba escrita en el propio código: el comentario de `prepararPendientes` decía
+*"Va de DOS en dos a proposito"* y `index.js` la llamaba con **tres**.
+
+**Lo caro no es la imagen, es el CRC.** `crcDeStream()` recorre el original byte por byte
+en JavaScript. El derivado lo hace el binding de Images y el Worker casi solo espera I/O.
+Medido: una vuelta con un derivado son **90 ms de CPU y 2 316 ms de reloj**.
+
+**El arreglo:** dos colas separadas, un trabajo por vuelta, y **los derivados primero** —
+el derivado es lo único que la galería necesita para verse; el CRC solo sirve para el
+ZIP, que no existe hasta liberar. Así la galería se ve completa a media preparación.
+
+Un derivado fallido **no se marca**: `generarDerivado` ya dice que si no sale, la galería
+cae al original y solo va lenta. Marcarlo obligaría a usar `crc32=-2`, que además traba
+el ZIP. Para que no tape la fila, si la vuelta no avanza se sigue con los CRC.
+
+### 25.3 El contador mentía (R139b)
+
+Al separar las colas, el número se congeló: contaba **archivos** que necesitaban algo, y
+con los derivados en marcha cada foto seguía necesitando su CRC. Bruno vio "64" clavado
+mientras el servidor preparaba veinte fotos, y reportó —con razón— que seguía trabado.
+
+Ahora se cuentan **trabajos**: una foto a la que le faltan las dos cosas cuenta dos. El
+cambio va en los dos lados (`contarPendientes()` y `pendientesGaleria()`), porque si se
+separan vuelve a haber dos verdades.
+
+### 25.4 La pantalla saboteaba el trabajo que esperaba (R139c)
+
+El hallazgo más contraintuitivo. Una foto sin copia reducida obliga al Worker a bajar el
+original de 9 MB y transformarlo **por cada miniatura**. Abrir la entrega disparaba 76 de
+esas de golpe. Medido:
+
+```
+/api/e/foto       67 peticiones -> 56 muertas por CPU
+/api/e/derivados  29 peticiones -> 16 muertas por CPU
+```
+
+Las miniaturas se comían el CPU de la preparación y arrastraban al botón. Un círculo
+cerrado: para ver las fotos hay que prepararlas, pero intentar verlas lo impedía. Y esas
+56 salían rotas igual, así que el costo no compraba nada.
+
+Ahora, mientras una foto no tenga copia reducida, se pinta un hueco que dice
+"Preparando". **En cuanto se quitaron, el endpoint del botón revivió.**
+
+### 25.5 Ritmo del cron (R139d, R139e)
+
+El cron pasa a **cada minuto**. Y el lote no puede ser uno solo para los dos trabajos:
+
+- **Derivados: 3 por vuelta.** Salen en `Ok`.
+- **Firmas: 1 por vuelta.** Con 3 mataban el cron — tres `Exceeded CPU Limit` seguidos.
+
+No cuestan lo mismo y por eso el lote es distinto.
+
+**Cómo se terminó esa entrega:** con un bucle desde el navegador contra `derivados`,
+pausado. El patrón fue de ráfagas: **22 firmas en 34 segundos**, luego minutos de 503, y
+otra vez. Insistir cada pocos segundos lo empeoraba; **esperar ~40 s tras cada frenada lo
+destrababa**. Terminó en 76/76 con 0 fallidas.
+
+### 25.6 La marca de agua baja a 0.15 (R140)
+
+Bruno la comparó sobre sus propias fotos con ocho variantes (0.35 a 0.05 y sin marca),
+en claro y sobre fondo oscuro como se ve un reproductor. A 0.35 competía con la foto.
+
+**El tamaño no cambió** — sigue en `ANCHO_MARCA`. Solo la opacidad.
+
+**Truco útil para comparar sin castigar al servidor:** el dibujado es una mezcla lineal,
+así que con **dos** transformaciones —`o=0.001` y `o=1`— se obtiene cualquier opacidad
+mezclándolas en un canvas. Ocho variantes por dos peticiones. Con el techo de 10 ms, la
+diferencia entre poder comparar y no poder.
+
+**El video:** los PNG de Stream se habían **perdido** —se generaban con
+`scratchpad/wm-video.mjs`, que no está versionado— y la opacidad la pone el perfil, no el
+PNG, así que hacía falta el archivo. Se regeneraron desde el **mosaico real**, bajado de
+`GET /api/e/marca` (1922×912, el mismo que dibujan las fotos): el tile se pinta al 93.75%
+del ancho del cuadro —la misma fracción que `ANCHO_MARCA`— y se repite hasta cubrirlo.
+1920×1080 con 2 repeticiones, 1080×1920 con 4. Reusar el arte real evitó reconstruirlo de
+memoria.
+
+Perfiles nuevos, opacidad 0.15 y escala 1:
+
+```
+horizontal 4e07f0699bbcf0d9cfbd8c03e593ccd4
+vertical   498ce8be25027059c2edad321d9875de
+```
+
+Los cuatro anteriores quedan documentados en `wrangler.toml` y **no se borran**.
+
+**Solo aplica a lo que se suba de ahora en adelante**: en video la marca va quemada.
+
+### 25.7 Lo que queda anotado
+
+- **Contratar Workers Paid.** Es lo único que resuelve la causa. Todo lo demás son
+  parches buenos alrededor de un techo equivocado.
+- **`scratchpad/` no está versionado y ya costó caro.** `wm-video.mjs` y `tile.mjs`
+  generan artefactos de producción y se perdieron. Esta vez se salvó porque
+  `GET /api/e/marca` devuelve el mosaico vivo; la próxima puede no haber salida.
+- **La señal de que el cron se está muriendo** es pendientes que no bajan **y cero
+  fallidas**. Si fallara de verdad, quedarían marcadas.
+- **El límite se cruza por tamaño de archivo, no por número.** Estas fotos eran de 9 a
+  16 MB. Si un día entran de 20, los lotes actuales pueden volver a no caber.
