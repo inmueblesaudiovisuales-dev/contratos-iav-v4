@@ -460,9 +460,19 @@ function destacadasVisibles(){
   // Solo del set principal: si no, las fotos de otro set se colarian al muestrario
   // y el conteo del boton "ver las N" dejaria de cuadrar con lo que hay debajo.
   var sinPortada = galeriaPrincipal().filter(function(f){ return f !== p; });
-  var marcadas = sinPortada.filter(function(f){ return f.destacado; }).length;
-  return sinPortada.slice(0, Math.min(sinPortada.length,
-                                      Math.max(marcadas, D.destacadas || 6)));
+  // R145 — Las marcadas van PRIMERO y todas. Antes esto hacia slice() sobre la galeria
+  // en orden de subida y usaba las marcadas solo para contar CUANTAS: marcar una foto
+  // cambiaba el numero de huecos del muestrario, pero no cual foto ocupaba cada hueco.
+  // O sea que elegir destacadas no servia de nada. Se rompio en R138, al acotar esto al
+  // set principal: la lista de la que salia el slice venia ordenada con las destacadas
+  // al frente, y galeriaPrincipal() viene en orden de subida.
+  var marcadas = sinPortada.filter(function(f){ return f.destacado; });
+  var relleno = sinPortada.filter(function(f){ return !f.destacado; });
+  // Si se marcaron menos que el minimo, se completa con las que siguen. Importa mas de
+  // lo que parece: al separar portada de destacada (r133) toda entrega existente quedo
+  // con exactamente UNA destacada, y sin el relleno el muestrario habria quedado vacio.
+  var meta = Math.max(marcadas.length, D.destacadas || 6);
+  return marcadas.concat(relleno).slice(0, Math.min(sinPortada.length, meta));
 }
 // Lo que queda: ni la portada ni el muestrario. Asi 1 + 6 + resto = el total que
 // anuncia el boton, sin repetir ninguna.
