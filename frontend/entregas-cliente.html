@@ -37,8 +37,12 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 
 /* El hero es SIEMPRE una foto (la que Bruno eligio como portada). El video ya no
    vive aqui: tiene su propia seccion, donde caben varios. */
+/* R143 — Mas alto: de un tope de 420 px a ~70% de pantalla. La portada es la foto que
+   Bruno eligio como su mejor trabajo y salia en una franja. El minimo de 380 px evita
+   que en una ventana baja quede aplastada, y el 70% —en vez del 100%— deja ver que hay
+   algo debajo: a pantalla completa el cliente no sabe que puede bajar. */
 .hero{position:relative;overflow:hidden;background:#3a3630 center/cover;
-  height:clamp(260px,42vh,420px)}
+  height:clamp(380px,70vh,720px)}
 .hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .hero::after{content:'';position:absolute;inset:0;z-index:1;
   background:linear-gradient(to top,rgba(20,16,10,.86),rgba(20,16,10,.05) 62%)}
@@ -101,17 +105,25 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 .vcard .cap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:12px 14px}
 .vcard .cap b{font-size:13px;font-weight:600;color:#fff;line-height:1.3;display:block;text-align:left}
 
-/* Fotos: mosaico por columnas. Respeta la proporcion de cada foto, asi que una
-   vertical se ve vertical en vez de salir recortada a 4:3. */
-.mosaico{column-count:2;column-gap:8px}
-@media(min-width:640px){ .mosaico{column-count:3;column-gap:12px} }
+/* R143 — Reticula regular, no mosaico por columnas.
+   El mosaico (column-count) llena de ARRIBA ABAJO: con 3 columnas, las fotos 1 a 10
+   caen en la izquierda y la 11 arriba de la segunda. El cliente, que barre la pantalla
+   de izquierda a derecha, las lee 1, 11, 21 — y el recorrido con el que se fotografio
+   la casa se pierde. Medido en celular: el mosaico da 2,5,3,6,4,7 donde la reticula da
+   2,3,4,5,6,7.
+   Ademas el mosaico existe para acomodar proporciones mezcladas, y aqui no hay: las 20
+   fotos medidas son 3:2 exacto, todas horizontales. Se estaba pagando el precio de una
+   solucion para un problema que no existe.
+   OJO: si algun dia entran verticales, `object-fit:cover` las recortaria. Ver §26.7. */
+.mosaico{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media(min-width:640px){ .mosaico{grid-template-columns:repeat(3,1fr);gap:12px} }
 
 /* Las destacadas son un muestrario, no un archivo: van en UNA columna en el
    telefono y dos en escritorio, o sea al doble o triple de tamaño que el mosaico.
    Lo primero que ve el cliente tiene que ser el mejor trabajo, en grande. */
-.destacadas{column-count:1;column-gap:12px}
-@media(min-width:640px){ .destacadas{column-count:2;column-gap:14px} }
-.destacadas .ph{margin-bottom:12px;border-radius:11px}
+.destacadas{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:640px){ .destacadas{grid-template-columns:repeat(2,1fr);gap:14px} }
+.destacadas .ph{border-radius:11px}
 .destacadas .ph::after{border-radius:11px}
 
 /* El resto de las fotos no se monta hasta que se pide: cada miniatura es una
@@ -123,10 +135,18 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 .vertodas:hover{background:var(--paper-2)}
 .vertodas .n{font-family:var(--font-mono);font-weight:400;color:var(--ink-3);font-size:12px}
 .subt{font-size:11.5px;color:var(--ink-3);margin:-4px 0 13px}
-.ph{break-inside:avoid;margin:0 0 8px;position:relative;border-radius:9px;overflow:hidden;
-  background:var(--paper-2);cursor:zoom-in;display:block;width:100%;border:none;padding:0}
-@media(min-width:640px){ .ph{margin-bottom:12px} }
-.ph img{width:100%;height:auto;opacity:0;transition:opacity .35s}
+/* R143 — En reticula la celda manda la proporcion (3:2, la de todas las fotos) y la
+   imagen la llena. Antes la imagen mandaba el alto (height:auto) porque el mosaico
+   necesitaba alturas distintas; ya no. El margen se fue: ahora el hueco lo pone el
+   `gap` de la reticula, y dejarlo sumaba doble separacion. */
+.ph{position:relative;border-radius:9px;overflow:hidden;aspect-ratio:3/2;
+  background:var(--paper-2);cursor:zoom-in;display:block;width:100%;border:none;padding:0;margin:0}
+/* Una foto a todo lo ancho cada tres filas: rompe la monotonia de 70 fotos iguales.
+   SOLO cabe si la fila anterior quedo completa —si no, la reticula la empuja abajo y
+   deja un hueco visible— asi que la posicion NO es un numero fijo: la calcula
+   montarMosaico() desde las columnas que haya en ese momento. */
+.ph.ancha{grid-column:1/-1;aspect-ratio:16/7}
+.ph img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s}
 .ph img.ok{opacity:1}
 .ph::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 1px rgba(33,30,24,.09);
   border-radius:9px;pointer-events:none}
@@ -613,9 +633,28 @@ function montarMosaico(cont, fs, anchas){
   var cols = anchas ? (caja >= 640 ? 2 : 1) : (caja >= 620 ? 3 : 2);
   var ancho = Math.max(200, Math.round(caja / cols));
 
+  // R143 — Una foto a todo lo ancho cada tres filas llenas. La posicion NO puede ser un
+  // numero fijo: `grid-column:1/-1` solo cabe si la fila anterior quedo COMPLETA, y si
+  // no, la reticula la empuja abajo y deja un hueco visible. Con 2 columnas toca cada 7
+  // y con 3 cada 10, asi que sale de `cols`. Solo en el mosaico: en el muestrario, que
+  // son seis fotos ya grandes, no hay monotonia que romper.
+  var conAnchas = !anchas;
+  // Las columnas REALES se leen de la reticula ya montada, no se deducen. El calculo
+  // de arriba usa el ancho del contenedor con un umbral de 620/640 y el CSS usa el de
+  // la VENTANA con otro: en cuanto discrepen, la ancha cae a media fila y reaparece el
+  // hueco. Preguntarle al navegador cuantas columnas pinto es la unica fuente que no
+  // se puede despegar del CSS.
+  var colsReales = cols;
+  try {
+    var g = getComputedStyle(cont).gridTemplateColumns;
+    if (g && g !== 'none') colsReales = g.trim().split(/s+/).length;
+  } catch (e) {}
+  var periodo = colsReales * 3 + 1;
+
   fs.forEach(function(f, i){
+    var esAncha = conAnchas && i % periodo === colsReales * 3;
     var b = document.createElement('button');
-    b.className = 'ph';
+    b.className = 'ph' + (esAncha ? ' ancha' : '');
     b.setAttribute('aria-label', 'Ver ' + (f.nombre || 'foto'));
     b.onclick = (function(n){ return function(){ abrirFoto(n); }; })(todas.indexOf(f));
     var img = document.createElement('img');
@@ -628,7 +667,8 @@ function montarMosaico(cont, fs, anchas){
     img.decoding = 'async';
     img.alt = f.nombre || '';
     img.onload = function(){ img.className = 'ok'; };
-    img.src = fotoUrl(f, ancho);
+    // Una ancha ocupa la fila entera, asi que necesita el ancho del contenedor.
+    img.src = fotoUrl(f, esAncha ? caja : ancho);
     b.appendChild(img);
     cont.appendChild(b);
   });
