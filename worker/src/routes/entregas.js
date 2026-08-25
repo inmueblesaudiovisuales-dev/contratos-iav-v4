@@ -368,8 +368,13 @@ async function prepararUno(env, db, tope) {
     // la vuelta no avanzo se sigue con los CRC, que son una cola independiente.
     if (hechos) return hechos;
   }
+  // R139e — Las firmas van de UNA en una, aunque los derivados vayan de tres en tres.
+  // No cuestan lo mismo: el derivado lo hace el binding de Images y el Worker casi
+  // solo espera, mientras que la firma recorre los 9 MB dentro del propio Worker.
+  // Medido el 24 ago 2026: con lote de 3, los derivados salian en Ok y las firmas
+  // mataban el cron con "Exceeded CPU Limit" tres vueltas seguidas.
   const { results: sinCrc } = await query(db,
-    `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_CRC} ORDER BY fecha LIMIT ?`, [tope]);
+    `SELECT * FROM e_archivos WHERE ${FILTRO_SIN_CRC} ORDER BY fecha LIMIT 1`);
   let hechos = 0;
   for (const a of (sinCrc || [])) {
     if (await asegurarCrc(env, db, a)) hechos++;
