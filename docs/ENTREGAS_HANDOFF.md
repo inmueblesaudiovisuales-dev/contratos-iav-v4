@@ -1,18 +1,20 @@
-# Handoff — Sistema de Entregas (R129–R135)
+# Handoff — Sistema de Entregas (R129–R138)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
 >
-> Última actualización: 2026-08-18
+> Última actualización: 2026-08-24
 > Rango de commits: `9994f46..HEAD`.
 >
 > **Atajos:** §2 estado · §15 lo que falta · §21 qué material hay vivo ahora ·
 > §14 las 30 trampas conocidas · §18-§20 las sesiones del 11-12 ago (ZIP, descargas,
 > rediseño de los dos portales y preparación automática) · §22 la sesión del 18 ago
 > (la marca que no se quitaba tras liberar, y la galería de destacadas) · §9 la marca
-> de agua recalibrada el 18 ago.
+> de agua recalibrada el 18 ago · §23 la sesión del 24 ago (el recorrido 360 copiable
+> y los sets de fotos con galería o sin ella).
 >
-> **Pendiente inmediato:** correr la migración `r133-destacadas.sql` en D1 (§22.5).
+> **Sin pendientes de migración.** `r133-destacadas.sql` y `r138-galeria-entregables.sql`
+> están aplicadas y verificadas en producción (§23.4).
 
 ---
 
@@ -180,8 +182,8 @@ Reversible: un `DROP TABLE` de las cinco deja la base como estaba.
 |---|---|
 | `e_clientes` | `cliente_id` liga al admin. Si existe, los datos de contacto se leen en vivo y las columnas locales quedan vacías |
 | `e_entregas` | `codigo` (único, llave del enlace público), `estado`, `tour_url`, `dias_vigencia`, `pagado_manual`, y las fechas del ciclo |
-| `e_entregables` | `tipo` (`fotos`\|`video`\|`enlace`), `nombre`, `orden`, `completo`, `valor` |
-| `e_archivos` | `r2_key` (original), `images_id` (legacy), `stream_uid`, `stream_uid_limpio`, `bytes`, `destacado` |
+| `e_entregables` | `tipo` (`fotos`\|`video`\|`enlace`), `nombre`, `orden`, `completo`, `valor`, `galeria` (R138: si el set de fotos se ve en cuadrícula o solo se descarga) |
+| `e_archivos` | `r2_key` (original), `images_id` (legacy), `stream_uid`, `stream_uid_limpio`, `bytes`, `destacado`, `portada` (R133) |
 | `e_eventos` | Bitácora. Sobrevive al borrado del material |
 
 **D1 ignora las foreign keys.** Las cascadas van a mano:
@@ -793,10 +795,13 @@ Bruno decidió no atenderlo por ahora. Queda aquí como registro, no como insist
 
 ### Si retomas esto sin contexto, empieza por aquí
 
-1. **Correr la migración `r133-destacadas.sql`** en D1. El código ya la da por hecha
-   (§22.4): sin ella no existe la columna `portada`.
-2. **Rotar el token** (D). Es lo único que bloquea trabajo de video.
-3. **Abrir una entrega en un teléfono real** (B5).
+1. **Rotar el token** (D). Es lo único que bloquea trabajo de video.
+2. **Abrir una entrega en un teléfono real** (B5).
+3. **Probar los sets de fotos con material real** (§23.5): subir dos carpetas de
+   verdad y ver la variante y el staging contra la base, no contra una API simulada.
+
+Las migraciones **ya no son pendiente**: `r133` y `r138` están aplicadas y verificadas
+contra producción (§23.4).
 
 Lo que **ya no** es prioridad: decidir qué pasa con las entregas que hay. Son demos
 (§4 C3). No hay ningún cliente esperando.
@@ -1439,9 +1444,124 @@ cierra en las dos (1 + 6 + resto = total).
 
 ### 22.7 Qué falta de esto
 
-- **Correr la migración r133 en D1.** El código la necesita: sin ella, `portada` no
-  existe como columna y el `SELECT *` no la trae.
+- ~~Correr la migración r133 en D1.~~ **Hecha.** Verificado el 24 ago 2026 contra la
+  base de producción: `e_archivos` tiene `portada` y `destacado` (§23.4).
 - Verlo en un **teléfono real** (sigue siendo B5). Las destacadas se midieron a
   375 px emulados, no en una pantalla táctil.
 - El número 6 vive en `DESTACADAS_VISIBLES` (`routes/entregas.js`) y el portal lo lee
   del servidor, así que cambiarlo es una línea.
+
+---
+
+## 23. Sesión del 24 ago 2026 — el recorrido 360 copiable y los sets de fotos
+
+Dos cosas pedidas por Bruno, en el mismo día. La segunda salió de una pregunta suya
+que parecía de operación y resultó ser un hueco del modelo de datos.
+
+### 23.1 El recorrido 360 se podía abrir pero no copiar (R137)
+
+El bloque del tour vivía duplicado: una copia en la entrega viva y otra, recortada,
+en la pantalla de vencida. La de vencida traía **solo un botón "Abrir"** — sin la
+liga y sin nada que copiar. Justo cuando fotos y video ya se retiraron y el recorrido
+es lo único que le queda al cliente, era cuando menos podía hacer con él.
+
+Ahora las dos pantallas pintan `bloqueTour()`, una sola función. No se pueden volver
+a desincronizar porque ya no hay dos copias.
+
+**Se agregó "Copiar código"**, que entrega un iframe listo para pegar en el sitio del
+cliente. Es iframe y **no** el `shareScript.js` de CloudPano, por dos razones que
+importan:
+
+- Los constructores que usan las inmobiliarias (Wix, EasyBroker, WordPress sin
+  plugins) suelen **borrar los `<script>`** y sí permitir iframes. Con el script de
+  CloudPano, a una parte de los clientes simplemente no les funcionaría.
+- Su splash muestra el **título del tour, que es nuestro folio interno**
+  (`IAV-2608.17-A …`), más su marca "powered by CloudPano".
+
+Como los tours siempre son de CloudPano, la URL se normaliza: si la guardada trae
+`utm` o parámetros, el cliente recibe la forma canónica limpia. Y el valor va por
+`esc()` antes de entrar al atributo `src` — sin eso, una liga con `&` o comillas
+producía un snippet con HTML roto que el cliente pegaba en su sitio.
+
+**Se quitó el lenguaje que prometía permanencia** ("no expira", "sigue disponible").
+El comportamiento **no** cambió: `tour_url` solo se lee y solo lo escriben las
+acciones de admin, el cron de expiración nunca lo toca, y el payload público lo sigue
+devolviendo en estado `expirada`. Se dejó de prometer, nada más.
+
+### 23.2 Dos carpetas de fotos y el cliente las veía dobles (R138)
+
+La pregunta de Bruno fue concreta: un cliente quiere sus fotos **y** las mismas con
+**su** logotipo. ¿Qué pasa si subo las dos carpetas?
+
+Lo que pasaba: `base.fotos` era una lista plana que ni siquiera decía de qué
+entregable venía cada foto, y el portal la pintaba tal cual. Dos carpetas eran 2N
+renglones sin relación entre sí — el cliente veía cada foto dos veces, en la galería
+y en el ZIP. No existía manera de decirle a la página que una era variante de la otra.
+
+**Ojo con esto**, que es lo que hace la duplicación peor que un simple estorbo: a un
+set que ya trae el logotipo del cliente, el sistema le dibuja **su propio mosaico
+encima** mientras no esté liberada. Y al liberar solo deja de dibujar el suyo: el
+logotipo quemado en el JPEG se queda para siempre. Las copias marcadas por fuera no
+son intercambiables con las limpias.
+
+La solución fue la columna `galeria` en `e_entregables`:
+
+| `galeria` | Qué ve el cliente |
+|---|---|
+| `1` | Cuadrícula propia, con el nombre del entregable de encabezado |
+| `0` | Ninguna imagen. El set solo aparece como un botón de descarga |
+
+El **primer** set de fotos nace con galería; los siguientes nacen sin ella, que es el
+caso común de una variante. Prenderla es un clic en el portal de control — y eso es
+lo que se hace cuando el segundo set sí es material distinto, como staging virtual.
+
+**La portada sale siempre del primer set con galería.** Una foto de un set que no se
+muestra dejaría la cabecera apuntando a algo invisible, así que el servidor rechaza
+marcarla, y al apagar la galería del set que la tenía la reasigna (`reasignarPortada`).
+
+Cada set lleva además **su propio ZIP**, firmado por entregable — `zip:<entrega>:<entregable>`,
+que no sirve para el ZIP general ni al revés. Para un set sin galería ese botón es la
+**única** forma de bajarlo, porque sus fotos no se ven en ningún lado.
+
+El reparto vive en `repartirFotos()` (`entregas-core.js`), puro y con 9 pruebas.
+
+### 23.3 Dos bugs que salieron armando lo anterior
+
+**El JSON rompe la identidad.** El servidor manda las mismas fotos dos veces —dentro
+de `galerias` y aplanadas en `fotos`— y al serializar dejan de ser el mismo objeto en
+el navegador. Todo el código de la galería compara por identidad: `f !== portada` para
+no repetir la portada, y `todas.indexOf(f)` para saber qué foto abrir. Resultado: la
+portada salía duplicada y **tocar una foto del segundo set daba `indexOf === -1`**, así
+que el visor abría otra. La página reconstruye `fotos` desde `galerias` al cargar, y
+con eso vuelve a haber una sola copia de cada foto.
+
+**El interruptor se escondía y dejaba fotos enterradas.** Al principio solo se mostraba
+con más de un set. Si borrabas un set y el que quedaba estaba en "solo descarga", el
+botón desaparecía y sus fotos quedaban invisibles **sin forma de volver a prenderlas**.
+Ahora también aparece cuando el set está apagado, aunque sea el único.
+
+### 23.4 Migraciones — las dos verificadas contra producción
+
+`r138-galeria-entregables.sql` corrió el 24 ago 2026, **antes** del deploy. El orden
+importa: el código nuevo inserta `galeria` al crear un entregable, así que con el
+código arriba y la columna abajo, agregar entregables truena. La lectura sí aguanta
+—`galeria` llegaría `undefined` y solo el `0` explícito apaga la galería—, y hay una
+prueba que fija ese comportamiento.
+
+De paso se resolvió una duda vieja de este documento: **`r133` ya estaba corrida.** El
+`PRAGMA` de producción devuelve `portada` y `destacado` en `e_archivos`. La nota de
+"pendiente inmediato" llevaba tiempo siendo falsa.
+
+Estado de la base tras r138: 24 entregables, los 24 con `galeria=1`. Ninguna entrega
+existente cambia de comportamiento.
+
+### 23.5 Qué falta de esto
+
+- **Ejercerlo con material real.** Los tres escenarios —un set, variante, staging— se
+  verificaron en el navegador contra una API simulada, no contra una entrega de verdad
+  con dos carpetas subidas.
+- **Decidir si `pausada` también debe mostrar el recorrido.** Hoy no lo muestra; solo
+  se cambió `expirada`. Pausar es una decisión deliberada de Bruno y enseñar el tour
+  ahí contradiría el propósito, así que se dejó como estaba.
+- El mensaje del commit `2af33f0` (R137) trae una `@` suelta al final, de un error de
+  sintaxis al escribirlo. Corregirlo pide force-push a `main`.
