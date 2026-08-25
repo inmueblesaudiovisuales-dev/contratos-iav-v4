@@ -1,4 +1,4 @@
-# Handoff — Sistema de Entregas (R129–R138)
+# Handoff — Sistema de Entregas (R129–R139)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
@@ -11,7 +11,8 @@
 > rediseño de los dos portales y preparación automática) · §22 la sesión del 18 ago
 > (la marca que no se quitaba tras liberar, y la galería de destacadas) · §9 la marca
 > de agua recalibrada el 18 ago · §23 la sesión del 24 ago (el recorrido 360 copiable
-> y los sets de fotos con galería o sin ella).
+> y los sets de fotos con galería o sin ella) · **§24 el cron que moría de CPU y no
+> preparaba nada** — léelo si ves preparaciones atoradas.
 >
 > **Sin pendientes de migración.** `r133-destacadas.sql` y `r138-galeria-entregables.sql`
 > están aplicadas y verificadas en producción (§23.4).
@@ -1565,3 +1566,106 @@ existente cambia de comportamiento.
   ahí contradiría el propósito, así que se dejó como estaba.
 - El mensaje del commit `2af33f0` (R137) trae una `@` suelta al final, de un error de
   sintaxis al escribirlo. Corregirlo pide force-push a `main`.
+
+---
+
+## 24. El cron de preparación moría de CPU (24 ago 2026, R139)
+
+El bug más caro de encontrar de toda la sesión, y el más barato de arreglar: un `3`
+donde el propio código decía **dos**.
+
+### 24.1 El síntoma, y la pista que lo delató
+
+Una entrega recién subida —76 fotos, 9 MB de promedio— atorada en **64 pendientes**
+sin avanzar. El portal mostraba la mitad de las miniaturas rotas.
+
+La pista no fue el número, fue lo que **no** había: **cero archivos marcados como
+fallidos**. Si el cron los estuviera intentando y fallando, quedarían en `crc32=-2`.
+Que siguieran todos en `-1` significaba que ni siquiera los estaba tocando.
+
+`wrangler tail` lo enseñó en 40 segundos:
+
+```
+"*/2 * * * *" @ 7:04:09 PM - Exceeded CPU Limit
+"*/2 * * * *" @ 7:06:09 PM - Exceeded CPU Limit
+```
+
+El cron **sí** disparaba, puntual. Moría a la mitad, **antes** de llegar a la línea
+que marca el fallo, así que reintentaba exactamente lo mismo cada dos minutos para
+siempre y no dejaba ni un rastro en la base. Un ciclo cerrado, invisible desde SQL.
+
+### 24.2 La causa estaba escrita en el propio código
+
+El comentario de `prepararPendientes` decía, textual:
+
+> Va de **DOS** en dos a proposito: cada una decodifica un JPEG de 10 MB, y pasarse
+> revienta el limite de CPU del Worker.
+
+Y `index.js` la llamaba con **tres**. Ese `3` entró el 12 ago (`b5ccd0a`), junto con
+el cambio del cron de cada minuto a cada dos minutos — subir el lote compensaba la
+mitad de vueltas. Con fotos chicas aguantó cuatro meses. Con estas de 9 MB, no.
+
+**Lo caro no es la imagen, es el CRC.** `crcDeStream()` recorre el original entero
+**byte por byte en JavaScript**. Tres fotos de 9 MB son 27 millones de iteraciones en
+una sola ejecución. El derivado, en cambio, lo hace el binding de Images.
+
+### 24.3 El arreglo
+
+**Los dos trabajos dejan de ir juntos.** Antes cada vuelta agarraba un archivo y le
+hacía el derivado **y** el CRC. Ahora son dos colas independientes y cada vuelta hace
+uno solo.
+
+**Los derivados van primero**, y esto no es un detalle de rendimiento sino de
+prioridad: el derivado es lo único que la galería necesita para verse; el CRC solo
+sirve para armar el ZIP, y el ZIP no existe hasta que la entrega se libera. Haciendo
+todos los derivados antes, la galería se ve **completa a media preparación** en vez
+de al final.
+
+El lote del cron baja de 3 a 1. Uno cada dos minutos son 30 por hora, que es
+infinitamente más que cero.
+
+El endpoint `derivados` —el botón "Preparar galería"— recibe el mismo reparto. Ahí el
+lote de uno evitaba que muriera, pero hacía los dos trabajos por petición y producía
+los 503 pasajeros que el bucle del portal tiene que aguantar.
+
+### 24.4 Por qué un derivado fallido NO se marca
+
+`generarDerivado` ya lo dice: si no sale, la galería cae al original y solo va lenta.
+Marcarlo obligaría a usar `crc32=-2`, que además **traba el ZIP** — el endpoint
+rechaza con "Faltan N fotos por preparar" ante cualquier `crc32 < 0`. Sería un
+problema peor que el que resuelve.
+
+Para que tampoco tape la fila, cuando la vuelta de derivados no avanza se sigue con
+los CRC, que son otra cola. Un derivado imposible deja la galería lenta para esa foto
+y no bloquea nada más.
+
+### 24.5 Verificación
+
+Tras el deploy, dos vueltas seguidas del cron en `Ok` en vez de `Exceeded CPU Limit`,
+y la base avanzando: los derivados bajaron de 64 a 62 en ~4 minutos —uno por vuelta,
+como se diseñó—, con `sin_crc` todavía en 64. Eso último es la prueba de que la
+prioridad quedó bien: los CRC ni se habían tocado.
+
+**Medido con `wrangler tail --format json`**, una vuelta del cron haciendo un derivado:
+
+| | |
+|---|---|
+| CPU | **90 ms** |
+| Reloj | **2 316 ms** |
+
+Ese contraste explica todo el bug. El derivado casi no gasta CPU —lo hace el binding
+de Images, el Worker solo espera I/O—, así que 2.3 s de reloj son casi todo R2. El que
+quemaba CPU era el CRC en JavaScript, y por eso tres archivos con **los dos** trabajos
+se pasaban del límite mientras uno solo ni lo roza. Sirve de línea base: si una vuelta
+vuelve a acercarse al límite, el sospechoso es el CRC, no la imagen.
+
+### 24.6 Lo que queda anotado
+
+- **El camino normal es el botón, no el cron.** El cron es la red por si nadie abre el
+  portal: a 1 cada 2 minutos, 62 fotos son ~2 horas. El botón hace petición tras
+  petición sin esperar.
+- **Vigilar el lote si las fotos crecen.** El límite se cruzó por tamaño de archivo,
+  no por número. Si un día entran fotos de 20 MB, 1 por vuelta puede volver a no
+  caber. La señal es la misma: pendientes que no bajan y **cero** fallidas.
+- El CRC durante la subida sigue descartado (§18, la tanda donde de 50 fotos entraron
+  10 y 40 murieron en cadena).
