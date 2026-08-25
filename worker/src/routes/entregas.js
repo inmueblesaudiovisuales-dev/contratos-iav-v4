@@ -338,8 +338,20 @@ const FILTRO_BASE = `r2_key<>'' AND mime NOT LIKE 'video/%'`;
 // completa en la mitad del tiempo y los CRC se calculan despues, sin prisa.
 const FILTRO_SIN_DERIVADO = `${FILTRO_BASE} AND (r2_key_web='' OR r2_key_web IS NULL)`;
 const FILTRO_SIN_CRC = `${FILTRO_BASE} AND crc32 = -1`;
-// Lo que falta en total, para el contador del portal y su barra de avance.
-const FILTRO_PENDIENTE = `${FILTRO_BASE} AND (crc32 = -1 OR r2_key_web='')`;
+// R139b — Cuenta TRABAJOS pendientes, no archivos. Un archivo al que le faltan las dos
+// cosas cuenta dos. Contando archivos, la cifra se quedaba congelada durante toda la
+// primera mitad: con los derivados en marcha, cada archivo seguia necesitando su CRC y
+// por lo tanto seguia contando. Bruno veia "64" sin moverse mientras el servidor
+// preparaba veinte fotos, y la unica lectura posible era que estaba trabado otra vez.
+async function contarPendientes(db, entregaId) {
+  const filtroEnt = entregaId ? 'AND e_entrega_id=?' : '';
+  const p = entregaId ? [entregaId] : [];
+  const r = await queryOne(db,
+    `SELECT (SELECT COUNT(*) FROM e_archivos WHERE ${FILTRO_SIN_DERIVADO} ${filtroEnt})
+          + (SELECT COUNT(*) FROM e_archivos WHERE ${FILTRO_SIN_CRC} ${filtroEnt}) AS n`,
+    entregaId ? [...p, ...p] : []);
+  return (r && r.n) || 0;
+}
 
 // Un solo trabajo, el que toque. Devuelve si avanzo algo.
 // El orden importa y no es arbitrario: primero lo que hace visible la galeria.
@@ -392,9 +404,7 @@ export async function prepararPendientes(env, tope = 1) {
   }
 
   const hechos = await prepararUno(env, db, tope);
-  const pend = await queryOne(db,
-    `SELECT COUNT(*) AS n FROM e_archivos WHERE ${FILTRO_PENDIENTE}`);
-  return { hechos, pendientes: (pend && pend.n) || 0, reemplazos };
+  return { hechos, pendientes: await contarPendientes(db, null), reemplazos };
 }
 
 // ── Reemplazo de version (R136) ───────────────────────────────────────────────
@@ -1917,10 +1927,7 @@ export async function handleEntregas(request, env, ctx, action) {
         else await run(db, 'UPDATE e_archivos SET crc32=-2 WHERE id=? AND crc32 < 0', [a.id]);
       }
     }
-    const pend = await queryOne(db,
-      `SELECT COUNT(*) AS n FROM e_archivos WHERE ${FILTRO_PENDIENTE}
-       ${entregaId ? 'AND e_entrega_id=?' : ''}`, entregaId ? [entregaId] : []);
-    return ok({ ok: true, hechos, pendientes: (pend && pend.n) || 0 });
+    return ok({ ok: true, hechos, pendientes: await contarPendientes(db, entregaId || null) });
   }
 
   // ---- Huerfanos: material sin registro en la base ----

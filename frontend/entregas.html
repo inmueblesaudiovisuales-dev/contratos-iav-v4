@@ -992,15 +992,21 @@ async function subirFotos(entregableId, files){
 // comentario en subirFoto del lado del servidor).
 // Falta preparar si le falta la copia reducida (para la galeria) o el CRC (para
 // poder meterlo en el ZIP sin reventar el Worker). El video solo necesita el CRC.
+// R139b — Cuenta TRABAJOS, no archivos: cada foto lleva dos (la copia reducida que ve
+// la galería y el CRC que arma el ZIP), y desde R139 se hacen por separado. Contando
+// archivos la cifra no se movía en toda la primera mitad —con los derivados en marcha,
+// cada foto seguía necesitando su CRC y seguía contando— y parecía estar trabada.
 function pendientesGaleria(){
-  return (ACT && ACT.archivos || []).filter(function(a){
-    if(!a.r2_key) return false;
+  return (ACT && ACT.archivos || []).reduce(function(n, a){
+    if(!a.r2_key) return n;
     // Solo imágenes: los videos no llevan copia reducida ni entran al ZIP, así que
     // nunca están "pendientes". Y -2 significa "ya se intentó y no se pudo": contarlo
     // dejaría el aviso encendido para siempre.
-    if(!/^image\//.test(a.mime || '')) return false;
-    return !a.r2_key_web || Number(a.crc32) === -1;
-  }).length;
+    if(!/^image\//.test(a.mime || '')) return n;
+    if(!a.r2_key_web) n++;
+    if(Number(a.crc32) === -1) n++;
+    return n;
+  }, 0);
 }
 
 async function completarDerivados(onAvance){
@@ -1127,7 +1133,7 @@ function barraGaleria(faltan, total){
   var hechas = Math.max(0, total - faltan);
   return '<div class="prog" style="margin-left:0"><i style="width:' +
       (total ? Math.round(hechas / total * 100) : 0) + '%"></i></div>' +
-    '<div class="progtxt" style="margin-left:0">Preparando · faltan ' + faltan + ' de ' + total + '</div>' +
+    '<div class="progtxt" style="margin-left:0">Preparando · faltan ' + faltan + ' de ' + total + ' pasos</div>' +
     '<p class="hint">Puedes cerrar la ventana: el servidor sigue preparándolas solo. ' +
     'Esto solo lo hace más rápido.</p>';
 }
