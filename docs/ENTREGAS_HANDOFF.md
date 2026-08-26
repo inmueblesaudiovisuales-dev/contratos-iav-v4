@@ -1,9 +1,9 @@
-# Handoff — Sistema de Entregas (R129–R146)
+# Handoff — Sistema de Entregas (R129–R147)
 
 > Documento vivo. Si retomas esto sin contexto previo, **empieza aquí** y usa
 > `docs/superpowers/plans/2026-08-11-sistema-entregas.md` para el plan por fases.
 >
-> Última actualización: 2026-08-24 (noche)
+> Última actualización: 2026-08-25 (noche)
 > Rango de commits: `9994f46..HEAD`.
 >
 > **Atajos:** §2 estado · §15 lo que falta · §21 qué material hay vivo ahora ·
@@ -13,8 +13,9 @@
 > de agua recalibrada el 18 ago · §23 la sesión del 24 ago (el recorrido 360 copiable
 > y los sets de fotos con galería o sin ella) · §24 el cron que moría de CPU ·
 > §25 el techo de CPU (resuelto) · §26 la galería del cliente: peso, caché y video
-> vertical · §27 la retícula regular y el bug del carácter perdido · **§28 rehacer una
-> entrega: volver a borrador, destacadas y el consejo de Drive**.
+> vertical · §27 la retícula regular y el bug del carácter perdido · §28 rehacer una
+> entrega: volver a borrador, destacadas y el consejo de Drive · **§29 el "No disponible"
+> que no dejaba rastro**.
 >
 > **Sin pendientes de migración.** `r133-destacadas.sql` y `r138-galeria-entregables.sql`
 > están aplicadas y verificadas en producción (§23.4).
@@ -2143,3 +2144,76 @@ Dos decisiones de colocación, las dos deliberadas:
 
 El texto explica el **porqué** —que el material se retira— y no solo da la orden. Un
 consejo sin razón se ignora.
+
+---
+
+## 29. El "No disponible" que no dejaba rastro (25 ago 2026, R147)
+
+Bruno abrió una liga de cliente y le salió **"No disponible — No pudimos cargar tu
+entrega"**. Recargó cuatro veces en veinte segundos y a la quinta entró. No volvió a
+pasar. Este apartado existe porque **no se pudo averiguar qué fue**, y ese es el
+problema que se arregló: no la falla, sino la ceguera.
+
+### 29.1 Lo que sí se supo
+
+Las seis entregas vivas responden `200` a `/api/e/publica`. En `e_eventos` quedaron
+cuatro `vista` seguidas —22:18:15, 22:18:26, 22:18:40 y 22:24:56 de Monterrey— que es
+exactamente la huella de alguien recargando.
+
+Ese detalle acota mucho: la `vista` se escribe **antes** de armar el payload y solo si
+la entrega está `publicada` o `liberada`. O sea que la petición **llegó al servidor y
+la entrega era servible**. No fue un enlace mal escrito ni una entrega en borrador.
+
+### 29.2 Por qué no se pudo saber más
+
+Dos agujeros que se tapan mutuamente:
+
+- **El router de `/api/e/*` no tenía `try/catch`** (`index.js`). Una excepción salía
+  como la página de error **1101 de Cloudflare, que es HTML**.
+- **El portal metía las cuatro fallas en la misma cubeta.** `await r.json()` sobre ese
+  HTML truena, cae al mismo `catch` que una red caída, y pinta el mismo texto que un
+  404. Sin reintento y sin dejar nada escrito.
+
+El resultado: un 500, una red que parpadea, una respuesta ilegible y una entrega que no
+existe eran **indistinguibles desde afuera y desde adentro**.
+
+### 29.3 El arreglo
+
+**En el Worker:** el router de entregas va en `try/catch`. Un error ahora sale como JSON
+con estatus 500 y queda escrito en `wrangler tail` con la acción que lo provocó.
+
+**En el portal del cliente:** `pedirPublica()` separa las causas y `cargar()` **reintenta
+una vez** a los 1.5 s. Un 404 no se reintenta: esa entrega no existe y esperar no la va a
+crear. Si la segunda también falla, el texto es **el mismo de siempre** y debajo va un
+código chico y gris:
+
+| Código | Qué pasó |
+|---|---|
+| `Ered` | Ni se llegó al servidor |
+| `E500` | El servidor reventó armando la respuesta |
+| `Edato` | Contestó algo que no es JSON (la 1101, un portal de wifi, un deploy a la mitad) |
+| `E404` | Esa entrega no existe |
+
+**Lo que ve el cliente cuando todo funciona no cambió en nada.** Y con el reintento, un
+parpadeo de red deja de ser una pantalla de error: se lo traga la página.
+
+> **Por qué el código va en pantalla y no solo en el log.** El cliente es quien ve la
+> falla y Bruno no. Un código que el cliente puede leer por WhatsApp —"me sale Ered"—
+> convierte un reporte inútil en un diagnóstico de un segundo.
+
+### 29.4 Verificación
+
+Siete escenarios contra el texto real de las dos funciones, extraído del `.html`, con
+`fetch` simulado: todo bien, 500 que se recupera al reintentar, 500 las dos veces, red
+caída, respuesta que no es JSON, 404 que no se reintenta, y `borrador` —que no es una
+falla y por eso no lleva código. **7 de 7.** Las 108 pruebas existentes siguen pasando.
+
+### 29.5 Lo que queda
+
+- **La causa original sigue sin identificarse.** Si vuelve a salir, ahora trae nombre:
+  pídele a quien la vio el código de abajo, o corre
+  `npx wrangler tail contratos-iav-v4 --format pretty --status error`.
+- **En la pantalla de error el botón de WhatsApp desaparece**, porque su liga viene en el
+  payload que no cargó. Justo cuando el cliente más necesitaría escribir, no puede.
+  `WA_BASE` es una constante del Worker; se podría hornear en la página. No se tocó
+  porque es anterior a esto y no era el encargo.

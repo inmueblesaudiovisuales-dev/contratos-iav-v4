@@ -232,6 +232,10 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 #eExtra{width:100%;max-width:400px;text-align:left}
 #eExtra p{max-width:none}
 #eExtra .sect{margin-top:6px}
+/* R147 — El codigo de la falla. Al cliente no le dice nada y no debe estorbarle:
+   va chico, gris y separado. A quien tenga que arreglarlo le dice cual de las
+   cuatro fallas fue, que es lo que no se supo el 25 ago. */
+#eCodigo{font-family:var(--font-mono);font-size:11px;color:var(--ink-4);letter-spacing:.06em;margin-top:2px}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
   background:var(--onyx);color:#fff;padding:11px 18px;border-radius:999px;font-size:12.5px;
   font-weight:600;z-index:250;opacity:0;transition:.25s;pointer-events:none}
@@ -246,6 +250,7 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
     <h2 id="eTitulo"></h2>
     <p id="eTexto"></p>
     <div id="eExtra"></div>
+    <p id="eCodigo"></p>
     <a class="wa" id="eWa" href="#" target="_blank" rel="noopener" style="max-width:280px">
       ¿Dudas? Escríbenos por WhatsApp</a>
   </div>
@@ -367,36 +372,70 @@ function vidThumb(v){
     '/thumbnails/thumbnail.jpg?time=2s&width=800';
 }
 
-function estado(titulo, texto, extra){
+function estado(titulo, texto, extra, codigo){
   document.getElementById('contenido').style.display = 'none';
   document.getElementById('eTitulo').textContent = titulo;
   document.getElementById('eTexto').textContent = texto;
   document.getElementById('eExtra').innerHTML = extra || '';
+  // Solo las pantallas de falla llevan codigo. "Estamos preparando tu material" o
+  // "el periodo terminó" no son errores y no deben cargar con uno.
+  document.getElementById('eCodigo').textContent = codigo || '';
   var wa = document.getElementById('eWa');
   if(D && D.waLink){ wa.href = D.waLink; } else { wa.style.display = 'none'; }
   document.getElementById('estado').style.display = 'flex';
 }
 
+// R147 — Antes cualquier falla terminaba igual: un solo catch para el 404, el 500,
+// la red caida y la respuesta ilegible, sin reintento y sin dejar rastro. Cuando
+// Bruno vio "No disponible" el 25 ago no hubo manera de saber cual de las cuatro
+// habia sido, y como no se repitio, tampoco de averiguarlo despues.
+//
+// Aqui se separan. Devuelve o los datos, o la causa. El texto que ve el cliente es
+// el mismo de siempre; lo que cambia es que ahora queda dicho cual fue.
+async function pedirPublica(){
+  var r;
+  try {
+    r = await fetch('/api/e/publica?codigo=' + encodeURIComponent(CODIGO));
+  } catch(e){ return { causa: 'Ered' }; }        // ni se llego al servidor
+  var d = null;
+  // Con el try/catch del Worker (R147) un error ya llega como JSON, asi que esto
+  // solo salta si contestó algo que no es JSON: la pagina 1101 de Cloudflare, un
+  // portal de wifi de por medio, o un despliegue a la mitad.
+  try { d = await r.json(); } catch(e){ return { causa: 'Edato' }; }
+  if(!r.ok || !d || !d.ok) return { causa: 'E' + r.status };
+  return { d: d };
+}
+
 async function cargar(){
   if(!CODIGO) return estado('Enlace inválido',
     'Este enlace no es válido. Pídele a Inmuebles Audiovisuales tu liga de entrega.');
-  try {
-    var r = await fetch('/api/e/publica?codigo=' + encodeURIComponent(CODIGO));
-    D = await r.json();
-    if(!r.ok) D = null;
-    // R138 — El servidor manda las mismas fotos dos veces: dentro de `galerias` y
-    // aplanadas en `fotos`. Al pasar por JSON dejan de ser el MISMO objeto, y todo
-    // el codigo de la galeria compara por identidad: `f !== portada` para no repetir
-    // la portada, y `todas.indexOf(f)` para saber que foto abrir en el visor. Con
-    // objetos distintos la portada salia dos veces y tocar una foto del segundo set
-    // devolvia indexOf === -1. Se reconstruye `fotos` desde `galerias` para que haya
-    // una sola copia de cada foto y la identidad vuelva a valer.
-    if(D && D.galerias && D.galerias.length){
-      D.fotos = D.galerias.reduce(function(acc, g){ return acc.concat(g.fotos || []); }, []);
-    }
-  } catch(e){ D = null; }
-  if(!D || !D.ok) return estado('No disponible',
-    'No pudimos cargar tu entrega. Intenta de nuevo en un momento.');
+
+  var res = await pedirPublica();
+  // Un reintento, y solo uno. Un 404 no se arregla esperando —esa entrega no existe—
+  // pero un 500 o una red que parpadeo si, y ese es justamente el caso que se vio y
+  // no se pudo reproducir. Segundo y medio alcanza para un parpadeo y no tanto como
+  // para que el cliente crea que la pagina se colgo.
+  if(res.causa && res.causa !== 'E404'){
+    await new Promise(function(f){ setTimeout(f, 1500); });
+    res = await pedirPublica();
+  }
+  if(res.causa){
+    D = null;
+    return estado('No disponible',
+      'No pudimos cargar tu entrega. Intenta de nuevo en un momento.', '', res.causa);
+  }
+
+  D = res.d;
+  // R138 — El servidor manda las mismas fotos dos veces: dentro de `galerias` y
+  // aplanadas en `fotos`. Al pasar por JSON dejan de ser el MISMO objeto, y todo
+  // el codigo de la galeria compara por identidad: `f !== portada` para no repetir
+  // la portada, y `todas.indexOf(f)` para saber que foto abrir en el visor. Con
+  // objetos distintos la portada salia dos veces y tocar una foto del segundo set
+  // devolvia indexOf === -1. Se reconstruye `fotos` desde `galerias` para que haya
+  // una sola copia de cada foto y la identidad vuelva a valer.
+  if(D.galerias && D.galerias.length){
+    D.fotos = D.galerias.reduce(function(acc, g){ return acc.concat(g.fotos || []); }, []);
+  }
 
   if(D.estado === 'borrador')
     return estado('Estamos preparando tu material',

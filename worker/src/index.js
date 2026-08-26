@@ -95,7 +95,20 @@ export default {
     if (action.startsWith('e/')) {
       // Namespace propio del sistema de entregas. No puede chocar con las acciones
       // existentes (publicarEntrega, obtenerEntrega, revocarEntrega... son de R123).
-      response = await handleEntregas(request, env, ctx, action.slice(2));
+      //
+      // R147 — El try/catch importa mas de lo que parece. Sin el, una excepcion aqui
+      // dentro sale como la pagina de error 1101 de Cloudflare, que es HTML: el
+      // `await r.json()` del portal del cliente truena al leerla y cae al mismo catch
+      // que un cable desconectado. Las dos fallas pintaban "No disponible" y ninguna
+      // dejaba rastro. Ahora un error es JSON con estatus 500 —el portal ya puede
+      // distinguirlo— y queda escrito en `wrangler tail` con la accion que lo provoco,
+      // que es lo unico que permite diagnosticarlo despues.
+      try {
+        response = await handleEntregas(request, env, ctx, action.slice(2));
+      } catch (e) {
+        console.error('entregas/' + action.slice(2) + ' reventó:', (e && e.stack) || e);
+        response = err('Error interno', 500);
+      }
     } else if (RUTAS_CONTRATOS.includes(action)) {
       response = await handleContratos(request, env, ctx, action);
     } else if (RUTAS_PORTAL.includes(action)) {
