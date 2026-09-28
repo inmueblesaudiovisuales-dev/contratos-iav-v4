@@ -8,6 +8,33 @@
 
 ---
 
+### R148 — la liga del cliente ya no se queda en blanco (2026-09-28 16:39:31 CST)
+
+Bruno reportó que la liga de entrega (ej. `IAV-2609.17-B-v9aeztv4c4`) "muchas veces está
+caída y solo se ve blanco". No era el servidor caído: `entregas-cliente.html` arranca con
+`#estado` y `#contenido` ocultos y solo muestra algo cuando termina todo. Cualquier espera
+o falla silenciosa era una página vacía. Cuatro formas de llegar ahí, las cuatro cerradas.
+110 tests verde. NO se tocó el adapter.
+
+1. **Google Fonts bloqueaba todo.** El `<link rel="stylesheet">` detiene el pintado y el
+   script hasta que llega la hoja. En datos del celular o el navegador de WhatsApp eso son
+   segundos en blanco. Ahora se carga con `media="print"` + `onload` y no bloquea.
+2. **Sin indicador de carga.** Nuevo `#cargando` (marca + "Cargando tu entrega…") visible
+   desde el primer pintado; `estado()` y `render()` lo quitan.
+3. **`fetch` sin límite.** Una conexión colgada nunca caía al `catch`. Ahora se corta a los
+   12 s con código `Etiempo` (y sí se reintenta una vez, como `Ered`).
+4. **Excepciones sin rastro.** Si `render()` truena, `#contenido` nunca se prendía. Ahora cae
+   a "No disponible" con `Epag`; cualquier otra excepción de `cargar()` con `Ejs`.
+
+Servidor: `streamListo()` (corre dentro de `/api/e/publica` en entregas liberadas con video)
+no tenía límite; ahora 4 s con `AbortSignal.timeout`. Si vence, se sirve la copia con marca,
+igual que en cualquier otra falla de esa consulta.
+
+Códigos nuevos que puede ver el cliente: `Etiempo`, `Epag`, `Ejs` (se suman a `Ered`,
+`Edato`, `E4xx/E5xx` de R147). Si Bruno vuelve a ver una falla, el código dice cuál fue.
+
+---
+
 ### R136 — reemplazar una versión, y 3 días de gracia antes de borrar (2026-08-20)
 
 Dos cambios. 102 tests verde. NO se tocó el adapter.

@@ -121,7 +121,12 @@ export async function streamListo(env, uid) {
   try {
     const r = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/stream/${uid}`,
-      { headers: { Authorization: `Bearer ${env.CF_MEDIA_TOKEN}` } });
+      // R148 — Con limite. Esto corre DENTRO de /api/e/publica cuando la entrega esta
+      // liberada: si la API de Stream tarda, el cliente se quedaba esperando su pagina.
+      // A los 4 s se da por "no lista" y se sirve la copia con marca, como ya pasaba
+      // con cualquier otra falla; la siguiente visita vuelve a preguntar.
+      { headers: { Authorization: `Bearer ${env.CF_MEDIA_TOKEN}` },
+        signal: AbortSignal.timeout(4000) });
     const j = await r.json();
     return !!(j && j.success && j.result && j.result.readyToStream);
   } catch (e) { console.error('streamListo', e.message); return false; }

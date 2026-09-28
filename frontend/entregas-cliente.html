@@ -6,7 +6,13 @@
 <title>Tu producción — Inmuebles Audiovisuales</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- R148 — La hoja de Google Fonts ya no bloquea. Un <link rel="stylesheet"> normal
+     detiene el pintado Y el script de abajo hasta que la hoja llega: con una red
+     lenta (datos del celular, el navegador interno de WhatsApp) la pagina se quedaba
+     en blanco esperando tipografias. Con media="print" se baja sin estorbar y se
+     aplica al llegar; mientras, se ve la fuente del sistema. -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{
   --paper-0:#F7F4EC; --paper-1:#FFFDF8; --paper-2:#EFEADF;
@@ -236,6 +242,17 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
    va chico, gris y separado. A quien tenga que arreglarlo le dice cual de las
    cuatro fallas fue, que es lo que no se supo el 25 ago. */
 #eCodigo{font-family:var(--font-mono);font-size:11px;color:var(--ink-4);letter-spacing:.06em;margin-top:2px}
+/* R148 — Lo que se ve mientras llega la entrega. Antes no habia nada: #estado y
+   #contenido arrancan ocultos, asi que cualquier espera o falla silenciosa era una
+   pagina vacia, que el cliente lee como "esta caida". */
+#cargando{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;padding:40px 28px;text-align:center}
+#cargando .marca{font-family:var(--font-display);font-size:15px;color:var(--ink-1)}
+#cargando .marca em{font-style:normal;color:var(--gold)}
+#cargando p{font-size:13px;color:var(--ink-3)}
+#cargando .giro{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);
+  border-top-color:var(--gold);animation:giro .9s linear infinite}
+@keyframes giro{to{transform:rotate(360deg)}}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
   background:var(--onyx);color:#fff;padding:11px 18px;border-radius:999px;font-size:12.5px;
   font-weight:600;z-index:250;opacity:0;transition:.25s;pointer-events:none}
@@ -244,6 +261,12 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 </head>
 <body>
 <div class="device">
+
+  <div id="cargando">
+    <div class="marca">Inmuebles <em>Audiovisuales</em></div>
+    <div class="giro"></div>
+    <p>Cargando tu entrega…</p>
+  </div>
 
   <div id="estado">
     <div class="marca">Inmuebles <em>Audiovisuales</em></div>
@@ -372,7 +395,13 @@ function vidThumb(v){
     '/thumbnails/thumbnail.jpg?time=2s&width=800';
 }
 
+function quitarCarga(){
+  var c = document.getElementById('cargando');
+  if(c) c.style.display = 'none';
+}
+
 function estado(titulo, texto, extra, codigo){
+  quitarCarga();
   document.getElementById('contenido').style.display = 'none';
   document.getElementById('eTitulo').textContent = titulo;
   document.getElementById('eTexto').textContent = texto;
@@ -392,11 +421,20 @@ function estado(titulo, texto, extra, codigo){
 //
 // Aqui se separan. Devuelve o los datos, o la causa. El texto que ve el cliente es
 // el mismo de siempre; lo que cambia es que ahora queda dicho cual fue.
+// R148 — Con limite de tiempo. Un fetch sin limite que se queda colgado (red que
+// no contesta, conexion a medias) nunca cae al catch: la pagina esperaba para
+// siempre sin decir nada. A los 12 s se corta y cuenta como falla, con su codigo.
+var LIMITE_PUBLICA_MS = 12000;
 async function pedirPublica(){
   var r;
+  var ctl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var t = ctl ? setTimeout(function(){ ctl.abort(); }, LIMITE_PUBLICA_MS) : null;
   try {
-    r = await fetch('/api/e/publica?codigo=' + encodeURIComponent(CODIGO));
-  } catch(e){ return { causa: 'Ered' }; }        // ni se llego al servidor
+    r = await fetch('/api/e/publica?codigo=' + encodeURIComponent(CODIGO),
+      ctl ? { signal: ctl.signal } : undefined);
+  } catch(e){                                     // ni se llego al servidor
+    return { causa: (e && e.name === 'AbortError') ? 'Etiempo' : 'Ered' };
+  } finally { if(t) clearTimeout(t); }
   var d = null;
   // Con el try/catch del Worker (R147) un error ya llega como JSON, asi que esto
   // solo salta si contestó algo que no es JSON: la pagina 1101 de Cloudflare, un
@@ -455,7 +493,17 @@ async function cargar(){
       'Las fotos y el video ya se retiraron. Si necesitas el material otra vez, escríbenos.',
       extra);
   }
-  render();
+  // R148 — Si render() truena a la mitad, #contenido nunca se muestra (se prende en
+  // su ultima linea) y la pagina queda vacia sin rastro. Ahora cae a la pantalla de
+  // falla con su propio codigo, y el error queda en la consola.
+  try {
+    render();
+    quitarCarga();
+  } catch(e){
+    console.error('render de la entrega falló', e);
+    estado('No disponible',
+      'No pudimos mostrar tu entrega. Intenta de nuevo en un momento.', '', 'Epag');
+  }
 }
 
 function videos(){ return (D.videos && D.videos.length) ? D.videos : (D.video ? [D.video] : []); }
@@ -945,7 +993,15 @@ function copiarEmbed360(){
   toast('Código copiado — pégalo en tu sitio');
 }
 
-document.addEventListener('DOMContentLoaded', cargar);
+// R148 — Ultima red: cualquier excepcion que se escape de cargar() (antes de que
+// haya algo en pantalla) termina en la pantalla de falla, nunca en blanco.
+document.addEventListener('DOMContentLoaded', function(){
+  cargar().catch(function(e){
+    console.error('cargar falló', e);
+    estado('No disponible',
+      'No pudimos cargar tu entrega. Intenta de nuevo en un momento.', '', 'Ejs');
+  });
+});
 </script>
 </body>
 </html>
