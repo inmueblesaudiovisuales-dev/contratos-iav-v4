@@ -12,7 +12,7 @@ import { handleTrabajos } from './routes/trabajos.js';
 import { handleActividades } from './routes/actividades.js';
 import { handleConfig } from './routes/config.js';
 import { handleEntregas, expirarEntregas, prepararPendientes } from './routes/entregas.js';
-import { codigoDeRuta } from './entregas-core.js';
+import { paginaDeRuta, servirPagina } from './paginas.js';
 import { syncToSheets, backupChecklistToR2 } from './cron.js';
 import { err } from './auth.js';
 
@@ -60,25 +60,15 @@ export default {
       // OJO: sin la extension .html. Cloudflare Assets responde 307 a *.html para
       // mandarte a la ruta corta, asi que pedir el .html aqui devuelve el redirect
       // en vez del contenido.
-      const esHostEntregas = url.hostname.startsWith('entregas.');
-      let servir = null;
-      if (esHostEntregas && (path === '/' || path === '/e' || path.startsWith('/e/'))) {
-        servir = '/entregas';                            // portal de control
-      } else if (path.startsWith('/ver/') || esHostEntregas) {
-        // Enlace del cliente. El codigo es el ultimo segmento tras el ultimo guion;
-        // el folio que va delante es decorativo y puede cambiar sin romper el enlace.
-        // Archivo propio, NO entrega.html: esa sigue sirviendo al sistema R123 hasta
-        // que Bruno decida el corte. Los dos conviven sin pisarse.
-        const ruta = path.startsWith('/ver/') ? path.slice(4) : path;
-        if (codigoDeRuta(ruta)) servir = '/entregas-cliente';
-      }
-      if (servir) {
-        const assetRes = await env.ASSETS.fetch(new Request(new URL(servir, url), request));
-        const headers = new Headers(assetRes.headers);
-        headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        headers.set('Pragma', 'no-cache');
-        return new Response(assetRes.body, { status: assetRes.status, headers });
-      }
+      //
+      // R149 — Antes solo se servia la pagina del cliente si el codigo de la ruta era
+      // valido; lo demas caia a Assets y salia 404 VACIO = pantalla en blanco. Una liga
+      // escrita a mano a la que le falto una letra dejo asi a todos los que la abrieron.
+      // Ahora cualquier ruta de entregas.* que no sea un archivo recibe la pagina
+      // (siempre 200, cabeceras limpias), y la pagina decide que decirle al cliente.
+      // Detalle y pruebas en paginas.js.
+      const servir = paginaDeRuta(url.hostname, path);
+      if (servir) return servirPagina(env, request, servir);
 
       const assetRes = await env.ASSETS.fetch(request);
       const isHtml = path.endsWith('.html') || path === '/' || !path.includes('.');

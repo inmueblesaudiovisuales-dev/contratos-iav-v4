@@ -325,12 +325,22 @@ header{background:var(--onyx);padding:13px 24px;display:flex;align-items:center;
 var D = null;
 // El codigo es el ultimo segmento tras el ultimo guion. El folio que va delante es
 // decorativo: si cambia (al reagendar), la liga vieja sigue funcionando.
+// R149 — Tolerante a lo que mete el celular: mayusculas (el teclado capitaliza), un
+// punto o parentesis pegado al final, una barra de mas. Tiene que limpiar igual que
+// normalizarCodigo() del Worker; si el codigo llega corto, el servidor lo rescata.
+var EN_VER = /^\/+ver(\/|$)/.test(location.pathname);
 var CODIGO = (function(){
-  var p = location.pathname.replace(/^\/+|\/+$/g,'');
+  var p = location.pathname;
+  try { p = decodeURIComponent(p); } catch(e){}
+  p = p.replace(/^\/+|\/+$/g,'');
   if(p.indexOf('ver/') === 0) p = p.slice(4);
+  p = p.split('/')[0];
   var partes = p.split('-');
-  return partes[partes.length - 1] || '';
+  return String(partes[partes.length - 1] || '').toLowerCase().replace(/[^a-z0-9]/g,'');
 })();
+// El WhatsApp de siempre, para las pantallas donde el servidor no alcanzo a mandarlo
+// (liga que no existe, red caida). Sin esto el cliente se quedaba sin a quien escribir.
+var WA_RESPALDO = 'https://wa.me/5218127174207';
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];});}
@@ -410,7 +420,7 @@ function estado(titulo, texto, extra, codigo){
   // "el periodo terminó" no son errores y no deben cargar con uno.
   document.getElementById('eCodigo').textContent = codigo || '';
   var wa = document.getElementById('eWa');
-  if(D && D.waLink){ wa.href = D.waLink; } else { wa.style.display = 'none'; }
+  wa.href = (D && D.waLink) || WA_RESPALDO;
   document.getElementById('estado').style.display = 'flex';
 }
 
@@ -444,9 +454,27 @@ async function pedirPublica(){
   return { d: d };
 }
 
+// R149 — Si el servidor tuvo que rescatar la liga (le faltaba una letra, traia
+// mayusculas), se corrige la barra de direcciones. Asi, si el cliente la guarda o la
+// reenvia, ya va completa. replaceState no recarga ni deja una entrada de historial.
+function corregirUrl(codigoReal){
+  if(!codigoReal || codigoReal === CODIGO) return;
+  try {
+    var p = location.pathname.replace(/\/+$/,'').split('/')[EN_VER ? 2 : 1] || '';
+    var i = p.lastIndexOf('-');
+    var folio = i >= 0 ? p.slice(0, i + 1) : '';
+    history.replaceState(null, '', (EN_VER ? '/ver/' : '/') + folio + codigoReal);
+  } catch(e){}
+}
+
+function ligaIncompleta(codigo){
+  return estado('No encontramos esta entrega',
+    'Revisa que la liga esté completa: a veces se corta al copiarla o al escribirla. ' +
+    'Si la abriste desde un mensaje, pídenos que te la reenviemos.', '', codigo);
+}
+
 async function cargar(){
-  if(!CODIGO) return estado('Enlace inválido',
-    'Este enlace no es válido. Pídele a Inmuebles Audiovisuales tu liga de entrega.');
+  if(!CODIGO) return ligaIncompleta('Eliga');
 
   var res = await pedirPublica();
   // Un reintento, y solo uno. Un 404 no se arregla esperando —esa entrega no existe—
@@ -457,6 +485,10 @@ async function cargar(){
     await new Promise(function(f){ setTimeout(f, 1500); });
     res = await pedirPublica();
   }
+  if(res.causa === 'E404' || res.causa === 'E400'){
+    D = null;
+    return ligaIncompleta(res.causa);
+  }
   if(res.causa){
     D = null;
     return estado('No disponible',
@@ -464,6 +496,7 @@ async function cargar(){
   }
 
   D = res.d;
+  corregirUrl(D.codigo);
   // R138 — El servidor manda las mismas fotos dos veces: dentro de `galerias` y
   // aplanadas en `fotos`. Al pasar por JSON dejan de ser el MISMO objeto, y todo
   // el codigo de la galeria compara por identidad: `f !== portada` para no repetir

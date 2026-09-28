@@ -31,7 +31,7 @@ export function codigoDeRuta(pathname) {
   const limpio = String(pathname || '').replace(/^\/+|\/+$/g, '');
   if (!limpio || limpio.includes('/')) return '';
   const partes = limpio.split('-');
-  const cand = partes[partes.length - 1];
+  const cand = normalizarCodigo(partes[partes.length - 1]);
   return esCodigoValido(cand) ? cand : '';
 }
 
@@ -39,6 +39,33 @@ export function esCodigoValido(s) {
   if (typeof s !== 'string' || s.length !== LARGO_CODIGO) return false;
   for (const ch of s) if (!ALFABETO.includes(ch)) return false;
   return true;
+}
+
+// R149 — Lo que el cliente trae en la URL no siempre es lo que se le mando. El 27 sep
+// la liga de IAV-2609.17-B se escribio A MANO en WhatsApp y salio sin su ultima letra:
+// el 404 de ese codigo trunco dejo a todos los que la abrieron en una pagina vacia.
+// Se limpia lo obvio (mayusculas que pone el teclado del celular, un punto o parentesis
+// pegados al final) y se acepta un codigo corto por pocas letras.
+//
+// El minimo NO es negociable a la baja: el codigo es el unico candado del enlace. Con
+// 8 de 10 letras quedan 31^8 ≈ 8.5e11 combinaciones, que siguen sin poder adivinarse.
+// Con menos, y como el folio se adivina por fecha, el candado empezaria a ceder.
+export const MIN_CODIGO_PARCIAL = 8;
+
+export function normalizarCodigo(s) {
+  return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Devuelve el prefijo por el que buscar, o '' si no hay nada que rescatar. Solo para
+// codigos que NO son validos tal cual: uno completo se busca directo y ya.
+//   - corto (8 o 9 letras): se busca como prefijo
+//   - largo (le sobra algo al final): se prueban sus primeras 10
+export function prefijoRescatable(s) {
+  const c = normalizarCodigo(s);
+  if (c.length < MIN_CODIGO_PARCIAL) return '';
+  const base = c.length > LARGO_CODIGO ? c.slice(0, LARGO_CODIGO) : c;
+  for (const ch of base) if (!ALFABETO.includes(ch)) return '';
+  return base;
 }
 
 // ── Entregables desde el paquete ──────────────────────────────────────────────

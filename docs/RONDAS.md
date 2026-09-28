@@ -8,6 +8,92 @@
 
 ---
 
+### R149 — la liga en blanco era una liga incompleta: 404 vacio (2026-09-28 17:06:48 CST)
+
+Seguimiento de R148. Aun con "Cargando tu entrega…" desde el primer pintado, la liga de
+IAV-2609.17-B (`v9aeztv4c4`) seguia en blanco total en "algunos dispositivos". NO era
+cache, ni cabeceras, ni el navegador de WhatsApp. NO se toco el adapter.
+
+**Causa raiz (con evidencia).** Analiticas de Cloudflare (GraphQL `httpRequestsAdaptiveGroups`,
+host entregas.*, 26-28 sep):
+
+- 27 sep 21:00 UTC, el lector de vistas previas de WhatsApp (`WhatsApp/2.23.20.0`) pidio en
+  orden `/IAV-`, `/IAV-2609`, `/IAV-2609.17`, `/IAV-2609.17-B-v`, `/IAV-2609.17-B-v9aez`,
+  `/IAV-2609.17-B-v9aeztv4c`. Es alguien **escribiendo la liga a mano** en WhatsApp (el
+  lector de vistas previas pide cada version mientras se teclea). Se envio sin el `4` final.
+- Esa liga truncada se abrio ~63 veces: iPhone Safari (iOS 18.7 / 26.x), Chrome iOS,
+  Windows Chrome y el lector de Facebook. **Todas 404.** La liga correcta, en el mismo
+  periodo, dio 200 siempre (31 + 16 + 9 peticiones).
+- Por que 404 VACIO: `codigoDeRuta()` exige 10 letras; con 9 el Worker no servia la pagina y
+  pasaba la peticion a Assets, que no tiene ese archivo y contesta `404`, `content-length: 0`.
+  Un 404 sin cuerpo es una pantalla en blanco en cualquier navegador, sin error y sin el
+  "Cargando…" de R148 (ese texto vive en la pagina, y la pagina nunca llego).
+- "En unos si y en otros no" = quien abrio la liga correcta vs. quien abrio la truncada.
+
+**Hipotesis descartadas, con prueba:**
+1. Redireccion cacheada: el servido de la pagina no cambio desde R129 y nunca pidio `.html`
+   (el 307 de Assets a `*.html` es temporal y nadie enlaza ahi). Ninguna ruta de la liga
+   devuelve 3xx.
+2. 304 mal formado: la respuesta de produccion no traia ETag ni Last-Modified; con
+   `If-None-Match`/`If-Modified-Since` (incluido `*`) devolvia 200 con los 56 189 bytes.
+3. Codificacion: identidad, gzip, br y zstd devuelven el mismo HTML completo (56 189 bytes
+   descomprimidos), `content-encoding` coherente.
+4. Service Worker / appcache: `navigator.serviceWorker` y `applicationCache` no aparecen en
+   ningun commit del repo; no hay `_headers` ni `_redirects` en frontend/.
+5. Cache del borde / Rocket Loader: el HTML servido es el del repo + el script de deteccion
+   de bots de Cloudflare (`/cdn-cgi/challenge-platform/.../jsd`) al final del body. No
+   bloquea el pintado. (El token OAuth de wrangler no puede leer la configuracion de la zona.)
+6. DNS / HTTP: A y AAAA de Cloudflare correctos; certificado valido; 200 en HTTP/1.1, 2 y 3
+   (las analiticas muestran HTTP/3 con 200 para la liga correcta).
+7. User-agents: iPhone Safari, Android Chrome, WhatsApp iOS/Android, Instagram, Facebook
+   (IAB y crawler): todos 200 con la pagina completa. Playwright WebKit (iPhone 13 +
+   UA de WhatsApp e Instagram) y Chromium (Pixel 7 + UA de Facebook, escritorio) renderizan
+   la entrega completa (7 fotos) en carga y en recarga.
+
+D1: `v9aeztv4c4` esta `publicada` (publicada 2026-09-26), sin nada anormal.
+
+**Que cambio.**
+- `worker/src/paginas.js` (nuevo): `paginaDeRuta()` y `servirPagina()`. En entregas.* TODA
+  ruta que no sea un archivo estatico (por extension: ico, png, svg, js, txt…; el punto del
+  folio no cuenta) recibe la pagina del cliente; `/ver/*` en contratos.* igual. La pagina se
+  pide a Assets con una peticion NUEVA (GET, sin cabeceras condicionales) y se devuelve con
+  cabeceras armadas desde cero: `200`, `text/html; charset=utf-8`, `no-store`, sin ETag, sin
+  Last-Modified, sin Content-Encoding heredado. Si Assets falla, pagina de respaldo con
+  texto y WhatsApp (codigo `Easset`, 503): nunca mas una respuesta vacia.
+- `worker/src/index.js`: usa lo anterior; se quito el `codigoDeRuta` del camino de servido.
+  El resto de contratos.* (admin, portal, checklist) sigue por su camino de siempre.
+- `worker/src/entregas-core.js`: `normalizarCodigo()` (minusculas, quita lo que no es letra
+  o numero: el teclado del celular capitaliza, WhatsApp a veces pega un punto) y
+  `prefijoRescatable()` (8 o 9 letras, o las primeras 10 si sobra algo). Minimo 8: el
+  codigo es el unico candado; 31^8 ≈ 8.5e11 sigue sin poder adivinarse.
+- `/api/e/publica`: si el codigo no existe tal cual, busca por prefijo y **solo si hay una
+  unica entrega** la sirve (queda `vista` con "liga incompleta: …" en e_eventos y un log).
+  Toda respuesta trae `codigo` real.
+- `entregas-cliente.html`: extrae el codigo tolerante (mayusculas, basura final, barra de
+  mas); con el `codigo` real corrige la barra de direcciones (`history.replaceState`), asi
+  lo que el cliente guarde o reenvie ya va completo; un 404/400 muestra "No encontramos esta
+  entrega — revisa que la liga este completa" con boton de WhatsApp (antes se ocultaba
+  cuando no habia datos).
+
+**Clear-Site-Data: evaluado y NO puesto.** La pagina nunca fue cacheable (no-store desde
+R129) ni redirigio, asi que no hay nada viejo que limpiar en los telefonos; y `"cache"` en
+cada visita borraria tambien las fotos ya bajadas y en Chrome es una operacion bloqueante
+que alenta la carga. Tampoco hace falta forma de liga nueva: las ligas ya enviadas siguen
+igual y la truncada ahora se rescata sola.
+
+Tests: `paginas.test.js` (nuevo, 8) + 5 en `entregas-core.test.js`. Worker 124 (123 ok,
+1 omitido que ya existia), checklist 314 verde. Verificado en local con `wrangler dev
+--host entregas.inmueblesaudiovisuales.com`.
+
+**Si reaparece.** 1) Pedir la liga EXACTA que abrio el cliente (captura). 2) Analiticas:
+GraphQL `httpRequestsAdaptiveGroups` filtrado por `clientRequestHTTPHost` y
+`edgeResponseStatus`, con `clientRequestPath` y `userAgent`. 3) `wrangler tail` y buscar
+`publica: liga rescatada` o `pagina …: Assets`. 4) En el telefono, si se sospecha, la
+pantalla de falla trae codigo chico (Eliga, E404, Ered, Etiempo, Edato, Epag, Ejs, Easset).
+Para evitar el origen: copiar la liga con el boton "Copiar liga" del portal, no escribirla.
+
+---
+
 ### R148 — la liga del cliente ya no se queda en blanco (2026-09-28 16:39:31 CST)
 
 Bruno reportó que la liga de entrega (ej. `IAV-2609.17-B-v9aeztv4c4`) "muchas veces está

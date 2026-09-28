@@ -8,6 +8,7 @@ import { query, queryOne, run, batch, uuid, now } from '../db.js';
 import { ok, err } from '../auth.js';
 import {
   generarCodigo, rutaPublica, entregablesSembrados, parsearAdicionales,
+  normalizarCodigo, esCodigoValido, prefijoRescatable,
   calcularExpiracion, diasRestantes, estaVencida, fechaLegible,
   debeBorrarse, diasParaBorrado, DIAS_GRACIA,
   entregaCompleta, faltantes, entregableCumplido,
@@ -808,24 +809,42 @@ export async function handleEntregas(request, env, ctx, action) {
 
   // ---- Publico (sin llave): lo que abre el cliente con su enlace ----
   if (action === 'publica') {
-    const codigo = url.searchParams.get('codigo') || '';
+    const codigo = normalizarCodigo(url.searchParams.get('codigo'));
     if (!codigo) return err('Enlace inválido', 400);
-    const e = await queryOne(db, 'SELECT * FROM e_entregas WHERE codigo=?', [codigo]);
+    let e = esCodigoValido(codigo)
+      ? await queryOne(db, 'SELECT * FROM e_entregas WHERE codigo=?', [codigo])
+      : null;
+    // R149 — Liga incompleta o con algo de mas: se rescata solo si hay UNA entrega que
+    // encaje. Dos candidatas = no se adivina, se contesta 404 como antes. El alfabeto
+    // no tiene % ni _, asi que el prefijo no puede colarle comodines al LIKE.
+    let rescatada = false;
+    if (!e) {
+      const pref = prefijoRescatable(codigo);
+      if (pref) {
+        const { results } = await query(db,
+          'SELECT * FROM e_entregas WHERE codigo LIKE ? LIMIT 2', [pref + '%']);
+        if (results && results.length === 1) { e = results[0]; rescatada = true; }
+      }
+    }
     if (!e) return err('Entrega no encontrada', 404);
+    if (rescatada) console.log('publica: liga rescatada', codigo, '->', e.codigo);
+    // El codigo real va en toda respuesta: con el, la pagina corrige su propia URL
+    // y lo que el cliente guarde o reenvie ya sale completo.
+    const real = { codigo: e.codigo, rescatada };
     if (e.estado === 'borrador') {
-      return ok({ ok: true, estado: 'borrador', waLink: WA_BASE, tourUrl: '' });
+      return ok({ ok: true, estado: 'borrador', waLink: WA_BASE, tourUrl: '', ...real });
     }
     if (e.estado === 'pausada') {
-      return ok({ ok: true, estado: 'pausada', waLink: WA_BASE, tourUrl: e.tour_url || '' });
+      return ok({ ok: true, estado: 'pausada', waLink: WA_BASE, tourUrl: e.tour_url || '', ...real });
     }
     if (e.estado === 'expirada') {
       // El material ya no existe, pero la liga del 360 si: vive en CloudPano y no
       // ocupa nada. Cerrarla del todo le quitaria al cliente algo que sigue vivo.
       return ok({ ok: true, estado: 'expirada', waLink: WA_BASE, tourUrl: e.tour_url || '',
-                  titulo: e.titulo });
+                  titulo: e.titulo, ...real });
     }
-    ctx.waitUntil(evento(db, e.id, 'vista', ''));
-    return ok(await payloadPublico(db, env, e));
+    ctx.waitUntil(evento(db, e.id, 'vista', rescatada ? 'liga incompleta: ' + codigo : ''));
+    return ok({ ...(await payloadPublico(db, env, e)), ...real });
   }
 
   // ---- Foto de la galeria: se transforma AL SERVIR ----

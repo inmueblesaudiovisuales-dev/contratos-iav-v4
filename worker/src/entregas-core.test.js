@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import {
   generarCodigo, esCodigoValido, rutaPublica, codigoDeRuta, LARGO_CODIGO,
+  normalizarCodigo, prefijoRescatable, MIN_CODIGO_PARCIAL,
   clavesAcordadas, parsearAdicionales, entregablesSembrados,
   calcularExpiracion, diasRestantes, estaVencida, fechaLegible, OFFSET_MTY_MS,
   debeBorrarse, fechaBorrado, diasParaBorrado, DIAS_GRACIA,
@@ -530,4 +531,37 @@ test('sin entregables ni archivos no truena', () => {
   const r = repartirFotos(null, null, esFotoTest);
   assert.deepEqual(r.galerias, []);
   assert.deepEqual(r.sets, []);
+});
+
+// R149 — La liga de IAV-2609.17-B se escribio a mano y salio sin su ultima letra.
+test('normalizarCodigo quita lo que mete el celular', () => {
+  assert.equal(normalizarCodigo('V9AEZTV4C4'), 'v9aeztv4c4');
+  assert.equal(normalizarCodigo('v9aeztv4c4.'), 'v9aeztv4c4');
+  assert.equal(normalizarCodigo('v9aeztv4c4)'), 'v9aeztv4c4');
+  assert.equal(normalizarCodigo(null), '');
+});
+
+test('codigoDeRuta acepta mayusculas y basura al final', () => {
+  assert.equal(codigoDeRuta('/IAV-2609.17-B-V9AEZTV4C4'), 'v9aeztv4c4');
+  assert.equal(codigoDeRuta('/IAV-2609.17-B-v9aeztv4c4.'), 'v9aeztv4c4');
+});
+
+test('prefijoRescatable: 8 o 9 letras se rescatan, menos no', () => {
+  assert.equal(prefijoRescatable('v9aeztv4c'), 'v9aeztv4c');
+  assert.equal(prefijoRescatable('v9aeztv4'), 'v9aeztv4');
+  assert.equal(MIN_CODIGO_PARCIAL, 8);
+  assert.equal(prefijoRescatable('v9aeztv'), '');          // 7: el candado ya cederia
+  assert.equal(prefijoRescatable('v9aez'), '');
+  assert.equal(prefijoRescatable(''), '');
+});
+
+test('prefijoRescatable: si le sobra algo, se prueban las primeras 10', () => {
+  assert.equal(prefijoRescatable('v9aeztv4c4x'), 'v9aeztv4c4');
+  assert.equal(prefijoRescatable('V9AEZTV4C'), 'v9aeztv4c');
+});
+
+test('prefijoRescatable rechaza letras fuera del alfabeto (nada de comodines al LIKE)', () => {
+  assert.equal(prefijoRescatable('v9aeztv4c0'), '');       // el 0 no existe en el alfabeto
+  assert.equal(prefijoRescatable('v9aezt%4c'), 'v9aezt4c');  // lo que no es letra ni numero se va
+  assert.equal(prefijoRescatable('v9aeztv4l'), '');        // la l tampoco
 });
