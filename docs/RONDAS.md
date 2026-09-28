@@ -85,6 +85,28 @@ Tests: `paginas.test.js` (nuevo, 8) + 5 en `entregas-core.test.js`. Worker 124 (
 1 omitido que ya existia), checklist 314 verde. Verificado en local con `wrangler dev
 --host entregas.inmueblesaudiovisuales.com`.
 
+**Verificado en produccion** (deploy de 3fdd721 por GitHub Actions, en verde):
+- curl: 5 variantes de liga (correcta, truncada `v9aeztv4c`, en MAYUSCULAS, solo codigo,
+  solo folio `/IAV-2609.17`) x 7 user-agents (Safari iOS, Chrome Android, WhatsApp iOS,
+  Instagram iOS, Facebook IAB Android, lector de WhatsApp, lector de Facebook) x 4 modos
+  (normal, `--compressed`, HTTP/1.1, con `If-None-Match`/`If-Modified-Since`):
+  **140/140 con 200 y la pagina completa**. Cabeceras de la truncada: `200`,
+  `text/html; charset=utf-8`, `no-store…`, sin ETag, sin Last-Modified, sin Location.
+- `/ver/` en contratos.* (correcta y truncada) 200; `/admin`, `/portal`, `/checklist` 200;
+  entregas.* `/` y `/e` 200 (portal de control); `favicon.ico` sigue 404 (es archivo).
+- `/api/e/publica`: `v9aeztv4c` -> rescata `v9aeztv4c4` (`rescatada: true`); 7 letras y
+  codigo inexistente -> 404.
+- Playwright WebKit (iPhone 13 con Safari, WhatsApp e Instagram; Safari Mac) y Chromium
+  (Pixel 7 con Chrome y Facebook IAB; Chrome escritorio) x 4 ligas: **28/28**. La truncada
+  abre la entrega completa (7 fotos) y la barra de direcciones queda en
+  `/IAV-2609.17-B-v9aeztv4c4`; un codigo inexistente muestra "No encontramos esta entrega"
+  con `E404` y boton de WhatsApp. Cero errores de pagina.
+- `wrangler tail` durante todo lo anterior: 252 peticiones, sin excepciones; 8
+  `publica: liga rescatada v9aeztv4c -> v9aeztv4c4`.
+
+Nota: estas pruebas dejaron eventos `vista` (algunos con "liga incompleta: …") en
+`e_eventos` de esa entrega; son mias, no del cliente.
+
 **Si reaparece.** 1) Pedir la liga EXACTA que abrio el cliente (captura). 2) Analiticas:
 GraphQL `httpRequestsAdaptiveGroups` filtrado por `clientRequestHTTPHost` y
 `edgeResponseStatus`, con `clientRequestPath` y `userAgent`. 3) `wrangler tail` y buscar
