@@ -1699,6 +1699,8 @@ export async function handleEntregas(request, env, ctx, action) {
       // Para el contador del portal ("3 de 6"). Va del servidor para que el numero
       // no quede escrito en dos lados y se separen.
       destacadasVisibles: DESTACADAS_VISIBLES,
+      // Para pintar un cuadro de cada video en el panel (thumbnail de Stream).
+      streamCustomer: env.STREAM_CUSTOMER_CODE || '',
       completa: entregaCompleta(items),
       faltan: faltantes(items)
     });

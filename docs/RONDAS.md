@@ -8,6 +8,22 @@
 
 ---
 
+### R150 — el panel de entregas ahora muestra el cuadro y el nombre de cada video (2026-09-30 16:52:49 CST)
+
+En entregas.inmueblesaudiovisuales.com un video subido era un cuadro gris con un icono:
+no se sabia cual era ni que tenia. NO se toco el adapter.
+
+- `frontend/entregas.html`: la tarjeta de video pinta el thumbnail de Stream
+  (`/thumbnails/thumbnail.jpg?time=2s`, el mismo patron que ya usa el portal del cliente)
+  y el nombre del archivo arriba (abajo viven las acciones). Mientras Stream codifica no
+  hay thumbnail: el `onerror` quita la imagen y queda el icono de siempre. Tambien en
+  modo "quitar".
+- Mientras se sube: vista previa local (cuadro del segundo 1 sacado del propio archivo
+  con `#t=1`, sin esperar a Stream) + nombre, y el texto de avance dice
+  "Subiendo <nombre> · x de y MB".
+- `worker/src/routes/entregas.js` (`obtener`): devuelve `streamCustomer` para armar la
+  URL del thumbnail.
+
 ### R149 — la liga en blanco era una liga incompleta: 404 vacio (2026-09-28 17:06:48 CST)
 
 Seguimiento de R148. Aun con "Cargando tu entrega…" desde el primer pintado, la liga de
